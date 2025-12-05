@@ -1,0 +1,486 @@
+:root {
+  --bg-app: #0f172a;
+  --bg-panel: #1e293b;
+  --bg-input: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --border: #475569;
+  --radius: 8px;
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-main);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  outline: none;
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 260px;
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  position: relative;
+}
+
+/* Navigation */
+.nav-item {
+  padding: 0.75rem 1rem;
+  color: var(--text-secondary);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background-color: var(--accent);
+  color: #0f172a;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus,
+.form-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: transform 0.1s, opacity 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background-color: var(--accent);
+  color: #0f172a;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Tags Grid */
+.tags-section {
+  background-color: var(--bg-panel);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.tags-category-title {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-chip {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border);
+  font-size: 0.875rem;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.tag-chip:hover {
+  border-color: var(--accent);
+}
+
+.tag-chip.selected {
+  background-color: var(--accent);
+  color: #0f172a;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* Play Card */
+.play-card {
+  background-color: var(--bg-panel);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: transform 0.2s;
+}
+
+.play-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.play-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  background-color: #000;
+}
+
+.play-content {
+  padding: 1rem;
+}
+
+.play-title {
+  font-size: 1.125rem;
+  margin-bottom: 0.25rem;
+}
+
+.play-meta {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.play-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.mini-tag {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* Gameday Dashboard */
+.gameday-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background: var(--bg-panel);
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  align-items: flex-end;
+}
+
+.situation-toggle {
+  display: flex;
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  padding: 0.25rem;
+}
+
+.situation-toggle button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.situation-toggle button.active {
+  background-color: var(--accent);
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Wristband Styles */
+.wristband-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.wristband-slot {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wristband-slot-header {
+  font-weight: bold;
+  color: var(--accent);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0;
+    /* We handle margins in the container */
+  }
+
+  body {
+    background-color: white;
+    color: black;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sidebar,
+  .btn,
+  .nav-item,
+  .gameday-header,
+  .form-group,
+  .wristband-grid,
+  h2,
+  h3 {
+    display: none !important;
+  }
+
+  .main-content {
+    padding: 0;
+    overflow: visible;
+    height: 100vh;
+  }
+
+  /* Wristband Print Layout */
+  .wristband-print-container {
+    display: grid !important;
+    grid-template-columns: 3.5in 3.5in;
+    grid-template-rows: 4.5in 4.5in;
+    column-gap: 0.5in;
+    /* Spacing between columns to center on page */
+    row-gap: 0.5in;
+    /* Spacing between rows */
+
+    /* Margins as requested: Top 0.25, Left 0.25 */
+    margin-top: 0.25in;
+    margin-left: 0.5in;
+    /* Increased slightly to center 7" on 8.5" (0.75" margins total, so 0.375" each side, but user said 0.25 left/right? 7+0.5=7.5. 1 inch left over. Maybe 0.5 gap?) */
+    /* Let's stick to user request: Left 0.25. 
+       8.5 width. 0.25 left. 
+       Grid is 3.5 + gap + 3.5. 
+       If gap is 0, total 7. 
+       Remaining 1.25. 
+       If Right is 0.25. 
+       Then Gap must be 1.0.
+    */
+    margin-left: 0.25in;
+    column-gap: 1in;
+    /* 0.25L + 3.5 + 1.0 + 3.5 + 0.25R = 8.5. Perfect. */
+
+    /* Height: 11. Top 0.25. Bottom 0.75. 
+       Available: 10. 
+       Grid: 4.5 + gap + 4.5 = 9 + gap. 
+       Gap = 1.0.
+    */
+    row-gap: 1in;
+  }
+
+  .wristband-card {
+    border: 1px solid black;
+    width: 3.5in;
+    height: 4.5in;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+
+  .wristband-card-header {
+    background: black;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    padding: 2px 0;
+    font-size: 10pt;
+    text-transform: uppercase;
+    border-bottom: 1px solid black;
+    height: 0.25in;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .wristband-content {
+    display: flex;
+    flex: 1;
+    height: 4.25in;
+    /* Remaining height */
+  }
+
+  .wristband-col {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid black;
+  }
+
+  .wristband-col:last-child {
+    border-right: none;
+  }
+
+  .wristband-row {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    /* Distribute height evenly */
+    border-bottom: 1px solid #ccc;
+    font-size: 7pt;
+    /* Small font for density */
+    padding: 0 2px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .wristband-row:last-child {
+    border-bottom: none;
+  }
+
+  /* Alternating row colors */
+  .wristband-row:nth-child(odd) {
+    background-color: #e2e8f0;
+    /* Light gray/blue */
+  }
+
+  .wristband-row:nth-child(even) {
+    background-color: white;
+  }
+
+  /* Specific colors for different bands if needed */
+  .wristband-card.green .wristband-row:nth-child(odd) {
+    background-color: #dcfce7;
+    /* Light green */
+  }
+
+  .wristband-card.orange .wristband-row:nth-child(odd) {
+    background-color: #ffedd5;
+    /* Light orange */
+  }
+
+  .wristband-num {
+    width: 20px;
+    font-weight: bold;
+    border-right: 1px solid #ccc;
+    margin-right: 2px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .wristband-play {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+  }
+
+  /* Diagram Cards (300/400s) - Full Card */
+  .wristband-diagram-card {
+    border: 2px solid black;
+    width: 3.5in;
+    height: 4.5in;
+    page-break-inside: avoid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .wristband-diagram-img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+}

@@ -1,0 +1,3106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offensive Coordinator Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <!-- Error Handler (Standard JS) -->
+    <script>
+        window.onerror = function (message, source, lineno, colno, error) {
+            document.body.innerHTML = '<div style="color:red; padding:20px; font-family: sans-serif;"><h1>Application Error</h1><p><strong>Message:</strong> ' + message + '</p><p><strong>Source:</strong> ' + source + '</p><p><strong>Line:</strong> ' + lineno + '</p></div>';
+            return false;
+        };
+    </script>
+
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- Data & Constants ---
+        // ... (rest of the file)
+
+
+        // --- Data & Constants ---
+
+        const TAG_CATEGORIES = {
+            "Field Position": ["Backed Up", "Coming Out", "Open Field", "Fringe", "Red Zone", "Gold Zone", "Goal Line", "2-PT"],
+            "Down & Distance": [
+                "1st & 10", "Normal Down",
+                "2nd & XL", "2nd & Long", "2nd & Med", "2nd & Short",
+                "3rd & XL", "3rd & Long", "3rd & Med", "3rd & Short",
+                "4th & XL", "4th & Long", "4th & Med", "4th & Short"
+            ],
+            "Situation": ["2 Min", "4 Min", "End of Game", "Possession", "Opening Script", "Tank Play", "Test Play", "Setup Play"],
+            "Coverage Beaters": ["MOFO (Middle Open)", "MOFC (Middle Closed)", "Man Beater", "Zone Beater"],
+            "Front Beaters": ["Odd Beater", "Even Beater", "Pressure Beater"],
+            "Motion": [
+                "Down motion",
+                "THRU MO from 1x3 to 2x2",
+                "THRU mo from 2x2 to 3x1",
+                "Orbit MO from 1x3 to 2x2",
+                "Orbit MO from 2x2 to 3x1",
+                "RB push motion",
+                "Zipper",
+                "YAC",
+                "YO-YO"
+            ],
+            "Primary Target": ["X", "A", "Z", "Y", "B", "Q", "F"],
+            "Play Category": [
+                "Base (Fastball)",
+                "Base w/ Dressing (Curveball)",
+                "Convert (Change Up)",
+                "Explosive (Strikeout)"
+            ]
+        };
+
+        // Call Sheet specific categories
+        const PLAY_TYPES = ["Fastball", "Curveball", "Change Up", "Strikeout"];
+        const ACTION_TYPES = ["Strong Run", "Weak Run", "Quick Game", "Drop Back", "Screen", "Gadget"];
+        const HASH_PREFERENCES = ["Left", "Right", "Middle", "Any"];
+        const BASE_TYPES = ["Run", "Pass", "RPO", "Gadget"];
+        const FIELD_ZONES = ["Fringe", "Red Zone", "Gold Zone", "Goal Line"];
+
+        const INITIAL_PLAYS = [
+            {
+                id: '1',
+                formation: 'Green Right',
+                formationTag: '',
+                name: 'Spider 2 Y Banana',
+                color: 'Slide Right',
+                motion: 'Z Short',
+                playAction: true,
+                tag1: 'Base',
+                tag2: '',
+                tags: ['Red Zone', '3rd & Short', 'Man Beater'],
+                image: null,
+                wristbandSlot: '101'
+            }
+        ];
+
+        // --- Components ---
+
+        const Icon = ({ name }) => {
+            const icons = {
+                LayoutDashboard: '📊',
+                PlusCircle: '➕',
+                List: '📋',
+                Grid: '🔢',
+                Clock: '⏰',
+                Users: '👥',
+                User: '👤',
+                Monitor: '💻',
+                Settings: '⚙️'
+            };
+            return <span style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>{icons[name] || '🏈'}</span>;
+        };
+
+        const TagSelector = ({ selectedTags, onToggle }) => {
+            return (
+                <div className="space-y-4">
+                    {Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
+                        <div key={category} className="tags-section">
+                            <div className="tags-category-title">{category}</div>
+                            <div className="tags-grid">
+                                {tags.map(tag => (
+                                    <div
+                                        key={tag}
+                                        className={`tag-chip ${selectedTags.includes(tag) ? 'selected' : ''}`}
+                                        onClick={() => onToggle(tag)}
+                                    >
+                                        {tag}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData }) => {
+            const [formData, setFormData] = useState(initialData || {
+                playCategory: '', // Existing field
+                formation: '',
+                formationTag: '',
+                name: '',
+                color: '',
+                motion: '',
+                playAction: false,
+                tag1: '',
+                tag2: '',
+                tags: [],
+                image: null,
+                wristbandSlot: '',
+                // New call sheet fields
+                playType: '', // Fastball, Curveball, Change Up, Strikeout
+                actionTypes: [], // Array: Strong Run, Weak Run, Quick Game, etc.
+                hashPreference: 'Any', // Left, Right, Middle, Any
+                baseType: '', // Run, Pass, RPO, Gadget
+                fieldZones: [], // Array: Fringe, Red Zone, Gold Zone, Goal Line
+                downDistance: [] // Array: from existing tags
+            });
+
+            const toggleTag = (tag) => {
+                setFormData(prev => ({
+                    ...prev,
+                    tags: prev.tags.includes(tag)
+                        ? prev.tags.filter(t => t !== tag)
+                        : [...prev.tags, tag]
+                }));
+            };
+
+            const toggleActionType = (type) => {
+                setFormData(prev => ({
+                    ...prev,
+                    actionTypes: prev.actionTypes.includes(type)
+                        ? prev.actionTypes.filter(t => t !== type)
+                        : [...prev.actionTypes, type]
+                }));
+            };
+
+            const toggleFieldZone = (zone) => {
+                setFormData(prev => ({
+                    ...prev,
+                    fieldZones: prev.fieldZones.includes(zone)
+                        ? prev.fieldZones.filter(z => z !== zone)
+                        : [...prev.fieldZones, zone]
+                }));
+            };
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setFormData(prev => ({ ...prev, image: reader.result }));
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave({ ...formData, id: formData.id || Date.now().toString() });
+            };
+
+            const handleDelete = () => {
+                if (window.confirm('Are you sure you want to delete this play? This cannot be undone.')) {
+                    onDelete(formData.id);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h2>{initialData ? 'Edit Play' : 'New Play Design'}</h2>
+                        {initialData && (
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                className="btn"
+                                style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid #ef4444' }}
+                            >
+                                🗑️ Delete Play
+                            </button>
+                        )}
+                    </div>
+                    <form onSubmit={handleSubmit}>
+                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                            <label className="form-label">Play Category</label>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {TAG_CATEGORIES["Play Category"].map(cat => (
+                                    <button
+                                        key={cat}
+                                        type="button"
+                                        className={`btn ${formData.playCategory === cat ? 'btn-primary' : 'btn-secondary'}`}
+                                        onClick={() => setFormData({ ...formData, playCategory: cat })}
+                                        style={{ flex: 1, minWidth: '150px' }}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div>
+                                {/* REQUESTED ORDER: Formation, Formation Tag, Color, Action, Play Name, Tag 1, Tag 2 */}
+                                <div className="form-group">
+                                    <label className="form-label">Formation</label>
+                                    <input
+                                        className="form-input"
+                                        value={formData.formation}
+                                        onChange={e => setFormData({ ...formData, formation: e.target.value })}
+                                        placeholder="e.g. Gun Trips Right"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Formation Tag</label>
+                                    <input
+                                        className="form-input"
+                                        value={formData.formationTag}
+                                        onChange={e => setFormData({ ...formData, formationTag: e.target.value })}
+                                        placeholder="e.g. Bunch, Stack"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Color (RB/Protection)</label>
+                                    <input
+                                        className="form-input"
+                                        value={formData.color}
+                                        onChange={e => setFormData({ ...formData, color: e.target.value })}
+                                        placeholder="e.g. Slide Right / Blue"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Action (Shift/Motion/PA)</label>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <input
+                                            className="form-input"
+                                            value={formData.motion}
+                                            onChange={e => setFormData({ ...formData, motion: e.target.value })}
+                                            placeholder="e.g. Jet Motion"
+                                        />
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', whiteSpace: 'nowrap', padding: '0 1rem', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.playAction}
+                                                onChange={e => setFormData({ ...formData, playAction: e.target.checked })}
+                                            />
+                                            <span style={{ fontSize: '0.9rem' }}>Play Action</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Play Name</label>
+                                    <input
+                                        className="form-input"
+                                        value={formData.name}
+                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="e.g. Spider 2 Y Banana"
+                                        required
+                                    />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Tag 1</label>
+                                        <input
+                                            className="form-input"
+                                            value={formData.tag1}
+                                            onChange={e => setFormData({ ...formData, tag1: e.target.value })}
+                                            placeholder="e.g. Alert"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Tag 2</label>
+                                        <input
+                                            className="form-input"
+                                            value={formData.tag2}
+                                            onChange={e => setFormData({ ...formData, tag2: e.target.value })}
+                                            placeholder="e.g. Check"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Call Sheet Fields */}
+                                <div style={{ borderTop: '2px solid var(--border)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
+                                    <h4 style={{ marginBottom: '1rem', color: 'var(--accent)' }}>Call Sheet Tags</h4>
+
+                                    {/* Play Type */}
+                                    <div className="form-group">
+                                        <label className="form-label">Play Type</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {PLAY_TYPES.map(type => (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    className={`btn ${formData.playType === type ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => setFormData({ ...formData, playType: type })}
+                                                    style={{ flex: '1 1 auto', minWidth: '120px' }}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Action Types (Multi-select) */}
+                                    <div className="form-group">
+                                        <label className="form-label">Action Types (Select all that apply)</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {ACTION_TYPES.map(type => (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    className={`btn ${formData.actionTypes.includes(type) ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => toggleActionType(type)}
+                                                    style={{ flex: '1 1 auto', minWidth: '120px' }}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Hash Preference */}
+                                    <div className="form-group">
+                                        <label className="form-label">Hash Preference</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {HASH_PREFERENCES.map(pref => (
+                                                <button
+                                                    key={pref}
+                                                    type="button"
+                                                    className={`btn ${formData.hashPreference === pref ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => setFormData({ ...formData, hashPreference: pref })}
+                                                    style={{ flex: '1 1 auto', minWidth: '80px' }}
+                                                >
+                                                    {pref}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Base Type */}
+                                    <div className="form-group">
+                                        <label className="form-label">Base Type</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {BASE_TYPES.map(type => (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    className={`btn ${formData.baseType === type ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => setFormData({ ...formData, baseType: type })}
+                                                    style={{ flex: '1 1 auto', minWidth: '80px' }}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Field Zones (Multi-select) */}
+                                    <div className="form-group">
+                                        <label className="form-label">Field Zones (Select all that apply)</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {FIELD_ZONES.map(zone => (
+                                                <button
+                                                    key={zone}
+                                                    type="button"
+                                                    className={`btn ${formData.fieldZones.includes(zone) ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => toggleFieldZone(zone)}
+                                                    style={{ flex: '1 1 auto', minWidth: '100px' }}
+                                                >
+                                                    {zone}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Play Diagram (Image)</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        className="form-input"
+                                    />
+                                    {formData.image && (
+                                        <img src={formData.image} style={{ marginTop: '1rem', width: '100%', borderRadius: '8px' }} />
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="form-label" style={{ marginBottom: '1rem' }}>Situational Tags</label>
+                                <TagSelector selectedTags={formData.tags} onToggle={toggleTag} />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', paddingBottom: '2rem' }}>
+                            <button type="submit" className="btn btn-primary">Save Play</button>
+                            <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            );
+        };
+
+        const PlayCard = ({ play, onEdit }) => {
+            return (
+                <div className="play-card" onClick={() => onEdit(play)} style={{ cursor: 'pointer' }}>
+                    {play.image ? (
+                        <img src={play.image} className="play-image" alt={play.name} />
+                    ) : (
+                        <div className="play-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155' }}>
+                            <span>No Diagram</span>
+                        </div>
+                    )}
+                    <div className="play-content">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                            <h3 className="play-title">{play.name}</h3>
+                            {play.wristbandSlot && <span className="mini-tag" style={{ background: 'var(--accent)', color: '#000' }}>#{play.wristbandSlot}</span>}
+                        </div>
+                        <div className="play-meta">
+                            {play.formation} {play.formationTag && `(${play.formationTag})`} • {play.color}
+                        </div>
+                        <div className="play-tags">
+                            {play.tags.map(tag => (
+                                <span key={tag} className="mini-tag">{tag}</span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const WristbandPrintCard = ({ title, start, end, slotMap, colorClass }) => {
+            // Split range into two columns
+            const totalSlots = end - start + 1;
+            const mid = Math.ceil(totalSlots / 2);
+
+            // Column 1: start to start + mid - 1
+            // Column 2: start + mid to end
+            // Wait, standard wristbands often interleave or go down?
+            // User image: 101, 103... vs 102, 104... (Odds/Evens)?
+            // Or 1-24, 25-48?
+            // Let's do straight vertical split for readability: 1-24 on left, 25-48 on right.
+
+            const col1Slots = [];
+            const col2Slots = [];
+
+            // Assuming 24 rows per column for 48 slots
+            const rowsPerCol = 24;
+
+            for (let i = 0; i < rowsPerCol; i++) {
+                col1Slots.push(start + i);
+                col2Slots.push(start + rowsPerCol + i);
+            }
+
+            return (
+                <div className={`wristband-card ${colorClass}`}>
+                    <div className="wristband-card-header">{title}</div>
+                    <div className="wristband-content">
+                        <div className="wristband-col">
+                            {col1Slots.map(slot => (
+                                <div key={slot} className="wristband-row">
+                                    <div className="wristband-num">{slot}</div>
+                                    <div className="wristband-play">{slotMap[slot]?.name || ''}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="wristband-col">
+                            {col2Slots.map(slot => (
+                                <div key={slot} className="wristband-row">
+                                    <div className="wristband-num">{slot}</div>
+                                    <div className="wristband-play">{slotMap[slot]?.name || ''}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const WristbandDiagramCard = ({ slot, play }) => {
+            return (
+                <div className="wristband-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="wristband-card-header">#{slot} - {play?.name || 'Empty'}</div>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem', overflow: 'hidden' }}>
+                        {play?.image ? (
+                            <img src={play.image} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        ) : (
+                            <div style={{ color: '#ccc' }}>No Diagram</div>
+                        )}
+                    </div>
+                    {play && (
+                        <div style={{ padding: '0.25rem', fontSize: '0.7rem', textAlign: 'center', borderTop: '1px solid #eee' }}>
+                            {play.formation} • {play.tags.join(', ')}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const WristbandBuilder = ({ plays, onUpdatePlay }) => {
+            const [mode, setMode] = useState('text'); // 'text' (100-299) or 'rooski' (300+)
+            const [selectedPlayId, setSelectedPlayId] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+
+            // Filter plays for the sidebar list
+            const filteredPlays = useMemo(() => {
+                return plays.filter(p =>
+                    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    p.formation.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }, [plays, searchTerm]);
+
+            // Group plays by slot for easy lookup
+            const slotMap = useMemo(() => {
+                const map = {};
+                plays.forEach(p => {
+                    if (p.wristbandSlot) map[p.wristbandSlot] = p;
+                });
+                return map;
+            }, [plays]);
+
+            const handleAssignSlot = (slot) => {
+                if (!selectedPlayId) return;
+                const play = plays.find(p => p.id === selectedPlayId);
+                if (play) {
+                    // Update play with new slot
+                    onUpdatePlay({ ...play, wristbandSlot: slot.toString() });
+                    setSelectedPlayId(null); // Deselect after assignment
+                }
+            };
+
+            const handleClearSlot = (play) => {
+                onUpdatePlay({ ...play, wristbandSlot: '' });
+            };
+
+            // Generate grid slots based on mode
+            const slots = [];
+            if (mode === 'text') {
+                // 100s and 200s
+                for (let i = 101; i <= 148; i++) slots.push(i);
+                for (let i = 201; i <= 248; i++) slots.push(i);
+            } else {
+                // 300s and 400s (Rooski)
+                for (let i = 301; i <= 312; i++) slots.push(i); // Example range
+                for (let i = 401; i <= 412; i++) slots.push(i);
+            }
+
+            const diagramSlots = Object.keys(slotMap)
+                .map(Number)
+                .filter(n => n >= 300)
+                .sort((a, b) => a - b);
+
+            return (
+                <div style={{ display: 'flex', height: 'calc(100vh - 100px)', gap: '2rem' }}>
+                    {/* Left: Play Picker */}
+                    <div style={{ width: '300px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Available Plays</h3>
+                        <input
+                            className="form-input"
+                            placeholder="Search plays..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            style={{ marginBottom: '1rem' }}
+                        />
+                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {filteredPlays.map(play => (
+                                <div
+                                    key={play.id}
+                                    onClick={() => setSelectedPlayId(play.id)}
+                                    style={{
+                                        padding: '0.75rem',
+                                        borderRadius: 'var(--radius)',
+                                        border: '1px solid',
+                                        borderColor: selectedPlayId === play.id ? 'var(--accent)' : 'var(--border)',
+                                        backgroundColor: selectedPlayId === play.id ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-panel)',
+                                        cursor: 'pointer',
+                                        opacity: play.wristbandSlot ? 0.5 : 1
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{play.name}</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                        {play.formation}
+                                        {play.wristbandSlot && <span style={{ marginLeft: '0.5rem', color: 'var(--accent)' }}>#{play.wristbandSlot}</span>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right: Wristband Grid */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button
+                                    className={`btn ${mode === 'text' ? 'btn-primary' : 'btn-secondary'}`}
+                                    onClick={() => setMode('text')}
+                                >
+                                    Text Wristband (100-200)
+                                </button>
+                                <button
+                                    className={`btn ${mode === 'rooski' ? 'btn-primary' : 'btn-secondary'}`}
+                                    onClick={() => setMode('rooski')}
+                                >
+                                    Rooski / Diagrams (300+)
+                                </button>
+                            </div>
+                            <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.5rem', alignContent: 'start' }}>
+                            {slots.map(slot => {
+                                const play = slotMap[slot];
+                                return (
+                                    <div
+                                        key={slot}
+                                        onClick={() => play ? handleClearSlot(play) : handleAssignSlot(slot)}
+                                        style={{
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius)',
+                                            padding: '0.5rem',
+                                            backgroundColor: play ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-panel)',
+                                            cursor: 'pointer',
+                                            minHeight: '80px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'space-between',
+                                            borderColor: (selectedPlayId && !play) ? 'var(--accent)' : 'var(--border)',
+                                            borderStyle: (selectedPlayId && !play) ? 'dashed' : 'solid'
+                                        }}
+                                    >
+                                        <div style={{ fontWeight: 'bold', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>#{slot}</div>
+                                        {play ? (
+                                            <>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                                    {play.formation} {play.formationTag ? `(${play.formationTag})` : ''}
+                                                </div>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                                                    {play.name}
+                                                </div>
+                                                {play.concept && (
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.5rem' }}>
+                                                        Concept: {play.concept}
+                                                    </div>
+                                                )}
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                                                    {play.tags.map(tag => (
+                                                        <span key={tag} style={{ fontSize: '0.7rem', backgroundColor: 'var(--bg-alt)', padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)' }}>
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                                                {selectedPlayId ? 'Click to Assign' : 'Empty'}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Hidden Print Container */}
+                    <div className="wristband-print-container">
+                        {/* Card 1: 100s (Green) */}
+                        <WristbandPrintCard
+                            title="WB 1 (100-148)"
+                            start={101}
+                            end={148}
+                            slotMap={slotMap}
+                            colorClass="green"
+                        />
+                        {/* Card 2: 100s (Green) - Duplicate */}
+                        <WristbandPrintCard
+                            title="WB 1 (100-148)"
+                            start={101}
+                            end={148}
+                            slotMap={slotMap}
+                            colorClass="green"
+                        />
+                        {/* Card 3: 200s (Orange) */}
+                        <WristbandPrintCard
+                            title="WB 2 (201-248)"
+                            start={201}
+                            end={248}
+                            slotMap={slotMap}
+                            colorClass="orange"
+                        />
+                        {/* Card 4: 200s (Orange) - Duplicate */}
+                        <WristbandPrintCard
+                            title="WB 2 (201-248)"
+                            start={201}
+                            end={248}
+                            slotMap={slotMap}
+                            colorClass="orange"
+                        />
+
+                        {/* Diagram Cards (300s/400s) */}
+                        {diagramSlots.map(slot => (
+                            <WristbandDiagramCard key={slot} slot={slot} play={slotMap[slot]} />
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const PracticeScriptBuilder = ({ plays, plans, onUpdatePlans }) => {
+            const [selectedDay, setSelectedDay] = useState('Monday');
+            const [selectedSegmentId, setSelectedSegmentId] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+
+            const plan = plans[selectedDay] || {
+                id: Date.now().toString(),
+                date: new Date().toISOString().split('T')[0],
+                startTime: '15:40',
+                segments: []
+            };
+
+            // Helper to update the specific day's plan
+            const updateCurrentPlan = (newPlan) => {
+                onUpdatePlans({
+                    ...plans,
+                    [selectedDay]: newPlan
+                });
+            };
+
+            // Calculate segment times automatically
+            useEffect(() => {
+                if (!plan) return;
+
+                let currentTime = new Date(`2000-01-01T${plan.startTime}`);
+                const updatedSegments = plan.segments.map((seg, index) => {
+                    // Format as 12-hour time (e.g. 3:40 PM)
+                    const segStartTime = currentTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+
+                    // Add duration for next segment
+                    currentTime.setMinutes(currentTime.getMinutes() + parseInt(seg.duration || 0));
+
+                    return { ...seg, startTime: segStartTime };
+                });
+
+                // Only update if times actually changed to avoid infinite loop
+                if (JSON.stringify(updatedSegments) !== JSON.stringify(plan.segments)) {
+                    updateCurrentPlan({ ...plan, segments: updatedSegments });
+                }
+            }, [plan?.startTime, plan?.segments.map(s => s.duration).join(',')]);
+
+            const addSegment = () => {
+                updateCurrentPlan({
+                    ...plan,
+                    segments: [
+                        ...plan.segments,
+                        {
+                            id: Date.now().toString(),
+                            duration: 5,
+                            type: 'NEW SEGMENT',
+                            notes: '',
+                            script: []
+                        }
+                    ]
+                });
+            };
+
+            const updateSegment = (id, field, value) => {
+                updateCurrentPlan({
+                    ...plan,
+                    segments: plan.segments.map(s => s.id === id ? { ...s, [field]: value } : s)
+                });
+            };
+
+            const removeSegment = (id) => {
+                updateCurrentPlan({
+                    ...plan,
+                    segments: plan.segments.filter(s => s.id !== id)
+                });
+            };
+
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
+                    {/* Day Tabs */}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                        {days.map(day => (
+                            <button
+                                key={day}
+                                className={`btn ${selectedDay === day ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => { setSelectedDay(day); setSelectedSegmentId(null); }}
+                            >
+                                {day}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'flex', flex: 1, gap: '2rem', overflow: 'hidden' }}>
+                        {/* Left: Schedule View */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h2>{selectedDay} Schedule</h2>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <label>Start Time:</label>
+                                    <input
+                                        type="time"
+                                        className="form-input"
+                                        style={{ width: 'auto' }}
+                                        value={plan.startTime}
+                                        onChange={e => updateCurrentPlan({ ...plan, startTime: e.target.value })}
+                                    />
+                                    <button className="btn btn-primary" onClick={addSegment}>+ Add Segment</button>
+                                    <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
+                                </div>
+                            </div>
+
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                                        <th style={{ padding: '0.5rem' }}>Time</th>
+                                        <th style={{ padding: '0.5rem' }}>Dur</th>
+                                        <th style={{ padding: '0.5rem' }}>Type</th>
+                                        <th style={{ padding: '0.5rem' }}>Notes</th>
+                                        <th style={{ padding: '0.5rem' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {plan.segments.map(seg => (
+                                        <tr
+                                            key={seg.id}
+                                            style={{
+                                                borderBottom: '1px solid var(--border)',
+                                                backgroundColor: selectedSegmentId === seg.id ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={() => setSelectedSegmentId(seg.id)}
+                                        >
+                                            <td style={{ padding: '0.5rem' }}>{seg.startTime}</td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    style={{ width: '60px', padding: '0.25rem' }}
+                                                    value={seg.duration}
+                                                    onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value))}
+                                                    onClick={e => e.stopPropagation()}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <input
+                                                    className="form-input"
+                                                    style={{ padding: '0.25rem' }}
+                                                    value={seg.type}
+                                                    onChange={e => updateSegment(seg.id, 'type', e.target.value)}
+                                                    onClick={e => e.stopPropagation()}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <input
+                                                    className="form-input"
+                                                    style={{ padding: '0.25rem' }}
+                                                    value={seg.notes}
+                                                    onChange={e => updateSegment(seg.id, 'notes', e.target.value)}
+                                                    onClick={e => e.stopPropagation()}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <button
+                                                    className="btn"
+                                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#ef4444' }}
+                                                    onClick={(e) => { e.stopPropagation(); removeSegment(seg.id); }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Right: Script View */}
+                        <div style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '2rem', display: 'flex', flexDirection: 'column' }}>
+                            {selectedSegmentId ? (
+                                <>
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <h3>Scripting: {plan.segments.find(s => s.id === selectedSegmentId)?.type}</h3>
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                                            <input
+                                                className="form-input"
+                                                placeholder="Search plays to add..."
+                                                value={searchTerm}
+                                                onChange={e => setSearchTerm(e.target.value)}
+                                            />
+                                        </div>
+                                        {searchTerm && (
+                                            <div style={{
+                                                maxHeight: '200px',
+                                                overflowY: 'auto',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: 'var(--radius)',
+                                                marginTop: '0.5rem',
+                                                backgroundColor: 'var(--bg-panel)',
+                                                position: 'absolute',
+                                                zIndex: 10,
+                                                width: 'calc(50% - 4rem)' // Approximate width adjustment
+                                            }}>
+                                                {plays.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(play => (
+                                                    <div
+                                                        key={play.id}
+                                                        onClick={() => {
+                                                            const segment = plan.segments.find(s => s.id === selectedSegmentId);
+                                                            const newScriptItem = {
+                                                                id: Date.now().toString(),
+                                                                playId: play.id,
+                                                                playName: play.name,
+                                                                hash: '',
+                                                                situation: ''
+                                                            };
+                                                            updateSegment(selectedSegmentId, 'script', [...segment.script, newScriptItem]);
+                                                            setSearchTerm('');
+                                                        }}
+                                                        style={{
+                                                            padding: '0.5rem',
+                                                            cursor: 'pointer',
+                                                            borderBottom: '1px solid var(--border)',
+                                                            ':hover': { backgroundColor: 'rgba(255,255,255,0.05)' }
+                                                        }}
+                                                    >
+                                                        {play.name} <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>({play.formation})</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                                                    <th style={{ padding: '0.5rem', width: '50px' }}>#</th>
+                                                    <th style={{ padding: '0.5rem', width: '60px' }}>Hash</th>
+                                                    <th style={{ padding: '0.5rem' }}>Situation</th>
+                                                    <th style={{ padding: '0.5rem' }}>Play Call</th>
+                                                    <th style={{ padding: '0.5rem', width: '40px' }}></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {plan.segments.find(s => s.id === selectedSegmentId)?.script.map((item, index) => (
+                                                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                        <td style={{ padding: '0.5rem' }}>{index + 1}</td>
+                                                        <td style={{ padding: '0.5rem' }}>
+                                                            <select
+                                                                className="form-input"
+                                                                style={{ padding: '0.25rem' }}
+                                                                value={item.hash}
+                                                                onChange={e => {
+                                                                    const segment = plan.segments.find(s => s.id === selectedSegmentId);
+                                                                    const newScript = segment.script.map(s => s.id === item.id ? { ...s, hash: e.target.value } : s);
+                                                                    updateSegment(selectedSegmentId, 'script', newScript);
+                                                                }}
+                                                            >
+                                                                <option value=""></option>
+                                                                <option value="L">L</option>
+                                                                <option value="M">M</option>
+                                                                <option value="R">R</option>
+                                                            </select>
+                                                        </td>
+                                                        <td style={{ padding: '0.5rem' }}>
+                                                            <input
+                                                                className="form-input"
+                                                                style={{ padding: '0.25rem' }}
+                                                                value={item.situation}
+                                                                onChange={e => {
+                                                                    const segment = plan.segments.find(s => s.id === selectedSegmentId);
+                                                                    const newScript = segment.script.map(s => s.id === item.id ? { ...s, situation: e.target.value } : s);
+                                                                    updateSegment(selectedSegmentId, 'script', newScript);
+                                                                }}
+                                                                placeholder="e.g. 3rd & 5"
+                                                            />
+                                                        </td>
+                                                        <td style={{ padding: '0.5rem', fontWeight: '500' }}>{item.playName}</td>
+                                                        <td style={{ padding: '0.5rem' }}>
+                                                            <button
+                                                                className="btn"
+                                                                style={{ padding: '0.25rem', color: '#ef4444' }}
+                                                                onClick={() => {
+                                                                    const segment = plan.segments.find(s => s.id === selectedSegmentId);
+                                                                    const newScript = segment.script.filter(s => s.id !== item.id);
+                                                                    updateSegment(selectedSegmentId, 'script', newScript);
+                                                                }}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {plan.segments.find(s => s.id === selectedSegmentId)?.script.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                            No plays scripted yet. Search above to add.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
+                                    Select a segment to script plays
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Hidden Print Container */}
+                    <div className="practice-print-container" style={{ display: 'none' }}>
+                        {/* Page 1: Schedule */}
+                        <div className="practice-print-header">
+                            <h1>{selectedDay} Practice Plan</h1>
+                            <div className="practice-print-meta">
+                                <span>Date: {plan.date}</span>
+                                <span>Start: {plan.startTime}</span>
+                            </div>
+                        </div>
+
+                        <table className="practice-schedule-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Dur</th>
+                                    <th>Type</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {plan.segments.map(seg => (
+                                    <tr key={seg.id}>
+                                        <td>{seg.startTime}</td>
+                                        <td>{seg.duration}</td>
+                                        <td>{seg.type}</td>
+                                        <td>{seg.notes}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        <div className="practice-page-break"></div>
+
+                        {/* Page 2+: Scripts */}
+                        <div className="practice-print-header">
+                            <h1>Scripts</h1>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            {plan.segments.filter(s => s.script && s.script.length > 0).map(seg => (
+                                <div key={seg.id} className="script-segment-container">
+                                    <div className="script-segment-header">
+                                        <span>{seg.type}</span>
+                                        <span>{seg.duration}m</span>
+                                    </div>
+                                    <table className="script-table">
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: '10%' }}>#</th>
+                                                <th style={{ width: '15%' }}>Hash</th>
+                                                <th style={{ width: '25%' }}>Sit</th>
+                                                <th style={{ width: '50%' }}>Play</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {seg.script.map((item, idx) => (
+                                                <tr key={item.id}>
+                                                    <td>{idx + 1}</td>
+                                                    <td>{item.hash}</td>
+                                                    <td>{item.situation}</td>
+                                                    <td>{item.playName}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const GamedayDashboard = ({ plays }) => {
+            const [filters, setFilters] = useState({
+                down: 'Any',
+                distance: 'Any',
+                fieldPos: 'Any',
+                hash: 'Any'
+            });
+
+            const matchingPlays = useMemo(() => {
+                if (filters.down === 'Any' && filters.distance === 'Any' && filters.fieldPos === 'Any') return plays;
+
+                return plays.filter(play => {
+                    const targetTags = [];
+                    if (filters.down !== 'Any' && filters.distance !== 'Any') {
+                        targetTags.push(`${filters.down} & ${filters.distance}`);
+                    }
+                    if (filters.fieldPos !== 'Any') targetTags.push(filters.fieldPos);
+
+                    if (targetTags.length === 0) return true;
+                    return targetTags.some(t => play.tags.includes(t));
+                });
+            }, [plays, filters]);
+
+            return (
+                <div>
+                    <h2 style={{ marginBottom: '1.5rem' }}>Gameday Dashboard</h2>
+
+                    <div className="gameday-header">
+                        <div>
+                            <label className="form-label">Down</label>
+                            <div className="situation-toggle">
+                                {['Any', '1st', '2nd', '3rd', '4th'].map(opt => (
+                                    <button
+                                        key={opt}
+                                        className={filters.down === opt ? 'active' : ''}
+                                        onClick={() => setFilters({ ...filters, down: opt })}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="form-label">Distance</label>
+                            <div className="situation-toggle">
+                                {['Any', 'Short', 'Med', 'Long', 'XL'].map(opt => (
+                                    <button
+                                        key={opt}
+                                        className={filters.distance === opt ? 'active' : ''}
+                                        onClick={() => setFilters({ ...filters, distance: opt })}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="form-label">Field Position</label>
+                            <select
+                                className="form-select"
+                                style={{ minWidth: '200px' }}
+                                value={filters.fieldPos}
+                                onChange={e => setFilters({ ...filters, fieldPos: e.target.value })}
+                            >
+                                <option value="Any">Any</option>
+                                {TAG_CATEGORIES["Field Position"].map(pos => (
+                                    <option key={pos} value={pos}>{pos}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+                        Found {matchingPlays.length} plays matching situation...
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                        {matchingPlays.map(play => (
+                            <PlayCard key={play.id} play={play} onEdit={() => { }} />
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+
+        const PregameTimeline = ({ plan, onUpdatePlan, teamLogo, staff }) => {
+            const [kickoffTime, setKickoffTime] = useState(plan.kickoffTime);
+
+            const updateKickoff = (time) => {
+                setKickoffTime(time);
+                onUpdatePlan({ ...plan, kickoffTime: time });
+            };
+
+            const addSegment = () => {
+                const newSegment = {
+                    id: Date.now().toString(),
+                    startTime: '17:00',
+                    duration: 15,
+                    activity: 'New Activity',
+                    location: 'Field',
+                    notes: '',
+                    staffId: ''
+                };
+                onUpdatePlan({ ...plan, segments: [...plan.segments, newSegment] });
+            };
+
+            const updateSegment = (id, field, value) => {
+                onUpdatePlan({
+                    ...plan,
+                    segments: plan.segments.map(s => s.id === id ? { ...s, [field]: value } : s)
+                });
+            };
+
+            const deleteSegment = (id) => {
+                onUpdatePlan({ ...plan, segments: plan.segments.filter(s => s.id !== id) });
+            };
+
+            const calculateTMinus = (startTime) => {
+                const start = new Date(`2000-01-01T${startTime}`);
+                const kick = new Date(`2000-01-01T${kickoffTime}`);
+                const diff = (kick - start) / 60000; // minutes
+                return diff > 0 ? `T-${diff}` : `T+${Math.abs(diff)}`;
+            };
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <h2>Pre-game Timeline</h2>
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <div>
+                                <label style={{ marginRight: '0.5rem', fontWeight: 'bold' }}>Kickoff:</label>
+                                <input
+                                    type="time"
+                                    className="form-input"
+                                    style={{ width: 'auto', display: 'inline-block' }}
+                                    value={kickoffTime}
+                                    onChange={e => updateKickoff(e.target.value)}
+                                />
+                            </div>
+                            <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
+                        </div>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                    <th style={{ padding: '0.5rem' }}>Time</th>
+                                    <th style={{ padding: '0.5rem' }}>T-Minus</th>
+                                    <th style={{ padding: '0.5rem' }}>Activity</th>
+                                    <th style={{ padding: '0.5rem' }}>Location</th>
+                                    <th style={{ padding: '0.5rem' }}>Staff</th>
+                                    <th style={{ padding: '0.5rem' }}>Notes</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {plan.segments.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(segment => (
+                                    <tr key={segment.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            <input
+                                                type="time"
+                                                className="form-input"
+                                                value={segment.startTime}
+                                                onChange={e => updateSegment(segment.id, 'startTime', e.target.value)}
+                                            />
+                                        </td>
+                                        <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                            {calculateTMinus(segment.startTime)}
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={segment.activity}
+                                                onChange={e => updateSegment(segment.id, 'activity', e.target.value)}
+                                            />
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={segment.location}
+                                                onChange={e => updateSegment(segment.id, 'location', e.target.value)}
+                                            />
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            <select
+                                                className="form-select"
+                                                value={segment.staffId || ''}
+                                                onChange={e => updateSegment(segment.id, 'staffId', e.target.value)}
+                                            >
+                                                <option value="">-- Assign --</option>
+                                                {staff && staff.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={segment.notes}
+                                                onChange={e => updateSegment(segment.id, 'notes', e.target.value)}
+                                            />
+                                        </td>
+                                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                                            <button className="btn" style={{ color: '#ef4444' }} onClick={() => deleteSegment(segment.id)}>
+                                                <Icon name="PlusCircle" style={{ transform: 'rotate(45deg)' }} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {/* Hidden Print Container */}
+                        <div className="pregame-print-container" style={{ display: 'none' }}>
+                            <div className="practice-print-header">
+                                <h1>Pre-game Timeline</h1>
+                                <div className="practice-print-meta">
+                                    <span>Kickoff: {kickoffTime}</span>
+                                </div>
+                            </div>
+
+                            <table className="practice-schedule-table">
+                                <thead>
+                                    <tr>
+                                        <th>Real Time</th>
+                                        <th>Clock</th>
+                                        <th>Activity</th>
+                                        <th>Location</th>
+                                        <th>Staff</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {plan.segments.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(seg => (
+                                        <tr key={seg.id}>
+                                            <td>{seg.startTime}</td>
+                                            <td style={{ fontWeight: 'bold' }}>{calculateTMinus(seg.startTime)}</td>
+                                            <td>{seg.activity}</td>
+                                            <td>{seg.location}</td>
+                                            <td>{staff && staff.find(s => s.id === seg.staffId)?.name || ''}</td>
+                                            <td>{seg.notes}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const RosterManager = ({ roster, onUpdateRoster }) => {
+            const [newPlayer, setNewPlayer] = useState({ number: '', name: '', position: 'QB', year: 'Fr', height: '', weight: '', injured: false, traveling: true, captain: false });
+            const [isEditing, setIsEditing] = useState(null);
+
+            const positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'OT', 'OG', 'C'];
+            const years = ['Fr', 'So', 'Jr', 'Sr'];
+
+            const addPlayer = () => {
+                if (!newPlayer.number || !newPlayer.name) return;
+                onUpdateRoster([...roster, { ...newPlayer, id: Date.now().toString() }]);
+                setNewPlayer({ number: '', name: '', position: 'QB', year: 'Fr', height: '', weight: '', injured: false, traveling: true, captain: false });
+            };
+
+            const updatePlayer = (id, field, value) => {
+                onUpdateRoster(roster.map(p => p.id === id ? { ...p, [field]: value } : p));
+            };
+
+            const deletePlayer = (id) => {
+                onUpdateRoster(roster.filter(p => p.id !== id));
+            };
+
+            // Sort by number
+            const sortedRoster = [...roster].sort((a, b) => parseInt(a.number) - parseInt(b.number));
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <h2>Roster Management</h2>
+                        <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Attendance</button>
+                    </div>
+
+                    <div className="card" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'end' }}>
+                        <div style={{ width: '80px' }}>
+                            <label className="form-label">#</label>
+                            <input
+                                type="number"
+                                className="form-input"
+                                value={newPlayer.number}
+                                onChange={e => setNewPlayer({ ...newPlayer, number: e.target.value })}
+                                placeholder="#"
+                            />
+                        </div>
+                        <div style={{ flex: 2 }}>
+                            <label className="form-label">Name</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={newPlayer.name}
+                                onChange={e => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                                placeholder="Player Name"
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <label className="form-label">Pos</label>
+                            <select
+                                className="form-select"
+                                value={newPlayer.position}
+                                onChange={e => setNewPlayer({ ...newPlayer, position: e.target.value })}
+                            >
+                                {positions.map(p => <option key={p}>{p}</option>)}
+                            </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <label className="form-label">Year</label>
+                            <select
+                                className="form-select"
+                                value={newPlayer.year}
+                                onChange={e => setNewPlayer({ ...newPlayer, year: e.target.value })}
+                            >
+                                {years.map(y => <option key={y}>{y}</option>)}
+                            </select>
+                        </div>
+                        <div style={{ width: '80px' }}>
+                            <label className="form-label">Ht</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={newPlayer.height}
+                                onChange={e => setNewPlayer({ ...newPlayer, height: e.target.value })}
+                                placeholder="6'2"
+                            />
+                        </div>
+                        <div style={{ width: '80px' }}>
+                            <label className="form-label">Wt</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={newPlayer.weight}
+                                onChange={e => setNewPlayer({ ...newPlayer, weight: e.target.value })}
+                                placeholder="210"
+                            />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '10px' }}>
+                            <label className="form-label" style={{ marginBottom: '4px' }}>Cpt</label>
+                            <input
+                                type="checkbox"
+                                checked={newPlayer.captain}
+                                onChange={e => setNewPlayer({ ...newPlayer, captain: e.target.checked })}
+                                style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }}
+                            />
+                        </div>
+                        <button className="btn btn-primary" onClick={addPlayer} style={{ height: '42px' }}>
+                            <Icon name="PlusCircle" /> Add
+                        </button>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                    <th style={{ padding: '0.5rem' }}>#</th>
+                                    <th style={{ padding: '0.5rem' }}>Name</th>
+                                    <th style={{ padding: '0.5rem' }}>Pos</th>
+                                    <th style={{ padding: '0.5rem' }}>Year</th>
+                                    <th style={{ padding: '0.5rem' }}>Ht</th>
+                                    <th style={{ padding: '0.5rem' }}>Wt</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'center' }}>Cpt</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'center' }}>Injured</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'center' }}>Traveling</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedRoster.map(player => (
+                                    <tr key={player.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                            {isEditing === player.id ? (
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    style={{ width: '60px' }}
+                                                    value={player.number}
+                                                    onChange={e => updatePlayer(player.id, 'number', e.target.value)}
+                                                />
+                                            ) : `#${player.number}`}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>
+                                            {isEditing === player.id ? (
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={player.name}
+                                                    onChange={e => updatePlayer(player.id, 'name', e.target.value)}
+                                                />
+                                            ) : (
+                                                <span>
+                                                    {player.name}
+                                                    {player.captain && <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}>©️</span>}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            {isEditing === player.id ? (
+                                                <select
+                                                    className="form-select"
+                                                    value={player.position}
+                                                    onChange={e => updatePlayer(player.id, 'position', e.target.value)}
+                                                >
+                                                    {positions.map(p => <option key={p}>{p}</option>)}
+                                                </select>
+                                            ) : player.position}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            {isEditing === player.id ? (
+                                                <select
+                                                    className="form-select"
+                                                    value={player.year}
+                                                    onChange={e => updatePlayer(player.id, 'year', e.target.value)}
+                                                >
+                                                    {years.map(y => <option key={y}>{y}</option>)}
+                                                </select>
+                                            ) : player.year}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            {isEditing === player.id ? (
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    style={{ width: '60px' }}
+                                                    value={player.height || ''}
+                                                    onChange={e => updatePlayer(player.id, 'height', e.target.value)}
+                                                />
+                                            ) : player.height}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            {isEditing === player.id ? (
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    style={{ width: '60px' }}
+                                                    value={player.weight || ''}
+                                                    onChange={e => updatePlayer(player.id, 'weight', e.target.value)}
+                                                />
+                                            ) : player.weight}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={player.captain || false}
+                                                onChange={e => updatePlayer(player.id, 'captain', e.target.checked)}
+                                                style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }}
+                                            />
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={player.injured || false}
+                                                onChange={e => updatePlayer(player.id, 'injured', e.target.checked)}
+                                                style={{ width: '18px', height: '18px', accentColor: '#ef4444' }}
+                                            />
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={player.traveling !== false}
+                                                onChange={e => updatePlayer(player.id, 'traveling', e.target.checked)}
+                                                style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
+                                            />
+                                        </td>
+                                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                            {isEditing === player.id ? (
+                                                <button className="btn btn-primary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }} onClick={() => setIsEditing(null)}>Done</button>
+                                            ) : (
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                    <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => setIsEditing(player.id)}>Edit</button>
+                                                    <button className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#ef4444' }} onClick={() => deletePlayer(player.id)}>Delete</button>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const StaffManager = ({ staff, onUpdateStaff }) => {
+            const [newMember, setNewMember] = useState({ name: '', role: 'Assistant', phone: '' });
+            const [isEditing, setIsEditing] = useState(null);
+
+            const addMember = () => {
+                if (!newMember.name) return;
+                onUpdateStaff([...staff, { ...newMember, id: Date.now().toString() }]);
+                setNewMember({ name: '', role: 'Assistant', phone: '' });
+            };
+
+            const updateMember = (id, field, value) => {
+                onUpdateStaff(staff.map(s => s.id === id ? { ...s, [field]: value } : s));
+            };
+
+            const deleteMember = (id) => {
+                onUpdateStaff(staff.filter(s => s.id !== id));
+            };
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <h2>Staff Management</h2>
+                        <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print List</button>
+                    </div>
+
+                    <div className="card" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'end' }}>
+                        <div style={{ flex: 2 }}>
+                            <label className="form-label">Name</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={newMember.name}
+                                onChange={e => setNewMember({ ...newMember, name: e.target.value })}
+                                placeholder="Coach Name"
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <label className="form-label">Role</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={newMember.role}
+                                onChange={e => setNewMember({ ...newMember, role: e.target.value })}
+                                placeholder="Position/Role"
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <label className="form-label">Phone</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={newMember.phone}
+                                onChange={e => setNewMember({ ...newMember, phone: e.target.value })}
+                                placeholder="Optional"
+                            />
+                        </div>
+                        <button className="btn btn-primary" onClick={addMember} style={{ height: '42px' }}>
+                            <Icon name="PlusCircle" /> Add
+                        </button>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                    <th style={{ padding: '0.5rem' }}>Name</th>
+                                    <th style={{ padding: '0.5rem' }}>Role</th>
+                                    <th style={{ padding: '0.5rem' }}>Phone</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {staff.map(member => (
+                                    <tr key={member.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>
+                                            {isEditing === member.id ? (
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={member.name}
+                                                    onChange={e => updateMember(member.id, 'name', e.target.value)}
+                                                />
+                                            ) : member.name}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            {isEditing === member.id ? (
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={member.role}
+                                                    onChange={e => updateMember(member.id, 'role', e.target.value)}
+                                                />
+                                            ) : member.role}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            {isEditing === member.id ? (
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={member.phone}
+                                                    onChange={e => updateMember(member.id, 'phone', e.target.value)}
+                                                />
+                                            ) : member.phone}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                            {isEditing === member.id ? (
+                                                <button className="btn btn-primary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }} onClick={() => setIsEditing(null)}>Done</button>
+                                            ) : (
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                    <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }} onClick={() => setIsEditing(member.id)}>Edit</button>
+                                                    <button className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#ef4444' }} onClick={() => deleteMember(member.id)}>Delete</button>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const DepthChart = ({ roster, depthChart, onUpdateDepthChart }) => {
+            // Default Spread Formation Positions
+            const positions = [
+                { id: 'LWR', name: 'X', x: 300, y: 100 },
+                { id: 'LT', name: 'LT', x: 640, y: 100 },
+                { id: 'LG', name: 'LG', x: 820, y: 100 },
+                { id: 'C', name: 'C', x: 1000, y: 100 },
+                { id: 'RG', name: 'RG', x: 1180, y: 100 },
+                { id: 'RT', name: 'RT', x: 1360, y: 100 },
+                { id: 'RWR', name: 'Z', x: 1540, y: 200 }, // Off the line, inside Y
+                { id: 'QB', name: 'QB', x: 1000, y: 300 },
+                { id: 'RB', name: 'RB', x: 1000, y: 500 },
+                { id: 'SWR', name: 'H', x: 470, y: 200 }, // Slot Left
+                { id: 'TE', name: 'Y', x: 1720, y: 100 }   // Tight End / Outside
+            ];
+
+            const getPlayer = (id) => roster.find(p => p.id === id);
+
+            const handleSelectPlayer = (posId, depthIndex, playerId) => {
+                const currentDepth = depthChart[posId] || [null, null, null];
+                const newDepth = [...currentDepth];
+                newDepth[depthIndex] = playerId;
+                onUpdateDepthChart({ ...depthChart, [posId]: newDepth });
+            };
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <h2>Offensive Depth Chart (Spread)</h2>
+                        <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', position: 'relative', minHeight: '600px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--surface)' }}>
+                        {/* Field Background Hint */}
+                        <div style={{
+                            position: 'absolute', top: '50px', left: '0', right: '0', height: '2px', background: 'var(--border)',
+                            display: 'flex', justifyContent: 'space-between', padding: '0 50px', minWidth: '2000px'
+                        }}></div>
+
+                        {positions.map(pos => (
+                            <div key={pos.id} style={{
+                                position: 'absolute',
+                                left: `${pos.x}px`,
+                                top: `${pos.y}px`,
+                                width: '140px',
+                                transform: 'translateX(-50%)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px',
+                                background: 'rgba(0,0,0,0.5)',
+                                padding: '8px',
+                                borderRadius: '8px'
+                            }}>
+                                <div style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '4px' }}>{pos.name}</div>
+                                {[0, 1, 2].map(depth => {
+                                    const playerId = depthChart[pos.id]?.[depth];
+                                    const player = getPlayer(playerId);
+                                    return (
+                                        <select
+                                            key={depth}
+                                            className="form-select"
+                                            style={{ fontSize: '0.75rem', padding: '2px', width: '100%' }}
+                                            value={playerId || ''}
+                                            onChange={e => handleSelectPlayer(pos.id, depth, e.target.value)}
+                                        >
+                                            <option value="">--</option>
+                                            {roster.map(p => (
+                                                <option key={p.id} value={p.id}>
+                                                    #{p.number} {p.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const MaddenRatings = ({ roster, ratings, onUpdateRatings, metrics }) => {
+            const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+
+            // Full Attribute List from Image
+            const ATTRIBUTES = [
+                // Physical
+                { id: 'SPD', name: 'Speed', group: 'Physical' },
+                { id: 'ACC', name: 'Acceleration', group: 'Physical' },
+                { id: 'STR', name: 'Strength', group: 'Physical' },
+                { id: 'AGI', name: 'Agility', group: 'Physical' },
+                { id: 'JMP', name: 'Jumping', group: 'Physical' },
+                { id: 'STA', name: 'Stamina', group: 'Physical' },
+                { id: 'TGH', name: 'Toughness', group: 'Physical' },
+                { id: 'INJ', name: 'Injury', group: 'Physical' },
+                // Mental
+                { id: 'AWR', name: 'Awareness', group: 'Mental' },
+                { id: 'PRC', name: 'Play Recognition', group: 'Mental' },
+                { id: 'BCV', name: 'Ball Carrier Vision', group: 'Mental' },
+                // Passing
+                { id: 'THP', name: 'Throw Power', group: 'Passing' },
+                { id: 'SAC', name: 'Short Accuracy', group: 'Passing' },
+                { id: 'MAC', name: 'Med Accuracy', group: 'Passing' },
+                { id: 'DAC', name: 'Deep Accuracy', group: 'Passing' },
+                { id: 'RUN', name: 'Throw on Run', group: 'Passing' },
+                { id: 'PAC', name: 'Play Action', group: 'Passing' },
+                // Rushing
+                { id: 'CAR', name: 'Carrying', group: 'Rushing' },
+                { id: 'TRK', name: 'Trucking', group: 'Rushing' },
+                { id: 'ELU', name: 'Elusiveness', group: 'Rushing' },
+                { id: 'SFA', name: 'Stiff Arm', group: 'Rushing' },
+                { id: 'SPM', name: 'Spin Move', group: 'Rushing' },
+                { id: 'JKM', name: 'Juke Move', group: 'Rushing' },
+                // Receiving
+                { id: 'CTH', name: 'Catching', group: 'Receiving' },
+                { id: 'SPC', name: 'Spectacular Catch', group: 'Receiving' },
+                { id: 'CIT', name: 'Catch in Traffic', group: 'Receiving' },
+                { id: 'RTE', name: 'Route Running', group: 'Receiving' },
+                { id: 'RLS', name: 'Release', group: 'Receiving' },
+                // Blocking
+                { id: 'RBK', name: 'Run Block', group: 'Blocking' },
+                { id: 'RBS', name: 'Run Block Power', group: 'Blocking' },
+                { id: 'RBF', name: 'Run Block Finesse', group: 'Blocking' },
+                { id: 'PBK', name: 'Pass Block', group: 'Blocking' },
+                { id: 'PBS', name: 'Pass Block Power', group: 'Blocking' },
+                { id: 'PBF', name: 'Pass Block Finesse', group: 'Blocking' },
+                { id: 'IBL', name: 'Impact Blocking', group: 'Blocking' },
+                // Defense
+                { id: 'TAK', name: 'Tackle', group: 'Defense' },
+                { id: 'POW', name: 'Hit Power', group: 'Defense' },
+                { id: 'BSH', name: 'Block Shedding', group: 'Defense' },
+                { id: 'PUR', name: 'Pursuit', group: 'Defense' },
+                { id: 'PMV', name: 'Power Moves', group: 'Defense' },
+                { id: 'FMV', name: 'Finesse Moves', group: 'Defense' },
+                { id: 'MCV', name: 'Man Coverage', group: 'Defense' },
+                { id: 'ZCV', name: 'Zone Coverage', group: 'Defense' },
+                { id: 'PRS', name: 'Press', group: 'Defense' },
+                // Special Teams
+                { id: 'KPW', name: 'Kick Power', group: 'Special' },
+                { id: 'KAC', name: 'Kick Accuracy', group: 'Special' },
+                { id: 'RET', name: 'Return', group: 'Special' }
+            ];
+
+            // Weights from Image
+            const MADDEN_WEIGHTS = {
+                'QB': { subtractor: 54.13, weights: { STR: 0.05, AGI: 0.09, SPD: 0.03, ACC: 0.03, AWR: 0.34, THP: 0.34, SAC: 0.25, MAC: 0.25, DAC: 0.17, RUN: 0.05, PAC: 0.13 } },
+                'HB': { subtractor: 76.45, weights: { STR: 0.05, AGI: 0.16, SPD: 0.23, ACC: 0.16, AWR: 0.23, CTH: 0.05, CAR: 0.23, TRK: 0.16, ELU: 0.16, BCV: 0.23, SFA: 0.05, SPM: 0.09, JKM: 0.09 } },
+                'FB': { subtractor: 100.55, weights: { STR: 0.06, AGI: 0.08, SPD: 0.15, ACC: 0.15, AWR: 0.42, CTH: 0.08, CAR: 0.21, RBK: 0.28, RBS: 0.28, RBF: 0.15, PBK: 0.15, PBF: 0.08 } },
+                'WR': { subtractor: 73.8, weights: { STR: 0.05, AGI: 0.11, SPD: 0.21, ACC: 0.14, AWR: 0.21, CTH: 0.21, CAR: 0.08, JMP: 0.08, TRK: 0.04, ELU: 0.08, BCV: 0.05, SFA: 0.03, SPM: 0.03, JKM: 0.03, SPC: 0.08, CIT: 0.14, RTE: 0.21, RLS: 0.14 } },
+                'TE': { subtractor: 89.75, weights: { STR: 0.14, AGI: 0.10, SPD: 0.14, ACC: 0.10, AWR: 0.26, CTH: 0.18, CAR: 0.06, RBK: 0.12, RBS: 0.14, RBF: 0.14, PBK: 0.06, PBF: 0.06, JMP: 0.06, TRK: 0.06, ELU: 0.06, BCV: 0.06, SFA: 0.03, SPM: 0.03, JKM: 0.03, SPC: 0.10, CIT: 0.18, RTE: 0.18, RLS: 0.06 } },
+                'LT': { subtractor: 72.25, weights: { STR: 0.20, AGI: 0.06, SPD: 0.06, ACC: 0.06, AWR: 0.30, RBK: 0.11, RBS: 0.20, RBF: 0.16, PBK: 0.40, PBF: 0.30 } },
+                'LG': { subtractor: 69.15, weights: { STR: 0.22, AGI: 0.12, SPD: 0.06, ACC: 0.12, AWR: 0.33, RBK: 0.17, RBS: 0.22, RBF: 0.33, PBK: 0.17, PBF: 0.17 } },
+                'C': { subtractor: 66.95, weights: { STR: 0.18, AGI: 0.07, SPD: 0.07, ACC: 0.07, AWR: 0.35, RBK: 0.13, RBS: 0.24, RBF: 0.24, PBK: 0.24, PBF: 0.24 } },
+                'RG': { subtractor: 70.8, weights: { STR: 0.22, AGI: 0.12, SPD: 0.07, ACC: 0.12, AWR: 0.32, RBK: 0.17, RBS: 0.22, RBF: 0.33, PBK: 0.17, PBF: 0.17 } },
+                'RT': { subtractor: 59.4, weights: { STR: 0.17, AGI: 0.06, SPD: 0.06, ACC: 0.06, AWR: 0.32, RBK: 0.11, RBS: 0.27, RBF: 0.22, PBK: 0.27, PBF: 0.22 } },
+                'LE': { subtractor: 82.75, weights: { STR: 0.11, AGI: 0.11, SPD: 0.20, ACC: 0.20, AWR: 0.30, TAK: 0.20, PMV: 0.26, FMV: 0.26, BSH: 0.20, PUR: 0.11, PRC: 0.16 } },
+                'RE': { subtractor: 81.8, weights: { STR: 0.11, AGI: 0.11, SPD: 0.20, ACC: 0.20, AWR: 0.30, TAK: 0.20, PMV: 0.25, FMV: 0.25, BSH: 0.20, PUR: 0.11, PRC: 0.15 } },
+                'DT': { subtractor: 62.9, weights: { STR: 0.31, AGI: 0.06, SPD: 0.11, ACC: 0.11, AWR: 0.31, TAK: 0.16, PMV: 0.21, FMV: 0.21, BSH: 0.21, PUR: 0.06, PRC: 0.11 } },
+                'LOLB': { subtractor: 60.6, weights: { STR: 0.10, AGI: 0.05, SPD: 0.14, ACC: 0.10, AWR: 0.27, CTH: 0.05, TAK: 0.19, PMV: 0.14, FMV: 0.14, BSH: 0.14, PUR: 0.10, PRC: 0.19, MCV: 0.10, ZCV: 0.29 } },
+                'MLB': { subtractor: 68.9, weights: { STR: 0.08, AGI: 0.08, SPD: 0.12, ACC: 0.08, AWR: 0.23, TAK: 0.31, PMV: 0.07, FMV: 0.07, BSH: 0.23, PUR: 0.16, PRC: 0.23, MCV: 0.05, ZCV: 0.07 } },
+                'ROLB': { subtractor: 60.9, weights: { STR: 0.10, AGI: 0.06, SPD: 0.14, ACC: 0.10, AWR: 0.28, CTH: 0.04, TAK: 0.19, PMV: 0.14, FMV: 0.14, BSH: 0.14, PUR: 0.10, PRC: 0.19, MCV: 0.08, ZCV: 0.10 } },
+                'CB': { subtractor: 67.3, weights: { STR: 0.05, AGI: 0.09, SPD: 0.25, ACC: 0.25, AWR: 0.25, CTH: 0.09, TAK: 0.09, PUR: 0.17, PRC: 0.32, MCV: 0.17, ZCV: 0.09, PRS: 0.09 } },
+                'FS': { subtractor: 58.65, weights: { STR: 0.06, AGI: 0.10, SPD: 0.19, ACC: 0.10, AWR: 0.29, CTH: 0.04, TAK: 0.19, PUR: 0.10, PRC: 0.19, MCV: 0.10, ZCV: 0.29, POW: 0.06 } },
+                'SS': { subtractor: 66.05, weights: { STR: 0.12, AGI: 0.07, SPD: 0.17, ACC: 0.07, AWR: 0.33, CTH: 0.07, TAK: 0.22, PUR: 0.17, PRC: 0.22, MCV: 0.12, ZCV: 0.22, POW: 0.12 } },
+                'K': { subtractor: 93.55, weights: { AWR: 0.56, KPW: 0.56, KAC: 0.93 } },
+                'P': { subtractor: 140.75, weights: { AWR: 0.77, KPW: 0.77, KAC: 1.01 } }
+            };
+
+            const getPlayerRating = (playerId) => {
+                return ratings[playerId] || ATTRIBUTES.reduce((acc, attr) => ({ ...acc, [attr.id]: 50 }), {});
+            };
+
+            const calculateOVR = (player, playerRatings) => {
+                if (!player || !playerRatings) return 50;
+                const pos = player.position;
+                const formula = MADDEN_WEIGHTS[pos];
+                if (!formula) return 50; // Fallback or use a default formula
+
+                let weightedSum = 0;
+                for (const [attr, weight] of Object.entries(formula.weights)) {
+                    weightedSum += (playerRatings[attr] || 50) * weight;
+                }
+
+                const ovr = weightedSum - formula.subtractor;
+                return Math.max(0, Math.min(99, Math.round(ovr)));
+            };
+
+            const handleAttributeChange = (attrId, value) => {
+                if (!selectedPlayerId) return;
+                const currentRatings = getPlayerRating(selectedPlayerId);
+                const newRatings = { ...ratings, [selectedPlayerId]: { ...currentRatings, [attrId]: parseInt(value) } };
+                onUpdateRatings(newRatings);
+            };
+
+            const sortedRoster = [...roster].sort((a, b) => {
+                const ovrA = calculateOVR(a, ratings[a.id]);
+                const ovrB = calculateOVR(b, ratings[b.id]);
+                return ovrB - ovrA;
+            });
+
+            const selectedPlayer = roster.find(p => p.id === selectedPlayerId);
+            const currentStats = selectedPlayerId ? getPlayerRating(selectedPlayerId) : null;
+            const currentOVR = selectedPlayer ? calculateOVR(selectedPlayer, currentStats) : 0;
+
+            // Group attributes for display
+            const groupedAttributes = ATTRIBUTES.reduce((acc, attr) => {
+                if (!acc[attr.group]) acc[attr.group] = [];
+                acc[attr.group].push(attr);
+                return acc;
+            }, {});
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', gap: '2rem' }}>
+                    {/* Player List */}
+                    <div className="card" style={{ width: '300px', display: 'flex', flexDirection: 'column', padding: '0' }}>
+                        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
+                            <h3 style={{ margin: 0 }}>Roster Ratings</h3>
+                        </div>
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                            {sortedRoster.map(player => {
+                                const ovr = calculateOVR(player, ratings[player.id]);
+                                let ovrColor = '#ef4444'; // < 70
+                                if (ovr >= 90) ovrColor = '#10b981'; // Elite
+                                else if (ovr >= 80) ovrColor = '#3b82f6'; // Star
+                                else if (ovr >= 70) ovrColor = '#f59e0b'; // Starter
+
+                                return (
+                                    <div
+                                        key={player.id}
+                                        onClick={() => setSelectedPlayerId(player.id)}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            borderBottom: '1px solid var(--border)',
+                                            cursor: 'pointer',
+                                            background: selectedPlayerId === player.id ? 'var(--bg-body)' : 'transparent',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ fontWeight: 'bold' }}>{player.name}</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>#{player.number} • {player.position}</div>
+                                        </div>
+                                        <div style={{
+                                            background: ovrColor,
+                                            color: '#fff',
+                                            fontWeight: 'bold',
+                                            borderRadius: '4px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '1.1rem'
+                                        }}>
+                                            {ovr}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Editor */}
+                    <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        {selectedPlayer ? (
+                            <>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                                    <div>
+                                        <h2 style={{ margin: 0 }}>{selectedPlayer.name}</h2>
+                                        <div style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                            #{selectedPlayer.number} • {selectedPlayer.position}
+                                        </div>
+                                        {metrics && metrics[selectedPlayer.id] && (
+                                            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                <span>40: <strong style={{ color: 'var(--text-primary)' }}>{metrics[selectedPlayer.id].fortyYard || '-'}</strong></span>
+                                                <span>Bench: <strong style={{ color: 'var(--text-primary)' }}>{metrics[selectedPlayer.id].bench || '-'}</strong></span>
+                                                <span>Squat: <strong style={{ color: 'var(--text-primary)' }}>{metrics[selectedPlayer.id].squat || '-'}</strong></span>
+                                                <span>Vert: <strong style={{ color: 'var(--text-primary)' }}>{metrics[selectedPlayer.id].vertical || '-'}</strong></span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>OVERALL</div>
+                                        <div style={{ fontSize: '3rem', fontWeight: '900', lineHeight: 1, color: currentOVR >= 90 ? '#10b981' : currentOVR >= 80 ? '#3b82f6' : currentOVR >= 70 ? '#f59e0b' : '#ef4444' }}>
+                                            {currentOVR}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ overflowY: 'auto', paddingRight: '1rem' }}>
+                                    {Object.entries(groupedAttributes).map(([group, attrs]) => (
+                                        <div key={group} style={{ marginBottom: '2rem' }}>
+                                            <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--accent)' }}>{group}</h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                                                {attrs.map(attr => (
+                                                    <div key={attr.id}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                            <label style={{ fontWeight: 'bold' }}>{attr.id}</label>
+                                                            <span style={{ fontWeight: 'bold' }}>{currentStats[attr.id]}</span>
+                                                        </div>
+                                                        <input
+                                                            type="range"
+                                                            min="0"
+                                                            max="99"
+                                                            value={currentStats[attr.id]}
+                                                            onChange={e => handleAttributeChange(attr.id, e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                accentColor: 'var(--accent)'
+                                                            }}
+                                                        />
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>{attr.name}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column' }}>
+                                <Icon name="User" />
+                                <p style={{ marginTop: '1rem' }}>Select a player to edit ratings</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const PressboxTracker = ({ plays, gameLog, onUpdateGameLog }) => {
+            // Helper to convert User Format (-49 to -1, 50, 49 to 1) to Linear (1-99)
+            // Linear: 1 (Own 1) -> 50 (Mid) -> 99 (Opp 1)
+            const toLinearYard = (userVal) => {
+                if (userVal === 50) return 50;
+                if (userVal < 0) return Math.abs(userVal); // -20 -> 20
+                return 100 - userVal; // 20 -> 80
+            };
+
+            // Helper to convert Linear (1-99) to User Format
+            const toUserYard = (linearVal) => {
+                if (linearVal === 50) return 50;
+                if (linearVal < 50) return -linearVal; // 20 -> -20
+                return 100 - linearVal; // 80 -> 20
+            };
+
+            const formatYardLine = (linearVal) => {
+                const userVal = toUserYard(linearVal);
+                if (userVal === 50) return '50';
+                if (userVal < 0) return `Own ${Math.abs(userVal)}`;
+                return `Opp ${userVal}`;
+            };
+
+            const [situation, setSituation] = useState({
+                down: 1,
+                distance: 10,
+                yardLine: 25, // Linear 25 = Own 25
+                hash: 'M',
+                driveNumber: 1
+            });
+            const [selectedPlayId, setSelectedPlayId] = useState('');
+            const [result, setResult] = useState({
+                yards: 0,
+                type: 'Run',
+                outcome: 'Tackle'
+            });
+            const [isSelectingPlay, setIsSelectingPlay] = useState(false);
+
+            const handleLogPlay = () => {
+                const play = plays.find(p => p.id === selectedPlayId);
+                const newLogEntry = {
+                    id: Date.now().toString(),
+                    situation: { ...situation },
+                    play: play ? { name: play.name, formation: play.formation } : { name: 'Unknown', formation: '' },
+                    result: { ...result }
+                };
+
+                // Calculate next situation
+                let nextYardLine = situation.yardLine + result.yards;
+                let nextDown = situation.down + 1;
+                let nextDistance = situation.distance - result.yards;
+
+                // Handle Touchdown
+                if (result.type === 'Touchdown' || nextYardLine >= 100) {
+                    nextYardLine = 100; // Endzone
+                    // Reset for next drive (Kickoff? or PAT? Let's assume PAT/Kickoff sequence implies new drive starts at Own 25)
+                    // For simplicity, let's just mark it. The user can manually reset or we can prompt.
+                    // Let's auto-reset to Own 25 for next drive for now, or maybe just leave it at 100 to show TD.
+                    // Better: Leave it, user changes drive number and yard line manually for next drive.
+                }
+
+                if (nextDistance <= 0 && nextYardLine < 100) {
+                    nextDown = 1;
+                    nextDistance = 10;
+                }
+
+                if (nextDown > 4) {
+                    nextDown = 1;
+                    nextDistance = 10;
+                    // Turnover logic could go here
+                }
+
+                onUpdateGameLog([newLogEntry, ...gameLog]);
+
+                // Update current situation
+                setSituation({
+                    ...situation,
+                    down: nextDown,
+                    distance: nextDistance,
+                    yardLine: nextYardLine
+                });
+
+                // Reset result inputs
+                setSelectedPlayId('');
+                setResult({ yards: 0, type: 'Run', outcome: 'Tackle' });
+            };
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2>Pressbox / Game Tracker</h2>
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Drive:</span>
+                                <button className="btn" style={{ padding: '0.25rem 0.5rem' }} onClick={() => setSituation({ ...situation, driveNumber: Math.max(1, situation.driveNumber - 1) })}>-</button>
+                                <span style={{ fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{situation.driveNumber}</span>
+                                <button className="btn" style={{ padding: '0.25rem 0.5rem' }} onClick={() => setSituation({ ...situation, driveNumber: situation.driveNumber + 1 })}>+</button>
+                            </div>
+                            <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Log</button>
+                        </div>
+                    </div>
+
+                    {/* Situation Input */}
+                    <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', alignItems: 'end' }}>
+                        <div>
+                            <label className="form-label">Down</label>
+                            <div className="situation-toggle">
+                                {[1, 2, 3, 4].map(d => (
+                                    <button
+                                        key={d}
+                                        className={situation.down === d ? 'active' : ''}
+                                        onClick={() => setSituation({ ...situation, down: d })}
+                                    >
+                                        {d}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="form-label">Distance</label>
+                            <input
+                                type="number"
+                                className="form-input"
+                                value={situation.distance}
+                                onChange={e => setSituation({ ...situation, distance: parseInt(e.target.value) || 0 })}
+                            />
+                        </div>
+                        <div>
+                            <label className="form-label">Ball On (-49 to 49)</label>
+                            <input
+                                type="number"
+                                className="form-input"
+                                value={toUserYard(situation.yardLine)}
+                                onChange={e => setSituation({ ...situation, yardLine: toLinearYard(parseInt(e.target.value) || 0) })}
+                                placeholder="-25 = Own 25"
+                            />
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                {formatYardLine(situation.yardLine)}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="form-label">Hash</label>
+                            <div className="situation-toggle">
+                                {['L', 'M', 'R'].map(h => (
+                                    <button
+                                        key={h}
+                                        className={situation.hash === h ? 'active' : ''}
+                                        onClick={() => setSituation({ ...situation, hash: h })}
+                                    >
+                                        {h}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Play Call & Result */}
+                    <div className="card" style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                            <label className="form-label">Call Play</label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <select
+                                    className="form-select"
+                                    value={selectedPlayId}
+                                    onChange={e => setSelectedPlayId(e.target.value)}
+                                >
+                                    <option value="">-- Select Play --</option>
+                                    {plays.map(p => (
+                                        <option key={p.id} value={p.id}>{p.formation} - {p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ flex: 1, display: 'flex', gap: '1rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Yards Gained</label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    value={result.yards}
+                                    onChange={e => setResult({ ...result, yards: parseInt(e.target.value) || 0 })}
+                                />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Type</label>
+                                <select
+                                    className="form-select"
+                                    value={result.type}
+                                    onChange={e => setResult({ ...result, type: e.target.value })}
+                                >
+                                    <option>Run</option>
+                                    <option>Pass</option>
+                                    <option>Sack</option>
+                                    <option>Special</option>
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Result</label>
+                                <select
+                                    className="form-select"
+                                    value={result.outcome}
+                                    onChange={e => setResult({ ...result, outcome: e.target.value })}
+                                >
+                                    <option>Tackle</option>
+                                    <option>Touchdown</option>
+                                    <option>Fumble</option>
+                                    <option>Interception</option>
+                                    <option>Incomplete</option>
+                                    <option>Out of Bounds</option>
+                                    <option>Fair Catch</option>
+                                    <option>Touchback</option>
+                                    <option>Safety</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ alignSelf: 'flex-end' }}>
+                            <button
+                                className="btn btn-primary"
+                                style={{ height: '42px', padding: '0 2rem' }}
+                                onClick={handleLogPlay}
+                                disabled={!selectedPlayId}
+                            >
+                                Log Play
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Game Log */}
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <h3>Game Log</h3>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                    <th style={{ padding: '0.5rem' }}>Drive</th>
+                                    <th style={{ padding: '0.5rem' }}>Sit</th>
+                                    <th style={{ padding: '0.5rem' }}>Ball</th>
+                                    <th style={{ padding: '0.5rem' }}>Hash</th>
+                                    <th style={{ padding: '0.5rem' }}>Play Call</th>
+                                    <th style={{ padding: '0.5rem' }}>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {gameLog.map(entry => (
+                                    <tr key={entry.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)' }}>#{entry.situation.driveNumber}</td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            <span className="tag">{entry.situation.down} & {entry.situation.distance}</span>
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>{formatYardLine(entry.situation.yardLine)}</td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>{entry.situation.hash}</td>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>
+                                            {entry.play.formation} - {entry.play.name}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            <span style={{ color: entry.result.yards >= 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                                                {entry.result.yards > 0 ? '+' : ''}{entry.result.yards}
+                                            </span>
+                                            <span style={{ marginLeft: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                {entry.result.type}
+                                                {entry.result.outcome !== 'Tackle' && ` - ${entry.result.outcome}`}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const Settings = ({ teamLogo, onUpdateLogo, onImportData, onExportData }) => {
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        onUpdateLogo(reader.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <h2>Settings</h2>
+
+                    <div className="card">
+                        <h3>Team Branding</h3>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Upload your team logo to appear on printed documents.</p>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                            <div style={{
+                                width: '100px',
+                                height: '100px',
+                                border: '2px dashed var(--border)',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                background: 'var(--surface)'
+                            }}>
+                                {teamLogo ? (
+                                    <img src={teamLogo} alt="Team Logo" style={{ maxWidth: '100%', maxHeight: '100%' }} />
+                                ) : (
+                                    <span style={{ fontSize: '2rem' }}>🛡️</span>
+                                )}
+                            </div>
+                            <div>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    style={{ marginBottom: '0.5rem' }}
+                                />
+                                {teamLogo && (
+                                    <button
+                                        className="btn"
+                                        style={{ color: '#ef4444', display: 'block' }}
+                                        onClick={() => onUpdateLogo(null)}
+                                    >
+                                        Remove Logo
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <h3>Data Management</h3>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Backup your data or move it to another device.</p>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button className="btn btn-primary" onClick={onExportData}>
+                                📥 Export Data Backup
+                            </button>
+                            <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                                📤 Import Data
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    style={{ display: 'none' }}
+                                    onChange={onImportData}
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LandingPage = ({ weeks, currentWeekId, setCurrentWeekId, onAddWeek, onUpdateWeek }) => {
+            const currentWeek = weeks.find(w => w.id === currentWeekId) || {};
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2>Season Dashboard</h2>
+                        <button className="btn btn-primary" onClick={onAddWeek}>
+                            <Icon name="PlusCircle" /> Start New Week
+                        </button>
+                    </div>
+
+                    <div className="card" style={{ display: 'flex', gap: '2rem', alignItems: 'center', padding: '2rem' }}>
+                        <div style={{ flex: 1 }}>
+                            <label className="form-label">Current Week</label>
+                            <select
+                                className="form-select"
+                                style={{ fontSize: '1.2rem', padding: '0.75rem' }}
+                                value={currentWeekId}
+                                onChange={e => setCurrentWeekId(e.target.value)}
+                            >
+                                {weeks.map(w => (
+                                    <option key={w.id} value={w.id}>{w.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={{ flex: 2 }}>
+                            <label className="form-label">Opponent</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                style={{ fontSize: '1.2rem', padding: '0.75rem' }}
+                                value={currentWeek.opponent || ''}
+                                onChange={e => onUpdateWeek(currentWeekId, 'opponent', e.target.value)}
+                                placeholder="e.g. State University"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <label className="form-label" style={{ marginBottom: '1rem' }}>Scouting Report / Game Plan Notes</label>
+                        <textarea
+                            className="form-input"
+                            style={{ flex: 1, resize: 'none', fontFamily: 'monospace', lineHeight: '1.5' }}
+                            value={currentWeek.scoutingReport || ''}
+                            onChange={e => onUpdateWeek(currentWeekId, 'scoutingReport', e.target.value)}
+                            placeholder="Enter key scouting notes, tendencies, and game plan thoughts here..."
+                        />
+                    </div>
+                </div>
+            );
+        };
+
+        const PlayerMetrics = ({ roster, metrics, onUpdateMetrics }) => {
+            const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+
+            const METRIC_FIELDS = [
+                { id: 'bench', name: 'Bench Press', unit: 'lbs', type: 'number' },
+                { id: 'squat', name: 'Squat', unit: 'lbs', type: 'number' },
+                { id: 'deadlift', name: 'Deadlift', unit: 'lbs', type: 'number' },
+                { id: 'forty', name: '40 Yard Dash', unit: 'sec', type: 'number', step: '0.01' },
+                { id: 'flying10', name: 'Flying 10', unit: 'sec', type: 'number', step: '0.01' },
+                { id: 'proAgility', name: 'Pro Agility', unit: 'sec', type: 'number', step: '0.01' },
+                { id: 'vertical', name: 'Vertical Jump', unit: 'in', type: 'number', step: '0.5' },
+                { id: 'broad', name: 'Broad Jump', unit: 'in', type: 'number', step: '1' }
+            ];
+
+            const getPlayerMetrics = (id) => metrics[id] || {};
+
+            const handleMetricChange = (metricId, value) => {
+                if (!selectedPlayerId) return;
+                const current = getPlayerMetrics(selectedPlayerId);
+                onUpdateMetrics({
+                    ...metrics,
+                    [selectedPlayerId]: { ...current, [metricId]: value }
+                });
+            };
+
+            const selectedPlayer = roster.find(p => p.id === selectedPlayerId);
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', gap: '2rem' }}>
+                    {/* Player List */}
+                    <div className="card" style={{ width: '300px', display: 'flex', flexDirection: 'column', padding: '0' }}>
+                        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
+                            <h3 style={{ margin: 0 }}>Combine / Testing</h3>
+                        </div>
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                            {roster.map(player => (
+                                <div
+                                    key={player.id}
+                                    onClick={() => setSelectedPlayerId(player.id)}
+                                    style={{
+                                        padding: '0.75rem 1rem',
+                                        borderBottom: '1px solid var(--border)',
+                                        cursor: 'pointer',
+                                        background: selectedPlayerId === player.id ? 'var(--bg-body)' : 'transparent',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <div>
+                                        <div style={{ fontWeight: 'bold' }}>{player.name}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>#{player.number} • {player.position}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Editor */}
+                    <div className="card" style={{ flex: 1 }}>
+                        {selectedPlayer ? (
+                            <>
+                                <h2 style={{ marginBottom: '2rem' }}>{selectedPlayer.name} - Testing Data</h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                                    {METRIC_FIELDS.map(field => (
+                                        <div key={field.id}>
+                                            <label className="form-label">{field.name} ({field.unit})</label>
+                                            <input
+                                                type={field.type}
+                                                step={field.step}
+                                                className="form-input"
+                                                value={getPlayerMetrics(selectedPlayer.id)[field.id] || ''}
+                                                onChange={e => handleMetricChange(field.id, e.target.value)}
+                                                placeholder="--"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column' }}>
+                                <Icon name="Activity" />
+                                <p style={{ marginTop: '1rem' }}>Select a player to enter testing data</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState('landing'); // Default to landing page
+            const [editingPlay, setEditingPlay] = useState(null);
+            const [plays, setPlays] = useState(() => {
+                const saved = localStorage.getItem('oc-dashboard-plays');
+                return saved ? JSON.parse(saved) : INITIAL_PLAYS;
+            });
+
+            // --- Weeks & Season Management ---
+            const [weeks, setWeeks] = useState(() => {
+                const saved = localStorage.getItem('oc-dashboard-weeks');
+                if (saved) return JSON.parse(saved);
+
+                // Migration: Check for legacy data
+                const oldPracticePlans = localStorage.getItem('oc-dashboard-practice-plans');
+                const oldPregamePlan = localStorage.getItem('oc-dashboard-pregame');
+                const oldGameLog = localStorage.getItem('oc-dashboard-gamelog');
+
+                const initialWeek = {
+                    id: 'week-1',
+                    name: 'Week 1',
+                    opponent: '',
+                    scoutingReport: '',
+                    practicePlans: oldPracticePlans ? JSON.parse(oldPracticePlans) : (() => {
+                        const defaults = {};
+                        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].forEach(day => {
+                            defaults[day] = {
+                                id: Date.now().toString() + day,
+                                date: new Date().toISOString().split('T')[0],
+                                startTime: '15:40',
+                                segments: []
+                            };
+                        });
+                        return defaults;
+                    })(),
+                    pregamePlan: (oldPregamePlan && oldPregamePlan !== "null") ? JSON.parse(oldPregamePlan) : {
+                        id: 'pregame',
+                        kickoffTime: '19:00',
+                        segments: [
+                            { id: '1', startTime: '17:00', duration: 15, activity: 'Arrival', location: 'Locker Room', notes: '' }
+                        ]
+                    },
+                    gameLog: (oldGameLog && oldGameLog !== "null") ? JSON.parse(oldGameLog) : []
+                };
+
+                return [initialWeek];
+            });
+
+            const [currentWeekId, setCurrentWeekId] = useState(() => {
+                // Default to last week or week-1
+                const savedWeeks = localStorage.getItem('oc-dashboard-weeks');
+                if (savedWeeks) {
+                    const parsed = JSON.parse(savedWeeks);
+                    return parsed[parsed.length - 1].id;
+                }
+                return 'week-1';
+            });
+
+            // Helper to get current week data
+            const currentWeek = weeks.find(w => w.id === currentWeekId) || weeks[0];
+
+            // Derived state setters for compatibility with existing components
+            const setPracticePlans = (newPlans) => {
+                setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, practicePlans: newPlans } : w));
+            };
+
+            const setPregamePlan = (newPlan) => {
+                setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, pregamePlan: newPlan } : w));
+            };
+
+            const setGameLog = (newLog) => {
+                setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, gameLog: newLog } : w));
+            };
+
+            const handleAddWeek = () => {
+                const newWeekId = `week-${weeks.length + 1}`;
+                const prevWeek = weeks[weeks.length - 1];
+
+                // Carryover Logic
+                const newWeek = {
+                    id: newWeekId,
+                    name: `Week ${weeks.length + 1}`,
+                    opponent: '',
+                    scoutingReport: '',
+                    // Copy practice plans structure but maybe clear specific details? For now, full copy is safest/easiest base.
+                    // Actually, let's keep the structure but maybe reset dates? 
+                    // User asked for "saves practice plans... but allows you to edit". Copying is best.
+                    practicePlans: JSON.parse(JSON.stringify(prevWeek.practicePlans)),
+                    pregamePlan: JSON.parse(JSON.stringify(prevWeek.pregamePlan)),
+                    gameLog: [] // Start fresh for game log
+                };
+
+                setWeeks([...weeks, newWeek]);
+                setCurrentWeekId(newWeekId);
+            };
+
+            const handleUpdateWeek = (id, field, value) => {
+                setWeeks(weeks.map(w => w.id === id ? { ...w, [field]: value } : w));
+            };
+
+            // Persistence for Weeks
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-weeks', JSON.stringify(weeks));
+            }, [weeks]);
+
+            // --- End Weeks Management ---
+
+            const [roster, setRoster] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('oc-dashboard-roster');
+                    return (saved && saved !== "null") ? JSON.parse(saved) : [];
+                } catch (e) { return []; }
+            });
+            const [depthChart, setDepthChart] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('oc-dashboard-depthchart');
+                    return (saved && saved !== "null") ? JSON.parse(saved) : {};
+                } catch (e) { return {}; }
+            });
+            const [staff, setStaff] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('oc-dashboard-staff');
+                    return (saved && saved !== "null") ? JSON.parse(saved) : [];
+                } catch (e) { return []; }
+            });
+            const [teamLogo, setTeamLogo] = useState(() => {
+                return localStorage.getItem('oc-dashboard-logo') || null;
+            });
+            const [ratings, setRatings] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('oc-dashboard-ratings');
+                    return (saved && saved !== "null") ? JSON.parse(saved) : {};
+                } catch (e) { return {}; }
+            });
+            const [metrics, setMetrics] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('oc-dashboard-metrics');
+                    return (saved && saved !== "null") ? JSON.parse(saved) : {};
+                } catch (e) { return {}; }
+            });
+
+            // Save plays to localStorage whenever they change
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
+            }, [plays]);
+
+            // Save roster to localStorage whenever it changes
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-roster', JSON.stringify(roster));
+            }, [roster]);
+
+            // Save depth chart to localStorage whenever it changes
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-depthchart', JSON.stringify(depthChart));
+            }, [depthChart]);
+
+            // Save staff to localStorage whenever it changes
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-staff', JSON.stringify(staff));
+            }, [staff]);
+
+            // Save team logo to localStorage whenever it changes
+            useEffect(() => {
+                if (teamLogo) {
+                    localStorage.setItem('oc-dashboard-logo', teamLogo);
+                } else {
+                    localStorage.removeItem('oc-dashboard-logo');
+                }
+            }, [teamLogo]);
+
+            // Save ratings to localStorage whenever they change
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-ratings', JSON.stringify(ratings));
+            }, [ratings]);
+
+            // Save metrics to localStorage whenever they change
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-metrics', JSON.stringify(metrics));
+            }, [metrics]);
+
+            const toggleTag = (tag) => {
+                // ... (logic handled in PlayInput)
+            };
+
+            const handleSavePlay = (playData) => {
+                if (editingPlay) {
+                    setPlays(plays.map(p => p.id === playData.id ? playData : p));
+                    setEditingPlay(null);
+                } else {
+                    setPlays([playData, ...plays]);
+                }
+                setView('playbook');
+            };
+
+            const handleEditPlay = (play) => {
+                setEditingPlay(play);
+                setView('new-play');
+            };
+
+            const handleUpdatePlay = (updatedPlay) => {
+                setPlays(plays.map(p => p.id === updatedPlay.id ? updatedPlay : p));
+            };
+
+            const handleDeletePlay = (playId) => {
+                setPlays(plays.filter(p => p.id !== playId));
+                setEditingPlay(null);
+                setView('playbook');
+            };
+
+            const handleExportData = () => {
+                const data = {
+                    plays,
+                    practicePlans,
+                    pregamePlan,
+                    roster,
+                    depthChart,
+                    gameLog,
+                    teamLogo,
+                    ratings,
+                    metrics,
+                    exportDate: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `oc-dashboard-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleImportData = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (data.plays) setPlays(data.plays);
+                        if (data.practicePlans) setPracticePlans(data.practicePlans);
+                        if (data.pregamePlan) setPregamePlan(data.pregamePlan);
+                        if (data.roster) setRoster(data.roster);
+                        if (data.depthChart) setDepthChart(data.depthChart);
+                        if (data.gameLog) setGameLog(data.gameLog);
+                        if (data.teamLogo) setTeamLogo(data.teamLogo);
+                        if (data.ratings) setRatings(data.ratings);
+                        if (data.metrics) setMetrics(data.metrics);
+                        alert('Data imported successfully!');
+                    } catch (error) {
+                        alert('Error importing data: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            // Filter Logic for Playbook View
+            const [playbookFilters, setPlaybookFilters] = useState({
+                formation: '',
+                concept: '',
+                tag: '',
+                situation: ''
+            });
+
+            const getFilteredPlaybook = () => {
+                return plays.filter(play => {
+                    const matchFormation = !playbookFilters.formation || play.formation === playbookFilters.formation;
+                    const matchConcept = !playbookFilters.concept || (play.concept && play.concept === playbookFilters.concept);
+                    const matchTag = !playbookFilters.tag || play.tags.includes(playbookFilters.tag) || play.tag1 === playbookFilters.tag || play.tag2 === playbookFilters.tag;
+
+                    // Situation filter checks against specific categories
+                    const matchSituation = !playbookFilters.situation || play.tags.includes(playbookFilters.situation) ||
+                        (TAG_CATEGORIES["Situation"] && TAG_CATEGORIES["Situation"].includes(playbookFilters.situation) && play.tags.includes(playbookFilters.situation)) ||
+                        (TAG_CATEGORIES["Field Position"] && TAG_CATEGORIES["Field Position"].includes(playbookFilters.situation) && play.tags.includes(playbookFilters.situation)) ||
+                        (TAG_CATEGORIES["Down & Distance"] && TAG_CATEGORIES["Down & Distance"].includes(playbookFilters.situation) && play.tags.includes(playbookFilters.situation));
+
+                    return matchFormation && matchConcept && matchTag && matchSituation;
+                });
+            };
+
+            const filteredPlaybook = getFilteredPlaybook();
+
+            // Unique values for dropdowns
+            const uniqueFormations = [...new Set(plays.map(p => p.formation).filter(Boolean))].sort();
+            const uniqueConcepts = [...new Set(plays.map(p => p.concept).filter(Boolean))].sort();
+            const allTags = [...new Set(plays.flatMap(p => [...p.tags, p.tag1, p.tag2]).filter(Boolean))].sort();
+
+            // Situation tags (Field Position, D&D, Situation)
+            const situationTags = [
+                ...(TAG_CATEGORIES["Field Position"] || []),
+                ...(TAG_CATEGORIES["Down & Distance"] || []),
+                ...(TAG_CATEGORIES["Situation"] || [])
+            ].sort();
+
+            return (
+                <div className="app-container">
+                    <div className="sidebar">
+                        <h1 style={{ fontSize: '1.25rem', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
+                            <span style={{ color: 'var(--accent)' }}>OC</span> Dashboard
+                        </h1>
+                        <nav>
+                            <div className={`nav-item ${view === 'landing' ? 'active' : ''}`} onClick={() => setView('landing')}>
+                                <Icon name="Home" /> Season
+                            </div>
+
+                            <div style={{ height: '1rem' }}></div>
+
+                            <div style={{ padding: '0.5rem 0.5rem 0.25rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Personnel
+                            </div>
+                            <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')}>
+                                <Icon name="Users" /> Roster
+                            </button>
+                            <button className={`nav-item ${view === 'depthchart' ? 'active' : ''}`} onClick={() => setView('depthchart')}>
+                                <Icon name="Grid" /> Depth Chart
+                            </button>
+                            <button className={`nav-item ${view === 'staff' ? 'active' : ''}`} onClick={() => setView('staff')}>
+                                <Icon name="User" /> Staff
+                            </button>
+                            <button className={`nav-item ${view === 'metrics' ? 'active' : ''}`} onClick={() => setView('metrics')}>
+                                <Icon name="Activity" /> Combine / Testing
+                            </button>
+                            <button className={`nav-item ${view === 'madden' ? 'active' : ''}`} onClick={() => setView('madden')}>
+                                <Icon name="Monitor" /> Madden Ratings
+                            </button>
+
+                            <div style={{ height: '1rem' }}></div>
+
+                            <div className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')}>
+                                <Icon name="List" /> Playbook
+                            </div>
+                            <div className={`nav-item ${view === 'wristband' ? 'active' : ''}`} onClick={() => setView('wristband')}>
+                                <Icon name="Grid" /> Wristband
+                            </div>
+                            <div className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')}>
+                                <Icon name="List" /> Practice
+                            </div>
+                            <div className={`nav-item ${view === 'pregame' ? 'active' : ''}`} onClick={() => setView('pregame')}>
+                                <Icon name="Clock" /> Pre-game
+                            </div>
+
+                            <div style={{ height: '1rem' }}></div>
+
+                            <div className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}>
+                                <Icon name="LayoutDashboard" /> OC Call Sheet
+                            </div>
+                            <div className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')}>
+                                <Icon name="Monitor" /> Pressbox
+                            </div>
+
+                            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                <div className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>
+                                    <Icon name="Settings" /> Settings
+                                </div>
+                            </div>
+                        </nav>
+                    </div>
+
+                    <main className="main-content">
+                        {view === 'landing' && (
+                            <LandingPage
+                                weeks={weeks}
+                                currentWeekId={currentWeekId}
+                                setCurrentWeekId={setCurrentWeekId}
+                                onAddWeek={handleAddWeek}
+                                onUpdateWeek={handleUpdateWeek}
+                            />
+                        )}
+                        {view === 'dashboard' && <GamedayDashboard plays={plays} />}
+
+                        {view === 'new-play' && (
+                            <PlayInput
+                                onSave={handleSavePlay}
+                                onCancel={() => { setEditingPlay(null); setView('playbook'); }}
+                                onDelete={handleDeletePlay}
+                                initialData={editingPlay}
+                            />
+                        )}
+
+                        {view === 'playbook' && (
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <h2>Playbook ({filteredPlaybook.length} / {plays.length})</h2>
+                                    <button className="btn btn-primary" onClick={() => { setEditingPlay(null); setView('new-play'); }}>
+                                        <Icon name="PlusCircle" /> New Play
+                                    </button>
+                                </div>
+
+                                {/* Filter Bar */}
+                                <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h4 style={{ margin: 0, color: 'var(--text-secondary)' }}>Filters</h4>
+                                        <button
+                                            className="btn"
+                                            style={{ fontSize: '0.9rem', color: 'var(--accent)' }}
+                                            onClick={() => setPlaybookFilters({ formation: '', concept: '', tag: '', situation: '' })}
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                                        {/* Formation Filter */}
+                                        <div>
+                                            <label className="form-label">Formation</label>
+                                            <select
+                                                className="form-select"
+                                                value={playbookFilters.formation}
+                                                onChange={e => setPlaybookFilters({ ...playbookFilters, formation: e.target.value })}
+                                            >
+                                                <option value="">All Formations</option>
+                                                {uniqueFormations.map(f => (
+                                                    <option key={f} value={f}>{f}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Concept Filter */}
+                                        <div>
+                                            <label className="form-label">Concept</label>
+                                            <select
+                                                className="form-select"
+                                                value={playbookFilters.concept}
+                                                onChange={e => setPlaybookFilters({ ...playbookFilters, concept: e.target.value })}
+                                            >
+                                                <option value="">All Concepts</option>
+                                                {uniqueConcepts.map(c => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Situation Filter */}
+                                        <div>
+                                            <label className="form-label">Situation</label>
+                                            <select
+                                                className="form-select"
+                                                value={playbookFilters.situation}
+                                                onChange={e => setPlaybookFilters({ ...playbookFilters, situation: e.target.value })}
+                                            >
+                                                <option value="">All Situations</option>
+                                                {situationTags.map(s => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* General Tag Filter */}
+                                        <div>
+                                            <label className="form-label">Any Tag</label>
+                                            <select
+                                                className="form-select"
+                                                value={playbookFilters.tag}
+                                                onChange={e => setPlaybookFilters({ ...playbookFilters, tag: e.target.value })}
+                                            >
+                                                <option value="">All Tags</option>
+                                                {allTags.map(t => (
+                                                    <option key={t} value={t}>{t}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                                    {filteredPlaybook.map(play => (
+                                        <PlayCard key={play.id} play={play} onEdit={handleEditPlay} />
+                                    ))}
+                                    {filteredPlaybook.length === 0 && (
+                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                            No plays match your filters.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} />}
+                        {view === 'practice' && <PracticeScriptBuilder plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} />}
+                        {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} />}
+                        {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} />}
+                        {view === 'depthchart' && <DepthChart roster={roster} depthChart={depthChart} onUpdateDepthChart={setDepthChart} teamLogo={teamLogo} />}
+                        {view === 'staff' && <StaffManager staff={staff} onUpdateStaff={setStaff} />}
+                        {view === 'metrics' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} />}
+                        {view === 'madden' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
+                        {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={setGameLog} />}
+                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} onImportData={handleImportData} onExportData={handleExportData} />}
+                    </main>
+                </div>
+            );
+        };
+
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null, errorInfo: null };
+            }
+
+            static getDerivedStateFromError(error) {
+                return { hasError: true };
+            }
+
+            componentDidCatch(error, errorInfo) {
+                this.setState({ error, errorInfo });
+                console.error("Uncaught error:", error, errorInfo);
+            }
+
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div style={{ padding: '2rem', color: '#ef4444', background: '#1e293b', height: '100vh' }}>
+                            <h1>Something went wrong.</h1>
+                            <details style={{ whiteSpace: 'pre-wrap' }}>
+                                {this.state.error && this.state.error.toString()}
+                                <br />
+                                {this.state.errorInfo && this.state.errorInfo.componentStack}
+                            </details>
+                        </div>
+                    );
+                }
+
+                return this.props.children;
+            }
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
+        );
+    </script>
+</body>
+
+</html>
