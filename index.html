@@ -742,10 +742,23 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ plays, plans, onUpdatePlans }) => {
+        const PracticeScriptBuilder = ({ plays, plans, onUpdatePlans, staff }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
+            const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
+            const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
+
+            // Helper function to migrate old notes format to new format
+            const migrateSegmentNotes = (segment) => {
+                if (typeof segment.notes === 'string') {
+                    return {
+                        ...segment,
+                        notes: segment.notes ? { 'ALL_COACHES': segment.notes } : {}
+                    };
+                }
+                return segment;
+            };
 
             const plan = plans[selectedDay] || {
                 id: Date.now().toString(),
@@ -792,8 +805,9 @@
                             id: Date.now().toString(),
                             duration: 5,
                             type: 'NEW SEGMENT',
-                            notes: '',
-                            script: []
+                            notes: {},  // Changed from '' to {}
+                            script: [],
+                            staffId: ''
                         }
                     ]
                 });
@@ -804,6 +818,21 @@
                     ...plan,
                     segments: plan.segments.map(s => s.id === id ? { ...s, [field]: value } : s)
                 });
+            };
+
+            // Special handler for notes to support coach-specific notes
+            const updateSegmentNotes = (segmentId, coachId, noteText) => {
+                const segment = plan.segments.find(s => s.id === segmentId);
+                const migratedSegment = migrateSegmentNotes(segment);
+                const updatedNotes = {
+                    ...migratedSegment.notes,
+                    [coachId]: noteText
+                };
+                // If note is empty, remove the key
+                if (!noteText || noteText.trim() === '') {
+                    delete updatedNotes[coachId];
+                }
+                updateSegment(segmentId, 'notes', updatedNotes);
             };
 
             const removeSegment = (id) => {
@@ -849,67 +878,125 @@
                                 </div>
                             </div>
 
+                            {/* Coach Filter */}
+                            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontWeight: 'bold' }}>Filter by Coach:</label>
+                                    <select
+                                        className="form-select"
+                                        style={{ width: 'auto' }}
+                                        value={selectedCoachFilter}
+                                        onChange={e => setSelectedCoachFilter(e.target.value)}
+                                    >
+                                        <option value="ALL">ALL</option>
+                                        {staff && staff.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontWeight: 'bold' }}>Notes for:</label>
+                                    <select
+                                        className="form-select"
+                                        style={{ width: 'auto' }}
+                                        value={selectedNotesCoach}
+                                        onChange={e => setSelectedNotesCoach(e.target.value)}
+                                    >
+                                        <option value="ALL_COACHES">All Coaches</option>
+                                        {staff && staff.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                                        <th style={{ padding: '0.5rem' }}>#</th>
                                         <th style={{ padding: '0.5rem' }}>Time</th>
                                         <th style={{ padding: '0.5rem' }}>Dur</th>
                                         <th style={{ padding: '0.5rem' }}>Type</th>
                                         <th style={{ padding: '0.5rem' }}>Notes</th>
+                                        <th style={{ padding: '0.5rem' }}>Staff</th>
                                         <th style={{ padding: '0.5rem' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {plan.segments.map(seg => (
-                                        <tr
-                                            key={seg.id}
-                                            style={{
-                                                borderBottom: '1px solid var(--border)',
-                                                backgroundColor: selectedSegmentId === seg.id ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
-                                                cursor: 'pointer'
-                                            }}
-                                            onClick={() => setSelectedSegmentId(seg.id)}
-                                        >
-                                            <td style={{ padding: '0.5rem' }}>{seg.startTime}</td>
-                                            <td style={{ padding: '0.5rem' }}>
-                                                <input
-                                                    type="number"
-                                                    className="form-input"
-                                                    style={{ width: '60px', padding: '0.25rem' }}
-                                                    value={seg.duration}
-                                                    onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value))}
-                                                    onClick={e => e.stopPropagation()}
-                                                />
-                                            </td>
-                                            <td style={{ padding: '0.5rem' }}>
-                                                <input
-                                                    className="form-input"
-                                                    style={{ padding: '0.25rem' }}
-                                                    value={seg.type}
-                                                    onChange={e => updateSegment(seg.id, 'type', e.target.value)}
-                                                    onClick={e => e.stopPropagation()}
-                                                />
-                                            </td>
-                                            <td style={{ padding: '0.5rem' }}>
-                                                <input
-                                                    className="form-input"
-                                                    style={{ padding: '0.25rem' }}
-                                                    value={seg.notes}
-                                                    onChange={e => updateSegment(seg.id, 'notes', e.target.value)}
-                                                    onClick={e => e.stopPropagation()}
-                                                />
-                                            </td>
-                                            <td style={{ padding: '0.5rem' }}>
-                                                <button
-                                                    className="btn"
-                                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#ef4444' }}
-                                                    onClick={(e) => { e.stopPropagation(); removeSegment(seg.id); }}
-                                                >
-                                                    ×
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {plan.segments
+                                        .filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter)
+                                        .map((seg, index) => (
+                                            <tr
+                                                key={seg.id}
+                                                style={{
+                                                    borderBottom: '1px solid var(--border)',
+                                                    backgroundColor: selectedSegmentId === seg.id ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+                                                    cursor: 'pointer'
+                                                }}
+                                                onClick={() => setSelectedSegmentId(seg.id)}
+                                            >
+                                                <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                                    {seg.type.toLowerCase().includes('warmup') ? 'W' : index + 1}
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>{seg.startTime}</td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <input
+                                                        type="number"
+                                                        className="form-input"
+                                                        style={{ width: '60px', padding: '0.25rem' }}
+                                                        value={seg.duration}
+                                                        onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value))}
+                                                        onClick={e => e.stopPropagation()}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <input
+                                                        className="form-input"
+                                                        style={{ padding: '0.25rem' }}
+                                                        value={seg.type}
+                                                        onChange={e => updateSegment(seg.id, 'type', e.target.value)}
+                                                        onClick={e => e.stopPropagation()}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <input
+                                                        className="form-input"
+                                                        style={{ padding: '0.25rem' }}
+                                                        value={(() => {
+                                                            const migrated = migrateSegmentNotes(seg);
+                                                            return migrated.notes[selectedNotesCoach] || '';
+                                                        })()}
+                                                        onChange={e => updateSegmentNotes(seg.id, selectedNotesCoach, e.target.value)}
+                                                        onClick={e => e.stopPropagation()}
+                                                        placeholder={selectedNotesCoach === 'ALL_COACHES' ? 'Notes for all coaches...' : `Notes for ${staff?.find(s => s.id === selectedNotesCoach)?.name || 'this coach'}...`}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <select
+                                                        className="form-select"
+                                                        style={{ padding: '0.25rem' }}
+                                                        value={seg.staffId || ''}
+                                                        onChange={e => updateSegment(seg.id, 'staffId', e.target.value)}
+                                                        onClick={e => e.stopPropagation()}
+                                                    >
+                                                        <option value="">-- Assign --</option>
+                                                        {staff && staff.map(s => (
+                                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <button
+                                                        className="btn"
+                                                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#ef4444' }}
+                                                        onClick={(e) => { e.stopPropagation(); removeSegment(seg.id); }}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
                                 </tbody>
                             </table>
                         </div>
@@ -1067,17 +1154,32 @@
                                     <th>Dur</th>
                                     <th>Type</th>
                                     <th>Notes</th>
+                                    <th>Staff</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {plan.segments.map(seg => (
-                                    <tr key={seg.id}>
-                                        <td>{seg.startTime}</td>
-                                        <td>{seg.duration}</td>
-                                        <td>{seg.type}</td>
-                                        <td>{seg.notes}</td>
-                                    </tr>
-                                ))}
+                                {plan.segments
+                                    .filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter)
+                                    .map(seg => (
+                                        <tr key={seg.id}>
+                                            <td>{seg.startTime}</td>
+                                            <td>{seg.duration}</td>
+                                            <td>{seg.type}</td>
+                                            <td>{(() => {
+                                                const migrated = migrateSegmentNotes(seg);
+                                                const notes = migrated.notes;
+                                                const allCoachesNotes = notes['ALL_COACHES'] || '';
+                                                const coachNotes = selectedCoachFilter !== 'ALL' ? (notes[selectedCoachFilter] || '') : '';
+
+                                                // Combine notes: All Coaches first, then coach-specific
+                                                const combined = [];
+                                                if (allCoachesNotes) combined.push(`[All] ${allCoachesNotes}`);
+                                                if (coachNotes) combined.push(coachNotes);
+                                                return combined.join(' | ');
+                                            })()}</td>
+                                            <td>{staff && staff.find(s => s.id === seg.staffId)?.name || ''}</td>
+                                        </tr>
+                                    ))}
                             </tbody>
                         </table>
 
@@ -1211,6 +1313,19 @@
 
         const PregameTimeline = ({ plan, onUpdatePlan, teamLogo, staff }) => {
             const [kickoffTime, setKickoffTime] = useState(plan.kickoffTime);
+            const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
+            const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
+
+            // Helper function to migrate old notes format to new format
+            const migrateSegmentNotes = (segment) => {
+                if (typeof segment.notes === 'string') {
+                    return {
+                        ...segment,
+                        notes: segment.notes ? { 'ALL_COACHES': segment.notes } : {}
+                    };
+                }
+                return segment;
+            };
 
             const updateKickoff = (time) => {
                 setKickoffTime(time);
@@ -1224,7 +1339,7 @@
                     duration: 15,
                     activity: 'New Activity',
                     location: 'Field',
-                    notes: '',
+                    notes: {},  // Changed from '' to {}
                     staffId: ''
                 };
                 onUpdatePlan({ ...plan, segments: [...plan.segments, newSegment] });
@@ -1237,9 +1352,64 @@
                 });
             };
 
+            // Special handler for notes to support coach-specific notes
+            const updateSegmentNotes = (segmentId, coachId, noteText) => {
+                const segment = plan.segments.find(s => s.id === segmentId);
+                const migratedSegment = migrateSegmentNotes(segment);
+                const updatedNotes = {
+                    ...migratedSegment.notes,
+                    [coachId]: noteText
+                };
+                // If note is empty, remove the key
+                if (!noteText || noteText.trim() === '') {
+                    delete updatedNotes[coachId];
+                }
+                updateSegment(segmentId, 'notes', updatedNotes);
+            };
+
             const deleteSegment = (id) => {
                 onUpdatePlan({ ...plan, segments: plan.segments.filter(s => s.id !== id) });
             };
+
+            // Auto-calculate segment times based on duration
+            useEffect(() => {
+                if (!plan || !plan.segments || plan.segments.length === 0) return;
+
+                // Sort segments by their current start time to maintain order
+                const sortedSegments = [...plan.segments].sort((a, b) =>
+                    a.startTime.localeCompare(b.startTime)
+                );
+
+                // Calculate times starting from the first segment
+                let hasChanges = false;
+                const updatedSegments = plan.segments.map(seg => {
+                    // Find this segment's position in the sorted array
+                    const sortedIndex = sortedSegments.findIndex(s => s.id === seg.id);
+
+                    if (sortedIndex === 0) {
+                        // Keep the first segment's time as-is
+                        return seg;
+                    }
+
+                    // Calculate this segment's start time based on previous segment in sorted order
+                    const prevSeg = sortedSegments[sortedIndex - 1];
+                    const prevStartTime = new Date(`2000-01-01T${prevSeg.startTime}`);
+                    prevStartTime.setMinutes(prevStartTime.getMinutes() + parseInt(prevSeg.duration || 0));
+
+                    const calculatedTime = prevStartTime.toTimeString().slice(0, 5); // HH:MM format
+
+                    if (seg.startTime !== calculatedTime) {
+                        hasChanges = true;
+                        return { ...seg, startTime: calculatedTime };
+                    }
+                    return seg;
+                });
+
+                // Only update if there are actual changes to avoid infinite loop
+                if (hasChanges) {
+                    onUpdatePlan({ ...plan, segments: updatedSegments });
+                }
+            }, [JSON.stringify(plan?.segments?.map(s => ({ id: s.id, duration: s.duration, startTime: s.startTime })))]);
 
             const calculateTMinus = (startTime) => {
                 const start = new Date(`2000-01-01T${startTime}`);
@@ -1263,7 +1433,41 @@
                                     onChange={e => updateKickoff(e.target.value)}
                                 />
                             </div>
+                            <button className="btn btn-primary" onClick={addSegment}>+ Add Segment</button>
                             <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
+                        </div>
+                    </div>
+
+                    {/* Coach Filter */}
+                    <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label style={{ fontWeight: 'bold' }}>Filter by Coach:</label>
+                            <select
+                                className="form-select"
+                                style={{ width: 'auto' }}
+                                value={selectedCoachFilter}
+                                onChange={e => setSelectedCoachFilter(e.target.value)}
+                            >
+                                <option value="ALL">ALL</option>
+                                {staff && staff.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label style={{ fontWeight: 'bold' }}>Notes for:</label>
+                            <select
+                                className="form-select"
+                                style={{ width: 'auto' }}
+                                value={selectedNotesCoach}
+                                onChange={e => setSelectedNotesCoach(e.target.value)}
+                            >
+                                <option value="ALL_COACHES">All Coaches</option>
+                                {staff && staff.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
@@ -1272,6 +1476,7 @@
                             <thead>
                                 <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                                     <th style={{ padding: '0.5rem' }}>Time</th>
+                                    <th style={{ padding: '0.5rem' }}>Dur</th>
                                     <th style={{ padding: '0.5rem' }}>T-Minus</th>
                                     <th style={{ padding: '0.5rem' }}>Activity</th>
                                     <th style={{ padding: '0.5rem' }}>Location</th>
@@ -1281,62 +1486,78 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {plan.segments.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(segment => (
-                                    <tr key={segment.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            <input
-                                                type="time"
-                                                className="form-input"
-                                                value={segment.startTime}
-                                                onChange={e => updateSegment(segment.id, 'startTime', e.target.value)}
-                                            />
-                                        </td>
-                                        <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
-                                            {calculateTMinus(segment.startTime)}
-                                        </td>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={segment.activity}
-                                                onChange={e => updateSegment(segment.id, 'activity', e.target.value)}
-                                            />
-                                        </td>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={segment.location}
-                                                onChange={e => updateSegment(segment.id, 'location', e.target.value)}
-                                            />
-                                        </td>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            <select
-                                                className="form-select"
-                                                value={segment.staffId || ''}
-                                                onChange={e => updateSegment(segment.id, 'staffId', e.target.value)}
-                                            >
-                                                <option value="">-- Assign --</option>
-                                                {staff && staff.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={segment.notes}
-                                                onChange={e => updateSegment(segment.id, 'notes', e.target.value)}
-                                            />
-                                        </td>
-                                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>
-                                            <button className="btn" style={{ color: '#ef4444' }} onClick={() => deleteSegment(segment.id)}>
-                                                <Icon name="PlusCircle" style={{ transform: 'rotate(45deg)' }} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {plan.segments
+                                    .filter(segment => selectedCoachFilter === 'ALL' || segment.staffId === selectedCoachFilter)
+                                    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                    .map(segment => (
+                                        <tr key={segment.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <input
+                                                    type="time"
+                                                    className="form-input"
+                                                    value={segment.startTime}
+                                                    onChange={e => updateSegment(segment.id, 'startTime', e.target.value)}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    style={{ width: '60px', padding: '0.25rem' }}
+                                                    value={segment.duration || 15}
+                                                    onChange={e => updateSegment(segment.id, 'duration', parseInt(e.target.value))}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                                {calculateTMinus(segment.startTime)}
+                                            </td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={segment.activity}
+                                                    onChange={e => updateSegment(segment.id, 'activity', e.target.value)}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={segment.location}
+                                                    onChange={e => updateSegment(segment.id, 'location', e.target.value)}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <select
+                                                    className="form-select"
+                                                    value={segment.staffId || ''}
+                                                    onChange={e => updateSegment(segment.id, 'staffId', e.target.value)}
+                                                >
+                                                    <option value="">-- Assign --</option>
+                                                    {staff && staff.map(s => (
+                                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={(() => {
+                                                        const migrated = migrateSegmentNotes(segment);
+                                                        return migrated.notes[selectedNotesCoach] || '';
+                                                    })()}
+                                                    onChange={e => updateSegmentNotes(segment.id, selectedNotesCoach, e.target.value)}
+                                                    placeholder={selectedNotesCoach === 'ALL_COACHES' ? 'Notes for all coaches...' : `Notes for ${staff?.find(s => s.id === selectedNotesCoach)?.name || 'this coach'}...`}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                                                <button className="btn" style={{ color: '#ef4444' }} onClick={() => deleteSegment(segment.id)}>
+                                                    <Icon name="PlusCircle" style={{ transform: 'rotate(45deg)' }} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
                             </tbody>
                         </table>
                         {/* Hidden Print Container */}
@@ -1352,6 +1573,7 @@
                                 <thead>
                                     <tr>
                                         <th>Real Time</th>
+                                        <th>Dur</th>
                                         <th>Clock</th>
                                         <th>Activity</th>
                                         <th>Location</th>
@@ -1360,16 +1582,31 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {plan.segments.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(seg => (
-                                        <tr key={seg.id}>
-                                            <td>{seg.startTime}</td>
-                                            <td style={{ fontWeight: 'bold' }}>{calculateTMinus(seg.startTime)}</td>
-                                            <td>{seg.activity}</td>
-                                            <td>{seg.location}</td>
-                                            <td>{staff && staff.find(s => s.id === seg.staffId)?.name || ''}</td>
-                                            <td>{seg.notes}</td>
-                                        </tr>
-                                    ))}
+                                    {plan.segments
+                                        .filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter)
+                                        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                        .map(seg => (
+                                            <tr key={seg.id}>
+                                                <td>{seg.startTime}</td>
+                                                <td>{seg.duration || 15}</td>
+                                                <td style={{ fontWeight: 'bold' }}>{calculateTMinus(seg.startTime)}</td>
+                                                <td>{seg.activity}</td>
+                                                <td>{seg.location}</td>
+                                                <td>{staff && staff.find(s => s.id === seg.staffId)?.name || ''}</td>
+                                                <td>{(() => {
+                                                    const migrated = migrateSegmentNotes(seg);
+                                                    const notes = migrated.notes;
+                                                    const allCoachesNotes = notes['ALL_COACHES'] || '';
+                                                    const coachNotes = selectedCoachFilter !== 'ALL' ? (notes[selectedCoachFilter] || '') : '';
+
+                                                    // Combine notes: All Coaches first, then coach-specific
+                                                    const combined = [];
+                                                    if (allCoachesNotes) combined.push(`[All] ${allCoachesNotes}`);
+                                                    if (coachNotes) combined.push(coachNotes);
+                                                    return combined.join(' | ');
+                                                })()}</td>
+                                            </tr>
+                                        ))}
                                 </tbody>
                             </table>
                         </div>
@@ -3047,7 +3284,7 @@
                         )}
 
                         {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} />}
-                        {view === 'practice' && <PracticeScriptBuilder plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} />}
+                        {view === 'practice' && <PracticeScriptBuilder plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} />}
                         {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} />}
                         {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} />}
                         {view === 'depthchart' && <DepthChart roster={roster} depthChart={depthChart} onUpdateDepthChart={setDepthChart} teamLogo={teamLogo} />}
