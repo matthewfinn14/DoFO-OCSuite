@@ -101,7 +101,13 @@
                 Users: '👥',
                 User: '👤',
                 Monitor: '💻',
-                Settings: '⚙️'
+                Settings: '⚙️',
+                Home: '🏠',
+                ChevronDown: '▼',
+                ChevronRight: '▶',
+                Calendar: '📅',
+                Book: '📖',
+                Clipboard: '✍️'
             };
             return <span style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>{icons[name] || '🏈'}</span>;
         };
@@ -1616,16 +1622,39 @@
         };
 
         const RosterManager = ({ roster, onUpdateRoster }) => {
-            const [newPlayer, setNewPlayer] = useState({ number: '', name: '', position: 'QB', year: 'Fr', height: '', weight: '', injured: false, traveling: true, captain: false });
+            const [newPlayer, setNewPlayer] = useState({
+                number: '', name: '', position: 'QB', year: 'Fr', height: '', weight: '',
+                injured: false, traveling: true, captain: false,
+                offenseRoles: [], defenseRoles: [], specialRoles: []
+            });
             const [isEditing, setIsEditing] = useState(null);
 
-            const positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'OT', 'OG', 'C'];
+            const positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'OT', 'OG', 'C', 'DE', 'DT', 'LB', 'CB', 'S', 'K', 'P', 'LS']; // Expanded primary list
             const years = ['Fr', 'So', 'Jr', 'Sr'];
+
+            const OFFENSE_TAGS = ['QB', 'RB', 'WR', 'TE', 'OL'];
+            const DEFENSE_TAGS = ['DL', 'LB', 'DB'];
+            const SPECIAL_TAGS = ['K', 'P', 'LS', 'H', 'KR', 'PR'];
+
+            const toggleTag = (category, tag) => {
+                setNewPlayer(prev => {
+                    const current = prev[category];
+                    if (current.includes(tag)) {
+                        return { ...prev, [category]: current.filter(t => t !== tag) };
+                    } else {
+                        return { ...prev, [category]: [...current, tag] };
+                    }
+                });
+            };
 
             const addPlayer = () => {
                 if (!newPlayer.number || !newPlayer.name) return;
                 onUpdateRoster([...roster, { ...newPlayer, id: Date.now().toString() }]);
-                setNewPlayer({ number: '', name: '', position: 'QB', year: 'Fr', height: '', weight: '', injured: false, traveling: true, captain: false });
+                setNewPlayer({
+                    number: '', name: '', position: 'QB', year: 'Fr', height: '', weight: '',
+                    injured: false, traveling: true, captain: false,
+                    offenseRoles: [], defenseRoles: [], specialRoles: []
+                });
             };
 
             const updatePlayer = (id, field, value) => {
@@ -1646,79 +1675,88 @@
                         <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Attendance</button>
                     </div>
 
-                    <div className="card" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'end' }}>
-                        <div style={{ width: '80px' }}>
-                            <label className="form-label">#</label>
-                            <input
-                                type="number"
-                                className="form-input"
-                                value={newPlayer.number}
-                                onChange={e => setNewPlayer({ ...newPlayer, number: e.target.value })}
-                                placeholder="#"
-                            />
+                    <div className="card" style={{ marginBottom: '2rem' }}>
+                        <h4 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Add New Athlete</h4>
+
+                        {/* Row 1: Basic Info */}
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <div style={{ width: '80px' }}>
+                                <label className="form-label">#</label>
+                                <input type="number" className="form-input" value={newPlayer.number} onChange={e => setNewPlayer({ ...newPlayer, number: e.target.value })} placeholder="#" />
+                            </div>
+                            <div style={{ flex: 2 }}>
+                                <label className="form-label">Name</label>
+                                <input type="text" className="form-input" value={newPlayer.name} onChange={e => setNewPlayer({ ...newPlayer, name: e.target.value })} placeholder="Player Name" />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Primary</label>
+                                <select className="form-select" value={newPlayer.position} onChange={e => setNewPlayer({ ...newPlayer, position: e.target.value })}>
+                                    {positions.map(p => <option key={p}>{p}</option>)}
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Year</label>
+                                <select className="form-select" value={newPlayer.year} onChange={e => setNewPlayer({ ...newPlayer, year: e.target.value })}>
+                                    {years.map(y => <option key={y}>{y}</option>)}
+                                </select>
+                            </div>
+                            <div style={{ width: '80px' }}>
+                                <label className="form-label">Ht</label>
+                                <input type="text" className="form-input" value={newPlayer.height} onChange={e => setNewPlayer({ ...newPlayer, height: e.target.value })} placeholder="6'2" />
+                            </div>
+                            <div style={{ width: '80px' }}>
+                                <label className="form-label">Wt</label>
+                                <input type="text" className="form-input" value={newPlayer.weight} onChange={e => setNewPlayer({ ...newPlayer, weight: e.target.value })} placeholder="210" />
+                            </div>
                         </div>
-                        <div style={{ flex: 2 }}>
-                            <label className="form-label">Name</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newPlayer.name}
-                                onChange={e => setNewPlayer({ ...newPlayer, name: e.target.value })}
-                                placeholder="Player Name"
-                            />
+
+                        {/* Row 2: Tagging */}
+                        <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, minWidth: '200px' }}>
+                                <label className="form-label" style={{ color: 'var(--accent)' }}>Offense Roles</label>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    {OFFENSE_TAGS.map(tag => (
+                                        <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.offenseRoles.includes(tag) ? 'var(--highlight)' : 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.offenseRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
+                                            <input type="checkbox" checked={newPlayer.offenseRoles.includes(tag)} onChange={() => toggleTag('offenseRoles', tag)} style={{ display: 'none' }} />
+                                            {tag}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ flex: 1, minWidth: '200px' }}>
+                                <label className="form-label" style={{ color: 'var(--accent)' }}>Defense Roles</label>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    {DEFENSE_TAGS.map(tag => (
+                                        <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.defenseRoles.includes(tag) ? 'var(--highlight)' : 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.defenseRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
+                                            <input type="checkbox" checked={newPlayer.defenseRoles.includes(tag)} onChange={() => toggleTag('defenseRoles', tag)} style={{ display: 'none' }} />
+                                            {tag}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ flex: 1, minWidth: '200px' }}>
+                                <label className="form-label" style={{ color: 'var(--accent)' }}>Special Teams</label>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    {SPECIAL_TAGS.map(tag => (
+                                        <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.specialRoles.includes(tag) ? 'var(--highlight)' : 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.specialRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
+                                            <input type="checkbox" checked={newPlayer.specialRoles.includes(tag)} onChange={() => toggleTag('specialRoles', tag)} style={{ display: 'none' }} />
+                                            {tag}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <label className="form-label">Pos</label>
-                            <select
-                                className="form-select"
-                                value={newPlayer.position}
-                                onChange={e => setNewPlayer({ ...newPlayer, position: e.target.value })}
-                            >
-                                {positions.map(p => <option key={p}>{p}</option>)}
-                            </select>
+
+                        {/* Row 3: Actions */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input type="checkbox" checked={newPlayer.captain} onChange={e => setNewPlayer({ ...newPlayer, captain: e.target.checked })} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }} />
+                                <label>Team Captain</label>
+                            </div>
+                            <button className="btn btn-primary" onClick={addPlayer}>
+                                <Icon name="PlusCircle" /> Add Athlete
+                            </button>
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <label className="form-label">Year</label>
-                            <select
-                                className="form-select"
-                                value={newPlayer.year}
-                                onChange={e => setNewPlayer({ ...newPlayer, year: e.target.value })}
-                            >
-                                {years.map(y => <option key={y}>{y}</option>)}
-                            </select>
-                        </div>
-                        <div style={{ width: '80px' }}>
-                            <label className="form-label">Ht</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newPlayer.height}
-                                onChange={e => setNewPlayer({ ...newPlayer, height: e.target.value })}
-                                placeholder="6'2"
-                            />
-                        </div>
-                        <div style={{ width: '80px' }}>
-                            <label className="form-label">Wt</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newPlayer.weight}
-                                onChange={e => setNewPlayer({ ...newPlayer, weight: e.target.value })}
-                                placeholder="210"
-                            />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '10px' }}>
-                            <label className="form-label" style={{ marginBottom: '4px' }}>Cpt</label>
-                            <input
-                                type="checkbox"
-                                checked={newPlayer.captain}
-                                onChange={e => setNewPlayer({ ...newPlayer, captain: e.target.checked })}
-                                style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }}
-                            />
-                        </div>
-                        <button className="btn btn-primary" onClick={addPlayer} style={{ height: '42px' }}>
-                            <Icon name="PlusCircle" /> Add
-                        </button>
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -1727,7 +1765,8 @@
                                 <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                                     <th style={{ padding: '0.5rem' }}>#</th>
                                     <th style={{ padding: '0.5rem' }}>Name</th>
-                                    <th style={{ padding: '0.5rem' }}>Pos</th>
+                                    <th style={{ padding: '0.5rem' }}>Primary</th>
+                                    <th style={{ padding: '0.5rem' }}>Roles / Tags</th>
                                     <th style={{ padding: '0.5rem' }}>Year</th>
                                     <th style={{ padding: '0.5rem' }}>Ht</th>
                                     <th style={{ padding: '0.5rem' }}>Wt</th>
@@ -1776,6 +1815,19 @@
                                                     {positions.map(p => <option key={p}>{p}</option>)}
                                                 </select>
                                             ) : player.position}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                {(player.offenseRoles || []).map(t => (
+                                                    <span key={t} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{t}</span>
+                                                ))}
+                                                {(player.defenseRoles || []).map(t => (
+                                                    <span key={t} style={{ fontSize: '0.7rem', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 6px', borderRadius: '4px', color: '#fca5a5' }}>{t}</span>
+                                                ))}
+                                                {(player.specialRoles || []).map(t => (
+                                                    <span key={t} style={{ fontSize: '0.7rem', background: 'rgba(59, 130, 246, 0.2)', padding: '2px 6px', borderRadius: '4px', color: '#93c5fd' }}>{t}</span>
+                                                ))}
+                                            </div>
                                         </td>
                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                             {isEditing === player.id ? (
@@ -1854,21 +1906,79 @@
         };
 
         const StaffManager = ({ staff, onUpdateStaff }) => {
-            const [newMember, setNewMember] = useState({ name: '', role: 'Assistant', phone: '' });
+            const [newMember, setNewMember] = useState({
+                name: '',
+                role: 'Assistant',
+                positions: {
+                    offense: '',
+                    defense: '',
+                    specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' }
+                },
+                otherDuties: ''
+            });
             const [isEditing, setIsEditing] = useState(null);
 
             const addMember = () => {
                 if (!newMember.name) return;
                 onUpdateStaff([...staff, { ...newMember, id: Date.now().toString() }]);
-                setNewMember({ name: '', role: 'Assistant', phone: '' });
+                setNewMember({
+                    name: '',
+                    role: 'Assistant',
+                    positions: {
+                        offense: '',
+                        defense: '',
+                        specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' }
+                    },
+                    otherDuties: ''
+                });
             };
 
             const updateMember = (id, field, value) => {
                 onUpdateStaff(staff.map(s => s.id === id ? { ...s, [field]: value } : s));
             };
 
+            const updatePosition = (id, type, value) => {
+                onUpdateStaff(staff.map(s => {
+                    if (s.id === id) {
+                        return {
+                            ...s,
+                            positions: { ...s.positions, [type]: value }
+                        };
+                    }
+                    return s;
+                }));
+            };
+
+            const updateSpecialsPosition = (id, unit, value) => {
+                onUpdateStaff(staff.map(s => {
+                    if (s.id === id) {
+                        return {
+                            ...s,
+                            positions: {
+                                ...s.positions,
+                                specials: { ...s.positions.specials, [unit]: value }
+                            }
+                        };
+                    }
+                    return s;
+                }));
+            };
+
             const deleteMember = (id) => {
                 onUpdateStaff(staff.filter(s => s.id !== id));
+            };
+
+            // Helper to format specials duties text
+            const formatSpecials = (specials) => {
+                if (!specials || typeof specials === 'string') return specials || '-';
+                const parts = [];
+                if (specials.ko) parts.push(`KO: ${specials.ko}`);
+                if (specials.kr) parts.push(`KR: ${specials.kr}`);
+                if (specials.punt) parts.push(`Punt: ${specials.punt}`);
+                if (specials.pr) parts.push(`PR: ${specials.pr}`);
+                if (specials.fg) parts.push(`FG: ${specials.fg}`);
+                if (specials.block) parts.push(`Blk: ${specials.block}`);
+                return parts.length > 0 ? parts.join(', ') : '-';
             };
 
             return (
@@ -1878,86 +1988,194 @@
                         <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print List</button>
                     </div>
 
-                    <div className="card" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'end' }}>
-                        <div style={{ flex: 2 }}>
-                            <label className="form-label">Name</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newMember.name}
-                                onChange={e => setNewMember({ ...newMember, name: e.target.value })}
-                                placeholder="Coach Name"
-                            />
+                    <div className="card" style={{ marginBottom: '2rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 2fr) 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <div>
+                                <label className="form-label">Name</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={newMember.name}
+                                    onChange={e => setNewMember({ ...newMember, name: e.target.value })}
+                                    placeholder="Coach Name"
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Role</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={newMember.role}
+                                    onChange={e => setNewMember({ ...newMember, role: e.target.value })}
+                                    placeholder="Title/Role"
+                                />
+                            </div>
+                            {/* Replaced phone with a placeholder or just space, or removed 3rd column? Keeping layout simple. */}
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'end' }}>
+                                <button className="btn btn-primary" onClick={addMember} style={{ height: '42px', width: '100%' }}>
+                                    <Icon name="PlusCircle" /> Add Coach
+                                </button>
+                            </div>
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <label className="form-label">Role</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newMember.role}
-                                onChange={e => setNewMember({ ...newMember, role: e.target.value })}
-                                placeholder="Position/Role"
-                            />
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '1rem', alignItems: 'start' }}>
+                            <div>
+                                <label className="form-label">Offense Pos</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={newMember.positions.offense}
+                                    onChange={e => setNewMember({
+                                        ...newMember,
+                                        positions: { ...newMember.positions, offense: e.target.value }
+                                    })}
+                                    placeholder="e.g. QBs"
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Defense Pos</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={newMember.positions.defense}
+                                    onChange={e => setNewMember({
+                                        ...newMember,
+                                        positions: { ...newMember.positions, defense: e.target.value }
+                                    })}
+                                    placeholder="e.g. None"
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Other Duties</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={newMember.otherDuties}
+                                    onChange={e => setNewMember({ ...newMember, otherDuties: e.target.value })}
+                                    placeholder="Equipment, Video, etc."
+                                />
+                            </div>
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <label className="form-label">Phone</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newMember.phone}
-                                onChange={e => setNewMember({ ...newMember, phone: e.target.value })}
-                                placeholder="Optional"
-                            />
+
+                        {/* Special Teams Grid */}
+                        <div style={{ marginTop: '1rem' }}>
+                            <label className="form-label">Special Teams Assignments</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem' }}>
+                                {['ko', 'kr', 'punt', 'pr', 'fg', 'block'].map(unit => (
+                                    <div key={unit}>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            style={{ fontSize: '0.85rem', padding: '0.25rem' }}
+                                            value={newMember.positions.specials[unit]}
+                                            onChange={e => setNewMember({
+                                                ...newMember,
+                                                positions: {
+                                                    ...newMember.positions,
+                                                    specials: { ...newMember.positions.specials, [unit]: e.target.value }
+                                                }
+                                            })}
+                                            placeholder={unit.toUpperCase()}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <button className="btn btn-primary" onClick={addMember} style={{ height: '42px' }}>
-                            <Icon name="PlusCircle" /> Add
-                        </button>
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                             <thead>
-                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                    <th style={{ padding: '0.5rem' }}>Name</th>
-                                    <th style={{ padding: '0.5rem' }}>Role</th>
-                                    <th style={{ padding: '0.5rem' }}>Phone</th>
+                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                    <th style={{ padding: '0.5rem', width: '20%' }}>Name / Role</th>
+                                    <th style={{ padding: '0.5rem', width: '15%' }}>Offense</th>
+                                    <th style={{ padding: '0.5rem', width: '15%' }}>Defense</th>
+                                    <th style={{ padding: '0.5rem', width: '30%' }}>Special Teams</th>
+                                    <th style={{ padding: '0.5rem', width: '15%' }}>Other Duties</th>
                                     <th style={{ padding: '0.5rem', textAlign: 'right' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {staff.map(member => (
                                     <tr key={member.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            {isEditing === member.id ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={member.name}
+                                                        onChange={e => updateMember(member.id, 'name', e.target.value)}
+                                                        placeholder="Name"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={member.role}
+                                                        onChange={e => updateMember(member.id, 'role', e.target.value)}
+                                                        placeholder="Role"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold' }}>{member.name}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{member.role}</div>
+                                                </div>
+                                            )}
+                                        </td>
+
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
                                             {isEditing === member.id ? (
                                                 <input
                                                     type="text"
                                                     className="form-input"
-                                                    value={member.name}
-                                                    onChange={e => updateMember(member.id, 'name', e.target.value)}
+                                                    value={member.positions?.offense || ''}
+                                                    onChange={e => updatePosition(member.id, 'offense', e.target.value)}
                                                 />
-                                            ) : member.name}
+                                            ) : (member.positions?.offense || '-')}
                                         </td>
                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                             {isEditing === member.id ? (
                                                 <input
                                                     type="text"
                                                     className="form-input"
-                                                    value={member.role}
-                                                    onChange={e => updateMember(member.id, 'role', e.target.value)}
+                                                    value={member.positions?.defense || ''}
+                                                    onChange={e => updatePosition(member.id, 'defense', e.target.value)}
                                                 />
-                                            ) : member.role}
+                                            ) : (member.positions?.defense || '-')}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                            {isEditing === member.id ? (
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem' }}>
+                                                    {['ko', 'kr', 'punt', 'pr', 'fg', 'block'].map(unit => (
+                                                        <input
+                                                            key={unit}
+                                                            type="text"
+                                                            className="form-input"
+                                                            style={{ fontSize: '0.8rem', padding: '0.1rem' }}
+                                                            value={member.positions?.specials?.[unit] || ''}
+                                                            onChange={e => updateSpecialsPosition(member.id, unit, e.target.value)}
+                                                            placeholder={unit.toUpperCase()}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div style={{ fontSize: '0.85rem' }}>
+                                                    {formatSpecials(member.positions?.specials)}
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                             {isEditing === member.id ? (
                                                 <input
                                                     type="text"
                                                     className="form-input"
-                                                    value={member.phone}
-                                                    onChange={e => updateMember(member.id, 'phone', e.target.value)}
+                                                    value={member.otherDuties || ''}
+                                                    onChange={e => updateMember(member.id, 'otherDuties', e.target.value)}
                                                 />
-                                            ) : member.phone}
+                                            ) : (member.otherDuties || '-')}
                                         </td>
-                                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
                                             {isEditing === member.id ? (
                                                 <button className="btn btn-primary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }} onClick={() => setIsEditing(null)}>Done</button>
                                             ) : (
@@ -1976,21 +2194,102 @@
             );
         };
 
-        const DepthChart = ({ roster, depthChart, onUpdateDepthChart }) => {
-            // Default Spread Formation Positions
-            const positions = [
-                { id: 'LWR', name: 'X', x: 300, y: 100 },
-                { id: 'LT', name: 'LT', x: 640, y: 100 },
-                { id: 'LG', name: 'LG', x: 820, y: 100 },
-                { id: 'C', name: 'C', x: 1000, y: 100 },
-                { id: 'RG', name: 'RG', x: 1180, y: 100 },
-                { id: 'RT', name: 'RT', x: 1360, y: 100 },
-                { id: 'RWR', name: 'Z', x: 1540, y: 200 }, // Off the line, inside Y
-                { id: 'QB', name: 'QB', x: 1000, y: 300 },
-                { id: 'RB', name: 'RB', x: 1000, y: 500 },
-                { id: 'SWR', name: 'H', x: 470, y: 200 }, // Slot Left
-                { id: 'TE', name: 'Y', x: 1720, y: 100 }   // Tight End / Outside
-            ];
+        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout }) => {
+
+            // Standard coordinate mappings for different formations
+            const FORMATIONS = {
+                'OFFENSE': [
+                    { id: 'OFF_LWR', name: 'X', x: 20, y: 100 },
+                    { id: 'OFF_LT', name: 'LT', x: 340, y: 100 },
+                    { id: 'OFF_LG', name: 'LG', x: 520, y: 100 },
+                    { id: 'OFF_C', name: 'C', x: 700, y: 100 },
+                    { id: 'OFF_RG', name: 'RG', x: 880, y: 100 },
+                    { id: 'OFF_RT', name: 'RT', x: 1060, y: 100 },
+                    { id: 'OFF_RWR', name: 'Z', x: 1240, y: 200 },
+                    { id: 'OFF_QB', name: 'QB', x: 700, y: 300 },
+                    { id: 'OFF_RB', name: 'RB', x: 700, y: 500 },
+                    { id: 'OFF_SWR', name: 'H', x: 170, y: 200 },
+                    { id: 'OFF_TE', name: 'Y', x: 1420, y: 100 }
+                ],
+                'DEFENSE': [
+                    { id: 'DEF_LDE', name: 'DE', x: 340, y: 100 },
+                    { id: 'DEF_LDT', name: 'DT', x: 520, y: 100 },
+                    { id: 'DEF_RDT', name: 'NT', x: 880, y: 100 },
+                    { id: 'DEF_RDE', name: 'DE', x: 1060, y: 100 },
+                    { id: 'DEF_WLB', name: 'Will', x: 520, y: 300 },
+                    { id: 'DEF_MLB', name: 'Mike', x: 880, y: 300 },
+                    { id: 'DEF_LCB', name: 'CB', x: 20, y: 200 },
+                    { id: 'DEF_RCB', name: 'CB', x: 1380, y: 200 },
+                    { id: 'DEF_FS', name: 'FS', x: 520, y: 500 },
+                    { id: 'DEF_SS', name: 'SS', x: 880, y: 500 },
+                    { id: 'DEF_NICK', name: 'Nickel', x: 1100, y: 300 }
+                ],
+                'KICKOFF': [
+                    { id: 'KO_K', name: 'K', x: 700, y: 500 },
+                    { id: 'KO_L1', name: 'L1', x: 600, y: 300 }, { id: 'KO_R1', name: 'R1', x: 800, y: 300 },
+                    { id: 'KO_L2', name: 'L2', x: 500, y: 300 }, { id: 'KO_R2', name: 'R2', x: 900, y: 300 },
+                    { id: 'KO_L3', name: 'L3', x: 400, y: 300 }, { id: 'KO_R3', name: 'R3', x: 1000, y: 300 },
+                    { id: 'KO_L4', name: 'L4', x: 300, y: 300 }, { id: 'KO_R4', name: 'R4', x: 1100, y: 300 },
+                    { id: 'KO_L5', name: 'L5', x: 200, y: 300 }, { id: 'KO_R5', name: 'R5', x: 1200, y: 300 }
+                ],
+                'KICK_RETURN': [
+                    { id: 'KR_R1', name: 'KR', x: 600, y: 600 }, { id: 'KR_R2', name: 'KR', x: 800, y: 600 },
+                    { id: 'KR_FL1', name: 'Front', x: 200, y: 200 }, { id: 'KR_FL2', name: 'Front', x: 1200, y: 200 },
+                    { id: 'KR_M1', name: 'Mid', x: 400, y: 300 }, { id: 'KR_M2', name: 'Mid', x: 1000, y: 300 },
+                    { id: 'KR_M3', name: 'Mid', x: 600, y: 300 }, { id: 'KR_M4', name: 'Mid', x: 800, y: 300 },
+                    { id: 'KR_B1', name: 'Back', x: 500, y: 450 }, { id: 'KR_B2', name: 'Back', x: 900, y: 450 },
+                    { id: 'KR_OFF', name: 'Off', x: 700, y: 450 }
+                ],
+                'PUNT': [
+                    { id: 'P_P', name: 'P', x: 700, y: 600 },
+                    { id: 'P_PP', name: 'PP', x: 700, y: 400 },
+                    { id: 'P_LS', name: 'LS', x: 700, y: 100 },
+                    { id: 'P_L1', name: 'L1', x: 600, y: 100 }, { id: 'P_R1', name: 'R1', x: 800, y: 100 },
+                    { id: 'P_L2', name: 'L2', x: 500, y: 100 }, { id: 'P_R2', name: 'R2', x: 900, y: 100 },
+                    { id: 'P_L3', name: 'Wing', x: 400, y: 150 }, { id: 'P_R3', name: 'Wing', x: 1000, y: 150 },
+                    { id: 'P_G1', name: 'Gunner', x: 100, y: 100 }, { id: 'P_G2', name: 'Gunner', x: 1300, y: 100 }
+                ],
+                'PUNT_RETURN': [
+                    { id: 'PR_R', name: 'Ret', x: 700, y: 600 },
+                    { id: 'PR_J1', name: 'Jam', x: 100, y: 200 }, { id: 'PR_J2', name: 'Jam', x: 1300, y: 200 },
+                    { id: 'PR_L1', name: 'Rush', x: 300, y: 150 }, { id: 'PR_R1', name: 'Rush', x: 1100, y: 150 },
+                    { id: 'PR_L2', name: 'Rush', x: 400, y: 150 }, { id: 'PR_R2', name: 'Rush', x: 1000, y: 150 },
+                    { id: 'PR_L3', name: 'Rush', x: 500, y: 150 }, { id: 'PR_R3', name: 'Rush', x: 900, y: 150 },
+                    { id: 'PR_L4', name: 'Rush', x: 600, y: 150 }, { id: 'PR_R4', name: 'Rush', x: 800, y: 150 }
+                ],
+                'HANDS_TEAM': [
+                    { id: 'HT_FL1', name: 'Front', x: 200, y: 100 }, { id: 'HT_FL2', name: 'Front', x: 1200, y: 100 },
+                    { id: 'HT_FL3', name: 'Front', x: 400, y: 100 }, { id: 'HT_FL4', name: 'Front', x: 1000, y: 100 },
+                    { id: 'HT_FL5', name: 'Front', x: 600, y: 100 }, { id: 'HT_FL6', name: 'Front', x: 800, y: 100 },
+                    { id: 'HT_M1', name: 'Mid', x: 300, y: 300 }, { id: 'HT_M2', name: 'Mid', x: 1100, y: 300 },
+                    { id: 'HT_M3', name: 'Mid', x: 700, y: 300 },
+                    { id: 'HT_D1', name: 'Deep', x: 500, y: 500 }, { id: 'HT_D2', name: 'Deep', x: 900, y: 500 }
+                ],
+                'ONSIDE_KICK': [
+                    { id: 'OS_K', name: 'K', x: 700, y: 500 },
+                    { id: 'OS_L1', name: 'L1', x: 650, y: 300 }, { id: 'OS_R1', name: 'R1', x: 750, y: 300 },
+                    { id: 'OS_L2', name: 'L2', x: 600, y: 300 }, { id: 'OS_R2', name: 'R2', x: 800, y: 300 },
+                    { id: 'OS_L3', name: 'L3', x: 550, y: 300 }, { id: 'OS_R3', name: 'R3', x: 850, y: 300 },
+                    { id: 'OS_L4', name: 'L4', x: 500, y: 300 }, { id: 'OS_R4', name: 'R4', x: 900, y: 300 },
+                    { id: 'OS_L5', name: 'L5', x: 450, y: 300 }, { id: 'OS_R5', name: 'R5', x: 950, y: 300 }
+                ],
+                'PAT_BLOCK': [
+                    { id: 'PB_1', name: 'Rush', x: 100, y: 100 }, { id: 'PB_11', name: 'Rush', x: 1300, y: 100 },
+                    { id: 'PB_2', name: 'Rush', x: 220, y: 100 }, { id: 'PB_10', name: 'Rush', x: 1180, y: 100 },
+                    { id: 'PB_3', name: 'Rush', x: 340, y: 100 }, { id: 'PB_9', name: 'Rush', x: 1060, y: 100 },
+                    { id: 'PB_4', name: 'Rush', x: 460, y: 100 }, { id: 'PB_8', name: 'Rush', x: 940, y: 100 },
+                    { id: 'PB_5', name: 'Rush', x: 580, y: 100 }, { id: 'PB_7', name: 'Rush', x: 820, y: 100 },
+                    { id: 'PB_6', name: 'Safe', x: 700, y: 400 }
+                ]
+            };
+
+            const defaultPositions = FORMATIONS[chartType] || FORMATIONS['OFFENSE'];
+
+            // Merge default positions with saved custom layout
+            const positions = defaultPositions.map(pos => {
+                const saved = savedLayout[pos.id];
+                return saved ? { ...pos, x: saved.x, y: saved.y } : pos;
+            });
 
             const getPlayer = (id) => roster.find(p => p.id === id);
 
@@ -2001,57 +2300,131 @@
                 onUpdateDepthChart({ ...depthChart, [posId]: newDepth });
             };
 
+            const chartTitles = {
+                'OFFENSE': 'Offensive Depth Chart (Spread)',
+                'DEFENSE': 'Defensive Depth Chart (4-2-5)',
+                'KICKOFF': 'Kickoff Unit',
+                'KICK_RETURN': 'Kick Return Unit',
+                'PUNT': 'Punt Unit',
+                'PUNT_RETURN': 'Punt Return / Block',
+                'HANDS_TEAM': 'Hands Team',
+                'ONSIDE_KICK': 'Onside Kick Unit',
+                'PAT_BLOCK': 'PAT / FG Block'
+            };
+
+            // Draggable Logic
+            const [draggingId, setDraggingId] = useState(null);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            const [tempPosition, setTempPosition] = useState(null); // { x, y } while dragging
+
+            const handleMouseDown = (e, pos) => {
+                // Prevent drag if clicking on select or anything that shouldn't be dragged
+                if (e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION') return;
+
+                setDraggingId(pos.id);
+                setDragOffset({
+                    x: e.clientX - pos.x,
+                    y: e.clientY - pos.y
+                });
+                setTempPosition({ x: pos.x, y: pos.y });
+            };
+
+            const handleMouseMove = (e) => {
+                if (!draggingId || !tempPosition) return;
+
+                const newX = e.clientX - dragOffset.x;
+                const newY = e.clientY - dragOffset.y;
+
+                setTempPosition({ x: newX, y: newY });
+            };
+
+            const handleMouseUp = () => {
+                if (draggingId && tempPosition && onUpdateLayout) {
+                    onUpdateLayout(draggingId, tempPosition.x, tempPosition.y);
+                }
+                setDraggingId(null);
+                setTempPosition(null);
+            };
+
+            // Add listener to window for mouse up to catch drags that end outside container
+            useEffect(() => {
+                if (draggingId) {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                    return () => {
+                        window.removeEventListener('mousemove', handleMouseMove);
+                        window.removeEventListener('mouseup', handleMouseUp);
+                    };
+                }
+            }, [draggingId, tempPosition]); // Dependency required for closure state access if not using functional updates, but simple enough here.
+
             return (
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                        <h2>Offensive Depth Chart (Spread)</h2>
-                        <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
+                        <h2>{chartTitles[chartType] || chartTitles['OFFENSE']}</h2>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button className="btn btn-secondary" onClick={onResetLayout} title="Reset positions to default">Reset Layout</button>
+                            <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
+                        </div>
                     </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', position: 'relative', minHeight: '600px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--surface)' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', position: 'relative', minHeight: '600px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--surface)', userSelect: 'none' }}>
                         {/* Field Background Hint */}
                         <div style={{
                             position: 'absolute', top: '50px', left: '0', right: '0', height: '2px', background: 'var(--border)',
-                            display: 'flex', justifyContent: 'space-between', padding: '0 50px', minWidth: '2000px'
+                            display: 'flex', justifyContent: 'space-between', padding: '0 50px', minWidth: '1500px', pointerEvents: 'none'
                         }}></div>
 
-                        {positions.map(pos => (
-                            <div key={pos.id} style={{
-                                position: 'absolute',
-                                left: `${pos.x}px`,
-                                top: `${pos.y}px`,
-                                width: '140px',
-                                transform: 'translateX(-50%)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '4px',
-                                background: 'rgba(0,0,0,0.5)',
-                                padding: '8px',
-                                borderRadius: '8px'
-                            }}>
-                                <div style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '4px' }}>{pos.name}</div>
-                                {[0, 1, 2].map(depth => {
-                                    const playerId = depthChart[pos.id]?.[depth];
-                                    const player = getPlayer(playerId);
-                                    return (
-                                        <select
-                                            key={depth}
-                                            className="form-select"
-                                            style={{ fontSize: '0.75rem', padding: '2px', width: '100%' }}
-                                            value={playerId || ''}
-                                            onChange={e => handleSelectPlayer(pos.id, depth, e.target.value)}
-                                        >
-                                            <option value="">--</option>
-                                            {roster.map(p => (
-                                                <option key={p.id} value={p.id}>
-                                                    #{p.number} {p.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    );
-                                })}
-                            </div>
-                        ))}
+                        {positions.map(pos => {
+                            const isDragging = draggingId === pos.id;
+                            const x = isDragging ? tempPosition.x : pos.x;
+                            const y = isDragging ? tempPosition.y : pos.y;
+
+                            return (
+                                <div
+                                    key={pos.id}
+                                    onMouseDown={(e) => handleMouseDown(e, pos)}
+                                    style={{
+                                        position: 'absolute',
+                                        left: `${x}px`,
+                                        top: `${y}px`,
+                                        width: '140px',
+                                        transform: 'translateX(-50%)', // Center align relative to coords
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '4px',
+                                        background: isDragging ? 'var(--highlight)' : 'rgba(0,0,0,0.5)',
+                                        padding: '8px',
+                                        borderRadius: '8px',
+                                        cursor: isDragging ? 'grabbing' : 'grab',
+                                        border: isDragging ? '1px solid var(--accent)' : '1px solid transparent',
+                                        zIndex: isDragging ? 10 : 1
+                                    }}
+                                >
+                                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '4px' }}>{pos.name}</div>
+                                    {[0, 1, 2].map(depth => {
+                                        const playerId = depthChart[pos.id]?.[depth];
+                                        return (
+                                            <select
+                                                key={depth}
+                                                className="form-select"
+                                                style={{ fontSize: '0.75rem', padding: '2px', width: '100%' }}
+                                                value={playerId || ''}
+                                                onChange={e => handleSelectPlayer(pos.id, depth, e.target.value)}
+                                            // Mouse down on select handled by early return in parent handler
+                                            >
+                                                <option value="">--</option>
+                                                {roster.map(p => (
+                                                    <option key={p.id} value={p.id}>
+                                                        #{p.number} {p.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             );
@@ -2715,94 +3088,547 @@
             );
         };
 
-        const PlayerMetrics = ({ roster, metrics, onUpdateMetrics }) => {
+        const MetricGraph = ({ history, field }) => {
+            if (!history || history.length < 2) return null;
+
+            const sortedHistory = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const dataPoints = sortedHistory.filter(h => h[field.id]).map(h => ({
+                date: h.date,
+                value: parseFloat(h[field.id])
+            }));
+
+            if (dataPoints.length < 2) return null;
+
+            const width = 600;
+            const height = 300;
+            const padding = 40;
+
+            const minVal = Math.min(...dataPoints.map(d => d.value));
+            const maxVal = Math.max(...dataPoints.map(d => d.value));
+            const range = maxVal - minVal || 1; // Prevent div by zero
+
+            // Calculate coordinates
+            const points = dataPoints.map((d, i) => {
+                const x = padding + (i / (dataPoints.length - 1)) * (width - 2 * padding);
+                // Lower value is better for timed events (40yd), Higher is better for others
+                const isTimed = ['forty', 'flying10', 'proAgility'].includes(field.id);
+
+                let yRatio;
+                if (isTimed) {
+                    // Invert: Max value (slowest) at bottom (height-padding), Min value (fastest) at top (padding)
+                    yRatio = (d.value - minVal) / range;
+                    // actually for SVG y=0 is top. So we want Min (Fast) at Top (0+padding), Max (Slow) at Bottom.
+                    // y = padding + yRatio * height -> if yRatio is 0 (min), y=padding. Correct.
+                    // Wait, if d.value = minVal (Fastest), yRatio = 0. y = padding.
+                    // If d.value = maxVal (Slowest), yRatio = 1. y = height-padding. 
+                } else {
+                    // Normal: Max value (Strongest) at Top, Min at Bottom
+                    // yRatio = 1 is Max. We want Max at padding. 
+                    yRatio = 1 - ((d.value - minVal) / range);
+                }
+
+                const y = padding + yRatio * (height - 2 * padding);
+                return { x, y, value: d.value, date: d.date };
+            });
+
+            return (
+                <div style={{ marginTop: '2rem', border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem', background: 'var(--bg-body)' }}>
+                    <h4 style={{ textAlign: 'center', marginBottom: '1rem' }}>Progress: {field.name}</h4>
+                    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+                        {/* Grid Lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map(r => (
+                            <line
+                                key={r}
+                                x1={padding}
+                                y1={padding + r * (height - 2 * padding)}
+                                x2={width - padding}
+                                y2={padding + r * (height - 2 * padding)}
+                                stroke="var(--border)"
+                                strokeWidth="1"
+                            />
+                        ))}
+
+                        {/* Line */}
+                        <polyline
+                            points={points.map(p => `${p.x},${p.y}`).join(' ')}
+                            fill="none"
+                            stroke="var(--accent)"
+                            strokeWidth="3"
+                        />
+
+                        {/* Points */}
+                        {points.map((p, i) => (
+                            <g key={i}>
+                                <circle cx={p.x} cy={p.y} r="5" fill="var(--bg-body)" stroke="var(--accent)" strokeWidth="2" />
+                                <text x={p.x} y={p.y - 10} textAnchor="middle" fill="var(--text-primary)" fontSize="12">{p.value}</text>
+                                <text x={p.x} y={height - 10} textAnchor="middle" fill="var(--text-secondary)" fontSize="10">{p.date}</text>
+                            </g>
+                        ))}
+                    </svg>
+                </div>
+            );
+        };
+
+
+        const PlayerMetrics = ({ roster, metrics, onUpdateMetrics, viewCategory }) => {
             const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+            const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0]);
+            const [currentEntry, setCurrentEntry] = useState({});
+            const [graphMetric, setGraphMetric] = useState('bench');
+            const [editingEntryIndex, setEditingEntryIndex] = useState(null);
 
             const METRIC_FIELDS = [
-                { id: 'bench', name: 'Bench Press', unit: 'lbs', type: 'number' },
-                { id: 'squat', name: 'Squat', unit: 'lbs', type: 'number' },
-                { id: 'deadlift', name: 'Deadlift', unit: 'lbs', type: 'number' },
-                { id: 'forty', name: '40 Yard Dash', unit: 'sec', type: 'number', step: '0.01' },
-                { id: 'flying10', name: 'Flying 10', unit: 'sec', type: 'number', step: '0.01' },
-                { id: 'proAgility', name: 'Pro Agility', unit: 'sec', type: 'number', step: '0.01' },
-                { id: 'vertical', name: 'Vertical Jump', unit: 'in', type: 'number', step: '0.5' },
-                { id: 'broad', name: 'Broad Jump', unit: 'in', type: 'number', step: '1' }
+                // Strength (Combine)
+                { id: 'bench', name: 'Bench Press', unit: 'lbs', type: 'number', group: 'Strength', categories: ['combine', 'ironman'] },
+                { id: 'squat', name: 'Squat', unit: 'lbs', type: 'number', group: 'Strength', categories: ['combine', 'ironman'] },
+                { id: 'deadlift', name: 'Deadlift', unit: 'lbs', type: 'number', group: 'Strength', categories: ['combine'] },
+
+                // Speed & Conditioning (Mixed)
+                { id: 'forty', name: '40 Yard Dash', unit: 'sec', type: 'number', step: '0.01', group: 'Speed & Conditioning', categories: ['combine', 'ironman'] },
+                { id: 'flying10', name: 'Flying 10', unit: 'sec', type: 'number', step: '0.01', group: 'Speed & Conditioning', categories: ['combine'] },
+                { id: 'run800', name: '800m Run', unit: 'min:sec', type: 'text', group: 'Speed & Conditioning', categories: ['ironman'] },
+
+                // Agility & Explosiveness (Mixed)
+                { id: 'proAgility', name: 'Pro Agility', unit: 'sec', type: 'number', step: '0.01', group: 'Agility & Explosiveness', categories: ['combine'] },
+                { id: 'shuttle30', name: '30 Yd Shuttle', unit: 'sec', type: 'number', step: '0.01', group: 'Agility & Explosiveness', categories: ['ironman'] },
+                { id: 'vertical', name: 'Vertical Jump', unit: 'in', type: 'number', step: '0.5', group: 'Agility & Explosiveness', categories: ['combine'] },
+                { id: 'broad', name: 'Broad Jump', unit: 'in', type: 'number', step: '1', group: 'Agility & Explosiveness', categories: ['combine'] },
+                { id: 'bagJump', name: 'Bag Jump', unit: 'reps', type: 'number', group: 'Agility & Explosiveness', categories: ['ironman'] }
             ];
 
-            const getPlayerMetrics = (id) => metrics[id] || {};
+            // Filter fields based on viewCategory
+            const activeFields = METRIC_FIELDS.filter(f => f.categories.includes(viewCategory));
 
-            const handleMetricChange = (metricId, value) => {
-                if (!selectedPlayerId) return;
-                const current = getPlayerMetrics(selectedPlayerId);
-                onUpdateMetrics({
-                    ...metrics,
-                    [selectedPlayerId]: { ...current, [metricId]: value }
-                });
+            // Group fields for display
+            const groupedFields = activeFields.reduce((acc, field) => {
+                if (!acc[field.group]) acc[field.group] = [];
+                acc[field.group].push(field);
+                return acc;
+            }, {});
+
+            // ... (rest of helper functions: parseTime, calculateIronManScore, getPlayerHistory) ...
+            const parseTime = (val) => {
+                if (!val) return null;
+                if (typeof val === 'number') return val;
+                if (val.includes(':')) {
+                    const [m, s] = val.split(':').map(Number);
+                    return (m * 60) + s;
+                }
+                return parseFloat(val);
+            };
+
+            const calculateIronManScore = (id, value, weight) => {
+                if (!value || !weight) return 0;
+                const wt = parseFloat(weight);
+                const val = parseTime(value);
+
+                if (isNaN(wt) || isNaN(val)) return 0;
+
+                // 40 Yard Dash (Linear Approximation from Chart)
+                if (id === 'forty') {
+                    // Standard (1000pts) time shifts by ~0.0056s per lb (1.4s over 250lbs)
+                    // 100lb base: 4.3s = 1000pts
+                    const standard1000 = 4.3 + (wt - 100) * 0.0056;
+                    const standard0 = standard1000 + 2.4; // 0pts is roughly 2.4s slower
+
+                    if (val <= standard1000) return 1000;
+                    if (val >= standard0) return 0;
+
+                    const range = standard0 - standard1000;
+                    const diff = standard0 - val;
+                    return Math.round((diff / range) * 1000);
+                }
+
+                // Bench Press & Squat (Max * 3 / Round(Wt, 10)) * 100
+                if (id === 'bench' || id === 'squat') {
+                    const roundedWeight = Math.round(wt / 10) * 10;
+                    if (roundedWeight === 0) return 0;
+                    const rawScore = (val * 3 / roundedWeight) * 100;
+                    return Math.max(0, Math.min(1000, Math.round(rawScore)));
+                }
+
+                // Bag Jump (Board Jump) - Threshold based on weight buckets
+                if (id === 'bagJump' || id === 'boardJump') {
+                    let threshold = 30;
+                    if (wt <= 150) threshold = 30;
+                    else if (wt < 160) threshold = 30; // 151-159 -> 30 (chart shows 140, 150 columns)
+                    else if (wt < 170) threshold = 29; // 160s
+                    else if (wt < 180) threshold = 28; // 170s
+                    else if (wt < 190) threshold = 27; // 180s
+                    else if (wt < 200) threshold = 26; // 190s
+                    else if (wt < 210) threshold = 26; // 200s (Chart says 200 is 26)
+                    else if (wt < 220) threshold = 25; // 210s
+                    else if (wt < 230) threshold = 25; // 220s (Chart says 220 is 25)
+                    else if (wt < 240) threshold = 24; // 230s
+                    else if (wt < 250) threshold = 23; // 240s
+                    else if (wt < 260) threshold = 22; // 250s
+                    else if (wt < 270) threshold = 21; // 260s
+                    else if (wt < 280) threshold = 20; // 270s
+                    else if (wt < 290) threshold = 19; // 280s
+                    else if (wt < 300) threshold = 18; // 290s
+                    else if (wt < 310) threshold = 17; // 300s
+                    else if (wt < 320) threshold = 16; // 310s
+                    else threshold = 15; // 320+
+
+                    // Logic from chart: Score = (Reps - Threshold) * 20
+                    // If Reps <= Threshold, Score is 0.
+                    const rawScore = (val - threshold) * 20;
+                    return Math.max(0, Math.min(1000, Math.round(rawScore)));
+                }
+
+                // 800m Run (Linear Approximation)
+                if (id === 'run800') {
+                    // 100lb base: 2:05 (125s) = 1000pts?
+                    // Let's assume weight handicap is significant. 0.2s per lb?
+                    const standard1000 = 125 + (wt - 100) * 0.15; // 162s (2:42) for 350lb
+                    const standard0 = standard1000 + 120; // 2 minute spread
+
+                    if (val <= standard1000) return 1000;
+                    if (val >= standard0) return 0;
+
+                    const range = standard0 - standard1000;
+                    const diff = standard0 - val;
+                    return Math.round((diff / range) * 1000);
+                }
+
+                // Shuttle (Placeholder)
+                // Shuttle (30 Yard Shuttle per User Rubric: Score = 4000 + 4*Wt - 80*Time)
+                if (id === 'shuttle30') {
+                    // Formula derived from user chart:
+                    // Base: 4000
+                    // Time Penalty: -80 pts per second (slower is worse)
+                    // Weight Bonus: +4 pts per pound (heavier gets more pts)
+                    // Example: 220lb, 54s -> 4000 + 880 - 4320 = 560
+                    const rawScore = 4000 + (wt * 4) - (val * 80);
+                    const score = Math.max(0, Math.min(1000, Math.round(rawScore)));
+                    return score;
+                }
+
+                return 0;
+            };
+
+            // ... (rest of logic: handlesave, handleentrychange) ...
+            const getPlayerHistory = (id) => {
+                const data = metrics[id];
+                if (!data) return [];
+                if (Array.isArray(data)) return data;
+                return [{ date: 'Initial', ...data }];
             };
 
             const selectedPlayer = roster.find(p => p.id === selectedPlayerId);
+            const playerWeight = selectedPlayer?.weight || 180;
+
+            const handleSaveEntry = () => {
+                if (!selectedPlayerId) return;
+                const history = getPlayerHistory(selectedPlayerId);
+
+                // Calculate scores for this entry
+                const scores = {};
+                let totalScore = 0;
+                METRIC_FIELDS.forEach(f => {
+                    if (currentEntry[f.id]) {
+                        const s = calculateIronManScore(f.id, currentEntry[f.id], playerWeight);
+                        if (s > 0) {
+                            scores[f.id] = s;
+                            totalScore += s;
+                        }
+                    }
+                });
+
+                const entryData = { date: entryDate, ...currentEntry, scores, totalScore };
+                let newHistory;
+
+                if (editingEntryIndex !== null) {
+                    newHistory = [...history];
+                    newHistory[editingEntryIndex] = entryData;
+                } else {
+                    newHistory = [...history, entryData];
+                }
+
+                onUpdateMetrics({
+                    ...metrics,
+                    [selectedPlayerId]: newHistory
+                });
+
+                // Reset
+                setCurrentEntry({});
+                setEditingEntryIndex(null);
+                setEntryDate(new Date().toISOString().split('T')[0]);
+            };
+
+            const handleEditEntry = (index, entry) => {
+                setEditingEntryIndex(index);
+                setEntryDate(entry.date);
+                // Filter out calculated fields key like 'scores' or 'totalScore' if we want cleaner state,
+                // but keeping them is fine as they get overwritten on save.
+                // We mainly need the input values.
+                const { scores, totalScore, date, ...inputValues } = entry;
+                setCurrentEntry(inputValues);
+            };
+
+            const handleCancelEdit = () => {
+                setEditingEntryIndex(null);
+                setCurrentEntry({});
+                setEntryDate(new Date().toISOString().split('T')[0]);
+            };
+
+            const handleEntryChange = (fieldId, value) => {
+                setCurrentEntry(prev => ({ ...prev, [fieldId]: value }));
+            };
+
+            const history = selectedPlayer ? getPlayerHistory(selectedPlayerId) : [];
+
+            const getLatestStats = (id) => {
+                const h = getPlayerHistory(id);
+                if (h.length === 0) return {};
+                const sorted = [...h].sort((a, b) => new Date(b.date) - new Date(a.date));
+                return sorted[0];
+            };
 
             return (
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', gap: '2rem' }}>
                     {/* Player List */}
                     <div className="card" style={{ width: '300px', display: 'flex', flexDirection: 'column', padding: '0' }}>
                         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                            <h3 style={{ margin: 0 }}>Combine / Testing</h3>
+                            <h3 style={{ margin: 0 }}>{viewCategory === 'ironman' ? 'Iron Man' : 'Combine Data'}</h3>
                         </div>
                         <div style={{ flex: 1, overflowY: 'auto' }}>
-                            {roster.map(player => (
-                                <div
-                                    key={player.id}
-                                    onClick={() => setSelectedPlayerId(player.id)}
-                                    style={{
-                                        padding: '0.75rem 1rem',
-                                        borderBottom: '1px solid var(--border)',
-                                        cursor: 'pointer',
-                                        background: selectedPlayerId === player.id ? 'var(--bg-body)' : 'transparent',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <div>
-                                        <div style={{ fontWeight: 'bold' }}>{player.name}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>#{player.number} • {player.position}</div>
+                            {roster.map(player => {
+                                const stats = getLatestStats(player.id);
+                                return (
+                                    <div
+                                        key={player.id}
+                                        onClick={() => { setSelectedPlayerId(player.id); setCurrentEntry({}); }}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            borderBottom: '1px solid var(--border)',
+                                            cursor: 'pointer',
+                                            background: selectedPlayerId === player.id ? 'var(--bg-body)' : 'transparent',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ fontWeight: 'bold' }}>{player.name}</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>#{player.number} • {player.position}</div>
+                                        </div>
+                                        <div>
+                                            {viewCategory === 'ironman' && stats.totalScore > 0 &&
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--success)' }}>{stats.totalScore} pts</span>
+                                            }
+                                            {viewCategory === 'combine' && stats.forty &&
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--accent)' }}>{stats.forty}s</span>
+                                            }
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     </div>
 
-                    {/* Editor */}
-                    <div className="card" style={{ flex: 1 }}>
+                    {/* Editor & Graph */}
+                    <div className="card" style={{ flex: 1, overflowY: 'auto' }}>
                         {selectedPlayer ? (
                             <>
-                                <h2 style={{ marginBottom: '2rem' }}>{selectedPlayer.name} - Testing Data</h2>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
-                                    {METRIC_FIELDS.map(field => (
-                                        <div key={field.id}>
-                                            <label className="form-label">{field.name} ({field.unit})</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <h2 style={{ margin: 0 }}>{selectedPlayer.name} - {viewCategory === 'ironman' ? 'Iron Man' : 'Combine'}</h2>
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
+                                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Est. Weight: </span>
+                                        <strong style={{ color: 'var(--accent)' }}>{playerWeight} lbs</strong>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                                    {/* Input Form */}
+                                    <div style={{ flex: 1, minWidth: '350px' }}>
+                                        <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            {editingEntryIndex !== null ? 'Edit Entry' : 'New Entry'}
+                                            {editingEntryIndex !== null && (
+                                                <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '2px 8px' }} onClick={handleCancelEdit}>Cancel</button>
+                                            )}
+                                        </h4>
+
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <label className="form-label">Session Date</label>
                                             <input
-                                                type={field.type}
-                                                step={field.step}
+                                                type="date"
                                                 className="form-input"
-                                                value={getPlayerMetrics(selectedPlayer.id)[field.id] || ''}
-                                                onChange={e => handleMetricChange(field.id, e.target.value)}
-                                                placeholder="--"
+                                                value={entryDate}
+                                                onChange={e => setEntryDate(e.target.value)}
                                             />
                                         </div>
-                                    ))}
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                            {Object.entries(groupedFields).map(([groupName, fields]) => (
+                                                <div key={groupName}>
+                                                    <h5 style={{ color: 'var(--accent)', borderBottom: '1px dashed var(--border)', paddingBottom: '0.25rem', marginBottom: '0.5rem' }}>{groupName}</h5>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1rem' }}>
+                                                        {fields.map(field => {
+                                                            const currentVal = currentEntry[field.id];
+                                                            const score = calculateIronManScore(field.id, currentVal, playerWeight);
+                                                            return (
+                                                                <div key={field.id}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                        <label className="form-label" style={{ fontSize: '0.8rem' }}>{field.name}</label>
+                                                                        {score > 0 && <span style={{ fontSize: '0.75rem', color: 'var(--success)' }}>{score} pts</span>}
+                                                                    </div>
+                                                                    <input
+                                                                        type={field.type}
+                                                                        step={field.step}
+                                                                        className="form-input"
+                                                                        value={currentVal || ''}
+                                                                        onChange={e => handleEntryChange(field.id, e.target.value)}
+                                                                        placeholder={field.unit}
+                                                                        style={{ padding: '0.5rem' }}
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <button className={`btn ${editingEntryIndex !== null ? 'btn-warning' : 'btn-primary'}`} style={{ marginTop: '1.5rem', width: '100%' }} onClick={handleSaveEntry}>
+                                            {editingEntryIndex !== null ? 'Update Entry' : 'Save Entry'}
+                                        </button>
+                                    </div>
+
+                                    {/* History Table */}
+                                    <div style={{ flex: 1, minWidth: '300px' }}>
+                                        <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>History</h4>
+                                        <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                                <thead>
+                                                    <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                                                        <th style={{ padding: '0.5rem' }}>Date</th>
+                                                        {viewCategory === 'ironman' && <th style={{ padding: '0.5rem' }}>Score</th>}
+                                                        {activeFields.slice(0, 3).map(f => <th key={f.id} style={{ padding: '0.5rem' }}>{f.name}</th>)}
+                                                        <th style={{ padding: '0.5rem' }}>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {history.map((e, i) => ({ ...e, originalIndex: i })).reverse().map((entry, idx) => (
+                                                        <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                            <td style={{ padding: '0.5rem', color: 'var(--text-secondary)' }}>{entry.date}</td>
+                                                            {viewCategory === 'ironman' && <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>{entry.totalScore || '-'}</td>}
+                                                            {activeFields.slice(0, 3).map(f => (
+                                                                <td key={f.id} style={{ padding: '0.5rem', fontWeight: entry[f.id] ? 'bold' : 'normal' }}>
+                                                                    {entry[f.id] || '-'}
+                                                                    {entry.scores && entry.scores[f.id] && viewCategory === 'ironman' && <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{entry.scores[f.id]} pts</div>}
+                                                                </td>
+                                                            ))}
+                                                            <td style={{ padding: '0.5rem' }}>
+                                                                <button
+                                                                    className="btn btn-secondary"
+                                                                    style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                                                                    onClick={() => handleEditEntry(entry.originalIndex, entry)}
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {/* Graph Section */}
+                                {history.length >= 2 && (
+                                    <div style={{ marginTop: '2rem' }}>
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                                            {activeFields.map(f => (
+                                                <button
+                                                    key={f.id}
+                                                    className={`btn ${graphMetric === f.id ? 'btn-primary' : 'btn-secondary'}`}
+                                                    style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}
+                                                    onClick={() => setGraphMetric(f.id)}
+                                                >
+                                                    {f.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <MetricGraph history={history} field={METRIC_FIELDS.find(f => f.id === graphMetric)} />
+                                    </div>
+                                )}
                             </>
                         ) : (
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column' }}>
                                 <Icon name="Activity" />
-                                <p style={{ marginTop: '1rem' }}>Select a player to enter testing data</p>
+                                <p style={{ marginTop: '1rem' }}>Select a player to manage testing data</p>
                             </div>
                         )}
                     </div>
                 </div>
             );
+        };
+
+
+        const CollapsibleCategory = ({ title, icon, children, defaultOpen = false }) => {
+            const [isOpen, setIsOpen] = useState(defaultOpen);
+            return (
+                <div style={{ marginBottom: '0.5rem' }}>
+                    <div
+                        onClick={() => setIsOpen(!isOpen)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.75rem 0.5rem',
+                            cursor: 'pointer',
+                            color: 'var(--text-secondary)',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            borderRadius: '6px',
+                            transition: 'background 0.2s',
+                            userSelect: 'none'
+                        }}
+                        className="nav-category-header"
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {icon && <Icon name={icon} />}
+                            <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.8rem' }}>{title}</span>
+                        </div>
+                        <span style={{ fontSize: '0.8rem', transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }}>
+                            <Icon name={isOpen ? "ChevronDown" : "ChevronRight"} />
+                        </span>
+                    </div>
+                    {isOpen && (
+                        <div style={{ paddingLeft: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            {children}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const useLocalStorage = (key, initialValue) => {
+            const [storedValue, setStoredValue] = useState(() => {
+                try {
+                    const item = window.localStorage.getItem(key);
+                    return item ? JSON.parse(item) : initialValue;
+                } catch (error) {
+                    console.error(error);
+                    return initialValue;
+                }
+            });
+
+            const setValue = (value) => {
+                try {
+                    const valueToStore = value instanceof Function ? value(storedValue) : value;
+                    setStoredValue(valueToStore);
+                    window.localStorage.setItem(key, JSON.stringify(valueToStore));
+                } catch (error) {
+                    console.error(error);
+                }
+            };
+
+            return [storedValue, setValue];
         };
 
         const App = () => {
@@ -2928,17 +3754,35 @@
                 try {
                     const saved = localStorage.getItem('oc-dashboard-staff');
                     return (saved && saved !== "null") ? JSON.parse(saved) : [];
-                } catch (e) { return []; }
+                } catch (e) { return {}; }
             });
             const [teamLogo, setTeamLogo] = useState(() => {
                 return localStorage.getItem('oc-dashboard-logo') || null;
             });
-            const [ratings, setRatings] = useState(() => {
-                try {
-                    const saved = localStorage.getItem('oc-dashboard-ratings');
-                    return (saved && saved !== "null") ? JSON.parse(saved) : {};
-                } catch (e) { return {}; }
-            });
+            const [depthChartType, setDepthChartType] = useState('OFFENSE');
+
+            // Layout Persistence
+            const [formationLayouts, setFormationLayouts] = useLocalStorage('formationLayouts', {});
+
+            const updateFormationLayout = (chartType, posId, x, y) => {
+                setFormationLayouts(prev => ({
+                    ...prev,
+                    [chartType]: {
+                        ...(prev[chartType] || {}),
+                        [posId]: { x, y }
+                    }
+                }));
+            };
+
+            const resetFormationLayout = (chartType) => {
+                setFormationLayouts(prev => {
+                    const next = { ...prev };
+                    delete next[chartType];
+                    return next;
+                });
+            };
+
+            const [ratings, setRatings] = useLocalStorage('oc-dashboard-ratings', {});
             const [metrics, setMetrics] = useState(() => {
                 try {
                     const saved = localStorage.getItem('oc-dashboard-metrics');
@@ -3107,60 +3951,102 @@
                         <h1 style={{ fontSize: '1.25rem', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
                             <span style={{ color: 'var(--accent)' }}>OC</span> Dashboard
                         </h1>
-                        <nav>
-                            <div className={`nav-item ${view === 'landing' ? 'active' : ''}`} onClick={() => setView('landing')}>
-                                <Icon name="Home" /> Season
-                            </div>
+                        <nav style={{ flex: 1, overflowY: 'auto' }}>
+                            {/* SEASON CATEGORY */}
+                            <CollapsibleCategory title="Season" icon="Calendar" defaultOpen={true}>
+                                <button
+                                    className={`nav-item ${view === 'landing' && currentWeekId === (weeks[weeks.length - 1]?.id) ? 'active' : ''}`}
+                                    onClick={() => { setCurrentWeekId(weeks[weeks.length - 1]?.id); setView('landing'); }}
+                                    style={{ paddingLeft: '0.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                >
+                                    Overview / Current
+                                </button>
+                                {weeks.map(week => (
+                                    <button
+                                        key={week.id}
+                                        className={`nav-item ${view === 'landing' && currentWeekId === week.id ? 'active' : ''}`}
+                                        onClick={() => { setCurrentWeekId(week.id); setView('landing'); }}
+                                        style={{ fontSize: '0.9rem', paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                    >
+                                        {week.name}
+                                    </button>
+                                ))}
+                                <button
+                                    className="nav-item"
+                                    onClick={handleAddWeek}
+                                    style={{ color: 'var(--accent)', paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                >
+                                    <Icon name="PlusCircle" /> Add Week
+                                </button>
+                            </CollapsibleCategory>
 
-                            <div style={{ height: '1rem' }}></div>
+                            {/* PERSONNEL CATEGORY */}
+                            <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
+                                {/* Nested Roster Menu */}
+                                <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Manage Roster
+                                </button>
+                                <button className={`nav-item ${view === 'staff' ? 'active' : ''}`} onClick={() => setView('staff')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Staff
+                                </button>
 
-                            <div style={{ padding: '0.5rem 0.5rem 0.25rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                Personnel
-                            </div>
-                            <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')}>
-                                <Icon name="Users" /> Roster
-                            </button>
-                            <button className={`nav-item ${view === 'depthchart' ? 'active' : ''}`} onClick={() => setView('depthchart')}>
-                                <Icon name="Grid" /> Depth Chart
-                            </button>
-                            <button className={`nav-item ${view === 'staff' ? 'active' : ''}`} onClick={() => setView('staff')}>
-                                <Icon name="User" /> Staff
-                            </button>
-                            <button className={`nav-item ${view === 'metrics' ? 'active' : ''}`} onClick={() => setView('metrics')}>
-                                <Icon name="Activity" /> Combine / Testing
-                            </button>
-                            <button className={`nav-item ${view === 'madden' ? 'active' : ''}`} onClick={() => setView('madden')}>
-                                <Icon name="Monitor" /> Madden Ratings
-                            </button>
+                                {/* Nested Depth Charts Menu */}
+                                <CollapsibleCategory title="Depth Charts" icon="LayoutDashboard" defaultOpen={false} nested={true}>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>Offense</button>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>Defense</button>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'KICKOFF' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('KICKOFF'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>Kickoff</button>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'KICK_RETURN' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('KICK_RETURN'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>Kick Return</button>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'PUNT' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('PUNT'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>Punt</button>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'PUNT_RETURN' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('PUNT_RETURN'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>Punt Return</button>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'HANDS_TEAM' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('HANDS_TEAM'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>Hands Team</button>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'ONSIDE_KICK' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('ONSIDE_KICK'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>Onside Kick</button>
+                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'PAT_BLOCK' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('PAT_BLOCK'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', paddingLeft: '2.5rem' }}>PAT Block</button>
+                                </CollapsibleCategory>
+                            </CollapsibleCategory>
 
-                            <div style={{ height: '1rem' }}></div>
+                            {/* ATHLETIC DEVELOPMENT CATEGORY */}
+                            <CollapsibleCategory title="Athletic Development" icon="Activity" defaultOpen={true}>
+                                <button className={`nav-item ${view === 'testing' ? 'active' : ''}`} onClick={() => setView('testing')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Combine / Testing
+                                </button>
+                                <button className={`nav-item ${view === 'ironman' ? 'active' : ''}`} onClick={() => setView('ironman')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Iron Man
+                                </button>
+                                <button className={`nav-item ${view === 'ratings' ? 'active' : ''}`} onClick={() => setView('ratings')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Madden Ratings
+                                </button>
+                            </CollapsibleCategory>
 
-                            <div className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')}>
-                                <Icon name="List" /> Playbook
-                            </div>
-                            <div className={`nav-item ${view === 'wristband' ? 'active' : ''}`} onClick={() => setView('wristband')}>
-                                <Icon name="Grid" /> Wristband
-                            </div>
-                            <div className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')}>
-                                <Icon name="List" /> Practice
-                            </div>
-                            <div className={`nav-item ${view === 'pregame' ? 'active' : ''}`} onClick={() => setView('pregame')}>
-                                <Icon name="Clock" /> Pre-game
-                            </div>
+                            {/* WEEKLY PREP CATEGORY */}
+                            <CollapsibleCategory title="Weekly Prep" icon="Book" defaultOpen={true}>
+                                <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Playbook
+                                </button>
+                                <button className={`nav-item ${view === 'wristband' ? 'active' : ''}`} onClick={() => setView('wristband')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Wristband
+                                </button>
+                                <button className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Practice
+                                </button>
+                            </CollapsibleCategory>
 
-                            <div style={{ height: '1rem' }}></div>
-
-                            <div className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}>
-                                <Icon name="LayoutDashboard" /> OC Call Sheet
-                            </div>
-                            <div className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')}>
-                                <Icon name="Monitor" /> Pressbox
-                            </div>
+                            {/* GAMEDAY CATEGORY */}
+                            <CollapsibleCategory title="Gameday" icon="LayoutDashboard" defaultOpen={false}>
+                                <button className={`nav-item ${view === 'pregame' ? 'active' : ''}`} onClick={() => setView('pregame')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Pre-game
+                                </button>
+                                <button className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    OC Call Sheet
+                                </button>
+                                <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    Pressbox
+                                </button>
+                            </CollapsibleCategory>
 
                             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                                <div className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>
+                                <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     <Icon name="Settings" /> Settings
-                                </div>
+                                </button>
                             </div>
                         </nav>
                     </div>
@@ -3287,10 +4173,20 @@
                         {view === 'practice' && <PracticeScriptBuilder plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} />}
                         {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} />}
                         {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} />}
-                        {view === 'depthchart' && <DepthChart roster={roster} depthChart={depthChart} onUpdateDepthChart={setDepthChart} teamLogo={teamLogo} />}
+                        {view === 'depth' && <DepthChart
+                            roster={roster}
+                            depthChart={currentWeek.depthChart || {}}
+                            onUpdateDepthChart={(dc) => updateCurrentWeek('depthChart', dc)}
+                            chartType={depthChartType}
+                            teamLogo={teamLogo}
+                            savedLayout={formationLayouts[depthChartType] || {}}
+                            onUpdateLayout={(posId, x, y) => updateFormationLayout(depthChartType, posId, x, y)}
+                            onResetLayout={() => resetFormationLayout(depthChartType)}
+                        />}
                         {view === 'staff' && <StaffManager staff={staff} onUpdateStaff={setStaff} />}
-                        {view === 'metrics' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} />}
-                        {view === 'madden' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
+                        {view === 'testing' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="combine" />}
+                        {view === 'ironman' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="ironman" />}
+                        {view === 'ratings' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
                         {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={setGameLog} />}
                         {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} onImportData={handleImportData} onExportData={handleExportData} />}
                     </main>
