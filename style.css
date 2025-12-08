@@ -484,3 +484,14 @@ button {
     max-height: 100%;
   }
 }
+
+/* Utility for print-only text */
+.screen-hidden {
+  display: none;
+}
+
+@media print {
+  .screen-hidden {
+    display: inline;
+  }
+}
