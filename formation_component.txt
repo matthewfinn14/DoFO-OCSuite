@@ -1,0 +1,106 @@
+// FormationWindow Component - To be integrated into index.html
+
+const FormationWindow = ({ selectedPlay }) => {
+    // Default defender positions (4-3 defense)
+    const getDefaultPositions = () => [
+        { id: 'DL1', label: 'DL', x: 35, y: 48 },
+        { id: 'DL2', label: 'DL', x: 42, y: 50 },
+        { id: 'DL3', label: 'DL', x: 58, y: 50 },
+        { id: 'DL4', label: 'DL', x: 65, y: 48 },
+        { id: 'LB1', label: 'LB', x: 30, y: 35 },
+        { id: 'LB2', label: 'LB', x: 50, y: 38 },
+        { id: 'LB3', label: 'LB', x: 70, y: 35 },
+        { id: 'DB1', label: 'CB', x: 15, y: 20 },
+        { id: 'DB2', label: 'CB', x: 85, y: 20 },
+        { id: 'DB3', label: 'S', x: 35, y: 15 },
+        { id: 'DB4', label: 'S', x: 65, y: 15 },
+    ];
+
+    const [defenders, setDefenders] = useState(getDefaultPositions());
+    const [dragging, setDragging] = useState(null);
+    const fieldRef = useRef(null);
+
+    // Reset positions when play changes
+    useEffect(() => {
+        setDefenders(getDefaultPositions());
+    }, [selectedPlay?.id]);
+
+    const handleMouseDown = (e, defenderId) => {
+        e.preventDefault();
+        st Dragging(defenderId);
+    };
+
+    const handleMouseMove = (e) => {
+        if (!dragging || !fieldRef.current) return;
+
+        const rect = fieldRef.current.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        const constrainedX = Math.max(2, Math.min(98, x));
+        const constrainedY = Math.max(2, Math.min(98, y));
+
+        setDefenders(prev => prev.map(d => 
+            d.id === dragging ? { ...d, x: constrainedX, y: constrainedY } : d
+        ));
+    };
+
+    const handleMouseUp = () => {
+        setDragging(null);
+    };
+
+    const handleReset = () => {
+        setDefenders(getDefaultPositions());
+    };
+
+    useEffect(() => {
+        if (dragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                window.removeEventListener('mousemove', handleMouseMove);
+                window.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [dragging]);
+
+    // Basic offensive positions based on formation
+    const getOffensivePositions = (formation) => {
+        const base = [
+            { label: 'LT', x: 35, y: 52 },
+            { label: 'LG', x: 42, y: 52 },
+            { label: 'C', x: 50, y: 52 },
+            { label: 'RG', x: 58, y: 52 },
+            { label: 'RT', x: 65, y: 52 },
+            { label: 'QB', x: 50, y: 58 },
+            { label: 'RB', x: 50, y: 65 },
+        ];
+
+        if (formation?.toLowerCase().includes('diamond')) {
+            return [...base,
+                { label: 'WR', x: 50, y: 45 },
+                { label: 'WR', x: 35, y: 58 },
+                { label: 'WR', x: 65, y: 58 },
+                { label: 'WR', x: 50, y: 72 }
+            ];
+        } else if (formation?.toLowerCase().includes('bunch')) {
+            return [...base,
+                { label: 'WR', x: 10, y: 52 },
+                { label: 'WR', x: 75, y: 52 },
+                { label: 'WR', x: 80, y: 52 },
+                { label: 'WR', x: 85, y: 50 }
+            ];
+        } else {
+            return [...base,
+                { label: 'WR', x: 10, y: 52 },
+                { label: 'WR', x: 25, y: 52 },
+                { label: 'WR', x: 75, y: 52 },
+                { label: 'WR', x: 90, y: 52 }
+            ];
+        }
+    };
+
+    const offensivePositions = selectedPlay ? getOffensivePositions(selectedPlay.formation) : [];
+
+    return (...); // JSX continues below
+};
