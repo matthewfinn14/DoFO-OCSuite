@@ -961,7 +961,7 @@
         };
 
         const PlayInput = ({ onSave, onCancel, onDelete, initialData }) => {
-            const [formData, setFormData] = useState(initialData || {
+            const [formData, setFormData] = useState({
                 playCategory: '', // Existing field
                 formation: '',
                 formationTag: '',
@@ -980,7 +980,8 @@
                 hashPreference: 'Any', // Left, Right, Middle, Any
                 baseType: '', // Run, Pass, RPO, Gadget
                 fieldZones: [], // Array: Fringe, Red Zone, Gold Zone, Goal Line
-                downDistance: [] // Array: from existing tags
+                downDistance: [], // Array: from existing tags
+                ...initialData // Merge existing data ON TOP of defaults
             });
 
             const toggleTag = (tag) => {
@@ -1269,9 +1270,32 @@
             );
         };
 
-        const PlayCard = ({ play, onEdit }) => {
+        const PlayCard = ({ play, onEdit, isSelected, onToggleSelection }) => {
             return (
-                <div className="play-card" onClick={() => onEdit(play)} style={{ cursor: 'pointer' }}>
+                <div className={`play-card ${isSelected ? 'selected' : ''}`} onClick={() => onEdit(play)} style={{ cursor: 'pointer', position: 'relative', border: isSelected ? '2px solid #ef4444' : '' }}>
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleSelection(play.id);
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: '5px',
+                            right: '5px',
+                            zIndex: 10,
+                            background: 'rgba(0,0,0,0.5)',
+                            borderRadius: '4px',
+                            padding: '4px'
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={isSelected || false}
+                            onChange={() => { }} // Handled by div click
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                    </div>
+
                     {play.image ? (
                         <img src={play.image} className="play-image" alt={play.name} />
                     ) : (
@@ -3643,7 +3667,7 @@
 
         const RosterManager = ({ roster, onUpdateRoster }) => {
             const [newPlayer, setNewPlayer] = useState({
-                number: '', name: '', position: 'QB', year: 'Fr', height: '', weight: '',
+                number: '', name: '', position: 'QB/LB', offPosition: 'QB', defPosition: 'LB', year: 'Fr', height: '', weight: '',
                 injured: false, traveling: true, captain: false,
                 offenseRoles: [], defenseRoles: [], specialRoles: [],
                 varsity: true, jv: false, jv2: false
@@ -3670,9 +3694,10 @@
 
             const addPlayer = () => {
                 if (!newPlayer.number || !newPlayer.name) return;
-                onUpdateRoster([...roster, { ...newPlayer, id: Date.now().toString() }]);
+                const position = `${newPlayer.offPosition}/${newPlayer.defPosition}`;
+                onUpdateRoster([...roster, { ...newPlayer, position, id: Date.now().toString() }]);
                 setNewPlayer({
-                    number: '', name: '', position: 'QB', year: 'Fr', height: '', weight: '',
+                    number: '', name: '', position: 'QB/LB', offPosition: 'QB', defPosition: 'LB', year: 'Fr', height: '', weight: '',
                     injured: false, traveling: true, captain: false,
                     offenseRoles: [], defenseRoles: [], specialRoles: [],
                     varsity: true, jv: false, jv2: false
@@ -3680,7 +3705,17 @@
             };
 
             const updatePlayer = (id, field, value) => {
-                onUpdateRoster(roster.map(p => p.id === id ? { ...p, [field]: value } : p));
+                // If updating off/def pos, also update the combined string for compat
+                let updatedPlayer = roster.find(p => p.id === id);
+                if (field === 'offPosition') {
+                    const newPos = `${value}/${updatedPlayer.defPosition || 'NA'}`;
+                    onUpdateRoster(roster.map(p => p.id === id ? { ...p, [field]: value, position: newPos } : p));
+                } else if (field === 'defPosition') {
+                    const newPos = `${updatedPlayer.offPosition || 'NA'}/${value}`;
+                    onUpdateRoster(roster.map(p => p.id === id ? { ...p, [field]: value, position: newPos } : p));
+                } else {
+                    onUpdateRoster(roster.map(p => p.id === id ? { ...p, [field]: value } : p));
+                }
             };
 
             const deletePlayer = (id) => {
@@ -3711,8 +3746,16 @@
                                 <input type="text" className="form-input" value={newPlayer.name} onChange={e => setNewPlayer({ ...newPlayer, name: e.target.value })} placeholder="Player Name" />
                             </div>
                             <div style={{ flex: 1 }}>
-                                <label className="form-label">Primary</label>
-                                <select className="form-select" value={newPlayer.position} onChange={e => setNewPlayer({ ...newPlayer, position: e.target.value })}>
+                                <label className="form-label">Off Pos</label>
+                                <select className="form-select" value={newPlayer.offPosition} onChange={e => setNewPlayer({ ...newPlayer, offPosition: e.target.value })}>
+                                    <option value="NA">--</option>
+                                    {positions.map(p => <option key={p}>{p}</option>)}
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Def Pos</label>
+                                <select className="form-select" value={newPlayer.defPosition} onChange={e => setNewPlayer({ ...newPlayer, defPosition: e.target.value })}>
+                                    <option value="NA">--</option>
                                     {positions.map(p => <option key={p}>{p}</option>)}
                                 </select>
                             </div>
@@ -3800,7 +3843,7 @@
                                 <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                                     <th style={{ padding: '0.5rem' }}>#</th>
                                     <th style={{ padding: '0.5rem' }}>Name</th>
-                                    <th style={{ padding: '0.5rem' }}>Primary</th>
+                                    <th style={{ padding: '0.5rem' }}>Pos (Off/Def)</th>
                                     <th style={{ padding: '0.5rem' }}>Roles / Tags</th>
                                     <th style={{ padding: '0.5rem' }}>Year</th>
                                     <th style={{ padding: '0.5rem' }}>Ht</th>
@@ -3809,7 +3852,6 @@
                                     <th style={{ padding: '0.5rem', textAlign: 'center' }}>JV</th>
                                     <th style={{ padding: '0.5rem', textAlign: 'center' }}>J2</th>
                                     <th style={{ padding: '0.5rem', textAlign: 'center' }}>Cpt</th>
-                                    <th style={{ padding: '0.5rem', textAlign: 'center' }}>Injured</th>
                                     <th style={{ padding: '0.5rem', textAlign: 'center' }}>Traveling</th>
                                     <th style={{ padding: '0.5rem', textAlign: 'right' }}>Actions</th>
                                 </tr>
@@ -3845,14 +3887,32 @@
                                         </td>
                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                             {isEditing === player.id ? (
-                                                <select
-                                                    className="form-select"
-                                                    value={player.position}
-                                                    onChange={e => updatePlayer(player.id, 'position', e.target.value)}
-                                                >
-                                                    {positions.map(p => <option key={p}>{p}</option>)}
-                                                </select>
-                                            ) : player.position}
+                                                <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
+                                                    <select
+                                                        className="form-select"
+                                                        style={{ padding: '2px', fontSize: '0.8rem' }}
+                                                        value={player.offPosition || 'NA'}
+                                                        onChange={e => updatePlayer(player.id, 'offPosition', e.target.value)}
+                                                    >
+                                                        <option value="NA">--</option>
+                                                        {positions.map(p => <option key={p}>{p}</option>)}
+                                                    </select>
+                                                    <select
+                                                        className="form-select"
+                                                        style={{ padding: '2px', fontSize: '0.8rem' }}
+                                                        value={player.defPosition || 'NA'}
+                                                        onChange={e => updatePlayer(player.id, 'defPosition', e.target.value)}
+                                                    >
+                                                        <option value="NA">--</option>
+                                                        {positions.map(p => <option key={p}>{p}</option>)}
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                    <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{player.offPosition}</span>
+                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{player.defPosition}</span>
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -3915,14 +3975,6 @@
                                                 checked={player.captain || false}
                                                 onChange={e => updatePlayer(player.id, 'captain', e.target.checked)}
                                                 style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }}
-                                            />
-                                        </td>
-                                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={player.injured || false}
-                                                onChange={e => updatePlayer(player.id, 'injured', e.target.checked)}
-                                                style={{ width: '18px', height: '18px', accentColor: '#ef4444' }}
                                             />
                                         </td>
                                         <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
@@ -6405,7 +6457,7 @@
             );
         };
 
-        const PressboxTracker = ({ plays, gameLog, onUpdateGameLog, roster }) => {
+        const PressboxTracker = ({ plays, gameLog, onUpdateGameLog, roster, depthChart, situation, onUpdateSituation }) => {
             // Helper to convert User Format (-49 to -1, 50, 49 to 1) to Linear (1-99)
             // Linear: 1 (Own 1) -> 50 (Mid) -> 99 (Opp 1)
             const toLinearYard = (userVal) => {
@@ -6428,13 +6480,8 @@
                 return `Opp ${userVal}`;
             };
 
-            const [situation, setSituation] = useState({
-                down: 1,
-                distance: 10,
-                yardLine: 25, // Linear 25 = Own 25
-                hash: 'M',
-                driveNumber: 1
-            });
+            // Situation state is now lifted to App
+            const setSituation = onUpdateSituation;
             const [selectedPlayId, setSelectedPlayId] = useState('');
             const [result, setResult] = useState({
                 yards: 0,
@@ -6804,7 +6851,131 @@
             );
         };
 
-        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, onImportData, onExportData }) => {
+        const UserGuide = () => {
+            return (
+                <div className="card" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
+                    <h1 style={{ marginBottom: '2rem' }}><Icon name="HelpCircle" size={32} /> User Guide</h1>
+
+                    <section style={{ marginBottom: '3rem' }}>
+                        <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Head Coach Usage</h2>
+                        <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                            <li><strong>Staff Management:</strong> Use "Task Assigner" and "Staff & Roles" to delegate responsibilities to your assistants.</li>
+                            <li><strong>Weekly Schedule:</strong> Monitor the "Active Week" timeline to ensure the team is on track for the upcoming opponent.</li>
+                            <li><strong>Travel & Logistics:</strong> Use the "Travel Roster" to manage personnel for away games.</li>
+                            <li><strong>Oversight:</strong> View all depth charts and practice plans to ensure alignment with team goals.</li>
+                        </ul>
+                    </section>
+
+                    <section style={{ marginBottom: '3rem' }}>
+                        <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Offensive Coordinator Usage</h2>
+                        <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                            <li><strong>Playbook:</strong> Add and organize plays with tags (Formation, Concept, Situation). Use batch delete to clean up old plays.</li>
+                            <li><strong>Game Planning:</strong> Build your "Smart Call Sheet" by tagging plays with specific situations (e.g., "3rd & Long").</li>
+                            <li><strong>Practice Scripts:</strong> Generate scripts based on your installed playbook and daily focus.</li>
+                            <li><strong>In-Game:</strong> Use the "OC Call Sheet" on the tablet app for real-time play calling and tracking.</li>
+                        </ul>
+                    </section>
+
+                    <section style={{ marginBottom: '3rem' }}>
+                        <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Position Coach Usage</h2>
+                        <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                            <li><strong>Depth Charts:</strong> Manage rotation and depth for your specific unit (Varsity, JV, etc.).</li>
+                            <li><strong>Player Development:</strong> Track "Iron Man" stats and "Testing" results for your position group.</li>
+                            <li><strong>Equipment:</strong> Manage "Checkouts" and "Inventory" for your specific position needs.</li>
+                        </ul>
+                    </section>
+                </div>
+            );
+        };
+
+        const TestingRecords = () => {
+            const [selectedGrade, setSelectedGrade] = useState('12'); // Default to Senior
+
+            // Generate Weight Classes: 100 to 320 in 10lb increments
+            const weightClasses = [];
+            weightClasses.push('< 100');
+            for (let i = 100; i < 320; i += 10) {
+                weightClasses.push(`${i}-${i + 9}`);
+            }
+            weightClasses.push('320+');
+
+            // Mock Data Helper
+            const getRecord = (grade, weightClass, test) => {
+                // Mock Data for demonstration
+                if (weightClass === '180-189' && test === 'Bench' && grade === '12') return { value: '315', holder: 'M. Finn', year: '2015' };
+                if (weightClass === '220-229' && test === 'Squat' && grade === '12') return { value: '500', holder: 'B. Baker', year: '2023' };
+                if (weightClass === '160-169' && test === '40 Yard' && grade === '11') return { value: '4.42', holder: 'T. Speed', year: '2024' };
+                if (weightClass === '140-149' && test === 'Vertical' && grade === '10') return { value: '34"', holder: 'J. Jump', year: '2024' };
+
+                return { value: '--', holder: '-', year: '-' };
+            };
+
+            const events = ['Bench', 'Squat', 'Clean', '40 Yard', 'Vertical'];
+
+            return (
+                <div className="card" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <h1 style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '1.5rem', margin: 0 }}>
+                            <Icon name="Award" size={28} color="var(--accent)" />
+                            Testing Records
+                        </h1>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <label style={{ fontWeight: 'bold' }}>Grade Level:</label>
+                            <select
+                                className="form-select"
+                                value={selectedGrade}
+                                onChange={(e) => setSelectedGrade(e.target.value)}
+                                style={{ width: '150px' }}
+                            >
+                                <option value="9">Freshman</option>
+                                <option value="10">Sophomore</option>
+                                <option value="11">Junior</option>
+                                <option value="12">Senior</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '800px' }}>
+                            <thead>
+                                <tr style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                    <th style={{ textAlign: 'left', padding: '1rem', borderBottom: '2px solid var(--border)', color: 'var(--text-secondary)' }}>Weight Class (lbs)</th>
+                                    {events.map(evt => (
+                                        <th key={evt} style={{ textAlign: 'center', padding: '1rem', borderBottom: '2px solid var(--border)', color: 'var(--text-secondary)' }}>{evt}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {weightClasses.map((wc, idx) => (
+                                    <tr key={wc} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                                        <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--accent)' }}>{wc}</td>
+                                        {events.map(evt => {
+                                            const record = getRecord(selectedGrade, wc, evt);
+                                            return (
+                                                <td key={evt} style={{ padding: '0.75rem', textAlign: 'center' }}>
+                                                    {record.value !== '--' ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                            <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#fff' }}>{record.value}</span>
+                                                            <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>{record.holder}</span>
+                                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{record.year}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ opacity: 0.1, fontSize: '1.2rem' }}>—</span>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, onImportData, onExportData, onImportDefaultData }) => {
             const handleImageUpload = (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -6919,7 +7090,7 @@
                         <h3>Data Management</h3>
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Backup your data or move it to another device.</p>
 
-                        <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                             <button className="btn btn-primary" onClick={onExportData}>
                                 📥 Export Data Backup
                             </button>
@@ -6932,6 +7103,9 @@
                                     onChange={onImportData}
                                 />
                             </label>
+                            <button className="btn" style={{ background: '#059669', color: 'white' }} onClick={onImportDefaultData}>
+                                🔄 Load 2025 Roster/Staff
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -7004,9 +7178,8 @@
                             points={points.map(p => `${p.x},${p.y}`).join(' ')}
                             fill="none"
                             stroke="var(--accent)"
-                            strokeWidth="3"
+                            strokeWidth="2"
                         />
-
                         {/* Points */}
                         {points.map((p, i) => (
                             <g key={i}>
@@ -7020,6 +7193,166 @@
             );
         };
 
+
+        const SmartCallSheet = ({ gamePlan, situation, plays, onUpdateSituation }) => {
+            // Helper to convert User Format (-49 to -1, 50, 49 to 1) to Linear (1-99)
+            const toLinearYard = (userVal) => {
+                if (userVal === 50) return 50;
+                if (userVal < 0) return Math.abs(userVal);
+                return 100 - userVal;
+            };
+
+            const formatYardLine = (linearVal) => {
+                if (linearVal === 50) return '50';
+                if (linearVal < 50) return `Own ${linearVal}`;
+                return `Opp ${100 - linearVal}`;
+            };
+
+            const [activeCategory, setActiveCategory] = useState('openers');
+
+            // Suggest Category based on Situation
+            const suggestedCategory = useMemo(() => {
+                const { down, distance, yardLine } = situation;
+                const distToGoal = 100 - situation.yardLine;
+
+                if (distToGoal <= 5 && distToGoal > 0) return 'goalLine';
+                if (distToGoal <= 20 && distToGoal > 0) return 'redZone';
+
+                if (down === 3) {
+                    if (distance <= 3) return 'thirdShort';
+                    if (distance <= 7) return 'thirdMed';
+                    return 'thirdLong'; // 8+
+                }
+
+                return 'openers';
+            }, [situation]);
+
+            // Auto-switch when suggestion changes
+            useEffect(() => {
+                if (suggestedCategory) {
+                    setActiveCategory(suggestedCategory);
+                }
+            }, [suggestedCategory]);
+
+            // Get plays for active category
+            const categoryPlaysRaw = (gamePlan && gamePlan[activeCategory]) || [];
+
+            // Map to full play details found in 'plays' prop
+            const categoryPlays = categoryPlaysRaw.map(p => {
+                return plays.find(pl => pl.id === p.id) || p;
+            });
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+                    {/* Top Bar: Situation Dashboard */}
+                    <div style={{
+                        background: 'var(--bg-panel)',
+                        padding: '1rem',
+                        borderRadius: '12px',
+                        marginBottom: '1rem',
+                        border: '2px solid var(--accent)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}>
+                        <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Down</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>{situation.down}</div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Distance</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>{situation.distance}</div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Ball On</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '600' }}>{formatYardLine(situation.yardLine)}</div>
+                            </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                {suggestedCategory === activeCategory ? '🤖 Auto-Suggested' : '✋ Manual Override'}
+                            </div>
+                            <div style={{ color: 'var(--text-secondary)' }}>
+                                Context: {suggestedCategory.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Content: Tabs + Grid */}
+                    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: '1rem' }}>
+                        {/* Left Sidebar: Categories (Large Tabs) */}
+                        <div style={{ width: '250px', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                            {['openers', 'thirdShort', 'thirdMed', 'thirdLong', 'redZone', 'goalLine'].map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setActiveCategory(cat)}
+                                    style={{
+                                        padding: '1.5rem 1rem',
+                                        textAlign: 'left',
+                                        background: activeCategory === cat ? 'var(--accent)' : 'var(--bg-panel)',
+                                        color: activeCategory === cat ? 'var(--bg-app)' : 'var(--text-primary)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '8px',
+                                        fontSize: '1.1rem',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>{cat.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+                                    <span style={{
+                                        fontSize: '0.9rem',
+                                        opacity: 0.8,
+                                        background: activeCategory === cat ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.1)',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px'
+                                    }}>
+                                        {(gamePlan && gamePlan[cat] && gamePlan[cat].length) || 0}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Right Area: Play Grid */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+                            {categoryPlays.length === 0 ? (
+                                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
+                                    <Icon name="Clipboard" size={48} />
+                                    <div style={{ fontSize: '1.5rem' }}>No plays in this section</div>
+                                    <p>Go to Game Plan to add plays to {activeCategory}.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                                    {categoryPlays.map((play, idx) => (
+                                        <div key={play.id || idx} className="play-card" style={{ cursor: 'pointer', borderLeft: '4px solid var(--accent)' }}>
+                                            <div style={{ height: '180px', background: '#000', overflow: 'hidden', position: 'relative' }}>
+                                                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333' }}>
+                                                    <Icon name="Image" size={48} opacity={0.5} />
+                                                </div>
+                                                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.8)', color: 'white', padding: '0.5rem' }}>
+                                                    <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{play.name}</div>
+                                                    <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>{play.formation}</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ padding: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                {play.tags && play.tags.slice(0, 3).map(t => (
+                                                    <span key={t} className="mini-tag">{t}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
         const PlayerMetrics = ({ roster, metrics, onUpdateMetrics, viewCategory }) => {
             const [selectedPlayerId, setSelectedPlayerId] = useState(null);
@@ -7388,10 +7721,20 @@
             return [storedValue, setValue];
         };
 
-        const ProgramDashboard = ({ currentWeek }) => {
+        const ProgramDashboard = ({ currentWeek, roster, userRole = 'Head Coach', permissions = { view: true, edit: true } }) => {
             const [focusItems, setFocusItems] = useState([]);
             const [newFocus, setNewFocus] = useState('');
+
+            // Task State
             const [tasks, setTasks] = useState([]);
+
+            // Injury State (with persistence)
+            const [injuries, setInjuries] = useLocalStorage('oc-dashboard-injuries', []);
+            const [injuryForm, setInjuryForm] = useState({ playerId: '', status: 'Questionable', notes: '', returnDate: '' });
+
+            // Outreach State
+            const [outreach, setOutreach] = useLocalStorage('oc-dashboard-outreach', []);
+            const [newOutreach, setNewOutreach] = useState('');
 
             // Program Focus Persistence
             useEffect(() => {
@@ -7423,6 +7766,49 @@
                 saveFocus(focusItems.filter(i => i.id !== id));
             };
 
+            // Injury Logic
+            const addInjury = () => {
+                if (!injuryForm.playerId) return;
+                const player = roster.find(p => p.id === injuryForm.playerId);
+                const injury = {
+                    id: Date.now(),
+                    date: new Date().toISOString().split('T')[0],
+                    playerId: injuryForm.playerId,
+                    playerName: player ? `${player.firstName} ${player.lastName}` : 'Unknown',
+                    status: injuryForm.status,
+                    notes: injuryForm.notes,
+                    returnDate: injuryForm.returnDate
+                };
+                setInjuries([injury, ...injuries]);
+                setInjuryForm({ playerId: '', status: 'Questionable', notes: '', returnDate: '' });
+            };
+
+            const removeInjury = (id) => {
+                setInjuries(injuries.filter(i => i.id !== id));
+            };
+
+            // Outreach Logic
+            const addOutreach = () => {
+                if (!newOutreach.trim()) return;
+                const item = {
+                    id: Date.now(),
+                    text: newOutreach,
+                    completed: false,
+                    date: new Date().toISOString().split('T')[0]
+                };
+                setOutreach([item, ...outreach]);
+                setNewOutreach('');
+            };
+
+            const removeOutreach = (id) => {
+                setOutreach(outreach.filter(i => i.id !== id));
+            };
+
+            const toggleOutreach = (id) => {
+                setOutreach(outreach.map(i => i.id === id ? { ...i, completed: !i.completed } : i));
+            };
+
+
             // Tasks / Priorities Loading
             useEffect(() => {
                 if (!currentWeek) return;
@@ -7433,8 +7819,6 @@
                 if (saved) {
                     setTasks(JSON.parse(saved));
                 } else {
-                    // Try to load standard templates if empty
-                    // But we can't easily access the helper functions from outside App unless we move them or duplicate
                     setTasks([]);
                 }
             }, [currentWeek?.name]);
@@ -7442,20 +7826,41 @@
             if (!currentWeek) return <div>Loading...</div>;
 
             const isWeek = currentWeek.name.startsWith("Week") || currentWeek.name === "Camp Week";
+            const canEdit = permissions.edit;
+
+            // Map full role names to short codes used in tasks
+            const roleMap = {
+                'Head Coach': 'HC',
+                'Offensive Coordinator': 'OC',
+                'Defensive Coordinator': 'DC',
+                'Special Teams Coordinator': 'ST', // Assuming ST code
+                'Position Coach': 'Position Coach', // Or specific position
+                'Director of Ops': 'Ops',
+                'Recruiting Coordinator': 'Recruiting'
+            };
+
+            const userRoleShort = roleMap[userRole] || userRole;
+
+            // Filter tasks: HC & Ops see all. Others see assigned tasks + 'ALL'.
+            const displayedTasks = (userRole === 'Head Coach' || userRole === 'Director of Ops')
+                ? tasks
+                : tasks.filter(t => !t.roles || t.roles.length === 0 || t.roles.includes('ALL') || t.roles.includes(userRoleShort));
 
             return (
-                <div style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                     <div style={{ marginBottom: '2rem' }}>
                         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
                             <span style={{ color: 'var(--accent)' }}>{currentWeek.name}</span> Focus
                             {currentWeek.opponent && <span style={{ fontSize: '1.5rem', color: 'var(--text-secondary)', marginLeft: '1rem' }}>vs {currentWeek.opponent}</span>}
                         </h1>
-                        <div style={{ color: 'var(--text-secondary)' }}>Program Dashboard</div>
+                        <div style={{ color: 'var(--text-secondary)' }}>
+                            Program Dashboard {userRole !== 'Head Coach' && <span style={{ opacity: 0.7 }}>— Viewing as {userRole}</span>}
+                        </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', flex: 1, minHeight: 0 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
                         {/* LEFT: Program Focus (Goals) */}
-                        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div className="card" style={{ display: 'flex', flexDirection: 'column', maxHeight: '400px' }}>
                             <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                                 <Icon name="Trophy" color="var(--accent)" />
                                 Program Goals & Priorities
@@ -7475,10 +7880,11 @@
                                             background: item.completed ? 'rgba(0,255,0,0.05)' : 'transparent'
                                         }}>
                                             <button
-                                                onClick={() => toggleFocus(item.id)}
+                                                onClick={() => canEdit && toggleFocus(item.id)}
                                                 style={{
-                                                    background: 'none', border: 'none', cursor: 'pointer',
-                                                    color: item.completed ? 'var(--accent)' : 'var(--text-secondary)'
+                                                    background: 'none', border: 'none', cursor: canEdit ? 'pointer' : 'default',
+                                                    color: item.completed ? 'var(--accent)' : 'var(--text-secondary)',
+                                                    opacity: canEdit ? 1 : 0.7
                                                 }}
                                             >
                                                 {item.completed ? <Icon name="Check" size={20} /> : <div style={{ width: '20px', height: '20px', border: '2px solid var(--text-secondary)', borderRadius: '4px' }}></div>}
@@ -7486,31 +7892,35 @@
                                             <span style={{ flex: 1, textDecoration: item.completed ? 'line-through' : 'none', color: item.completed ? 'var(--text-secondary)' : 'var(--text-primary)', fontSize: '1.1rem' }}>
                                                 {item.text}
                                             </span>
-                                            <button
-                                                onClick={() => removeFocus(item.id)}
-                                                style={{ background: 'none', border: 'none', color: '#ef4444', opacity: 0.5, cursor: 'pointer' }}
-                                            >
-                                                <Icon name="Minus" size={16} />
-                                            </button>
+                                            {canEdit && (
+                                                <button
+                                                    onClick={() => removeFocus(item.id)}
+                                                    style={{ background: 'none', border: 'none', color: '#ef4444', opacity: 0.5, cursor: 'pointer' }}
+                                                >
+                                                    <Icon name="Minus" size={16} />
+                                                </button>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>
                             </div>
 
-                            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
-                                <input
-                                    className="form-input"
-                                    placeholder="Add major goal..."
-                                    value={newFocus}
-                                    onChange={e => setNewFocus(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && addFocus()}
-                                />
-                                <button className="btn btn-primary" onClick={addFocus}>Add</button>
-                            </div>
+                            {canEdit && (
+                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+                                    <input
+                                        className="form-input"
+                                        placeholder="Add major goal..."
+                                        value={newFocus}
+                                        onChange={e => setNewFocus(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && addFocus()}
+                                    />
+                                    <button className="btn btn-primary" onClick={addFocus}>Add</button>
+                                </div>
+                            )}
                         </div>
 
                         {/* RIGHT: To-Do / Checklist (Context Aware) */}
-                        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div className="card" style={{ display: 'flex', flexDirection: 'column', maxHeight: '400px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                                 <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                                     <Icon name="Checkbox" color="var(--accent)" />
@@ -7522,14 +7932,14 @@
                             </div>
 
                             <div style={{ flex: 1, overflowY: 'auto' }}>
-                                {tasks.length === 0 ? (
+                                {displayedTasks.length === 0 ? (
                                     <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                                         No tasks found for {currentWeek.name}.<br />
-                                        <span style={{ fontSize: '0.8rem' }}>Go to Director of Ops &gt; Task Assigner to manage.</span>
+                                        <span style={{ fontSize: '0.8rem' }}>Go to Personnel &gt; Task Assigner to manage.</span>
                                     </div>
                                 ) : (
                                     <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        {tasks.map(task => (
+                                        {displayedTasks.map(task => (
                                             <li key={task.id} style={{
                                                 padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)',
                                                 display: 'flex', gap: '1rem', alignItems: 'start',
@@ -7551,6 +7961,146 @@
                                 )}
                             </div>
                         </div>
+                    </div>
+
+
+                    {/* INJURY REPORT & OUTREACH */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', opacity: canEdit ? 1 : 0.9 }}>
+
+                        {/* INJURY REPORT */}
+                        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                                <Icon name="Activity" color="#ef4444" />
+                                Injury Report
+                            </h2>
+
+                            {/* Injury Form */}
+                            {canEdit && (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr auto', gap: '0.75rem', paddingBottom: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <select
+                                        className="form-select"
+                                        value={injuryForm.playerId}
+                                        onChange={e => setInjuryForm({ ...injuryForm, playerId: e.target.value })}
+                                    >
+                                        <option value="">Select Player...</option>
+                                        {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                                            <option key={p.id} value={p.id}>#{p.jersey} {p.lastName}, {p.firstName}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        className="form-select"
+                                        value={injuryForm.status}
+                                        onChange={e => setInjuryForm({ ...injuryForm, status: e.target.value })}
+                                    >
+                                        <option value="Questionable">Questionable</option>
+                                        <option value="Doubtful">Doubtful</option>
+                                        <option value="Out">Out</option>
+                                        <option value="IR">IR / Season</option>
+                                        <option value="Limited">Limited</option>
+                                    </select>
+                                    <input
+                                        className="form-input"
+                                        placeholder="Injury Notes..."
+                                        value={injuryForm.notes}
+                                        onChange={e => setInjuryForm({ ...injuryForm, notes: e.target.value })}
+                                    />
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        value={injuryForm.returnDate}
+                                        onChange={e => setInjuryForm({ ...injuryForm, returnDate: e.target.value })}
+                                        title="Expected Return / Follow-up Date"
+                                    />
+                                    <button className="btn btn-primary" onClick={addInjury}>Add</button>
+                                </div>
+                            )}
+
+                            {/* Injury List */}
+                            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                {injuries.length === 0 && <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', padding: '1rem' }}>No active injuries reported.</div>}
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                    <tbody>
+                                        {injuries.map(injury => (
+                                            <tr key={injury.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <td style={{ padding: '0.75rem' }}>
+                                                    <div style={{ fontWeight: 'bold' }}>{injury.playerName}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Reported: {injury.date}</div>
+                                                </td>
+                                                <td style={{ padding: '0.75rem' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <span className={`mini-tag ${injury.status === 'Out' || injury.status === 'IR' ? 'bg-red-500' : 'bg-yellow-500'}`} style={{ color: '#000', fontWeight: 'bold', width: 'fit-content' }}>
+                                                            {injury.status}
+                                                        </span>
+                                                        {injury.returnDate && (
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Icon name="Calendar" size={12} />
+                                                                Until: {injury.returnDate}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '0.75rem', color: 'var(--text-secondary)' }}>{injury.notes}</td>
+                                                <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                                    {canEdit && <button onClick={() => removeInjury(injury.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><Icon name="X" size={14} /></button>}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* OUTREACH / RECRUITING */}
+                        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                                <Icon name="MessageCircle" color="#3b82f6" />
+                                Reach Out To
+                            </h2>
+
+                            {canEdit && (
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                    <input
+                                        className="form-input"
+                                        placeholder="Name / Note..."
+                                        value={newOutreach}
+                                        onChange={e => setNewOutreach(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && addOutreach()}
+                                    />
+                                    <button className="btn btn-primary" onClick={addOutreach}><Icon name="Plus" size={18} /></button>
+                                </div>
+                            )}
+
+                            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '300px' }}>
+                                {outreach.length === 0 && <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', padding: '1rem' }}>No outreach tasks.</div>}
+                                <ul style={{ listStyle: 'none', padding: 0 }}>
+                                    {outreach.map(item => (
+                                        <li key={item.id} style={{
+                                            display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                            padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                            background: item.completed ? 'rgba(0,255,0,0.05)' : 'transparent'
+                                        }}>
+                                            <button
+                                                onClick={() => canEdit && toggleOutreach(item.id)}
+                                                style={{
+                                                    background: 'none', border: 'none', cursor: canEdit ? 'pointer' : 'default',
+                                                    color: item.completed ? 'var(--accent)' : 'var(--text-secondary)',
+                                                    opacity: canEdit ? 1 : 0.7
+                                                }}
+                                            >
+                                                {item.completed ? <Icon name="Check" size={18} /> : <div style={{ width: '18px', height: '18px', border: '2px solid var(--text-secondary)', borderRadius: '4px' }}></div>}
+                                            </button>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ textDecoration: item.completed ? 'line-through' : 'none', color: item.completed ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{item.text}</div>
+                                            </div>
+                                            {canEdit && (
+                                                <button onClick={() => removeOutreach(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', opacity: 0.5 }}><Icon name="X" size={14} /></button>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             );
@@ -7860,7 +8410,275 @@
         };
 
 
-        const EquipmentManager = ({ view, roster, inventory, onUpdateInventory, checkouts, onUpdateCheckouts, issuance, onUpdateIssuance, wishlist, onUpdateWishlist }) => {
+        const JerseyLottery = ({ roster, lotteryData, onUpdateLottery }) => {
+            const [view, setView] = useState('bidding'); // 'bidding', 'results'
+            const [selectedBidderId, setSelectedBidderId] = useState('');
+            const [battleNumber, setBattleNumber] = useState(null);
+            const [battleLives, setBattleLives] = useState({});
+
+            // Ensure data structure
+            const bids = lotteryData?.bids || {};
+            const winners = lotteryData?.winners || {};
+            const availableNumbers = lotteryData?.available || Array.from({ length: 99 }, (_, i) => i + 1);
+
+            const getRemainingTokens = (pid) => {
+                const playerBids = bids[pid] || {};
+                const total = Object.values(playerBids).reduce((a, b) => a + b, 0);
+                return 7 - total;
+            };
+
+            const handleBid = (pid, number, delta) => {
+                const currentBids = { ...(bids[pid] || {}) };
+                const currentVal = currentBids[number] || 0;
+                const remaining = getRemainingTokens(pid);
+
+                if (delta > 0 && remaining <= 0) return;
+                if (delta < 0 && currentVal <= 0) return;
+
+                const newVal = currentVal + delta;
+                if (newVal === 0) delete currentBids[number];
+                else currentBids[number] = newVal;
+
+                const newAllBids = { ...bids, [pid]: currentBids };
+                onUpdateLottery({ ...lotteryData, bids: newAllBids });
+            };
+
+            const getBidsForNumber = (num) => {
+                const bidders = [];
+                Object.entries(bids).forEach(([pid, playerBids]) => {
+                    if (playerBids[num]) bidders.push({ pid, tokens: playerBids[num] });
+                });
+                return bidders.sort((a, b) => b.tokens - a.tokens);
+            };
+
+            const startBattle = (num) => {
+                const bidders = getBidsForNumber(num);
+                const lives = {};
+                bidders.forEach(b => lives[b.pid] = b.tokens);
+                setBattleLives(lives);
+                setBattleNumber(num);
+            };
+
+            const updateLife = (pid, delta) => {
+                setBattleLives(prev => ({
+                    ...prev,
+                    [pid]: Math.max(0, (prev[pid] || 0) + delta)
+                }));
+            };
+
+            const declareWinner = (num, pid) => {
+                if (!confirm(`Declare ${roster.find(p => p.id === pid)?.name} the winner of #${num}?`)) return;
+                onUpdateLottery({ ...lotteryData, winners: { ...winners, [num]: pid } });
+                setBattleNumber(null);
+            };
+
+            const clearWinner = (num) => {
+                if (!confirm(`Reset winner for #${num}?`)) return;
+                const newWinners = { ...winners };
+                delete newWinners[num];
+                onUpdateLottery({ ...lotteryData, winners: newWinners });
+            };
+
+            return (
+                <div className="card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h2>Jersey Number Lottery</h2>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button className={`btn ${view === 'bidding' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setView('bidding')}>Place Bids</button>
+                            <button className={`btn ${view === 'results' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setView('results')}>Lottery Board</button>
+                        </div>
+                    </div>
+
+                    {view === 'bidding' && (
+                        <div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label className="form-label">Select Player</label>
+                                <select className="form-select" value={selectedBidderId} onChange={e => setSelectedBidderId(e.target.value)}>
+                                    <option value="">-- Choose Athlete --</option>
+                                    {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                                        <option key={p.id} value={p.id}>{p.lastName}, {p.firstName} (Tokens: {getRemainingTokens(p.id)})</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {selectedBidderId && (
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Tokens Remaining:</div>
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            {Array.from({ length: 7 }).map((_, i) => (
+                                                <div key={i} style={{
+                                                    width: '24px', height: '24px', borderRadius: '50%',
+                                                    background: i < getRemainingTokens(selectedBidderId) ? 'var(--accent)' : 'var(--border)',
+                                                    border: '1px solid var(--border)'
+                                                }}></div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '0.5rem' }}>
+                                        {availableNumbers.map(num => {
+                                            const playerBid = (bids[selectedBidderId] || {})[num] || 0;
+                                            const isTaken = Object.values(winners).includes(num); // Or check unavailable list
+                                            const isWonByMe = winners[num] === selectedBidderId;
+
+                                            // Check if won by someone else
+                                            const winnerId = winners[num];
+                                            const isWonByOther = winnerId && winnerId !== selectedBidderId;
+
+                                            return (
+                                                <button
+                                                    key={num}
+                                                    onClick={() => !isWonByOther && handleBid(selectedBidderId, num, 1)}
+                                                    onContextMenu={(e) => { e.preventDefault(); handleBid(selectedBidderId, num, -1); }}
+                                                    disabled={isWonByOther}
+                                                    style={{
+                                                        height: '60px',
+                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                        border: isWonByOther ? '1px solid var(--border)' : playerBid > 0 ? '2px solid var(--accent)' : '1px solid var(--border)',
+                                                        background: isWonByMe ? '#dcfce7' : isWonByOther ? '#eee' : playerBid > 0 ? 'var(--surface)' : 'transparent',
+                                                        opacity: isWonByOther ? 0.5 : 1,
+                                                        cursor: isWonByOther ? 'not-allowed' : 'pointer',
+                                                        position: 'relative'
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{num}</span>
+                                                    {playerBid > 0 && (
+                                                        <div style={{
+                                                            position: 'absolute', top: '-5px', right: '-5px',
+                                                            background: 'var(--accent)', color: 'white',
+                                                            borderRadius: '50%', width: '20px', height: '20px',
+                                                            fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}>
+                                                            {playerBid}
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <div style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                        * Left Click to Add Token, Right Click to Remove Token.
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {view === 'results' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+                            {availableNumbers.filter(num => getBidsForNumber(num).length > 0).map(num => {
+                                const bidders = getBidsForNumber(num);
+                                const winnerId = winners[num];
+                                const winner = winnerId ? roster.find(p => p.id === winnerId) : null;
+                                const isConflict = bidders.length > 1;
+
+                                return (
+                                    <div key={num} className="card" style={{ padding: '1rem', border: winner ? '2px solid #10b981' : isConflict ? '2px solid #f59e0b' : '1px solid var(--border)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <h3 style={{ margin: 0, fontSize: '2rem' }}>#{num}</h3>
+                                            {winner ? (
+                                                <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>MATCHED</span>
+                                            ) : isConflict ? (
+                                                <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>CONFLICT</span>
+                                            ) : (
+                                                <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>OPEN</span>
+                                            )}
+                                        </div>
+
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            {winner ? (
+                                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{winner.name}</div>
+                                            ) : (
+                                                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                                    {bidders.map(b => {
+                                                        const p = roster.find(x => x.id === b.pid);
+                                                        return (
+                                                            <li key={b.pid} style={{ display: 'flex', justifySelf: 'space-between', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                                                                <span style={{ flex: 1 }}>{p?.lastName}</span>
+                                                                <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>{b.tokens} Lives</span>
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            )}
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            {winner ? (
+                                                <button className="btn btn-secondary" style={{ width: '100%', fontSize: '0.8rem' }} onClick={() => clearWinner(num)}>Reset</button>
+                                            ) : (
+                                                <>
+                                                    {isConflict ? (
+                                                        <button className="btn" style={{ width: '100%', background: '#f59e0b', color: 'white' }} onClick={() => startBattle(num)}>⚔️ Battle!</button>
+                                                    ) : (
+                                                        <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => declareWinner(num, bidders[0].pid)}>Assign</button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Battle Modal Overlay */}
+                    {battleNumber && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 1000
+                        }}>
+                            <div className="card" style={{ width: '500px', maxWidth: '90vw', border: '2px solid #f59e0b' }}>
+                                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                                    <h2 style={{ fontSize: '3rem', margin: 0 }}>#{battleNumber}</h2>
+                                    <div style={{ color: '#f59e0b', fontWeight: 'bold', letterSpacing: '1px' }}>ROCK PAPER SCISSORS BATTLE</div>
+                                </div>
+
+                                <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
+                                    {getBidsForNumber(battleNumber).map(b => {
+                                        const p = roster.find(x => x.id === b.pid);
+                                        const lives = battleLives[b.pid] ?? b.tokens;
+                                        const isOut = lives === 0;
+
+                                        return (
+                                            <div key={b.pid} style={{
+                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                padding: '1rem', background: 'var(--bg-body)', borderRadius: '8px',
+                                                opacity: isOut ? 0.4 : 1
+                                            }}>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{p?.name}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: isOut ? 'red' : 'var(--accent)' }}>
+                                                        {lives} <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>LIVES</span>
+                                                    </div>
+                                                    <button
+                                                        className="btn"
+                                                        style={{ background: '#ef4444', color: 'white', padding: '4px 8px' }}
+                                                        onClick={() => updateLife(b.pid, -1)}
+                                                        disabled={isOut}
+                                                    >
+                                                        -1
+                                                    </button>
+                                                    {lives > 0 && Object.values(battleLives).filter(l => l > 0).length === 1 && (
+                                                        <button className="btn btn-primary" onClick={() => declareWinner(battleNumber, b.pid)}>Winner 🏆</button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setBattleNumber(null)}>Cancel Battle</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const EquipmentManager = ({ view, roster, inventory, onUpdateInventory, checkouts, onUpdateCheckouts, issuance, onUpdateIssuance, wishlist, onUpdateWishlist, lotteryData, onUpdateLottery }) => {
             const [newItem, setNewItem] = useState({ name: '', type: '', quantity: 0, condition: 'New' });
             const [selectedPlayerId, setSelectedPlayerId] = useState('');
             const [newWish, setNewWish] = useState({ item: '', priority: 'Medium', cost: 0, link: '' });
@@ -7932,6 +8750,9 @@
                 onUpdateWishlist(wishlist.map(w => w.id === id ? { ...w, status: w.status === 'Pending' ? 'Purchased' : 'Pending' } : w));
             };
 
+            if (view === 'equipment-lottery') {
+                return <JerseyLottery roster={roster} lotteryData={lotteryData} onUpdateLottery={onUpdateLottery} />;
+            }
             if (view === 'equipment-inventory') {
                 return (
                     <div className="card">
@@ -8111,13 +8932,279 @@
             return null;
         };
 
+
+        // --- RBAC CONSTANTS & HELPERS ---
+        const ROLES = [
+            'Head Coach',
+            'Offensive Coordinator',
+            'Defensive Coordinator',
+            'Special Teams Coordinator',
+            'Position Coach',
+            'Director of Ops',
+            'Recruiting Coordinator'
+        ];
+
+        const FEATURES = [
+            { id: 'dashboard', label: 'Program Dashboard (Focus/Injuries)' },
+            { id: 'playbook', label: 'Playbook' },
+            { id: 'callsheet', label: 'Call Sheet & Game Planning' },
+            { id: 'install', label: 'Install Schedule' },
+            { id: 'scripts', label: 'Practice Scripts' },
+            { id: 'depth', label: 'Depth Charts' },
+            { id: 'recruiting', label: 'Recruiting Board' },
+            { id: 'staff', label: 'Staff Management' },
+            { id: 'settings', label: 'Settings & Config' }
+        ];
+
+        const DEFAULT_PERMISSIONS = {
+            'Head Coach': {
+                dashboard: { view: true, edit: true },
+                playbook: { view: true, edit: true },
+                callsheet: { view: true, edit: true },
+                install: { view: true, edit: true },
+                scripts: { view: true, edit: true },
+                depth: { view: true, edit: true },
+                recruiting: { view: true, edit: true },
+                staff: { view: true, edit: true },
+                settings: { view: true, edit: true }
+            },
+            'Offensive Coordinator': {
+                dashboard: { view: true, edit: true }, // Can update injuries/focus
+                playbook: { view: true, edit: true },
+                callsheet: { view: true, edit: true },
+                install: { view: true, edit: true },
+                scripts: { view: true, edit: true },
+                depth: { view: true, edit: true }, // Offense depth
+                recruiting: { view: true, edit: true }, // Offense recruiting
+                staff: { view: true, edit: false },
+                settings: { view: false, edit: false }
+            },
+            'Defensive Coordinator': {
+                dashboard: { view: true, edit: true },
+                playbook: { view: true, edit: true }, // Assuming shared playbook or separate (future)
+                callsheet: { view: true, edit: true },
+                install: { view: true, edit: true },
+                scripts: { view: true, edit: true },
+                depth: { view: true, edit: true },
+                recruiting: { view: true, edit: true },
+                staff: { view: true, edit: false },
+                settings: { view: false, edit: false }
+            },
+            'Position Coach': {
+                dashboard: { view: true, edit: false }, // View only for program focus
+                playbook: { view: true, edit: false }, // View only
+                callsheet: { view: true, edit: false }, // View only
+                install: { view: true, edit: false },
+                scripts: { view: true, edit: false },
+                depth: { view: true, edit: true }, // Can edit depth (simplified for now)
+                recruiting: { view: true, edit: true }, // Can add notes
+                staff: { view: false, edit: false },
+                settings: { view: false, edit: false }
+            },
+            'Director of Ops': {
+                dashboard: { view: true, edit: true },
+                playbook: { view: false, edit: false },
+                callsheet: { view: false, edit: false },
+                install: { view: true, edit: true }, // Logistics
+                scripts: { view: true, edit: true }, // Logistics
+                depth: { view: true, edit: false },
+                recruiting: { view: true, edit: true },
+                staff: { view: true, edit: true },
+                settings: { view: true, edit: false }
+            },
+            'Recruiting Coordinator': {
+                dashboard: { view: true, edit: false },
+                playbook: { view: false, edit: false },
+                callsheet: { view: false, edit: false },
+                install: { view: false, edit: false },
+                scripts: { view: false, edit: false },
+                depth: { view: true, edit: false }, // Needs to see roster
+                recruiting: { view: true, edit: true },
+                staff: { view: false, edit: false },
+                settings: { view: false, edit: false }
+            }
+        };
+
+        const PermissionsView = ({ permissions, onUpdatePermissions, onResetDefaults }) => {
+            const togglePermission = (role, featureId, type) => {
+                const newPermissions = JSON.parse(JSON.stringify(permissions));
+                if (!newPermissions[role]) newPermissions[role] = {};
+                if (!newPermissions[role][featureId]) newPermissions[role][featureId] = { view: false, edit: false };
+
+                newPermissions[role][featureId][type] = !newPermissions[role][featureId][type];
+
+                // Logic: If edit is true, view must be true
+                if (type === 'edit' && newPermissions[role][featureId].edit) {
+                    newPermissions[role][featureId].view = true;
+                }
+                // Logic: If view is false, edit must be false
+                if (type === 'view' && !newPermissions[role][featureId].view) {
+                    newPermissions[role][featureId].edit = false;
+                }
+
+                onUpdatePermissions(newPermissions);
+            };
+
+            return (
+                <div style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <div>
+                            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Permissions Management</h1>
+                            <div style={{ color: 'var(--text-secondary)' }}>Configure View and Edit access for each staff role.</div>
+                        </div>
+                        <button className="btn btn-outline" onClick={onResetDefaults}>
+                            <Icon name="RotateCcw" size={16} /> Reset to Defaults
+                        </button>
+                    </div>
+
+                    <div className="card" style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Feature</th>
+                                    {ROLES.map(role => (
+                                        <th key={role} style={{ textAlign: 'center', padding: '1rem', minWidth: '120px' }}>
+                                            {role.replace(' Coordinator', ' Coord.')}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {FEATURES.map(feature => (
+                                    <tr key={feature.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <td style={{ padding: '1rem', fontWeight: 'bold' }}>{feature.label}</td>
+                                        {ROLES.map(role => {
+                                            const rolePerms = permissions[role] || DEFAULT_PERMISSIONS[role] || { view: false, edit: false };
+                                            const p = rolePerms[feature.id] || { view: false, edit: false };
+                                            const isHC = role === 'Head Coach';
+
+                                            return (
+                                                <td key={`${role}-${feature.id}`} style={{ padding: '1rem', textAlign: 'center' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                                                        <button
+                                                            onClick={() => !isHC && togglePermission(role, feature.id, 'view')}
+                                                            title="Toggle View"
+                                                            style={{
+                                                                background: p.view ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                                border: p.view ? '1px solid #3b82f6' : '1px solid transparent',
+                                                                color: p.view ? '#3b82f6' : 'var(--text-secondary)',
+                                                                padding: '4px 8px', borderRadius: '4px', cursor: isHC ? 'default' : 'pointer',
+                                                                opacity: isHC ? 0.5 : 1
+                                                            }}
+                                                        >
+                                                            View
+                                                        </button>
+                                                        <button
+                                                            onClick={() => !isHC && togglePermission(role, feature.id, 'edit')}
+                                                            title="Toggle Edit"
+                                                            style={{
+                                                                background: p.edit ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                                border: p.edit ? '1px solid #22c55e' : '1px solid transparent',
+                                                                color: p.edit ? '#22c55e' : 'var(--text-secondary)',
+                                                                padding: '4px 8px', borderRadius: '4px', cursor: isHC ? 'default' : 'pointer',
+                                                                opacity: isHC ? 0.5 : 1
+                                                            }}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        // DEFAULT 2025 DATA
+        const DEFAULT_ROSTER_2025 = [
+            { id: 'p1', jersey: '1', firstName: 'Trevor', lastName: 'Britten', name: 'Trevor Britten', year: 'SR', position: 'WR/LB', height: "6'2\"", weight: '185', telephone: '', email: '' },
+            { id: 'p2', jersey: '2', firstName: 'Fiston', lastName: 'Carlson', name: 'Fiston Carlson', year: 'JR', position: 'RB/DL', height: "5'11\"", weight: '180', telephone: '', email: '' },
+            { id: 'p3', jersey: '3', firstName: 'Hayden', lastName: 'Janssen', name: 'Hayden Janssen', year: 'SR', position: 'QB/DB', height: "6'3\"", weight: '181', telephone: '', email: '' },
+            { id: 'p4', jersey: '4', firstName: 'Cooper', lastName: 'Triggs', name: 'Cooper Triggs', year: 'JR', position: 'RB/DB', height: "5'10\"", weight: '190', telephone: '', email: '' },
+            { id: 'p5', jersey: '5', firstName: 'Tucker', lastName: 'Hawkins', name: 'Tucker Hawkins', year: 'JR', position: 'QB/LB', height: "6'3\"", weight: '192', telephone: '', email: '' },
+            { id: 'p6', jersey: '6', firstName: 'Logan', lastName: 'Smith', name: 'Logan Smith', year: 'JR', position: 'WR/DB', height: "5'8\"", weight: '155', telephone: '', email: '' },
+            { id: 'p7', jersey: '7', firstName: 'Luke', lastName: 'Thoreson', name: 'Luke Thoreson', year: 'JR', position: 'WR/DB', height: "6'3\"", weight: '183', telephone: '', email: '' },
+            { id: 'p9', jersey: '9', firstName: 'Noah', lastName: 'Healy', name: 'Noah Healy', year: 'SO', position: 'WR/DB', height: "5'5\"", weight: '127', telephone: '', email: '' },
+            { id: 'p11', jersey: '11', firstName: 'Blake', lastName: 'Larson (C)', name: 'Blake Larson (C)', year: 'SR', position: 'WR/DB', height: "5'10\"", weight: '163', telephone: '', email: '', captain: true },
+            { id: 'p12', jersey: '12', firstName: 'Jake', lastName: 'Knoll', name: 'Jake Knoll', year: 'JR', position: 'WR/DB', height: "5'10\"", weight: '138', telephone: '', email: '' },
+            { id: 'p13', jersey: '13', firstName: 'Colin', lastName: 'Willis', name: 'Colin Willis', year: 'SO', position: 'QB/DB', height: "6'3\"", weight: '165', telephone: '', email: '' },
+            { id: 'p16', jersey: '16', firstName: 'Makenna', lastName: 'Springer', name: 'Makenna Springer', year: 'JR', position: 'K', height: "5'4\"", weight: '120', telephone: '', email: '' },
+            { id: 'p18', jersey: '18', firstName: 'Wyatt', lastName: 'Ramus', name: 'Wyatt Ramus', year: 'JR', position: 'WR/LB', height: "6'1\"", weight: '181', telephone: '', email: '' },
+            { id: 'p21', jersey: '21', firstName: 'Brady', lastName: 'Long', name: 'Brady Long', year: 'SO', position: 'RB/DB', height: "5'7\"", weight: '135', telephone: '', email: '' },
+            { id: 'p22', jersey: '22', firstName: 'Cody', lastName: 'Long (C)', name: 'Cody Long (C)', year: 'SR', position: 'WR/DB', height: "5'9\"", weight: '154', telephone: '', email: '', captain: true },
+            { id: 'p23', jersey: '23', firstName: 'Myles', lastName: 'McIlrath', name: 'Myles McIlrath', year: 'FR', position: 'K', height: "5'11\"", weight: '140', telephone: '', email: '' },
+            { id: 'p24', jersey: '24', firstName: 'Cael', lastName: 'Faber', name: 'Cael Faber', year: 'SR', position: 'K', height: "6'2\"", weight: '180', telephone: '', email: '' },
+            { id: 'p25', jersey: '25', firstName: 'Ben', lastName: 'Mazyck', name: 'Ben Mazyck', year: 'JR', position: 'RB/DB', height: "5'9\"", weight: '170', telephone: '', email: '' },
+            { id: 'p27', jersey: '27', firstName: 'Brody', lastName: 'Kilstofte', name: 'Brody Kilstofte', year: 'SO', position: 'WR/DB', height: "5'9\"", weight: '140', telephone: '', email: '' },
+            { id: 'p28', jersey: '28', firstName: 'Carsyn', lastName: 'Hartmann', name: 'Carsyn Hartmann', year: 'SO', position: 'WR/DB', height: "5'8\"", weight: '140', telephone: '', email: '' },
+            { id: 'p30', jersey: '30', firstName: 'Alden', lastName: 'Frey', name: 'Alden Frey', year: 'JR', position: 'WR/DB', height: "5'10\"", weight: '165', telephone: '', email: '' },
+            { id: 'p31', jersey: '31', firstName: 'Kale', lastName: 'Kadolph', name: 'Kale Kadolph', year: 'JR', position: 'OL/DL', height: "6'0\"", weight: '165', telephone: '', email: '' },
+            { id: 'p34', jersey: '34', firstName: 'Tyler', lastName: 'Lambert', name: 'Tyler Lambert', year: 'JR', position: 'RB/LB', height: "6'0\"", weight: '173', telephone: '', email: '' },
+            { id: 'p44', jersey: '44', firstName: 'Cael', lastName: 'Paulson', name: 'Cael Paulson', year: 'SO', position: 'WR/LB', height: "6'0\"", weight: '165', telephone: '', email: '' },
+            { id: 'p50', jersey: '50', firstName: 'Jake', lastName: 'Rogers', name: 'Jake Rogers', year: 'SR', position: 'OL/DL', height: "5'9\"", weight: '227', telephone: '', email: '' },
+            { id: 'p52', jersey: '52', firstName: 'Cael', lastName: 'Vermeer', name: 'Cael Vermeer', year: 'SR', position: 'OL/LB', height: "6'1\"", weight: '205', telephone: '', email: '' },
+            { id: 'p54', jersey: '54', firstName: 'Benjamin', lastName: 'Eshelman', name: 'Benjamin Eshelman', year: 'SO', position: 'OL/LB', height: "5'10\"", weight: '169', telephone: '', email: '' },
+            { id: 'p55', jersey: '55', firstName: 'Carter', lastName: 'Barber', name: 'Carter Barber', year: 'JR', position: 'OL/LB', height: "6'2\"", weight: '210', telephone: '', email: '' },
+            { id: 'p56', jersey: '56', firstName: 'Jackson', lastName: 'Mohr', name: 'Jackson Mohr', year: 'SR', position: 'OL/DL', height: "6'0\"", weight: '270', telephone: '', email: '' },
+            { id: 'p58', jersey: '58', firstName: 'Chance', lastName: 'Georgius', name: 'Chance Georgius', year: 'JR', position: 'OL/DL', height: "5'10\"", weight: '212', telephone: '', email: '' },
+            { id: 'p59', jersey: '59', firstName: 'Blake', lastName: 'Nelsen', name: 'Blake Nelsen', year: 'SR', position: 'OL/DL', height: "6'2\"", weight: '230', telephone: '', email: '' },
+            { id: 'p62', jersey: '62', firstName: 'Blake', lastName: 'Winecoff', name: 'Blake Winecoff', year: 'FR', position: 'OL/DL', height: "5'11\"", weight: '200', telephone: '', email: '' },
+            { id: 'p72', jersey: '72', firstName: 'Kalen', lastName: 'Bauman', name: 'Kalen Bauman', year: 'SO', position: 'OL/DL', height: "6'5\"", weight: '168', telephone: '', email: '' },
+            { id: 'p74', jersey: '74', firstName: 'Roman', lastName: 'Stotts', name: 'Roman Stotts', year: 'JR', position: 'OL/DL', height: "6'0\"", weight: '219', telephone: '', email: '' },
+            { id: 'p75', jersey: '75', firstName: 'Gavin', lastName: 'Jeter (C)', name: 'Gavin Jeter (C)', year: 'JR', position: 'OL/DL', height: "6'2\"", weight: '210', telephone: '', email: '', captain: true },
+            { id: 'p76', jersey: '76', firstName: 'Aiden', lastName: 'Sweeney', name: 'Aiden Sweeney', year: 'SO', position: 'OL/LB', height: "5'11\"", weight: '165', telephone: '', email: '' },
+            { id: 'p8533', jersey: '85/33', firstName: 'Nolan', lastName: 'Jonas', name: 'Nolan Jonas', year: 'FR', position: 'WR/DB', height: "6'1\"", weight: '165', telephone: '', email: '' },
+            { id: 'p28061', jersey: '28/0/61', firstName: 'Samuel', lastName: 'Scarrow', name: 'Samuel Scarrow', year: 'FR', position: 'RB/LB', height: "6'0\"", weight: '160', telephone: '', email: '' }
+        ];
+
+        const DEFAULT_STAFF_2025 = [
+            { id: 's1', name: 'Matt Finn', role: 'Head Coach', phone: '', email: '' },
+            { id: 's2', name: 'Wyatt Bunn', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's3', name: 'Don Finn', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's4', name: 'Ryan Gelber', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's5', name: 'DJ Hawkins', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's6', name: 'Jeff Janes', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's7', name: 'Hesston Johnson', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's8', name: 'Kirk Knudsen', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's9', name: 'Andy Koester', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's10', name: 'Kale Lande', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's11', name: 'Craig Lyon', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's12', name: 'Alex Macki', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's13', name: 'Rod Ramus', role: 'Assistant Coach', phone: '', email: '' },
+            { id: 's14', name: 'Ross Thoreson', role: 'Assistant Coach', phone: '', email: '' }
+        ];
+
         const App = () => {
-            const [view, setView] = useState('landing'); // Default to landing page
+            const [view, setView] = useState('callsheet'); // Default to landing page
             const [editingPlay, setEditingPlay] = useState(null);
             const [plays, setPlays] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-plays');
                 return saved ? JSON.parse(saved) : INITIAL_PLAYS;
             });
+
+            // RBAC State
+            const [currentUserRole, setCurrentUserRole] = useState('Head Coach');
+            const [permissions, setPermissions] = useLocalStorage('oc-dashboard-permissions', DEFAULT_PERMISSIONS);
+
+            // Ensure permissions structure integrity on load (if new roles added later)
+            useEffect(() => {
+                const newPerms = { ...permissions };
+                let changed = false;
+                ROLES.forEach(role => {
+                    if (!newPerms[role]) {
+                        newPerms[role] = DEFAULT_PERMISSIONS[role];
+                        changed = true;
+                    }
+                });
+                if (changed) setPermissions(newPerms);
+            }, []);
+
+            const currentPermissions = permissions[currentUserRole] || DEFAULT_PERMISSIONS['Head Coach'];
 
             // --- Weeks & Season Management ---
 
@@ -8293,8 +9380,28 @@
             const [roster, setRoster] = useState(() => {
                 try {
                     const saved = localStorage.getItem('oc-dashboard-roster');
-                    return (saved && saved !== "null") ? JSON.parse(saved) : [];
-                } catch (e) { return []; }
+                    let loadedRoster = [];
+
+                    if (!saved || saved === "null" || saved === "[]") {
+                        loadedRoster = DEFAULT_ROSTER_2025;
+                    } else {
+                        loadedRoster = JSON.parse(saved);
+                    }
+
+                    // Migration / Initialization
+                    return loadedRoster.map(p => {
+                        if (!p.offPosition || !p.defPosition) {
+                            const parts = (p.position || '').split('/');
+                            return {
+                                ...p,
+                                offPosition: p.offPosition || parts[0] || 'NA',
+                                defPosition: p.defPosition || parts[1] || 'NA'
+                            };
+                        }
+                        return p;
+                    });
+
+                } catch (e) { return DEFAULT_ROSTER_2025; }
             });
             const [depthChart, setDepthChart] = useState(() => {
                 try {
@@ -8305,9 +9412,12 @@
             const [staff, setStaff] = useState(() => {
                 try {
                     const saved = localStorage.getItem('oc-dashboard-staff');
-                    return (saved && saved !== "null") ? JSON.parse(saved) : [];
-                } catch (e) { return {}; }
+                    if (!saved || saved === "null" || saved === "[]") return DEFAULT_STAFF_2025;
+                    return JSON.parse(saved);
+                } catch (e) { return DEFAULT_STAFF_2025; }
             });
+            const [lotteryData, setLotteryData] = useLocalStorage('oc-dashboard-equipment-lottery', { bids: {}, winners: {}, available: null });
+
             const [teamLogo, setTeamLogo] = useState(() => {
                 return localStorage.getItem('oc-dashboard-logo') || null;
             });
@@ -8343,6 +9453,15 @@
             const [valhallaData, setValhallaData] = useLocalStorage('oc-dashboard-valhalla', {
                 progress: {},
                 xpLog: []
+            });
+
+            // Game Situation State (Lifted for Smart Call Sheet)
+            const [situation, setSituation] = useState({
+                down: 1,
+                distance: 10,
+                yardLine: 25, // Linear 25 = Own 25
+                hash: 'M',
+                driveNumber: 1
             });
 
             // Equipment State
@@ -8504,6 +9623,41 @@
                 situation: ''
             });
 
+            // Batch Delete State
+            const [selectedPlays, setSelectedPlays] = useState([]);
+
+            const handleImportDefaultData = () => {
+                if (window.confirm('This will OVERWRITE your current roster and staff list with the 2025 default data. Are you sure?')) {
+                    setRoster(DEFAULT_ROSTER_2025);
+                    setStaff(DEFAULT_STAFF_2025);
+                    alert('Loaded 2025 Roster and Staff.');
+                }
+            };
+
+            const togglePlaySelection = (playId) => {
+                setSelectedPlays(prev =>
+                    prev.includes(playId)
+                        ? prev.filter(id => id !== playId)
+                        : [...prev, playId]
+                );
+            };
+
+            const handleDeleteSelected = (e) => {
+                // Prevent event bubbling and default action to avoid conflicts with other handlers
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                // Small timeout to allow the UI to stabilize/event loop to clear before showing the blocking alert
+                setTimeout(() => {
+                    if (window.confirm(`Are you sure you want to delete ${selectedPlays.length} plays? This cannot be undone.`)) {
+                        setPlays(prevPlays => prevPlays.filter(p => !selectedPlays.includes(p.id)));
+                        setSelectedPlays([]);
+                    }
+                }, 50);
+            };
+
             const getFilteredPlaybook = () => {
                 return plays.filter(play => {
                     const matchFormation = !playbookFilters.formation || play.formation === playbookFilters.formation;
@@ -8558,7 +9712,7 @@
                                             setView('landing');
                                         }
                                     }}
-                                    style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.2)' }}
+                                    style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.2)', marginBottom: '0.5rem' }}
                                 >
                                     {weeks.map(w => (
                                         <option key={w.id} value={w.id}>
@@ -8567,113 +9721,161 @@
                                     ))}
                                     <option value="NEW_WEEK">+ Create New Week</option>
                                 </select>
+
+                                {/* RBAC View As Selector */}
+                                <select
+                                    className="form-select"
+                                    value={currentUserRole}
+                                    onChange={(e) => {
+                                        setCurrentUserRole(e.target.value);
+                                        // Default to landing page on role switch for safety
+                                        setView('landing');
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        fontSize: '0.8rem',
+                                        padding: '0.4rem',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        color: currentUserRole === 'Head Coach' ? 'var(--text-primary)' : 'var(--accent)'
+                                    }}
+                                >
+                                    {ROLES.map(role => (
+                                        <option key={role} value={role}>View as: {role}</option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <button
-                                className={`nav-item ${view === 'landing' ? 'active' : ''}`}
-                                onClick={() => setView('landing')}
-                                style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
-                            >
-                                <Icon name="Home" size={18} color="var(--accent)" />
-                                <span style={{ fontWeight: '600' }}>Home</span>
-                            </button>
+                            {currentPermissions.dashboard.view && (
+                                <button
+                                    className={`nav-item ${view === 'landing' ? 'active' : ''}`}
+                                    onClick={() => setView('landing')}
+                                    style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
+                                >
+                                    <Icon name="Home" size={18} color="var(--accent)" />
+                                    <span style={{ fontWeight: '600' }}>Current Focus</span>
+                                </button>
+                            )}
 
-                            <button
-                                className={`nav-item ${view === 'director-ops' ? 'active' : ''}`}
-                                onClick={() => setView('director-ops')}
-                                style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
-                            >
-                                <Icon name="Checkbox" size={18} color="var(--accent)" />
-                                <span style={{ fontWeight: '600' }}>My Weekly Checklist</span>
-                            </button>
+                            {currentPermissions.staff.view && (
+                                <button
+                                    className={`nav-item ${view === 'director-ops' ? 'active' : ''}`}
+                                    onClick={() => setView('director-ops')}
+                                    style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
+                                >
+                                    <Icon name="Checkbox" size={18} color="var(--accent)" />
+                                    <span style={{ fontWeight: '600' }}>My Weekly Checklist</span>
+                                </button>
+                            )}
+
+
 
                             {/* PERSONNEL CATEGORY */}
-                            <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
-                                <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    Manage Roster
-                                </button>
-                                <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    Staff & Roles
-                                </button>
-                                <button className={`nav-item ${view === 'staff-duties' ? 'active' : ''}`} onClick={() => setView('staff-duties')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    Task Assigner
-                                </button>
-                            </CollapsibleCategory>
+                            {/* PERSONNEL CATEGORY */}
+                            {currentPermissions.staff.view && (
+                                <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
+                                    <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        Manage Roster
+                                    </button>
+                                    <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        Staff & Roles
+                                    </button>
+                                    <button className={`nav-item ${view === 'staff-duties' ? 'active' : ''}`} onClick={() => setView('staff-duties')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        Task Assigner
+                                    </button>
+                                </CollapsibleCategory>
+                            )}
 
                             {/* DEPTH CHARTS CATEGORY (Moved from Players) */}
-                            <CollapsibleCategory title="Depth Charts" icon="LayoutDashboard" defaultOpen={false}>
+                            {currentPermissions.depth.view && (
+                                <CollapsibleCategory title="Depth Charts" icon="LayoutDashboard" defaultOpen={false}>
 
-                                {/* VARSITY */}
-                                <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
-                                    {['OFFENSE', 'DEFENSE', 'KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
-                                        <button
-                                            key={`V_${type}`}
-                                            className={`nav-item ${view === 'depth' && depthChartType === `V_${type}` ? 'active' : ''}`}
-                                            onClick={() => { setView('depth'); setDepthChartType(`V_${type}`); }}
-                                            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}
-                                        >
-                                            {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        </button>
-                                    ))}
+                                    {/* VARSITY */}
+                                    <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
+                                        {['OFFENSE', 'DEFENSE', 'KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
+                                            <button
+                                                key={`V_${type}`}
+                                                className={`nav-item ${view === 'depth' && depthChartType === `V_${type}` ? 'active' : ''}`}
+                                                onClick={() => { setView('depth'); setDepthChartType(`V_${type}`); }}
+                                                style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}
+                                            >
+                                                {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            </button>
+                                        ))}
+                                    </CollapsibleCategory>
+
+                                    {/* JV */}
+                                    <CollapsibleCategory title="Junior Varsity" icon="Medal" defaultOpen={false} nested={true}>
+                                        {['OFFENSE', 'DEFENSE', 'KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
+                                            <button
+                                                key={`JV_${type}`}
+                                                className={`nav-item ${view === 'depth' && depthChartType === `JV_${type}` ? 'active' : ''}`}
+                                                onClick={() => { setView('depth'); setDepthChartType(`JV_${type}`); }}
+                                                style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}
+                                            >
+                                                {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            </button>
+                                        ))}
+                                    </CollapsibleCategory>
+
+                                    {/* JV2 */}
+                                    <CollapsibleCategory title="JV2" icon="Award" defaultOpen={false} nested={true}>
+                                        {['OFFENSE', 'DEFENSE', 'KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
+                                            <button
+                                                key={`J2_${type}`}
+                                                className={`nav-item ${view === 'depth' && depthChartType === `J2_${type}` ? 'active' : ''}`}
+                                                onClick={() => { setView('depth'); setDepthChartType(`J2_${type}`); }}
+                                                style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}
+                                            >
+                                                {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            </button>
+                                        ))}
+                                    </CollapsibleCategory>
+
                                 </CollapsibleCategory>
-
-                                {/* JV */}
-                                <CollapsibleCategory title="Junior Varsity" icon="Medal" defaultOpen={false} nested={true}>
-                                    {['OFFENSE', 'DEFENSE', 'KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
-                                        <button
-                                            key={`JV_${type}`}
-                                            className={`nav-item ${view === 'depth' && depthChartType === `JV_${type}` ? 'active' : ''}`}
-                                            onClick={() => { setView('depth'); setDepthChartType(`JV_${type}`); }}
-                                            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}
-                                        >
-                                            {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        </button>
-                                    ))}
-                                </CollapsibleCategory>
-
-                                {/* JV2 */}
-                                <CollapsibleCategory title="JV2" icon="Award" defaultOpen={false} nested={true}>
-                                    {['OFFENSE', 'DEFENSE', 'KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
-                                        <button
-                                            key={`J2_${type}`}
-                                            className={`nav-item ${view === 'depth' && depthChartType === `J2_${type}` ? 'active' : ''}`}
-                                            onClick={() => { setView('depth'); setDepthChartType(`J2_${type}`); }}
-                                            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}
-                                        >
-                                            {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        </button>
-                                    ))}
-                                </CollapsibleCategory>
-
-                            </CollapsibleCategory>
+                            )}
 
 
 
                             {/* WEEKLY PREP CATEGORY */}
+                            {/* WEEKLY PREP CATEGORY */}
                             <CollapsibleCategory title="Offense Prep" icon="Brain" defaultOpen={true}>
-                                <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="Book" size={14} style={{ marginRight: '6px' }} /> Playbook
-                                </button>
-                                <button className={`nav-item ${view === 'game-plan' ? 'active' : ''}`} onClick={() => setView('game-plan')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="Clipboard" size={14} style={{ marginRight: '6px' }} /> Game Plan
-                                </button>
-                                <button className={`nav-item ${view === 'scouting' ? 'active' : ''}`} onClick={() => setView('scouting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="Swords" size={14} style={{ marginRight: '6px' }} /> Scouting Report
-                                </button>
-                                <button className={`nav-item ${view === 'wristband' ? 'active' : ''}`} onClick={() => setView('wristband')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="Wristband" size={14} style={{ marginRight: '6px' }} /> Wristband
-                                </button>
+                                {currentPermissions.playbook.view && (
+                                    <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Book" size={14} style={{ marginRight: '6px' }} /> Playbook
+                                    </button>
+                                )}
+                                {currentPermissions.callsheet.view && (
+                                    <>
+                                        <button className={`nav-item ${view === 'game-plan' ? 'active' : ''}`} onClick={() => setView('game-plan')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Clipboard" size={14} style={{ marginRight: '6px' }} /> Game Plan
+                                        </button>
+                                        <button className={`nav-item ${view === 'scouting' ? 'active' : ''}`} onClick={() => setView('scouting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Swords" size={14} style={{ marginRight: '6px' }} /> Scouting Report
+                                        </button>
+                                        <button className={`nav-item ${view === 'wristband' ? 'active' : ''}`} onClick={() => setView('wristband')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Wristband" size={14} style={{ marginRight: '6px' }} /> Wristband
+                                        </button>
+                                    </>
+                                )}
                             </CollapsibleCategory>
 
                             {/* PRACTICE CATEGORY */}
-                            <CollapsibleCategory title="Practice" icon="Calendar" defaultOpen={true}>
-                                <button className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    Plans
-                                </button>
-                                <button className={`nav-item ${view === 'practice-scripts' ? 'active' : ''}`} onClick={() => setView('practice-scripts')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    Scripts
-                                </button>
-                            </CollapsibleCategory>
+                            {/* PRACTICE CATEGORY */}
+                            {(currentPermissions.scripts.view || currentPermissions.install.view) && (
+                                <CollapsibleCategory title="Practice" icon="Calendar" defaultOpen={true}>
+                                    {currentPermissions.install.view && (
+                                        <button className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            Plans
+                                        </button>
+                                    )}
+                                    {currentPermissions.scripts.view && (
+                                        <button className={`nav-item ${view === 'practice-scripts' ? 'active' : ''}`} onClick={() => setView('practice-scripts')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            Scripts
+                                        </button>
+                                    )}
+                                </CollapsibleCategory>
+                            )}
 
 
 
@@ -8687,24 +9889,41 @@
                                 </button>
                             </CollapsibleCategory>
 
+                            {/* TABLET APP CATEGORY */}
+                            {currentPermissions.callsheet.view && (
+                                <CollapsibleCategory title="Tablet App" icon="Tablet" defaultOpen={true}>
+                                    <button
+                                        className={`nav-item ${view === 'callsheet' ? 'active' : ''}`}
+                                        onClick={() => setView('callsheet')}
+                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                    >
+                                        <Icon name="Smartphone" size={14} style={{ marginRight: '6px' }} /> Smart Call Sheet
+                                    </button>
+                                </CollapsibleCategory>
+                            )}
+
                             {/* IN-GAME CATEGORY */}
-                            <CollapsibleCategory title="In-game" icon="Zap" defaultOpen={false}>
-                                <button className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    OC Call Sheet
-                                </button>
-                                <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    Pressbox
-                                </button>
-                                <button className={`nav-item ${view === 'special-teams' ? 'active' : ''}`} onClick={() => setView('special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="Target" size={14} style={{ marginRight: '6px' }} /> Special Teams
-                                </button>
-                            </CollapsibleCategory>
+                            {/* IN-GAME CATEGORY */}
+                            {currentPermissions.callsheet.view && (
+                                <CollapsibleCategory title="In-game" icon="Zap" defaultOpen={false}>
+                                    <button className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        OC Call Sheet
+                                    </button>
+                                    <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        Pressbox
+                                    </button>
+                                    <button className={`nav-item ${view === 'special-teams' ? 'active' : ''}`} onClick={() => setView('special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Target" size={14} style={{ marginRight: '6px' }} /> Special Teams
+                                    </button>
+                                </CollapsibleCategory>
+                            )}
 
                             {/* ATHLETIC DEVELOPMENT CATEGORY */}
                             <CollapsibleCategory title="Player Development" icon="Activity" defaultOpen={true}>
                                 <button className={`nav-item ${view === 'testing' ? 'active' : ''}`} onClick={() => setView('testing')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     <Icon name="Dumbbell" size={14} style={{ marginRight: '6px' }} /> Combine / Testing
                                 </button>
+
                                 <button className={`nav-item ${view === 'ironman' ? 'active' : ''}`} onClick={() => setView('ironman')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     <Icon name="Award" size={14} style={{ marginRight: '6px' }} /> Iron Man
                                 </button>
@@ -8717,12 +9936,18 @@
                                 <button className={`nav-item ${view === 'valhalla' ? 'active' : ''}`} onClick={() => setView('valhalla')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', color: '#ffd700', fontWeight: 'bold' }}>
                                     <Icon name="Swords" size={14} style={{ marginRight: '6px' }} /> Quest for Valhalla
                                 </button>
+                                <button className={`nav-item ${view === 'testing-records' ? 'active' : ''}`} onClick={() => setView('testing-records')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    <Icon name="Award" size={14} style={{ marginRight: '6px' }} /> Program Records
+                                </button>
                             </CollapsibleCategory>
 
                             {/* EQUIPMENT CATEGORY */}
                             <CollapsibleCategory title="Equipment & Inv." icon="Package" defaultOpen={false}>
                                 <button className={`nav-item ${view === 'equipment-checkout' ? 'active' : ''}`} onClick={() => setView('equipment-checkout')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     Checkout Form
+                                </button>
+                                <button className={`nav-item ${view === 'equipment-lottery' ? 'active' : ''}`} onClick={() => setView('equipment-lottery')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    <Icon name="Trophy" size={14} style={{ marginRight: '6px' }} /> Jersey Lottery
                                 </button>
                                 <button className={`nav-item ${view === 'equipment-inventory' ? 'active' : ''}`} onClick={() => setView('equipment-inventory')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     Current Inventory
@@ -8733,8 +9958,18 @@
                             </CollapsibleCategory>
 
                             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                                <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="Settings" /> Settings
+                                {currentPermissions.settings.view && (
+                                    <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Settings" /> Settings
+                                    </button>
+                                )}
+                                {currentUserRole === 'Head Coach' && (
+                                    <button className={`nav-item ${view === 'permissions' ? 'active' : ''}`} onClick={() => setView('permissions')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
+                                        <Icon name="Shield" /> Permissions
+                                    </button>
+                                )}
+                                <button className={`nav-item ${view === 'help' ? 'active' : ''}`} onClick={() => setView('help')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', marginTop: '0.5rem' }}>
+                                    <Icon name="HelpCircle" /> How to Use
                                 </button>
                             </div>
                         </nav>
@@ -8742,7 +9977,8 @@
 
                     <main className="main-content">
                         {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} />}
-                        {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} />}
+                        {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} roster={roster} userRole={currentUserRole} permissions={currentPermissions.dashboard} />}
+                        {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
                         {view === 'scouting' && (
                             <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '2rem' }}>
@@ -8780,22 +10016,40 @@
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                     <h2>Playbook ({filteredPlaybook.length} / {plays.length})</h2>
-                                    <button className="btn btn-primary" onClick={() => { setEditingPlay(null); setView('new-play'); }}>
-                                        <Icon name="PlusCircle" /> New Play
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        {selectedPlays.length > 0 && (
+                                            <button className="btn" style={{ backgroundColor: '#ef4444', color: 'white' }} onClick={handleDeleteSelected}>
+                                                Delete Selected ({selectedPlays.length})
+                                            </button>
+                                        )}
+                                        <button className="btn btn-primary" onClick={() => { setEditingPlay(null); setView('new-play'); }}>
+                                            <Icon name="PlusCircle" /> New Play
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Filter Bar */}
                                 <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                         <h4 style={{ margin: 0, color: 'var(--text-secondary)' }}>Filters</h4>
-                                        <button
-                                            className="btn"
-                                            style={{ fontSize: '0.9rem', color: 'var(--accent)' }}
-                                            onClick={() => setPlaybookFilters({ formation: '', concept: '', tag: '', situation: '' })}
-                                        >
-                                            Clear All
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                            {selectedPlays.length > 0 && (
+                                                <button
+                                                    className="btn"
+                                                    style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}
+                                                    onClick={() => setSelectedPlays([])}
+                                                >
+                                                    Clear Selection
+                                                </button>
+                                            )}
+                                            <button
+                                                className="btn"
+                                                style={{ fontSize: '0.9rem', color: 'var(--accent)' }}
+                                                onClick={() => setPlaybookFilters({ formation: '', concept: '', tag: '', situation: '' })}
+                                            >
+                                                Clear Filters
+                                            </button>
+                                        </div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                                         {/* Formation Filter */}
@@ -8862,7 +10116,13 @@
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
                                     {filteredPlaybook.map(play => (
-                                        <PlayCard key={play.id} play={play} onEdit={handleEditPlay} />
+                                        <PlayCard
+                                            key={play.id}
+                                            play={play}
+                                            onEdit={handleEditPlay}
+                                            isSelected={selectedPlays.includes(play.id)}
+                                            onToggleSelection={togglePlaySelection}
+                                        />
                                     ))}
                                     {filteredPlaybook.length === 0 && (
                                         <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
@@ -8898,13 +10158,17 @@
                                 view={view === 'staff-duties' ? 'duties' : 'roster'}
                             />
                         )}
-                        {view === 'valhalla' && <ValhallaDashboard roster={roster} valhallaData={valhallaData} onUpdateValhalla={setValhallaData} />}
+                        {view === 'valhalla' && <ValhallaQuest roster={roster} data={valhallaData} onUpdate={(d) => setValhallaData(d)} />}
+
+                        {view === 'testing-records' && <TestingRecords />}
+
                         {view === 'summer-comp' && <SummerCompetitionManager roster={roster} compData={summerCompData} onUpdateComp={setSummerCompData} />}
                         {view === 'travel' && <TravelManager roster={roster} travelRoster={travelRoster} onUpdateTravel={setTravelRoster} currentWeekName={currentWeek.name} />}
                         {view === 'testing' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="combine" />}
                         {view === 'ironman' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="ironman" />}
                         {view === 'ratings' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
-                        {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={setGameLog} roster={roster} depthChart={currentWeek.depthChart || {}} />}
+                        {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={handleUpdateGameLog} roster={roster} depthChart={currentWeek.depthChart || {}} situation={situation} onUpdateSituation={setSituation} />}
+                        {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} />}
                         {view === 'special-teams' && (
                             <SpecialTeamsDashboard
                                 roster={roster}
@@ -8937,9 +10201,12 @@
                                 onUpdateIssuance={setIssuance}
                                 wishlist={wishlist}
                                 onUpdateWishlist={setWishlist}
+                                lotteryData={lotteryData}
+                                onUpdateLottery={setLotteryData}
                             />
                         )}
-                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} onImportData={handleImportData} onExportData={handleExportData} />}
+                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} />}
+                        {view === 'help' && <UserGuide />}
                     </main>
                 </div >
             );
