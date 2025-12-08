@@ -1,0 +1,148 @@
+        // Special Teams Dashboard Component
+        const SpecialTeamsDashboard = ({ roster, depthCharts, onUpdateDepthChart, savedLayouts, onUpdateLayout, onResetLayout, opponentData, onUpdateOpponentData }) => {
+            const [kickerDistance, setKickerDistance] = useState(opponentData?.kickerDistance || 50);
+            const [punterDistance, setPunterDistance] = useState(opponentData?.punterDistance || 45);
+            const [yardLine, setYardLine] = useState(35);
+
+            // Calculate returner placement
+            const calculateReturnerPlacement = () => {
+                // Simple calculation: where the ball will land minus a safety buffer
+                const kickLandingZone = 100 - yardLine - kickerDistance;
+                const puntLandingZone = 100 - yardLine - punterDistance;
+                
+                return {
+                    kickReturn: Math.max(kickLandingZone - 5, 0), // 5 yard safety buffer
+                    puntReturn: Math.max(puntLandingZone - 5, 0)
+                };
+            };
+
+            const placement = calculateReturnerPlacement();
+
+            // Update opponent data when values change
+            useEffect(() => {
+                if (onUpdateOpponentData) {
+                    onUpdateOpponentData({ kickerDistance, punterDistance });
+                }
+            }, [kickerDistance, punterDistance]);
+
+            const stCharts = [
+                { type: 'KICKOFF', title: 'Kickoff' },
+                { type: 'KICK_RETURN', title: 'Kick Return' },
+                { type: 'PUNT', title: 'Punt' },
+                { type: 'PUNT_RETURN', title: 'Punt Return' },
+                { type: 'FIELD_GOAL', title: 'Field Goal / PAT' },
+                { type: 'HANDS_TEAM', title: 'Hands Team' },
+                { type: 'ONSIDE_KICK', title: 'Onside Kick' },
+                { type: 'PAT_BLOCK', title: 'PAT Block' }
+            ];
+
+            return (
+                <div style={{ padding: '2rem' }}>
+                    <h2 style={{ marginBottom: '2rem' }}>Special Teams Dashboard</h2>
+
+                    {/* Returner Placement Calculator */}
+                    <div style={{ 
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)', 
+                        border: '1px solid var(--accent)', 
+                        borderRadius: '8px', 
+                        padding: '1.5rem', 
+                        marginBottom: '2rem' 
+                    }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '1rem', color: 'var(--accent)' }}>Returner Placement Calculator</h3>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                    Opponent Kicker Max Distance (yds)
+                                </label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    value={kickerDistance}
+                                    onChange={e => setKickerDistance(parseInt(e.target.value) || 0)}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                            
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                    Opponent Punter Max Distance (yds)
+                                </label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    value={punterDistance}
+                                    onChange={e => setPunterDistance(parseInt(e.target.value) || 0)}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                            
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                    Line of Scrimmage (yard line)
+                                </label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    value={yardLine}
+                                    onChange={e => setYardLine(parseInt(e.target.value) || 0)}
+                                    min="0"
+                                    max="100"
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: '1fr 1fr', 
+                            gap: '1rem', 
+                            padding: '1rem', 
+                            backgroundColor: 'rgba(0, 0, 0, 0.2)', 
+                            borderRadius: '4px' 
+                        }}>
+                            <div>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                    Kick Return - Suggested Returner Depth:
+                                </div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                    {placement.kickReturn} yards
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                    Punt Return - Suggested Returner Depth:
+                                </div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                    {placement.puntReturn} yards
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Special Teams Depth Charts */}
+                    <h3 style={{ marginBottom: '1.5rem' }}>Special Teams Depth Charts</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '2rem' }}>
+                        {stCharts.map(chart => (
+                            <div key={chart.type} style={{ 
+                                border: '1px solid var(--border)', 
+                                borderRadius: '8px', 
+                                padding: '1rem',
+                                backgroundColor: 'rgba(255, 255, 255, 0.02)'
+                            }}>
+                                <DepthChart
+                                    roster={roster}
+                                    depthChart={depthCharts[chart.type] || {}}
+                                    onUpdateDepthChart={(updated) => onUpdateDepthChart(chart.type, updated)}
+                                    chartType={chart.type}
+                                    savedLayout={savedLayouts[chart.type] || {}}
+                                    onUpdateLayout={(layout) => onUpdateLayout(chart.type, layout)}
+                                    onResetLayout={() => onResetLayout(chart.type)}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
