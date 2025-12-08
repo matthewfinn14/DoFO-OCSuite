@@ -1611,6 +1611,10 @@
             const focusItems = ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Bird-Dog', ...(customFocusItems || [])];
 
             // Helper function to migrate old notes format to new format
+            const isOffenseSegment = (type) => {
+                const offenseTypes = ['Team O', '7-on-7', 'Inside Run', 'Competition', 'O FUNDI', 'Take-Off', 'Goal Line', 'Short Yardage'];
+                return offenseTypes.includes(type);
+            };
             const migrateSegmentNotes = (segment) => {
                 if (typeof segment.notes === 'string') {
                     return {
@@ -1961,6 +1965,7 @@
                                                 {seg.type === 'Take-Off' && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>YARD</th>}
                                                 {seg.type !== 'Take-Off' && seg.type !== 'Ghost Script' && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>SIT.</th>}
                                                 <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>PLAY / CALL</th>
+                                                {isOffenseSegment(seg.type) && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>DEFENSE</th>}
                                                 <th style={{ textAlign: 'left', padding: '4px' }}>NOTES</th>
                                             </tr>
                                         </thead>
@@ -1973,6 +1978,7 @@
                                                     {seg.type === 'Take-Off' && <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.yardLine}</td>}
                                                     {seg.type !== 'Take-Off' && seg.type !== 'Ghost Script' && <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', whiteSpace: 'nowrap' }}>{slot.situation}</td>}
                                                     <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>{slot.playName}</td>
+                                                    {isOffenseSegment(seg.type) && <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.defense}</td>}
                                                     <td style={{ textAlign: 'left', padding: '4px' }}>{slot.notes}</td>
                                                 </tr>
                                             ))}
@@ -2768,6 +2774,7 @@
                                                         <th style={{ padding: '0.5rem', width: '150px' }}>Situation</th>
                                                     )}
                                                     <th style={{ padding: '0.5rem' }}>Play Call</th>
+                                                    {isOffenseSegment(activeSegment.type) && <th style={{ padding: '0.5rem' }}>Defense</th>}
                                                     <th style={{ padding: '0.5rem', width: '60px' }}>Insert</th>
                                                     <th style={{ padding: '0.5rem', width: '40px' }}></th>
                                                 </tr>
@@ -2882,22 +2889,32 @@
                                                             <input
                                                                 className="form-input"
                                                                 list="play-options"
-                                                                style={{ padding: '0.25rem', width: '100%' }}
+                                                                style={{ padding: '0.25rem', width: '100%', fontWeight: 'bold' }}
                                                                 value={item.playName || ''}
                                                                 onChange={e => {
                                                                     const val = e.target.value;
-                                                                    // Check if matches known play
-                                                                    const match = plays.find(p => p.name === val);
-                                                                    const newScript = activeSegment.script.map(s => s.id === item.id ? {
-                                                                        ...s,
-                                                                        playName: val,
-                                                                        playId: match ? match.id : s.playId
-                                                                    } : s);
+                                                                    // Try to find play ID from name
+                                                                    const foundPlay = plays.find(p => p.name === val);
+                                                                    const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, playName: val, playId: foundPlay ? foundPlay.id : '' } : s);
                                                                     updateSegment(selectedSegmentId, 'script', newScript);
                                                                 }}
                                                                 placeholder="Search play..."
                                                             />
                                                         </td>
+                                                        {isOffenseSegment(activeSegment.type) && (
+                                                            <td style={{ padding: '0.5rem' }}>
+                                                                <input
+                                                                    className="form-input"
+                                                                    style={{ padding: '0.25rem' }}
+                                                                    value={item.defense || ''}
+                                                                    onChange={e => {
+                                                                        const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, defense: e.target.value } : s);
+                                                                        updateSegment(selectedSegmentId, 'script', newScript);
+                                                                    }}
+                                                                    placeholder="Front / Coverage"
+                                                                />
+                                                            </td>
+                                                        )}
                                                         <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                             <button
                                                                 className="btn"
@@ -3384,8 +3401,8 @@
         };
 
 
-        const PregameTimeline = ({ plan, onUpdatePlan, teamLogo, staff }) => {
-            const [kickoffTime, setKickoffTime] = useState(plan.kickoffTime);
+        const PregameTimeline = ({ plan = {}, onUpdatePlan, teamLogo, staff }) => {
+            const [kickoffTime, setKickoffTime] = useState(plan?.kickoffTime || '19:00');
             const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
             const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
 
@@ -3412,22 +3429,24 @@
                     duration: 15,
                     activity: 'New Activity',
                     location: 'Field',
-                    notes: {},  // Changed from '' to {}
+                    notes: {},
                     staffId: ''
                 };
-                onUpdatePlan({ ...plan, segments: [...plan.segments, newSegment] });
+                onUpdatePlan({ ...plan, segments: [...(plan.segments || []), newSegment] });
             };
 
             const updateSegment = (id, field, value) => {
                 onUpdatePlan({
                     ...plan,
-                    segments: plan.segments.map(s => s.id === id ? { ...s, [field]: value } : s)
+                    segments: (plan.segments || []).map(s => s.id === id ? { ...s, [field]: value } : s)
                 });
             };
 
             // Special handler for notes to support coach-specific notes
             const updateSegmentNotes = (segmentId, coachId, noteText) => {
-                const segment = plan.segments.find(s => s.id === segmentId);
+                const segment = (plan.segments || []).find(s => s.id === segmentId);
+                if (!segment) return;
+
                 const migratedSegment = migrateSegmentNotes(segment);
                 const updatedNotes = {
                     ...migratedSegment.notes,
@@ -3441,7 +3460,7 @@
             };
 
             const deleteSegment = (id) => {
-                onUpdatePlan({ ...plan, segments: plan.segments.filter(s => s.id !== id) });
+                onUpdatePlan({ ...plan, segments: (plan.segments || []).filter(s => s.id !== id) });
             };
 
             // Auto-calculate segment times based on duration
@@ -3542,8 +3561,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {plan.segments
-                                    .filter(segment => selectedCoachFilter === 'ALL' || segment.staffId === selectedCoachFilter)
+                                {((plan.segments || [])).filter(segment => selectedCoachFilter === 'ALL' || segment.staffId === selectedCoachFilter)
                                     .sort((a, b) => a.startTime.localeCompare(b.startTime))
                                     .map(segment => (
                                         <tr key={segment.id} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -9370,6 +9388,10 @@
                 setWeeks(weeks.map(w => w.id === id ? { ...w, [field]: value } : w));
             };
 
+            const handleUpdateGameLog = (newLog) => {
+                setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, gameLog: newLog } : w));
+            };
+
             // Persistence for Weeks
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-weeks', JSON.stringify(weeks));
@@ -10158,7 +10180,7 @@
                                 view={view === 'staff-duties' ? 'duties' : 'roster'}
                             />
                         )}
-                        {view === 'valhalla' && <ValhallaQuest roster={roster} data={valhallaData} onUpdate={(d) => setValhallaData(d)} />}
+                        {view === 'valhalla' && <ValhallaDashboard roster={roster} valhallaData={valhallaData} onUpdateValhalla={(d) => setValhallaData(d)} />}
 
                         {view === 'testing-records' && <TestingRecords />}
 
