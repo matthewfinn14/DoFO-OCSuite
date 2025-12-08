@@ -2095,6 +2095,7 @@
                                         <th style={{ padding: '0.5rem' }}>Dur</th>
                                         <th style={{ padding: '0.5rem' }}>Type</th>
                                         <th style={{ padding: '0.5rem' }}>Focus</th>
+                                        <th style={{ padding: '0.5rem' }}>Contact</th>
                                         <th style={{ padding: '0.5rem' }}>Notes</th>
                                         <th style={{ padding: '0.5rem' }}>Script</th>
                                         <th className="no-print" style={{ padding: '0.5rem' }}>Scout Cards</th>
@@ -2149,6 +2150,20 @@
                                                     <option key={f} value={f}>{f}</option>
                                                 ))}
                                                 <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
+                                            </select>
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            <select
+                                                className="form-select"
+                                                style={{ padding: '0.25rem', width: '90px' }}
+                                                value={plan.warmupContact || ''}
+                                                onChange={e => updateCurrentPlan({ ...plan, warmupContact: e.target.value })}
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                <option value="">--</option>
+                                                <option value="Touch">Touch</option>
+                                                <option value="Thud">Thud</option>
+                                                <option value="Live">Live</option>
                                             </select>
                                         </td>
                                         <td style={{ padding: '0.5rem' }}>
@@ -2363,6 +2378,21 @@
                                                             <option key={item} value={item}>{item}</option>
                                                         ))}
                                                         <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
+                                                    </select>
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <span className="print-only-text screen-hidden">{seg.contactLevel}</span>
+                                                    <select
+                                                        className="form-select no-print"
+                                                        style={{ padding: '0.25rem', width: '90px' }}
+                                                        value={seg.contactLevel || ''}
+                                                        onChange={e => updateSegment(seg.id, 'contactLevel', e.target.value)}
+                                                        onClick={e => e.stopPropagation()}
+                                                    >
+                                                        <option value="">--</option>
+                                                        <option value="Touch">Touch</option>
+                                                        <option value="Thud">Thud</option>
+                                                        <option value="Live">Live</option>
                                                     </select>
                                                 </td>
                                                 <td style={{ padding: '0.5rem', whiteSpace: 'pre-wrap' }}>
@@ -6416,7 +6446,7 @@
             const ST_KEYS = ['KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'FIELD_GOAL', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'];
 
             const PENALTY_TYPES = [
-                "Holding", "False Start", "Offsides", "Pass Interference", "Personal Foul", 
+                "Holding", "False Start", "Offsides", "Pass Interference", "Personal Foul",
                 "Delay of Game", "Block in the Back", "Roughing the Passer", "Facemask", "Unsportsmanlike Conduct"
             ];
 
@@ -6643,14 +6673,14 @@
 
                     {/* Penalty Tracking */}
                     <div className="card">
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <input
                                     type="checkbox"
                                     id="penaltyActive"
                                     checked={penalty.active}
                                     onChange={e => setPenalty({ ...penalty, active: e.target.checked })}
-                                    style={{ width: '20px', height: '20px', display: 'block' }} 
+                                    style={{ width: '20px', height: '20px', display: 'block' }}
                                 />
                                 <label htmlFor="penaltyActive" style={{ fontWeight: 'bold', color: penalty.active ? '#ef4444' : 'inherit' }}>
                                     FLAG ON PLAY?
@@ -6666,7 +6696,7 @@
                                             onChange={e => setPenalty({ ...penalty, playerId: e.target.value })}
                                         >
                                             <option value="">-- Who Committed Penalty? --</option>
-                                            {roster.sort((a,b) => a.name.localeCompare(b.name)).map(p => (
+                                            {roster.sort((a, b) => a.name.localeCompare(b.name)).map(p => (
                                                 <option key={p.id} value={p.id}>#{p.number} {p.name}</option>
                                             ))}
                                         </select>
@@ -6685,7 +6715,7 @@
                                     </div>
                                 </>
                             )}
-                         </div>
+                        </div>
                     </div>
 
                     {/* Injury Report */}
@@ -6755,7 +6785,7 @@
                                             </span>
                                             {entry.penalty && (
                                                 <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                                                    FLAG: {entry.penalty.type} 
+                                                    FLAG: {entry.penalty.type}
                                                     {(() => {
                                                         const p = roster.find(r => r.id === entry.penalty.playerId);
                                                         return p ? ` (#${p.number} ${p.name})` : '';
