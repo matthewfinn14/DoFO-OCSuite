@@ -459,6 +459,8 @@
                 Gamepad2: '🏈', // User asked for FOOTBALL icon for Madden, so mapping Gamepad2 to Football. Wait, fallback is Football. Explicit matches request.
                 Printer: '🖨️',
                 Check: '✅',
+                Bus: '🚌',
+                Checkbox: '☑️',
                 Minus: '⛔' // Using 'No Entry' for delete/remove to be distinct
             };
             // Default to 🏈 if not found, which conveniently handles the "Football" request if I used a random name, 
@@ -6802,7 +6804,7 @@
             );
         };
 
-        const Settings = ({ teamLogo, onUpdateLogo, onImportData, onExportData }) => {
+        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, onImportData, onExportData }) => {
             const handleImageUpload = (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -6813,6 +6815,22 @@
                     reader.readAsDataURL(file);
                 }
             };
+
+            const PRESET_COLORS = [
+                '#1e3a8a', // Navy
+                '#1d4ed8', // Royal Blue
+                '#60a5fa', // Light Blue (Columbia)
+                '#b91c1c', // Crimson
+                '#dc2626', // Red
+                '#c2410c', // Burnt Orange
+                '#ea580c', // Orange
+                '#ca8a04', // Gold
+                '#15803d', // Forest Green
+                '#16a34a', // Kelly Green
+                '#7e22ce', // Purple
+                '#475569', // Silver/Grey
+                '#000000', // Black
+            ];
 
             return (
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -6856,6 +6874,43 @@
                                         Remove Logo
                                     </button>
                                 )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <h3>Team Colors</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <input
+                                    type="color"
+                                    value={accentColor || '#38bdf8'}
+                                    onChange={(e) => onUpdateAccentColor(e.target.value)}
+                                    style={{ width: '50px', height: '50px', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer', background: 'none' }}
+                                />
+                                <div>
+                                    <div style={{ fontWeight: 'bold' }}>Accent Color</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Primary color for buttons, active states, and highlights.</div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {PRESET_COLORS.map(color => (
+                                    <button
+                                        key={color}
+                                        onClick={() => onUpdateAccentColor(color)}
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            backgroundColor: color,
+                                            border: accentColor === color ? '2px solid white' : '2px solid transparent',
+                                            boxShadow: accentColor === color ? '0 0 0 2px var(--accent)' : 'none',
+                                            cursor: 'pointer'
+                                        }}
+                                        title={color}
+                                    />
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -7296,7 +7351,7 @@
                                 fontSize: nested ? '0.9rem' : '0.8rem'
                             }}>{title}</span>
                         </div>
-                        <span style={{ fontSize: '0.8rem', transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }}>
+                        <span style={{ fontSize: '0.8rem' }}>
                             <Icon name={isOpen ? "ChevronDown" : "ChevronRight"} />
                         </span>
                     </div>
@@ -7458,7 +7513,7 @@
                         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                                 <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                                    <Icon name="Clipboard" color="var(--accent)" />
+                                    <Icon name="Checkbox" color="var(--accent)" />
                                     {isWeek ? 'Weekly Checklist' : 'Monthly To-Do'}
                                 </h2>
                                 <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
@@ -8256,6 +8311,9 @@
             const [teamLogo, setTeamLogo] = useState(() => {
                 return localStorage.getItem('oc-dashboard-logo') || null;
             });
+            const [accentColor, setAccentColor] = useState(() => {
+                return localStorage.getItem('oc-dashboard-accent') || '#38bdf8';
+            });
             const [depthChartType, setDepthChartType] = useState('OFFENSE');
 
             // Layout Persistence
@@ -8341,6 +8399,14 @@
                     localStorage.removeItem('oc-dashboard-logo');
                 }
             }, [teamLogo]);
+
+            // Apply and Save Accent Color
+            useEffect(() => {
+                if (accentColor) {
+                    document.documentElement.style.setProperty('--accent', accentColor);
+                    localStorage.setItem('oc-dashboard-accent', accentColor);
+                }
+            }, [accentColor]);
 
             // Save ratings to localStorage whenever they change
             useEffect(() => {
@@ -8517,12 +8583,12 @@
                                 onClick={() => setView('director-ops')}
                                 style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
                             >
-                                <Icon name="CheckSquare" size={18} color="var(--accent)" />
+                                <Icon name="Checkbox" size={18} color="var(--accent)" />
                                 <span style={{ fontWeight: '600' }}>My Weekly Checklist</span>
                             </button>
 
                             {/* PERSONNEL CATEGORY */}
-                            <CollapsibleCategory title="Personnel" icon="Clipboard" defaultOpen={false}>
+                            <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
                                 <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     Manage Roster
                                 </button>
@@ -8873,7 +8939,7 @@
                                 onUpdateWishlist={setWishlist}
                             />
                         )}
-                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} onImportData={handleImportData} onExportData={handleExportData} />}
+                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} onImportData={handleImportData} onExportData={handleExportData} />}
                     </main>
                 </div >
             );
