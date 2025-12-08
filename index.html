@@ -6373,7 +6373,7 @@
             );
         };
 
-        const PressboxTracker = ({ plays, gameLog, onUpdateGameLog }) => {
+        const PressboxTracker = ({ plays, gameLog, onUpdateGameLog, roster }) => {
             // Helper to convert User Format (-49 to -1, 50, 49 to 1) to Linear (1-99)
             // Linear: 1 (Own 1) -> 50 (Mid) -> 99 (Opp 1)
             const toLinearYard = (userVal) => {
@@ -6415,6 +6415,17 @@
             // Special Teams Keys to Check
             const ST_KEYS = ['KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'FIELD_GOAL', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'];
 
+            const PENALTY_TYPES = [
+                "Holding", "False Start", "Offsides", "Pass Interference", "Personal Foul", 
+                "Delay of Game", "Block in the Back", "Roughing the Passer", "Facemask", "Unsportsmanlike Conduct"
+            ];
+
+            const [penalty, setPenalty] = useState({
+                active: false,
+                playerId: '',
+                type: ''
+            });
+
             const reportInjury = () => {
                 if (!injuredPlayerId) return;
 
@@ -6442,7 +6453,9 @@
                     id: Date.now().toString(),
                     situation: { ...situation },
                     play: play ? { name: play.name, formation: play.formation } : { name: 'Unknown', formation: '' },
-                    result: { ...result }
+                    play: play ? { name: play.name, formation: play.formation } : { name: 'Unknown', formation: '' },
+                    result: { ...result },
+                    penalty: penalty.active ? { ...penalty } : null
                 };
 
                 // Calculate next situation
@@ -6483,6 +6496,7 @@
                 // Reset result inputs
                 setSelectedPlayId('');
                 setResult({ yards: 0, type: 'Run', outcome: 'Tackle' });
+                setPenalty({ active: false, playerId: '', type: '' });
             };
 
             return (
@@ -6627,6 +6641,53 @@
                         </div>
                     </div>
 
+                    {/* Penalty Tracking */}
+                    <div className="card">
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input
+                                    type="checkbox"
+                                    id="penaltyActive"
+                                    checked={penalty.active}
+                                    onChange={e => setPenalty({ ...penalty, active: e.target.checked })}
+                                    style={{ width: '20px', height: '20px', display: 'block' }} 
+                                />
+                                <label htmlFor="penaltyActive" style={{ fontWeight: 'bold', color: penalty.active ? '#ef4444' : 'inherit' }}>
+                                    FLAG ON PLAY?
+                                </label>
+                            </div>
+
+                            {penalty.active && (
+                                <>
+                                    <div style={{ flex: 1 }}>
+                                        <select
+                                            className="form-select"
+                                            value={penalty.playerId}
+                                            onChange={e => setPenalty({ ...penalty, playerId: e.target.value })}
+                                        >
+                                            <option value="">-- Who Committed Penalty? --</option>
+                                            {roster.sort((a,b) => a.name.localeCompare(b.name)).map(p => (
+                                                <option key={p.id} value={p.id}>#{p.number} {p.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <select
+                                            className="form-select"
+                                            value={penalty.type}
+                                            onChange={e => setPenalty({ ...penalty, type: e.target.value })}
+                                        >
+                                            <option value="">-- Penalty Type --</option>
+                                            {PENALTY_TYPES.map(t => (
+                                                <option key={t} value={t}>{t}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </>
+                            )}
+                         </div>
+                    </div>
+
                     {/* Injury Report */}
                     <div className="card" style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: '#ffe4e6', border: '1px solid #f43f5e' }}>
                         <div style={{ fontWeight: 'bold', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -6692,6 +6753,15 @@
                                                 {entry.result.type}
                                                 {entry.result.outcome !== 'Tackle' && ` - ${entry.result.outcome}`}
                                             </span>
+                                            {entry.penalty && (
+                                                <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                    FLAG: {entry.penalty.type} 
+                                                    {(() => {
+                                                        const p = roster.find(r => r.id === entry.penalty.playerId);
+                                                        return p ? ` (#${p.number} ${p.name})` : '';
+                                                    })()}
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
