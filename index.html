@@ -279,7 +279,19 @@
             "Primary Target": ["X", "A", "Z", "Y", "B", "Q", "F"],
 
             // Merged Call Sheet Tags
-            "Play Type": ["Fastball", "Curveball", "Change Up", "Strikeout"],
+            "Play Type": [
+                "Tank Runs",
+                "Perimeter Runs",
+                "FLOW RPOS",
+                "FIT RPOS",
+                "Quick",
+                "Intermediate",
+                "PAP",
+                "MOVEMENT",
+                "Deep",
+                "GADGET"
+            ],
+
             "Action Types": ["Strong Run", "Weak Run", "Quick Game", "Drop Back", "Screen", "Gadget"],
             "Base Type": ["Run", "Pass", "RPO", "Gadget"]
         };
@@ -2518,16 +2530,52 @@
                     )}
                     <div className="play-content">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                            <h3 className="play-title">{play.name}</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                                <h3 className="play-title">{play.name}</h3>
+                                {play.incomplete && (
+                                    <span style={{
+                                        background: '#eab308',
+                                        color: 'white',
+                                        padding: '0.25rem 0.5rem',
+                                        borderRadius: '4px',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem'
+                                    }}>
+                                        ⚠️ INCOMPLETE
+                                    </span>
+                                )}
+                            </div>
                             {play.wristbandSlot && <span className="mini-tag" style={{ background: 'var(--accent)', color: '#000' }}>#{play.wristbandSlot}</span>}
                         </div>
                         <div className="play-meta">
                             {play.formation} {play.formationTag && `(${play.formationTag})`} • {play.color}
                         </div>
                         <div className="play-tags">
-                            {play.tags.map(tag => (
-                                <span key={tag} className="mini-tag">{tag}</span>
-                            ))}
+                            {/* Tag 1 */}
+                            {play.tag1 && (
+                                <span className="mini-tag">
+                                    {(TAG_CATEGORIES["Motion"] || []).includes(play.tag1) ? `"${play.tag1}"` : play.tag1}
+                                </span>
+                            )}
+
+                            {/* Tag 2 */}
+                            {play.tag2 && (
+                                <span className="mini-tag">
+                                    ({play.tag2})
+                                </span>
+                            )}
+
+                            {/* Other Tags array (deduplicated) */}
+                            {play.tags && play.tags.map(tag => {
+                                // Deduplicate if tag matches fields
+                                if (tag === play.tag1 || tag === play.tag2) return null;
+
+                                const isMotion = (TAG_CATEGORIES["Motion"] || []).includes(tag);
+                                return <span key={tag} className="mini-tag">{isMotion ? `"${tag}"` : tag}</span>
+                            })}
                         </div>
                     </div>
                 </div>
@@ -9542,11 +9590,20 @@
         };
 
 
-        const SmartCallSheet = ({ gamePlan, situation, plays, onUpdateSituation, zonePhilosophies, onUpdatePhilosophy, onUpdateGamePlan }) => {
+        const SmartCallSheet = ({ gamePlan, situation, plays, onUpdateSituation, zonePhilosophies, onUpdatePhilosophy, onUpdateGamePlan, onQuickAddPlay }) => {
             const [selectedSection, setSelectedSection] = useState(null); // null = main menu, otherwise section key
             const [selectedHash, setSelectedHash] = useState('left'); // For opening script submenu
             const [selected2MinCategory, setSelected2MinCategory] = useState('oob_yac'); // For 2-minute submenu
-            const [viewMode, setViewMode] = useState('situations'); // 'situations' or 'matrix'
+            const [selectedOneWordCategory, setSelectedOneWordCategory] = useState('form_adj'); // For one-word submenu
+            const [selected2ndXLHash, setSelected2ndXLHash] = useState('lh'); // For 1st/2nd & XL submenu
+            const [selectedConvertShortMed, setSelectedConvertShortMed] = useState('short'); // For Convert Short/Med submenu
+            const [selectedConvertLongXL, setSelectedConvertLongXL] = useState('long'); // For Convert L/XL submenu
+            const [viewMode, setViewMode] = useState('situations'); // 'situations', 'matrix', or 'player_touches'
+
+            // Game Plan 2.0 State
+            const [gamePlanMode, setGamePlanMode] = useState('full'); // 'guided' or 'full'
+            const [currentPhase, setCurrentPhase] = useState(1); // 1-5
+            const [currentSituationInPhase, setCurrentSituationInPhase] = useState(0); // Index within phase
 
             // In-Game Script Builder State
             const [isBuildingScript, setIsBuildingScript] = useState(false);
@@ -9585,6 +9642,36 @@
                 // It does NOT have onUpdateGamePlan. I need to add that prop.
             };
 
+            // Quick add play to a set
+            const handleQuickAddToSet = (setId, playName) => {
+                if (!playName.trim() || !onQuickAddPlay) return;
+
+                // Create the incomplete play
+                const newPlay = onQuickAddPlay(playName);
+
+                // Add to the set
+                const updatedSets = [...(gamePlan.sets || [])];
+                const setIndex = updatedSets.findIndex(s => s.id === setId);
+
+                if (setIndex >= 0) {
+                    updatedSets[setIndex] = {
+                        ...updatedSets[setIndex],
+                        playIds: [...(updatedSets[setIndex].playIds || []), newPlay.id]
+                    };
+                } else {
+                    // Create new set if it doesn't exist
+                    updatedSets.push({
+                        id: setId,
+                        playIds: [newPlay.id]
+                    });
+                }
+
+                onUpdateGamePlan({
+                    ...gamePlan,
+                    sets: updatedSets
+                });
+            };
+
             // Define all game plan sections - ORGANIZED BY CATEGORY
             const gamePlanSections = [
                 // MINI SCRIPTS (Dynamic)
@@ -9601,34 +9688,31 @@
                 // SCRIPTS & SERIES
                 { type: 'header', label: 'SCRIPTS & SERIES' },
                 { key: 'opening_script', label: '🎬 OPENING SCRIPT', color: '#10b981', icon: 'Play', hasSubmenu: true },
-                { key: 'one_word', label: '1 WORD', color: '#f59e0b', icon: 'Hash' },
-                { key: 'form_adj', label: 'FORM ADJ', color: '#f59e0b', icon: 'Grid' },
-                { key: 'motion', label: 'MOTION', color: '#f59e0b', icon: 'Move' },
-                { key: 'tag', label: 'TAG', color: '#f59e0b', icon: 'Tag' },
+                { key: 'mini_script_1', label: '📝 MINI SCRIPT 1', color: '#06b6d4', icon: 'FileText' },
+                { key: 'mini_script_2', label: '📝 MINI SCRIPT 2', color: '#06b6d4', icon: 'FileText' },
+                { key: 'second_half_openers', label: '🔄 SECOND HALF OPENERS', color: '#f97316', icon: 'RefreshCw' },
+
 
                 // DOWN & DISTANCE
-                { type: 'header', label: 'DOWN & DISTANCE' },
+                { type: 'header', label: 'Down and Distance' },
                 { key: 'p_and_10', label: 'P&10', color: '#ef4444', icon: 'AlertCircle' },
-                { key: '2nd_xl_lh', label: '2ND & XL (LH)', color: '#3b82f6', icon: 'TrendingDown' },
-                { key: '2nd_xl_rh', label: '2ND & XL RH', color: '#3b82f6', icon: 'TrendingDown' },
-                { key: '3rd_short', label: '3RD & SHORT', color: '#10b981', icon: 'Target' },
-                { key: '3rd_med', label: '3RD & MED', color: '#10b981', icon: 'Target' },
-                { key: '3rd_long', label: '3RD & LONG', color: '#10b981', icon: 'Target' },
-                { key: '3rd_xl', label: '3RD & XL', color: '#10b981', icon: 'Target' },
+                { key: 'base_downs', label: '📊 BASE DOWNS', color: '#14b8a6', icon: 'BarChart2' },
+                { key: '2nd_xl', label: 'GET HALF', color: '#3b82f6', icon: 'TrendingDown', hasSubmenu: true },
+                { key: 'convert_short_med', label: '🎯 CONVERT SHORT/MED', color: '#10b981', icon: 'Target', hasSubmenu: true },
+                { key: 'convert_long_xl', label: '🎯 CONVERT L/XL 7-12+', color: '#059669', icon: 'Crosshair', hasSubmenu: true },
 
                 // FIELD ZONES
                 { type: 'header', label: 'FIELD ZONES' },
-                { key: 'backed_up', label: 'BACKED UP', color: '#dc2626', icon: 'AlertTriangle' },
-                { key: 'coming_out', label: 'COMING OUT', color: '#ea580c', icon: 'TrendingUp' },
+                { key: 'backed_up', label: 'BACKED UP', color: '#1f2937', icon: 'AlertTriangle' },
+                { key: 'coming_out', label: 'COMING OUT', color: '#6b7280', icon: 'TrendingUp' },
                 { key: 'open_field', label: 'OPEN FIELD', color: '#16a34a', icon: 'Maximize2' },
-                { key: 'fringe', label: 'FRINGE (+45-25)', color: '#ca8a04', icon: 'Navigation' },
+                { key: 'fringe', label: 'FRINGE (+45-25)', color: '#f97316', icon: 'Navigation' },
                 { key: 'high_red', label: 'HIGH RED (25-15)', color: '#ef4444', icon: 'Flag' },
-                { key: 'low_red', label: 'LOW RED (15-6)', color: '#ef4444', icon: 'Flag' },
-                { key: 'goal_line', label: 'GOAL LINE (5-GL)', color: '#ef4444', icon: 'Award' },
+                { key: 'low_red', label: 'LOW RED (15-6)', color: '#eab308', icon: 'Flag' },
+                { key: 'goal_line', label: 'GOAL LINE (5-GL)', color: '#3b82f6', icon: 'Award' },
 
                 // GAME SITUATIONS
                 { type: 'header', label: 'GAME SITUATIONS' },
-                { key: 'eoh', label: 'END OF HALF', color: '#8b5cf6', icon: 'Clock' },
                 { key: 'two_minute', label: '2-MINUTE', color: '#8b5cf6', icon: 'Zap', hasSubmenu: true },
                 { key: 'two_point', label: '2-POINT', color: '#8b5cf6', icon: 'Star' },
                 { key: 'four_minute', label: '4-MINUTE', color: '#8b5cf6', icon: 'Timer' }
@@ -9636,15 +9720,30 @@
 
             // Formation groups for matrix view
             const formationGroups = [
-                { id: '887', label: '887', color: '#ef4444' },
-                { id: '888', label: '888', color: '#ef4444' },
-                { id: '687', label: '687', color: '#fbbf24' },
-                { id: '688', label: '688', color: '#fbbf24' },
-                { id: '881', label: '881', color: '#facc15' },
-                { id: '984', label: '984', color: '#4ade80' },
-                { id: '983', label: '983', color: '#4ade80' },
-                { id: '488', label: '488', color: '#60a5fa' },
-                { id: '487', label: '487', color: '#60a5fa' }
+                { id: 'one_word', label: '1 WORD', color: '#f59e0b', icon: 'Hash', hasSubmenu: true },
+                { id: '887', label: '887', color: '#ef4444', icon: 'Grid' },
+                { id: '888', label: '888', color: '#ef4444', icon: 'Grid' },
+                { id: '687', label: '687', color: '#fbbf24', icon: 'Grid' },
+                { id: '688', label: '688', color: '#fbbf24', icon: 'Grid' },
+                { id: '881', label: '881', color: '#facc15', icon: 'Grid' },
+                { id: '984', label: '984', color: '#4ade80', icon: 'Grid' },
+                { id: '983', label: '983', color: '#4ade80', icon: 'Grid' },
+                { id: '488', label: '488', color: '#60a5fa', icon: 'Grid' },
+                { id: '487', label: '487', color: '#60a5fa', icon: 'Grid' }
+            ];
+
+            // Play Type groups
+            const playTypeGroups = [
+                { id: 'Tank Runs', label: 'TANK RUNS', color: '#16a34a', icon: 'ChevronsRight' },
+                { id: 'Perimeter Runs', label: 'PERIMETER RUNS', color: '#0ea5e9', icon: 'CornerUpRight' },
+                { id: 'FLOW RPOS', label: 'FLOW RPOS', color: '#eab308', icon: 'Shuffle' },
+                { id: 'FIT RPOS', label: 'FIT RPOS', color: '#f59e0b', icon: 'Target' },
+                { id: 'Quick', label: 'QUICK GAME', color: '#8b5cf6', icon: 'Zap' },
+                { id: 'Intermediate', label: 'INTERMEDIATE', color: '#d946ef', icon: 'Activity' },
+                { id: 'PAP', label: 'PAP', color: '#ec4899', icon: 'PlayCircle' },
+                { id: 'MOVEMENT', label: 'MOVEMENT', color: '#f43f5e', icon: 'Move' },
+                { id: 'Deep', label: 'DEEP SHOTS', color: '#ef4444', icon: 'ArrowUpCircle' },
+                { id: 'GADGET', label: 'GADGET', color: '#64748b', icon: 'Star' }
             ];
 
             // Get plays for selected section
@@ -9663,6 +9762,43 @@
                     const setId = `two_minute_${selected2MinCategory}`;
                     const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                }
+
+                // Special handling for one_word in Strike 'Em Out view with category submenu
+                if (selectedSection === 'one_word') {
+                    const setId = selectedOneWordCategory; // 'form_adj', 'motion', or 'tag'
+                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                }
+
+                // Special handling for 2nd_xl with hash submenu
+                if (selectedSection === '2nd_xl') {
+                    const setId = selected2ndXLHash === 'lh' ? '2nd_xl_lh' : '2nd_xl_rh';
+                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                }
+
+                // Special handling for convert_short_med with distance submenu
+                if (selectedSection === 'convert_short_med') {
+                    const setId = selectedConvertShortMed === 'short' ? '3rd_short' : '3rd_med';
+                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                }
+
+                // Special handling for convert_long_xl with distance submenu
+                if (selectedSection === 'convert_long_xl') {
+                    const setId = selectedConvertLongXL === 'long' ? '3rd_long' : '3rd_xl';
+                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                }
+
+                // Check if this is a Play Type
+                const isPlayType = playTypeGroups.some(pt => pt.id === selectedSection);
+                if (isPlayType) {
+                    return plays.filter(p => {
+                        const allPlayTags = [...(p.tags || []), p.tag1, p.tag2].filter(Boolean);
+                        return allPlayTags.includes(selectedSection);
+                    });
                 }
 
                 // Check if this is a formation from Strike 'Em Out view
@@ -9694,6 +9830,20 @@
                             {/* View Toggle Buttons */}
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem' }}>
                                 <button
+                                    onClick={() => setViewMode('matrix')}
+                                    className="btn"
+                                    style={{
+                                        background: viewMode === 'matrix' ? 'var(--accent)' : 'var(--bg-card)',
+                                        color: viewMode === 'matrix' ? 'white' : 'var(--text-primary)',
+                                        border: viewMode === 'matrix' ? 'none' : '2px solid var(--border)',
+                                        fontWeight: 'bold',
+                                        padding: '0.75rem 2rem',
+                                        fontSize: '1rem'
+                                    }}
+                                >
+                                    ⚾ STRIKE 'EM OUT
+                                </button>
+                                <button
                                     onClick={() => setViewMode('situations')}
                                     className="btn"
                                     style={{
@@ -9708,23 +9858,37 @@
                                     📋 SITUATIONS
                                 </button>
                                 <button
-                                    onClick={() => setViewMode('matrix')}
+                                    onClick={() => setViewMode('play_type')}
                                     className="btn"
                                     style={{
-                                        background: viewMode === 'matrix' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'matrix' ? 'white' : 'var(--text-primary)',
-                                        border: viewMode === 'matrix' ? 'none' : '2px solid var(--border)',
+                                        background: viewMode === 'play_type' ? 'var(--accent)' : 'var(--bg-card)',
+                                        color: viewMode === 'play_type' ? 'white' : 'var(--text-primary)',
+                                        border: viewMode === 'play_type' ? 'none' : '2px solid var(--border)',
                                         fontWeight: 'bold',
                                         padding: '0.75rem 2rem',
                                         fontSize: '1rem'
                                     }}
                                 >
-                                    ⚾ STRIKE 'EM OUT
+                                    🎯 PLAY TYPE
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('player_touches')}
+                                    className="btn"
+                                    style={{
+                                        background: viewMode === 'player_touches' ? 'var(--accent)' : 'var(--bg-card)',
+                                        color: viewMode === 'player_touches' ? 'white' : 'var(--text-primary)',
+                                        border: viewMode === 'player_touches' ? 'none' : '2px solid var(--border)',
+                                        fontWeight: 'bold',
+                                        padding: '0.75rem 2rem',
+                                        fontSize: '1rem'
+                                    }}
+                                >
+                                    👐 PLAYER TOUCHES
                                 </button>
                             </div>
 
                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                                {viewMode === 'situations' ? 'Select a game situation to view plays' : 'View plays organized by formation'}
+                                {viewMode === 'situations' ? 'Select a game situation to view plays' : viewMode === 'play_type' ? 'View plays organized by play type' : viewMode === 'player_touches' ? 'Manage plays designed to get the ball to key players' : 'View plays organized by formation'}
                             </p>
                         </div>
 
@@ -9783,6 +9947,18 @@
                                                     if (section.key === 'opening_script') {
                                                         playCount = ((gamePlan.sets || []).find(s => s.id === '1st_ten_lh')?.playIds?.length || 0) +
                                                             ((gamePlan.sets || []).find(s => s.id === '1st_ten_rh')?.playIds?.length || 0);
+                                                    } else if (section.key === '2nd_xl') {
+                                                        // For 1st/2nd & XL, combine LH and RH counts
+                                                        playCount = ((gamePlan.sets || []).find(s => s.id === '2nd_xl_lh')?.playIds?.length || 0) +
+                                                            ((gamePlan.sets || []).find(s => s.id === '2nd_xl_rh')?.playIds?.length || 0);
+                                                    } else if (section.key === 'convert_short_med') {
+                                                        // For Convert Short/Med, combine short and med counts
+                                                        playCount = ((gamePlan.sets || []).find(s => s.id === '3rd_short')?.playIds?.length || 0) +
+                                                            ((gamePlan.sets || []).find(s => s.id === '3rd_med')?.playIds?.length || 0);
+                                                    } else if (section.key === 'convert_long_xl') {
+                                                        // For Convert L/XL, combine long and xl counts
+                                                        playCount = ((gamePlan.sets || []).find(s => s.id === '3rd_long')?.playIds?.length || 0) +
+                                                            ((gamePlan.sets || []).find(s => s.id === '3rd_xl')?.playIds?.length || 0);
                                                     } else if (section.key === 'two_minute') {
                                                         // For 2-minute drill, combine all category counts
                                                         playCount = ['oob_yac', 'first_down', 'touchdown', 'final_play'].reduce((sum, cat) => {
@@ -9846,6 +10022,61 @@
                                     ));
                                 })()}
                             </div>
+                        ) : viewMode === 'player_touches' ? (
+                            // Player Touches View - single button
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                overflowY: 'auto',
+                                flex: 1,
+                                padding: '2rem'
+                            }}>
+                                <button
+                                    onClick={() => setSelectedSection('player_touches')}
+                                    style={{
+                                        background: '#8b5cf6',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '16px',
+                                        padding: '3rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '1rem',
+                                        minWidth: '300px',
+                                        minHeight: '200px',
+                                        position: 'relative',
+                                        fontSize: '2rem',
+                                        fontWeight: 'bold',
+                                        boxShadow: '0 4px 16px rgba(139, 92, 246, 0.3)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'scale(1.05)';
+                                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.4)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'scale(1)';
+                                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.3)';
+                                    }}
+                                >
+                                    <Icon name="Users" size={48} />
+                                    <div style={{ textAlign: 'center' }}>👐 PLAYER TOUCHES</div>
+                                    <div style={{
+                                        fontSize: '0.85rem',
+                                        opacity: 0.9,
+                                        position: 'absolute',
+                                        bottom: '1rem',
+                                        background: 'rgba(0,0,0,0.2)',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '6px'
+                                    }}>
+                                        {((gamePlan.sets || []).find(s => s.id === 'player_touches')?.playIds?.length || 0)} {((gamePlan.sets || []).find(s => s.id === 'player_touches')?.playIds?.length || 0) === 1 ? 'play' : 'plays'}
+                                    </div>
+                                </button>
+                            </div>
                         ) : (
                             // Matrix View - formation buttons
                             <div style={{
@@ -9855,17 +10086,31 @@
                                 overflowY: 'auto',
                                 flex: 1
                             }}>
-                                {formationGroups.map(formation => {
-                                    // Get play count for this formation
-                                    const formationPlays = plays.filter(p => p.formation && p.formation.includes(formation.id));
-                                    const playCount = formationPlays.length;
+                                {(viewMode === 'play_type' ? playTypeGroups : formationGroups).map(group => {
+                                    // Get play count
+                                    let playCount = 0;
+
+                                    if (viewMode === 'play_type') {
+                                        playCount = plays.filter(p => {
+                                            const allTags = [...(p.tags || []), p.tag1, p.tag2].filter(Boolean);
+                                            return allTags.includes(group.id);
+                                        }).length;
+                                    } else if (group.id === 'one_word') {
+                                        // For one_word, combine counts from all three categories
+                                        playCount = ['form_adj', 'motion', 'tag'].reduce((sum, cat) => {
+                                            return sum + ((gamePlan.sets || []).find(s => s.id === cat)?.playIds?.length || 0);
+                                        }, 0);
+                                    } else {
+                                        const formationPlays = plays.filter(p => p.formation && p.formation.includes(group.id));
+                                        playCount = formationPlays.length;
+                                    }
 
                                     return (
                                         <button
-                                            key={formation.id}
-                                            onClick={() => setSelectedSection(formation.id)}
+                                            key={group.id}
+                                            onClick={() => setSelectedSection(group.id)}
                                             style={{
-                                                background: formation.color,
+                                                background: group.color,
                                                 color: 'white',
                                                 border: 'none',
                                                 borderRadius: '12px',
@@ -9891,8 +10136,8 @@
                                                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
                                             }}
                                         >
-                                            <Icon name="Grid" size={32} />
-                                            <div style={{ textAlign: 'center' }}>{formation.label}</div>
+                                            <Icon name={group.icon} size={32} />
+                                            <div style={{ textAlign: 'center' }}>{group.label}</div>
                                             <div style={{
                                                 fontSize: '0.75rem',
                                                 opacity: 0.9,
@@ -9915,7 +10160,10 @@
             }
 
             // Section Detail View
-            const currentSection = gamePlanSections.find(s => s.key === selectedSection);
+            const currentSection = gamePlanSections.find(s => s.key === selectedSection) ||
+                formationGroups.find(f => f.id === selectedSection) ||
+                playTypeGroups.find(pt => pt.id === selectedSection) ||
+                (selectedSection === 'player_touches' ? { key: 'player_touches', label: '👐 PLAYER TOUCHES', color: '#8b5cf6', icon: 'Users' } : null);
 
             return (
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
@@ -10030,6 +10278,61 @@
                         </div>
                     )}
 
+                    {/* Quick Add Play Input */}
+                    {onQuickAddPlay && selectedSection && !['play_type', 'player_touches'].includes(selectedSection) && (
+                        <div style={{
+                            marginTop: '2rem',
+                            padding: '1.5rem',
+                            background: 'var(--bg-panel)',
+                            borderRadius: '8px',
+                            border: '2px dashed var(--border)'
+                        }}>
+                            <div style={{ marginBottom: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                ➕ QUICK ADD PLAY
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Type play name and press Enter..."
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    background: 'var(--bg-card)',
+                                    border: '2px solid var(--border)',
+                                    borderRadius: '6px',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '1rem'
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && e.target.value.trim()) {
+                                        // Determine the setId based on current section and submenus
+                                        let setId = selectedSection;
+
+                                        // Handle sections with submenus
+                                        if (selectedSection === 'opening_script') {
+                                            setId = `opening_script_${selectedHash}`;
+                                        } else if (selectedSection === '2nd_xl') {
+                                            setId = `2nd_xl_${selected2ndXLHash}`;
+                                        } else if (selectedSection === '2_min') {
+                                            setId = `2_min_${selected2MinCategory}`;
+                                        } else if (selectedSection === 'one_word') {
+                                            setId = `one_word_${selectedOneWordCategory}`;
+                                        } else if (selectedSection === 'convert_short_med') {
+                                            setId = selectedConvertShortMed === 'short' ? '3rd_short' : '3rd_med';
+                                        } else if (selectedSection === 'convert_long_xl') {
+                                            setId = selectedConvertLongXL === 'long' ? '3rd_long' : '3rd_xl';
+                                        }
+
+                                        handleQuickAddToSet(setId, e.target.value);
+                                        e.target.value = '';
+                                    }
+                                }}
+                            />
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                💡 Play will be created as incomplete - fill out details in the Playbook tab
+                            </div>
+                        </div>
+                    )}
+
                     {/* Hash Toggle for Opening Script */}
                     {selectedSection === 'opening_script' && (
                         <div style={{
@@ -10066,6 +10369,126 @@
                                 }}
                             >
                                 RIGHT HASH ▶
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Hash Toggle for 1st/2nd & XL */}
+                    {selectedSection === '2nd_xl' && (
+                        <div style={{
+                            background: 'var(--bg-panel)',
+                            padding: '1rem 1.5rem',
+                            borderBottom: '2px solid var(--border)',
+                            display: 'flex',
+                            gap: '1rem'
+                        }}>
+                            <button
+                                onClick={() => setSelected2ndXLHash('lh')}
+                                className="btn"
+                                style={{
+                                    background: selected2ndXLHash === 'lh' ? currentSection.color : 'var(--bg-card)',
+                                    color: selected2ndXLHash === 'lh' ? 'white' : 'var(--text-primary)',
+                                    border: selected2ndXLHash === 'lh' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1.5rem',
+                                    flex: 1
+                                }}
+                            >
+                                ◀ LEFT HASH
+                            </button>
+                            <button
+                                onClick={() => setSelected2ndXLHash('rh')}
+                                className="btn"
+                                style={{
+                                    background: selected2ndXLHash === 'rh' ? currentSection.color : 'var(--bg-card)',
+                                    color: selected2ndXLHash === 'rh' ? 'white' : 'var(--text-primary)',
+                                    border: selected2ndXLHash === 'rh' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1.5rem',
+                                    flex: 1
+                                }}
+                            >
+                                RIGHT HASH ▶
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Distance Toggle for Convert Short/Med */}
+                    {selectedSection === 'convert_short_med' && (
+                        <div style={{
+                            background: 'var(--bg-panel)',
+                            padding: '1rem 1.5rem',
+                            borderBottom: '2px solid var(--border)',
+                            display: 'flex',
+                            gap: '1rem'
+                        }}>
+                            <button
+                                onClick={() => setSelectedConvertShortMed('short')}
+                                className="btn"
+                                style={{
+                                    background: selectedConvertShortMed === 'short' ? currentSection.color : 'var(--bg-card)',
+                                    color: selectedConvertShortMed === 'short' ? 'white' : 'var(--text-primary)',
+                                    border: selectedConvertShortMed === 'short' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1.5rem',
+                                    flex: 1
+                                }}
+                            >
+                                3RD & SHORT
+                            </button>
+                            <button
+                                onClick={() => setSelectedConvertShortMed('med')}
+                                className="btn"
+                                style={{
+                                    background: selectedConvertShortMed === 'med' ? currentSection.color : 'var(--bg-card)',
+                                    color: selectedConvertShortMed === 'med' ? 'white' : 'var(--text-primary)',
+                                    border: selectedConvertShortMed === 'med' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1.5rem',
+                                    flex: 1
+                                }}
+                            >
+                                3RD & MED
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Distance Toggle for Convert L/XL */}
+                    {selectedSection === 'convert_long_xl' && (
+                        <div style={{
+                            background: 'var(--bg-panel)',
+                            padding: '1rem 1.5rem',
+                            borderBottom: '2px solid var(--border)',
+                            display: 'flex',
+                            gap: '1rem'
+                        }}>
+                            <button
+                                onClick={() => setSelectedConvertLongXL('long')}
+                                className="btn"
+                                style={{
+                                    background: selectedConvertLongXL === 'long' ? currentSection.color : 'var(--bg-card)',
+                                    color: selectedConvertLongXL === 'long' ? 'white' : 'var(--text-primary)',
+                                    border: selectedConvertLongXL === 'long' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1.5rem',
+                                    flex: 1
+                                }}
+                            >
+                                3RD & LONG (7-12)
+                            </button>
+                            <button
+                                onClick={() => setSelectedConvertLongXL('xl')}
+                                className="btn"
+                                style={{
+                                    background: selectedConvertLongXL === 'xl' ? currentSection.color : 'var(--bg-card)',
+                                    color: selectedConvertLongXL === 'xl' ? 'white' : 'var(--text-primary)',
+                                    border: selectedConvertLongXL === 'xl' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1.5rem',
+                                    flex: 1
+                                }}
+                            >
+                                3RD & XL (12+)
                             </button>
                         </div>
                     )}
@@ -10138,6 +10561,62 @@
                             </button>
                         </div>
                     )}
+
+                    {/* One-Word Category Toggle */}
+                    {selectedSection === 'one_word' && (
+                        <div style={{
+                            background: 'var(--bg-panel)',
+                            padding: '1rem 1.5rem',
+                            borderBottom: '2px solid var(--border)',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: '0.75rem'
+                        }}>
+                            <button
+                                onClick={() => setSelectedOneWordCategory('form_adj')}
+                                className="btn"
+                                style={{
+                                    background: selectedOneWordCategory === 'form_adj' ? currentSection.color : 'var(--bg-card)',
+                                    color: selectedOneWordCategory === 'form_adj' ? 'white' : 'var(--text-primary)',
+                                    border: selectedOneWordCategory === 'form_adj' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1rem',
+                                    fontSize: '0.85rem'
+                                }}
+                            >
+                                📐 FORM ADJ
+                            </button>
+                            <button
+                                onClick={() => setSelectedOneWordCategory('motion')}
+                                className="btn"
+                                style={{
+                                    background: selectedOneWordCategory === 'motion' ? currentSection.color : 'var(--bg-card)',
+                                    color: selectedOneWordCategory === 'motion' ? 'white' : 'var(--text-primary)',
+                                    border: selectedOneWordCategory === 'motion' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1rem',
+                                    fontSize: '0.85rem'
+                                }}
+                            >
+                                🏃 MOTION
+                            </button>
+                            <button
+                                onClick={() => setSelectedOneWordCategory('tag')}
+                                className="btn"
+                                style={{
+                                    background: selectedOneWordCategory === 'tag' ? currentSection.color : 'var(--bg-card)',
+                                    color: selectedOneWordCategory === 'tag' ? 'white' : 'var(--text-primary)',
+                                    border: selectedOneWordCategory === 'tag' ? 'none' : '2px solid var(--border)',
+                                    fontWeight: 'bold',
+                                    padding: '0.75rem 1rem',
+                                    fontSize: '0.85rem'
+                                }}
+                            >
+                                🏷️ TAG
+                            </button>
+                        </div>
+                    )}
+
 
                     {/* Zone Philosophy Editor (for field zones) */}
                     {['backed_up', 'coming_out', 'open_field', 'fringe', 'high_red', 'low_red', 'goal_line'].includes(selectedSection) && zonePhilosophies && (
@@ -10405,6 +10884,160 @@
                                     );
                                 })()}
                             </>
+                        ) : ['fringe', 'high_red', 'low_red', 'goal_line'].includes(selectedSection) ? (
+                            // Field zones with BASE / CONVERT / EXPLOSIVE matrix
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{
+                                    width: '100%',
+                                    borderCollapse: 'separate',
+                                    borderSpacing: '0.5rem',
+                                    marginTop: '1rem'
+                                }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{
+                                                background: 'var(--bg-panel)',
+                                                padding: '1rem',
+                                                borderRadius: '8px',
+                                                textAlign: 'left',
+                                                fontWeight: 'bold',
+                                                color: 'var(--text-secondary)',
+                                                minWidth: '120px'
+                                            }}>DOWN</th>
+                                            <th style={{
+                                                background: '#10b981',
+                                                color: 'white',
+                                                padding: '1rem',
+                                                borderRadius: '8px',
+                                                textAlign: 'center',
+                                                fontWeight: 'bold',
+                                                minWidth: '250px'
+                                            }}>BASE</th>
+                                            <th style={{
+                                                background: '#f59e0b',
+                                                color: 'white',
+                                                padding: '1rem',
+                                                borderRadius: '8px',
+                                                textAlign: 'center',
+                                                fontWeight: 'bold',
+                                                minWidth: '250px'
+                                            }}>CONVERT</th>
+                                            <th style={{
+                                                background: '#ef4444',
+                                                color: 'white',
+                                                padding: '1rem',
+                                                borderRadius: '8px',
+                                                textAlign: 'center',
+                                                fontWeight: 'bold',
+                                                minWidth: '250px'
+                                            }}>EXPLOSIVE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {['1st', '2nd', '3rd', '4th'].map(down => (
+                                            <tr key={down}>
+                                                <td style={{
+                                                    background: currentSection.color,
+                                                    color: 'white',
+                                                    padding: '1rem',
+                                                    borderRadius: '8px',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '1.1rem',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    {down}
+                                                </td>
+                                                {['base', 'convert', 'explosive'].map(category => {
+                                                    const setId = `${selectedSection}_${down}_${category}`;
+                                                    const cellPlays = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                                                    const cellPlayObjects = cellPlays.map(id => plays.find(p => p.id === id)).filter(Boolean);
+
+                                                    return (
+                                                        <td key={category} style={{
+                                                            background: 'var(--bg-panel)',
+                                                            padding: '1rem',
+                                                            borderRadius: '8px',
+                                                            verticalAlign: 'top'
+                                                        }}>
+                                                            {cellPlayObjects.length > 0 ? (
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                    {cellPlayObjects.map(play => (
+                                                                        <div
+                                                                            key={play.id}
+                                                                            style={{
+                                                                                background: 'var(--bg-card)',
+                                                                                padding: '0.75rem',
+                                                                                borderRadius: '6px',
+                                                                                cursor: 'pointer',
+                                                                                border: '2px solid transparent',
+                                                                                transition: 'all 0.2s'
+                                                                            }}
+                                                                            onClick={() => isBuildingScript && addToScript(play)}
+                                                                            onMouseEnter={(e) => {
+                                                                                e.currentTarget.style.borderColor = currentSection.color;
+                                                                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                                                            }}
+                                                                            onMouseLeave={(e) => {
+                                                                                e.currentTarget.style.borderColor = 'transparent';
+                                                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                                            }}
+                                                                        >
+                                                                            <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>
+                                                                                {play.wristbandSlot && <span style={{ color: currentSection.color, marginRight: '0.5rem' }}>{play.wristbandSlot}</span>}
+                                                                                {play.name}
+                                                                            </div>
+                                                                            {play.formation && (
+                                                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                                                    {play.formation}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <div style={{
+                                                                    color: 'var(--text-secondary)',
+                                                                    fontSize: '0.85rem',
+                                                                    fontStyle: 'italic',
+                                                                    textAlign: 'center',
+                                                                    padding: '1rem'
+                                                                }}>
+                                                                    No plays
+                                                                </div>
+                                                            )}
+
+                                                            {/* Quick Add Input */}
+                                                            {onQuickAddPlay && (
+                                                                <div style={{ marginTop: '0.5rem' }}>
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Add play..."
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            padding: '0.5rem',
+                                                                            background: 'var(--bg-card)',
+                                                                            border: '1px solid var(--border)',
+                                                                            borderRadius: '4px',
+                                                                            color: 'var(--text-primary)',
+                                                                            fontSize: '0.85rem'
+                                                                        }}
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter' && e.target.value.trim()) {
+                                                                                handleQuickAddToSet(setId, e.target.value);
+                                                                                e.target.value = '';
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         ) : (
                             // Standard grid for other sections
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
@@ -10467,9 +11100,17 @@
                                                         {play.hashPreference}
                                                     </span>
                                                 )}
-                                                {play.tags && play.tags.slice(0, 4).map(t => (
-                                                    <span key={t} className="mini-tag">{t}</span>
-                                                ))}
+                                                {play.tag1 && (
+                                                    <span className="mini-tag">
+                                                        {(TAG_CATEGORIES["Motion"] || []).includes(play.tag1) ? `"${play.tag1}"` : play.tag1}
+                                                    </span>
+                                                )}
+                                                {play.tag2 && <span className="mini-tag">({play.tag2})</span>}
+                                                {play.tags && play.tags.slice(0, 4).map(t => {
+                                                    if (t === play.tag1 || t === play.tag2) return null;
+                                                    const isMotion = (TAG_CATEGORIES["Motion"] || []).includes(t);
+                                                    return <span key={t} className="mini-tag">{isMotion ? `"${t}"` : t}</span>
+                                                })}
                                             </div>
                                         </div>
                                     </div>
@@ -12350,6 +12991,637 @@
         };
 
 
+        // ============================================
+        // PLAY-CALLING SIMULATOR COMPONENT
+        // ============================================
+
+        const PlayCallSimulator = ({ plays, roster, gamePlan, onUpdateGamePlan }) => {
+            // ===== GAME STATE =====
+            const [gameState, setGameState] = useState({
+                quarter: 1,
+                timeRemaining: 720, // 12 minutes in seconds
+                down: 1,
+                distance: 10,
+                yardLine: 25, // Start at own 25
+                hash: 'middle',
+                score: { home: 0, away: 0 },
+                driveNumber: 1,
+                playClockRemaining: 40,
+                playClockActive: false,
+                possession: 'home'
+            });
+
+            const [playHistory, setPlayHistory] = useState([]);
+            const [selectedPlay, setSelectedPlay] = useState(null);
+            const [showResult, setShowResult] = useState(false);
+            const [lastResult, setLastResult] = useState(null);
+            const [isSimulating, setIsSimulating] = useState(false);
+            const [simulatorActive, setSimulatorActive] = useState(false);
+
+            // ===== SCOUT TEAM STATE =====
+            const [difficulty, setDifficulty] = useState('medium'); // easy, medium, hard, elite
+            const [scoutTeam, setScoutTeam] = useState([]);
+
+            // ===== PERFORMANCE TRACKING =====
+            const [sessionStats, setSessionStats] = useState({
+                playsRun: 0,
+                avgDecisionTime: 0,
+                successRate: 0,
+                totalYards: 0,
+                touchdowns: 0,
+                turnovers: 0,
+                startTime: null
+            });
+
+            // ===== OVERLAY POSITION =====
+            const [overlayPosition, setOverlayPosition] = useState({ x: 20, y: 20 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+            // ===== GENERATE SCOUT TEAM =====
+            useEffect(() => {
+                if (simulatorActive && scoutTeam.length === 0) {
+                    generateScoutTeam();
+                }
+            }, [simulatorActive]);
+
+            const generateScoutTeam = () => {
+                const positions = ['DL', 'DL', 'DL', 'DL', 'LB', 'LB', 'LB', 'CB', 'CB', 'S', 'S'];
+                const difficultyMultipliers = {
+                    easy: 0.6,
+                    medium: 0.75,
+                    hard: 0.9,
+                    elite: 1.0
+                };
+                const mult = difficultyMultipliers[difficulty];
+
+                const team = positions.map((pos, idx) => ({
+                    id: `scout_${idx}`,
+                    position: pos,
+                    jersey: idx + 1,
+                    name: generatePlayerName(),
+                    ratings: {
+                        overall: Math.floor((60 + Math.random() * 35) * mult),
+                        speed: Math.floor((55 + Math.random() * 40) * mult),
+                        strength: Math.floor((55 + Math.random() * 40) * mult),
+                        ability: Math.floor((55 + Math.random() * 40) * mult)
+                    }
+                }));
+                setScoutTeam(team);
+            };
+
+            const generatePlayerName = () => {
+                const firstNames = ['Mike', 'John', 'Chris', 'David', 'James', 'Robert', 'Tyler', 'Brandon', 'Kevin', 'Marcus'];
+                const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
+                return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+            };
+
+            // ===== PLAY CLOCK COUNTDOWN =====
+            useEffect(() => {
+                if (!gameState.playClockActive || !simulatorActive) return;
+
+                const interval = setInterval(() => {
+                    setGameState(prev => {
+                        if (prev.playClockRemaining <= 0) {
+                            // Delay of game penalty
+                            alert('⚠️ DELAY OF GAME! 5 yard penalty');
+                            return {
+                                ...prev,
+                                playClockRemaining: 40,
+                                playClockActive: false,
+                                yardLine: Math.max(0, prev.yardLine - 5),
+                                distance: prev.distance + 5
+                            };
+                        }
+                        return { ...prev, playClockRemaining: prev.playClockRemaining - 1 };
+                    });
+                }, 1000);
+
+                return () => clearInterval(interval);
+            }, [gameState.playClockActive, simulatorActive]);
+
+            // ===== START PLAY CLOCK =====
+            const startPlayClock = () => {
+                setGameState(prev => ({ ...prev, playClockActive: true, playClockRemaining: 40 }));
+                if (!sessionStats.startTime) {
+                    setSessionStats(prev => ({ ...prev, startTime: Date.now() }));
+                }
+            };
+
+            // ===== SIMULATE PLAY RESULT =====
+            const simulatePlay = async () => {
+                if (!selectedPlay) {
+                    alert('Please select a play from the call sheet first!');
+                    return;
+                }
+
+                setIsSimulating(true);
+                setGameState(prev => ({ ...prev, playClockActive: false }));
+
+                // Calculate decision time
+                const decisionTime = 40 - gameState.playClockRemaining;
+
+                // Wait 2-3 seconds to simulate play execution
+                await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000));
+
+                // Calculate result based on ratings
+                const result = calculatePlayResult(selectedPlay);
+
+                setLastResult(result);
+                setShowResult(true);
+
+                // Update game state
+                updateGameStateAfterPlay(result);
+
+                // Update session stats
+                updateSessionStats(result, decisionTime);
+
+                // Add to play history
+                setPlayHistory(prev => [{
+                    playNumber: prev.length + 1,
+                    down: gameState.down,
+                    distance: gameState.distance,
+                    yardLine: gameState.yardLine,
+                    playName: selectedPlay.name,
+                    result: result,
+                    timestamp: Date.now()
+                }, ...prev]);
+
+                setIsSimulating(false);
+                setSelectedPlay(null);
+
+                // Auto-hide result after 3 seconds and start next play clock
+                setTimeout(() => {
+                    setShowResult(false);
+                    startPlayClock();
+                }, 3000);
+            };
+
+            // ===== CALCULATE PLAY RESULT =====
+            const calculatePlayResult = (play) => {
+                // Get offensive player ratings (simplified - using average of roster)
+                const offenseRating = roster.reduce((sum, p) => sum + (p.metrics?.maddenRating || 70), 0) / roster.length;
+
+                // Get defensive rating (average of scout team)
+                const defenseRating = scoutTeam.reduce((sum, p) => sum + p.ratings.overall, 0) / scoutTeam.length;
+
+                // Base success probability
+                let successProb = 0.5 + (offenseRating - defenseRating) / 200;
+
+                // Situational modifiers
+                if (gameState.distance >= 10) successProb -= 0.1; // Harder on long distance
+                if (gameState.yardLine < 10) successProb -= 0.15; // Harder near goal line
+                if (gameState.down >= 3) successProb -= 0.1; // Harder on 3rd/4th down
+
+                // Play type modifiers (check tags)
+                const playTags = play.tags || [];
+                const isRun = playTags.some(t => ['Strong Run', 'Weak Run'].includes(t));
+                const isPass = playTags.some(t => ['Drop Back', 'Quick Game'].includes(t));
+
+                // Determine outcome type
+                const roll = Math.random();
+                let outcome, yards;
+
+                if (roll > successProb) {
+                    // Unsuccessful play
+                    if (isPass && Math.random() > 0.7) {
+                        outcome = 'Incomplete';
+                        yards = 0;
+                    } else if (Math.random() > 0.95) {
+                        outcome = 'Turnover';
+                        yards = 0;
+                    } else if (Math.random() > 0.9) {
+                        outcome = 'Sack';
+                        yards = -(3 + Math.floor(Math.random() * 5));
+                    } else {
+                        outcome = 'Tackle';
+                        yards = Math.floor(Math.random() * Math.max(1, gameState.distance * 0.4));
+                    }
+                } else {
+                    // Successful play
+                    const baseYards = gameState.distance + Math.floor(Math.random() * 8);
+                    yards = Math.max(0, baseYards - Math.floor(Math.random() * 5));
+
+                    // Check for touchdown
+                    if (gameState.yardLine + yards >= 100) {
+                        outcome = 'TOUCHDOWN!';
+                        yards = 100 - gameState.yardLine;
+                    } else if (yards >= gameState.distance) {
+                        outcome = 'First Down';
+                    } else {
+                        outcome = 'Tackle';
+                    }
+                }
+
+                // Time elapsed (run plays take more time)
+                const timeElapsed = isRun ? (25 + Math.floor(Math.random() * 10)) : (5 + Math.floor(Math.random() * 8));
+
+                return {
+                    playId: play.id,
+                    playName: play.name,
+                    yardsGained: yards,
+                    outcome: outcome,
+                    timeElapsed: timeElapsed,
+                    turnover: outcome === 'Turnover',
+                    touchdown: outcome === 'TOUCHDOWN!'
+                };
+            };
+
+            // ===== UPDATE GAME STATE AFTER PLAY =====
+            const updateGameStateAfterPlay = (result) => {
+                setGameState(prev => {
+                    let newDown = prev.down;
+                    let newDistance = prev.distance;
+                    let newYardLine = Math.min(100, Math.max(0, prev.yardLine + result.yardsGained));
+                    let newScore = { ...prev.score };
+                    let newTimeRemaining = Math.max(0, prev.timeRemaining - result.timeElapsed);
+
+                    if (result.touchdown) {
+                        newScore.home += 7; // Assuming extra point
+                        newDown = 1;
+                        newDistance = 10;
+                        newYardLine = 25; // Kickoff
+                    } else if (result.turnover) {
+                        // Turnover - opponent gets ball
+                        newDown = 1;
+                        newDistance = 10;
+                        newYardLine = 100 - newYardLine; // Flip field position
+                    } else {
+                        // Normal play progression
+                        const yardsToGo = prev.distance - result.yardsGained;
+
+                        if (yardsToGo <= 0) {
+                            // First down!
+                            newDown = 1;
+                            newDistance = Math.min(10, 100 - newYardLine);
+                        } else {
+                            newDown = prev.down + 1;
+                            newDistance = yardsToGo;
+
+                            if (newDown > 4) {
+                                // Turnover on downs
+                                newDown = 1;
+                                newDistance = 10;
+                                newYardLine = 100 - newYardLine;
+                            }
+                        }
+                    }
+
+                    return {
+                        ...prev,
+                        down: newDown,
+                        distance: newDistance,
+                        yardLine: newYardLine,
+                        score: newScore,
+                        timeRemaining: newTimeRemaining,
+                        playClockRemaining: 40
+                    };
+                });
+            };
+
+            // ===== UPDATE SESSION STATS =====
+            const updateSessionStats = (result, decisionTime) => {
+                setSessionStats(prev => {
+                    const newPlaysRun = prev.playsRun + 1;
+                    const newAvgDecisionTime = ((prev.avgDecisionTime * prev.playsRun) + decisionTime) / newPlaysRun;
+                    const wasSuccessful = result.outcome === 'First Down' || result.outcome === 'TOUCHDOWN!';
+                    const newSuccessRate = ((prev.successRate * prev.playsRun) + (wasSuccessful ? 1 : 0)) / newPlaysRun;
+
+                    return {
+                        ...prev,
+                        playsRun: newPlaysRun,
+                        avgDecisionTime: newAvgDecisionTime,
+                        successRate: newSuccessRate,
+                        totalYards: prev.totalYards + result.yardsGained,
+                        touchdowns: prev.touchdowns + (result.touchdown ? 1 : 0),
+                        turnovers: prev.turnovers + (result.turnover ? 1 : 0)
+                    };
+                });
+            };
+
+            // ===== RESET SIMULATION =====
+            const resetSimulation = () => {
+                if (!confirm('Reset the simulation? This will clear all progress.')) return;
+
+                setGameState({
+                    quarter: 1,
+                    timeRemaining: 720,
+                    down: 1,
+                    distance: 10,
+                    yardLine: 25,
+                    hash: 'middle',
+                    score: { home: 0, away: 0 },
+                    driveNumber: 1,
+                    playClockRemaining: 40,
+                    playClockActive: false,
+                    possession: 'home'
+                });
+                setPlayHistory([]);
+                setSessionStats({
+                    playsRun: 0,
+                    avgDecisionTime: 0,
+                    successRate: 0,
+                    totalYards: 0,
+                    touchdowns: 0,
+                    turnovers: 0,
+                    startTime: null
+                });
+                setShowResult(false);
+                setSelectedPlay(null);
+                generateScoutTeam();
+            };
+
+            // ===== DRAGGING HANDLERS =====
+            const handleMouseDown = (e) => {
+                if (e.target.closest('.simulator-drag-handle')) {
+                    setIsDragging(true);
+                    setDragOffset({
+                        x: e.clientX - overlayPosition.x,
+                        y: e.clientY - overlayPosition.y
+                    });
+                }
+            };
+
+            const handleMouseMove = (e) => {
+                if (isDragging) {
+                    setOverlayPosition({
+                        x: e.clientX - dragOffset.x,
+                        y: e.clientY - dragOffset.y
+                    });
+                }
+            };
+
+            const handleMouseUp = () => {
+                setIsDragging(false);
+            };
+
+            useEffect(() => {
+                if (isDragging) {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                    return () => {
+                        window.removeEventListener('mousemove', handleMouseMove);
+                        window.removeEventListener('mouseup', handleMouseUp);
+                    };
+                }
+            }, [isDragging, dragOffset]);
+
+            // ===== RENDER =====
+            if (!simulatorActive) {
+                return (
+                    <div className="card" style={{ padding: '2rem', textAlign: 'center', maxWidth: '600px', margin: '2rem auto' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎮</div>
+                        <h2 style={{ marginBottom: '1rem' }}>Play-Calling Simulator</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                            Practice using your call sheet in realistic game scenarios. Select plays, manage the play clock,
+                            and see how your calls perform against a simulated scout team defense.
+                        </p>
+
+                        <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Scout Team Difficulty</label>
+                            <select
+                                className="form-select"
+                                value={difficulty}
+                                onChange={e => setDifficulty(e.target.value)}
+                                style={{ fontSize: '1.1rem', padding: '0.75rem' }}
+                            >
+                                <option value="easy">Easy (60-70 OVR)</option>
+                                <option value="medium">Medium (70-80 OVR)</option>
+                                <option value="hard">Hard (80-90 OVR)</option>
+                                <option value="elite">Elite (90+ OVR)</option>
+                            </select>
+                        </div>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                                setSimulatorActive(true);
+                                startPlayClock();
+                            }}
+                            style={{ fontSize: '1.2rem', padding: '1rem 2rem' }}
+                        >
+                            Start Simulation
+                        </button>
+                    </div>
+                );
+            }
+
+            return (
+                <div style={{ position: 'relative', height: '100%' }}>
+                    {/* Game Situation Overlay */}
+                    <div
+                        style={{
+                            position: 'fixed',
+                            left: `${overlayPosition.x}px`,
+                            top: `${overlayPosition.y}px`,
+                            zIndex: 1000,
+                            background: '#1a1a1a',
+                            border: '2px solid var(--accent)',
+                            borderRadius: '12px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                            minWidth: '320px',
+                            cursor: isDragging ? 'grabbing' : 'default',
+                            userSelect: 'none'
+                        }}
+                        onMouseDown={handleMouseDown}
+                    >
+                        {/* Drag Handle */}
+                        <div
+                            className="simulator-drag-handle"
+                            style={{
+                                padding: '0.5rem 1rem',
+                                background: 'var(--accent)',
+                                borderRadius: '10px 10px 0 0',
+                                cursor: 'grab',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}
+                        >
+                            <span style={{ fontWeight: 'bold', color: 'white' }}>🎮 SIMULATION</span>
+                            <button
+                                className="btn"
+                                onClick={() => setSimulatorActive(false)}
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                            >
+                                Exit
+                            </button>
+                        </div>
+
+                        {/* Game Info */}
+                        <div style={{ padding: '1rem' }}>
+                            {/* Score */}
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginBottom: '1rem',
+                                padding: '0.75rem',
+                                background: 'var(--surface)',
+                                borderRadius: '8px'
+                            }}>
+                                <div style={{ textAlign: 'center', flex: 1 }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>YOUR TEAM</div>
+                                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{gameState.score.home}</div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', fontSize: '1.5rem', fontWeight: 'bold' }}>-</div>
+                                <div style={{ textAlign: 'center', flex: 1 }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>OPPONENT</div>
+                                    <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{gameState.score.away}</div>
+                                </div>
+                            </div>
+
+                            {/* Situation */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <div style={{ padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>DOWN & DISTANCE</div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
+                                        {gameState.down}{['st', 'nd', 'rd', 'th'][gameState.down - 1]} & {gameState.distance}
+                                    </div>
+                                </div>
+                                <div style={{ padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>FIELD POSITION</div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
+                                        {gameState.yardLine < 50 ? `Own ${gameState.yardLine}` : `Opp ${100 - gameState.yardLine}`}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Time */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <div style={{ padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>QUARTER</div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Q{gameState.quarter}</div>
+                                </div>
+                                <div style={{ padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TIME</div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
+                                        {Math.floor(gameState.timeRemaining / 60)}:{String(gameState.timeRemaining % 60).padStart(2, '0')}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Play Clock */}
+                            <div style={{
+                                padding: '1rem',
+                                background: gameState.playClockRemaining <= 10 ? 'rgba(239, 68, 68, 0.2)' : 'var(--surface)',
+                                borderRadius: '8px',
+                                border: gameState.playClockRemaining <= 10 ? '2px solid #ef4444' : 'none',
+                                marginBottom: '1rem',
+                                textAlign: 'center'
+                            }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PLAY CLOCK</div>
+                                <div style={{
+                                    fontSize: '2.5rem',
+                                    fontWeight: 'bold',
+                                    color: gameState.playClockRemaining <= 10 ? '#ef4444' : 'var(--accent)',
+                                    fontFamily: 'monospace'
+                                }}>
+                                    {gameState.playClockRemaining}
+                                </div>
+                            </div>
+
+                            {/* Selected Play Display */}
+                            {selectedPlay && (
+                                <div style={{
+                                    padding: '0.75rem',
+                                    background: 'rgba(59, 130, 246, 0.1)',
+                                    border: '1px solid #3b82f6',
+                                    borderRadius: '6px',
+                                    marginBottom: '1rem'
+                                }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#93c5fd', marginBottom: '0.25rem' }}>SELECTED PLAY</div>
+                                    <div style={{ fontWeight: 'bold', color: '#3b82f6' }}>{selectedPlay.name}</div>
+                                </div>
+                            )}
+
+                            {/* Submit Play Button */}
+                            <button
+                                className="btn btn-primary"
+                                onClick={simulatePlay}
+                                disabled={!selectedPlay || isSimulating}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 'bold',
+                                    marginBottom: '0.5rem'
+                                }}
+                            >
+                                {isSimulating ? '⏳ Running Play...' : '▶️ Submit Play'}
+                            </button>
+
+                            {/* Quick Actions */}
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={resetSimulation}
+                                    style={{ flex: 1, fontSize: '0.85rem' }}
+                                >
+                                    🔄 Reset
+                                </button>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => alert(`Stats:\n\nPlays: ${sessionStats.playsRun}\nAvg Decision Time: ${sessionStats.avgDecisionTime.toFixed(1)}s\nSuccess Rate: ${(sessionStats.successRate * 100).toFixed(1)}%\nTotal Yards: ${sessionStats.totalYards}\nTDs: ${sessionStats.touchdowns}\nTurnovers: ${sessionStats.turnovers}`)}
+                                    style={{ flex: 1, fontSize: '0.85rem' }}
+                                >
+                                    📊 Stats
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Result Popup */}
+                    {showResult && lastResult && (
+                        <div style={{
+                            position: 'fixed',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 2000,
+                            background: 'var(--bg-card)',
+                            border: `3px solid ${lastResult.touchdown ? '#10b981' : lastResult.turnover ? '#ef4444' : '#3b82f6'}`,
+                            borderRadius: '16px',
+                            padding: '2rem',
+                            minWidth: '400px',
+                            textAlign: 'center',
+                            boxShadow: '0 16px 64px rgba(0,0,0,0.6)',
+                            animation: 'fadeIn 0.3s ease-in'
+                        }}>
+                            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                                {lastResult.touchdown ? '🎉' : lastResult.turnover ? '😱' : lastResult.outcome === 'First Down' ? '✅' : '⚡'}
+                            </div>
+                            <h2 style={{
+                                marginBottom: '1rem',
+                                color: lastResult.touchdown ? '#10b981' : lastResult.turnover ? '#ef4444' : 'inherit'
+                            }}>
+                                {lastResult.outcome}
+                            </h2>
+                            <div style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                                {lastResult.yardsGained > 0 ? '+' : ''}{lastResult.yardsGained} yards
+                            </div>
+                            <div style={{ color: 'var(--text-secondary)' }}>
+                                {lastResult.playName}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* The actual call sheet component will render here */}
+                    <div style={{ paddingTop: '1rem' }}>
+                        <SmartCallSheet
+                            gamePlan={gamePlan}
+                            situation={gameState}
+                            plays={plays}
+                            onUpdateSituation={setGameState}
+                            onUpdateGamePlan={onUpdateGamePlan}
+                            onPlaySelected={setSelectedPlay}
+                        />
+                    </div>
+                </div>
+            );
+        };
+
+
+
         const ProgramDashboard = ({ currentWeek, roster, userRole = 'Head Coach', permissions = { view: true, edit: true } }) => {
             // Checklist State (Daily, Weekly, Monthly)
             const [dailyFocus, setDailyFocus] = useState([]);
@@ -12712,10 +13984,14 @@
                     // Top Row: Scripts, Opening, 2nd & XL, End of Half
                     {
                         type: 'grid',
-                        cols: 6,
+                        cols: 10,
                         rows: [
+                            { header: 'PLAYER TOUCHES', setId: 'player_touches', colSpan: 1, color: '#8b5cf6' },
                             { header: 'OPENING SCRIPT LH', setId: '1st_ten_lh', colSpan: 1, color: '#10b981' },
                             { header: 'OPENING SCRIPT RH', setId: '1st_ten_rh', colSpan: 1, color: '#10b981' },
+                            { header: 'MINI SCRIPT 1', setId: 'mini_script_1', colSpan: 1, color: '#06b6d4' },
+                            { header: 'MINI SCRIPT 2', setId: 'mini_script_2', colSpan: 1, color: '#06b6d4' },
+                            { header: '2ND HALF OPENERS', setId: 'second_half_openers', colSpan: 1, color: '#f97316' },
                             { header: 'P&10', setId: 'p_and_10', colSpan: 1, color: '#ef4444' },
                             { header: '2ND & XL (LH)', setId: '2nd_xl_lh', colSpan: 1, color: '#3b82f6' },
                             { header: '2ND & XL RH', setId: '2nd_xl_rh', colSpan: 1, color: '#3b82f6' },
@@ -12763,7 +14039,7 @@
             },
             MATRIX: {
                 id: 'MATRIX',
-                name: 'Concept Matrix',
+                name: "Strike 'Em Out",
                 cols: [
                     { id: 'FB_L', label: 'FB L', fullLabel: 'Fastball Left' },
                     { id: 'FB_R', label: 'FB R', fullLabel: 'Fastball Right' },
@@ -12787,17 +14063,480 @@
                     { id: 'jets', label: 'Jets/Specials', color: '#a8a29e' }
                 ],
                 playTypes: [
-                    { id: 'strong_run', label: 'Strong run' },
-                    { id: 'weak_run', label: 'Weak run' },
-                    { id: 'quick_game', label: 'Quick game' },
-                    { id: 'drop_back', label: 'Drop back' },
-                    { id: 'screen', label: 'Screen' },
-                    { id: 'explosive', label: 'Explosive' }
+                    { id: 'inside_run_rt', label: 'Inside Run RT' },
+                    { id: 'inside_run_lt', label: 'Inside Run LT' },
+                    { id: 'perimeter_run_rt', label: 'Perimeter Run RT' },
+                    { id: 'perimeter_run_lt', label: 'Perimeter Run LT' },
+                    { id: 'fit_rpo', label: 'FIT RPO' },
+                    { id: 'flow_rpo', label: 'FLOW RPO' },
+                    { id: 'quick_game', label: 'Quick Game' },
+                    { id: 'drop_back', label: 'Drop Back' },
+                    { id: 'movement_pass', label: 'Movement Pass' },
+                    { id: 'screens', label: 'Screens' }
                 ]
             }
         };
 
-        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan }) => {
+        // Game Plan 2.0 Component
+        const GamePlan2 = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay }) => {
+            const [mode, setMode] = useState('full'); // 'guided' or 'full'
+            const [currentPhase, setCurrentPhase] = useState(1);
+            const [currentSituationIndex, setCurrentSituationIndex] = useState(0);
+
+            // Phase definitions
+            const phases = [
+                {
+                    id: 1,
+                    name: 'Core Downs & Distance',
+                    description: 'Start with your base plays that work in multiple situations',
+                    situations: ['base_downs', 'p_and_10', '2nd_xl']
+                },
+                {
+                    id: 2,
+                    name: 'Third Down Conversions',
+                    description: 'Add 3-5 plays for each distance category',
+                    situations: ['convert_short_med', 'convert_long_xl']
+                },
+                {
+                    id: 3,
+                    name: 'Field Zones',
+                    description: 'Many plays can work in multiple zones - reuse when possible',
+                    situations: ['backed_up', 'coming_out', 'open_field', 'fringe', 'high_red', 'low_red', 'goal_line']
+                },
+                {
+                    id: 4,
+                    name: 'Game Management',
+                    description: 'Critical situations - ensure you have go-to plays ready',
+                    situations: ['two_minute', 'four_minute', 'two_point']
+                },
+                {
+                    id: 5,
+                    name: 'Special Situations',
+                    description: 'Pre-scripted sequences for key moments',
+                    situations: ['opening_script', 'one_word']
+                }
+            ];
+
+            // All situation definitions (reusing from SmartCallSheet)
+            const allSituations = [
+                { key: 'base_downs', label: '📊 BASE DOWNS', color: '#14b8a6', recommended: '5-8 plays' },
+                { key: 'p_and_10', label: 'P&10', color: '#ef4444', recommended: '3-5 plays' },
+                { key: '2nd_xl', label: 'GET HALF', color: '#3b82f6', recommended: '4-6 plays', hasSubmenu: true },
+                { key: 'convert_short_med', label: '🎯 CONVERT SHORT/MED', color: '#10b981', recommended: '6-8 plays', hasSubmenu: true },
+                { key: 'convert_long_xl', label: '🎯 CONVERT L/XL 7-12+', color: '#059669', recommended: '4-6 plays', hasSubmenu: true },
+                { key: 'backed_up', label: 'BACKED UP', color: '#1f2937', recommended: '3-4 plays' },
+                { key: 'coming_out', label: 'COMING OUT', color: '#6b7280', recommended: '3-4 plays' },
+                { key: 'open_field', label: 'OPEN FIELD', color: '#16a34a', recommended: '4-5 plays' },
+                { key: 'fringe', label: 'FRINGE (+45-25)', color: '#f97316', recommended: '3-4 plays' },
+                { key: 'high_red', label: 'HIGH RED (25-15)', color: '#ef4444', recommended: '4-5 plays' },
+                { key: 'low_red', label: 'LOW RED (15-6)', color: '#eab308', recommended: '4-5 plays' },
+                { key: 'goal_line', label: 'GOAL LINE (5-GL)', color: '#3b82f6', recommended: '5-6 plays' },
+                { key: 'two_minute', label: '2-MINUTE', color: '#8b5cf6', recommended: '8-10 plays', hasSubmenu: true },
+                { key: 'four_minute', label: '4-MINUTE', color: '#8b5cf6', recommended: '4-5 plays' },
+                { key: 'two_point', label: '2-POINT', color: '#8b5cf6', recommended: '3-4 plays' },
+                { key: 'opening_script', label: 'OPENING SCRIPT', color: '#ec4899', recommended: '10-15 plays', hasSubmenu: true },
+                { key: 'one_word', label: 'ONE-WORD CALLS', color: '#f59e0b', recommended: '5-8 plays', hasSubmenu: true }
+            ];
+
+            // Helper to get play count for a situation
+            const getPlayCount = (situationKey) => {
+                if (situationKey === '2nd_xl') {
+                    return ((gamePlan.sets || []).find(s => s.id === '2nd_xl_lh')?.playIds?.length || 0) +
+                        ((gamePlan.sets || []).find(s => s.id === '2nd_xl_rh')?.playIds?.length || 0);
+                } else if (situationKey === 'convert_short_med') {
+                    return ((gamePlan.sets || []).find(s => s.id === '3rd_short')?.playIds?.length || 0) +
+                        ((gamePlan.sets || []).find(s => s.id === '3rd_med')?.playIds?.length || 0);
+                } else if (situationKey === 'convert_long_xl') {
+                    return ((gamePlan.sets || []).find(s => s.id === '3rd_long')?.playIds?.length || 0) +
+                        ((gamePlan.sets || []).find(s => s.id === '3rd_xl')?.playIds?.length || 0);
+                } else if (situationKey === 'two_minute') {
+                    return ['oob_yac', 'first_down', 'touchdown', 'final_play'].reduce((sum, cat) => {
+                        return sum + ((gamePlan.sets || []).find(s => s.id === `2min_${cat}`)?.playIds?.length || 0);
+                    }, 0);
+                } else if (situationKey === 'opening_script') {
+                    return ((gamePlan.sets || []).find(s => s.id === 'opening_script_left')?.playIds?.length || 0) +
+                        ((gamePlan.sets || []).find(s => s.id === 'opening_script_right')?.playIds?.length || 0);
+                } else if (situationKey === 'one_word') {
+                    return ['form_adj', 'pers_adj', 'motion_adj', 'explosive'].reduce((sum, cat) => {
+                        return sum + ((gamePlan.sets || []).find(s => s.id === `one_word_${cat}`)?.playIds?.length || 0);
+                    }, 0);
+                } else {
+                    return (gamePlan.sets || []).find(s => s.id === situationKey)?.playIds?.length || 0;
+                }
+            };
+
+            // Helper to get status for a situation
+            const getStatus = (situationKey) => {
+                const count = getPlayCount(situationKey);
+                if (count >= 3) return 'complete';
+                if (count > 0) return 'needs-plays';
+                return 'empty';
+            };
+
+            // Calculate overall completion
+            const calculateCompletion = () => {
+                const allSituationKeys = phases.flatMap(p => p.situations);
+                const completed = allSituationKeys.filter(key => getStatus(key) === 'complete').length;
+                return {
+                    completed,
+                    total: allSituationKeys.length,
+                    percentage: Math.round((completed / allSituationKeys.length) * 100)
+                };
+            };
+
+            const completion = calculateCompletion();
+            const currentPhaseData = phases.find(p => p.id === currentPhase);
+            const currentSituation = currentPhaseData ? allSituations.find(s => s.key === currentPhaseData.situations[currentSituationIndex]) : null;
+
+            // Navigation handlers for guided mode
+            const handleNext = () => {
+                if (currentSituationIndex < currentPhaseData.situations.length - 1) {
+                    setCurrentSituationIndex(currentSituationIndex + 1);
+                } else if (currentPhase < phases.length) {
+                    setCurrentPhase(currentPhase + 1);
+                    setCurrentSituationIndex(0);
+                }
+            };
+
+            const handlePrevious = () => {
+                if (currentSituationIndex > 0) {
+                    setCurrentSituationIndex(currentSituationIndex - 1);
+                } else if (currentPhase > 1) {
+                    setCurrentPhase(currentPhase - 1);
+                    const prevPhase = phases.find(p => p.id === currentPhase - 1);
+                    setCurrentSituationIndex(prevPhase.situations.length - 1);
+                }
+            };
+
+            const handleSkip = () => {
+                handleNext();
+            };
+
+            return (
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
+                    {/* Header with Mode Toggle */}
+                    <div style={{
+                        background: 'var(--bg-card)',
+                        borderBottom: '2px solid var(--border)',
+                        padding: '1.5rem'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>⚡ Game Plan 2.0</h2>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                    onClick={() => setMode('guided')}
+                                    className="btn"
+                                    style={{
+                                        background: mode === 'guided' ? 'var(--accent)' : 'var(--bg-panel)',
+                                        color: mode === 'guided' ? 'white' : 'var(--text-primary)',
+                                        border: mode === 'guided' ? 'none' : '2px solid var(--border)',
+                                        fontWeight: 'bold',
+                                        padding: '0.75rem 1.5rem'
+                                    }}
+                                >
+                                    🧭 GUIDED MODE
+                                </button>
+                                <button
+                                    onClick={() => setMode('full')}
+                                    className="btn"
+                                    style={{
+                                        background: mode === 'full' ? 'var(--accent)' : 'var(--bg-panel)',
+                                        color: mode === 'full' ? 'white' : 'var(--text-primary)',
+                                        border: mode === 'full' ? 'none' : '2px solid var(--border)',
+                                        fontWeight: 'bold',
+                                        padding: '0.75rem 1.5rem'
+                                    }}
+                                >
+                                    📋 FULL MENU
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div style={{ marginTop: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                    {completion.completed} of {completion.total} situations complete
+                                </span>
+                                <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                    {completion.percentage}%
+                                </span>
+                            </div>
+                            <div style={{
+                                width: '100%',
+                                height: '8px',
+                                background: 'var(--bg-panel)',
+                                borderRadius: '4px',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    width: `${completion.percentage}%`,
+                                    height: '100%',
+                                    background: 'linear-gradient(90deg, var(--accent), #10b981)',
+                                    transition: 'width 0.3s ease'
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Content Area */}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+                        {mode === 'guided' ? (
+                            // GUIDED MODE
+                            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                                {/* Phase Progress */}
+                                <div style={{
+                                    background: 'var(--bg-card)',
+                                    padding: '1.5rem',
+                                    borderRadius: '8px',
+                                    marginBottom: '2rem',
+                                    border: '2px solid var(--border)'
+                                }}>
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                        Phase {currentPhase} of {phases.length}
+                                    </div>
+                                    <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>
+                                        {currentPhaseData?.name}
+                                    </h3>
+                                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                                        {currentPhaseData?.description}
+                                    </p>
+                                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                        Situation {currentSituationIndex + 1} of {currentPhaseData?.situations.length}
+                                    </div>
+                                </div>
+
+                                {/* Current Situation Card */}
+                                {currentSituation && (
+                                    <div style={{
+                                        background: 'var(--bg-card)',
+                                        padding: '2rem',
+                                        borderRadius: '12px',
+                                        border: `3px solid ${currentSituation.color}`,
+                                        marginBottom: '2rem'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                                            <div style={{
+                                                width: '48px',
+                                                height: '48px',
+                                                borderRadius: '50%',
+                                                background: currentSituation.color,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '1.5rem'
+                                            }}>
+                                                {getStatus(currentSituation.key) === 'complete' ? '✅' :
+                                                    getStatus(currentSituation.key) === 'needs-plays' ? '⚠️' : '❌'}
+                                            </div>
+                                            <div>
+                                                <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>
+                                                    {currentSituation.label}
+                                                </h2>
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                                                    Recommended: {currentSituation.recommended}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            background: 'var(--bg-panel)',
+                                            padding: '1.5rem',
+                                            borderRadius: '8px',
+                                            marginBottom: '1.5rem'
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>
+                                                    Current Play Count:
+                                                </span>
+                                                <span style={{
+                                                    fontSize: '1.5rem',
+                                                    fontWeight: 'bold',
+                                                    color: getStatus(currentSituation.key) === 'complete' ? '#10b981' :
+                                                        getStatus(currentSituation.key) === 'needs-plays' ? '#eab308' : '#ef4444'
+                                                }}>
+                                                    {getPlayCount(currentSituation.key)}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            background: '#1e40af20',
+                                            border: '2px solid #3b82f6',
+                                            borderRadius: '8px',
+                                            padding: '1rem',
+                                            marginBottom: '1rem'
+                                        }}>
+                                            <div style={{ color: '#3b82f6', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                                                💡 Quick Tip
+                                            </div>
+                                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                {currentSituation.hasSubmenu ?
+                                                    'This situation has multiple categories. Use the Full Menu to add plays to each category.' :
+                                                    'Click "Go to Call Sheet" below to add plays to this situation.'}
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            className="btn"
+                                            style={{
+                                                width: '100%',
+                                                background: currentSituation.color,
+                                                color: 'white',
+                                                border: 'none',
+                                                fontWeight: 'bold',
+                                                padding: '1rem',
+                                                fontSize: '1rem'
+                                            }}
+                                        >
+                                            📋 Go to Call Sheet
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Navigation Buttons */}
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button
+                                        onClick={handlePrevious}
+                                        disabled={currentPhase === 1 && currentSituationIndex === 0}
+                                        className="btn"
+                                        style={{
+                                            flex: 1,
+                                            padding: '1rem',
+                                            fontWeight: 'bold',
+                                            opacity: currentPhase === 1 && currentSituationIndex === 0 ? 0.5 : 1
+                                        }}
+                                    >
+                                        ← Previous
+                                    </button>
+                                    <button
+                                        onClick={handleSkip}
+                                        className="btn"
+                                        style={{
+                                            flex: 1,
+                                            padding: '1rem',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        Skip for Now
+                                    </button>
+                                    <button
+                                        onClick={handleNext}
+                                        disabled={currentPhase === phases.length && currentSituationIndex === currentPhaseData?.situations.length - 1}
+                                        className="btn"
+                                        style={{
+                                            flex: 1,
+                                            padding: '1rem',
+                                            fontWeight: 'bold',
+                                            background: 'var(--accent)',
+                                            color: 'white',
+                                            border: 'none',
+                                            opacity: currentPhase === phases.length && currentSituationIndex === currentPhaseData?.situations.length - 1 ? 0.5 : 1
+                                        }}
+                                    >
+                                        Next →
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            // FULL MENU MODE
+                            <div>
+                                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '2rem' }}>
+                                    View all situations with status indicators. Click any situation to add plays.
+                                </p>
+
+                                {phases.map(phase => (
+                                    <div key={phase.id} style={{ marginBottom: '3rem' }}>
+                                        <div style={{
+                                            background: 'var(--bg-card)',
+                                            padding: '1rem 1.5rem',
+                                            borderRadius: '8px 8px 0 0',
+                                            borderBottom: '2px solid var(--accent)'
+                                        }}>
+                                            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>
+                                                Phase {phase.id}: {phase.name}
+                                            </h3>
+                                            <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                {phase.description}
+                                            </p>
+                                        </div>
+
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                                            gap: '1rem',
+                                            padding: '1.5rem',
+                                            background: 'var(--bg-panel)',
+                                            borderRadius: '0 0 8px 8px'
+                                        }}>
+                                            {phase.situations.map(sitKey => {
+                                                const sit = allSituations.find(s => s.key === sitKey);
+                                                if (!sit) return null;
+                                                const status = getStatus(sitKey);
+                                                const count = getPlayCount(sitKey);
+
+                                                return (
+                                                    <button
+                                                        key={sitKey}
+                                                        className="btn"
+                                                        style={{
+                                                            background: 'var(--bg-card)',
+                                                            border: `2px solid ${sit.color}`,
+                                                            borderRadius: '8px',
+                                                            padding: '1.5rem',
+                                                            textAlign: 'left',
+                                                            position: 'relative',
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                    >
+                                                        {/* Status Indicator */}
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            top: '0.75rem',
+                                                            right: '0.75rem',
+                                                            fontSize: '1.25rem'
+                                                        }}>
+                                                            {status === 'complete' ? '✅' :
+                                                                status === 'needs-plays' ? '⚠️' : '❌'}
+                                                        </div>
+
+                                                        <div style={{
+                                                            color: sit.color,
+                                                            fontWeight: 'bold',
+                                                            fontSize: '1rem',
+                                                            marginBottom: '0.5rem',
+                                                            paddingRight: '2rem'
+                                                        }}>
+                                                            {sit.label}
+                                                        </div>
+
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            marginTop: '0.75rem'
+                                                        }}>
+                                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                                                {count} plays
+                                                            </span>
+                                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                                                                {sit.recommended}
+                                                            </span>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay }) => {
             const [viewMode, setViewMode] = useState('call-sheet'); // 'call-sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
             const [showPlaySelector, setShowPlaySelector] = useState(false);
@@ -12805,6 +14544,9 @@
 
             // For Matrix/Grid Cell Editing
             const [activeCellSetId, setActiveCellSetId] = useState(null); // The setId currently being edited via modal
+
+            // For Strike 'Em Out matrix collapsible groups
+            const [collapsedGroups, setCollapsedGroups] = useState(new Set());
 
             // Helper to get play objects for a set ID
             const getPlaysForSet = (setId) => {
@@ -12859,6 +14601,17 @@
                     const newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                     onUpdateGamePlan({ ...gamePlan, sets: newSets });
                 }
+            };
+
+            // Quick add play to a set
+            const handleQuickAddToSet = (setId, playName) => {
+                if (!playName.trim() || !onQuickAddPlay) return;
+
+                // Create the incomplete play
+                const newPlay = onQuickAddPlay(playName);
+
+                // Add to the set
+                handleAddPlayToSet(setId, newPlay.id);
             };
 
 
@@ -12984,6 +14737,30 @@
                                             </div>
                                             <div style={{ padding: '0.5rem' }}>
                                                 {renderPlayListSimple(cell.setId)}
+                                                {onQuickAddPlay && (
+                                                    <input
+                                                        type="text"
+                                                        placeholder="+"
+                                                        style={{
+                                                            width: '100%',
+                                                            marginTop: '6px',
+                                                            padding: '4px 6px',
+                                                            fontSize: '0.8rem',
+                                                            border: '1px dashed var(--border)',
+                                                            borderRadius: '4px',
+                                                            background: 'rgba(255,255,255,0.1)'
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && e.target.value.trim()) {
+                                                                handleQuickAddToSet(cell.setId, e.target.value);
+                                                                e.target.value = '';
+                                                                e.preventDefault();
+                                                            }
+                                                        }}
+                                                    />
+                                                )}
+
                                             </div>
                                         </div>
                                     ))}
@@ -12996,7 +14773,6 @@
 
             const renderMatrix = () => {
                 const layout = GAME_PLAN_LAYOUTS.MATRIX;
-                const [collapsedGroups, setCollapsedGroups] = React.useState(new Set());
 
                 // Group columns by pitch type
                 const columnGroups = [
@@ -13007,13 +14783,15 @@
                 ];
 
                 const toggleGroup = (groupId) => {
-                    const newCollapsed = new Set(collapsedGroups);
-                    if (newCollapsed.has(groupId)) {
-                        newCollapsed.delete(groupId);
-                    } else {
-                        newCollapsed.add(groupId);
-                    }
-                    setCollapsedGroups(newCollapsed);
+                    setCollapsedGroups(prev => {
+                        const newCollapsed = new Set(prev);
+                        if (newCollapsed.has(groupId)) {
+                            newCollapsed.delete(groupId);
+                        } else {
+                            newCollapsed.add(groupId);
+                        }
+                        return newCollapsed;
+                    });
                 };
 
                 return (
@@ -13105,6 +14883,29 @@
                                                                         onClick={() => openPlaySelector(setId)}
                                                                     >
                                                                         {renderPlayListSimple(setId)}
+                                                                        {onQuickAddPlay && (
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="+"
+                                                                                style={{
+                                                                                    width: '100%',
+                                                                                    marginTop: '4px',
+                                                                                    padding: '2px 4px',
+                                                                                    fontSize: '0.75rem',
+                                                                                    border: '1px dashed var(--border)',
+                                                                                    borderRadius: '3px',
+                                                                                    background: 'rgba(255,255,255,0.1)'
+                                                                                }}
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                onKeyDown={(e) => {
+                                                                                    if (e.key === 'Enter' && e.target.value.trim()) {
+                                                                                        handleQuickAddToSet(setId, e.target.value);
+                                                                                        e.target.value = '';
+                                                                                        e.preventDefault(); // Prevent modal opening if it somehow bubbles
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                        )}
                                                                     </td>
                                                                 );
                                                             });
@@ -13130,7 +14931,7 @@
                             Call Sheet
                         </button>
                         <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
-                            Concept Matrix
+                            Strike 'Em Out
                         </button>
                     </div>
 
@@ -14216,6 +16017,10 @@
                 return saved ? JSON.parse(saved) : INITIAL_PLAYS;
             });
 
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
+            }, [plays]);
+
             // Formation Database
             const [formations, setFormations] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-formations');
@@ -14258,6 +16063,20 @@
 
             const handleUpdateFormation = (formationId, updatedFormation) => {
                 setFormations(formations.map(f => f.id === formationId ? updatedFormation : f));
+            };
+
+            // Quick add play from game plan (creates incomplete play)
+            const handleQuickAddPlay = (playName) => {
+                const newPlay = {
+                    id: `play_${Date.now()}`,
+                    name: playName.trim(),
+                    wristbandSlot: '',
+                    formation: '',
+                    tags: [],
+                    incomplete: true // Mark as incomplete
+                };
+                setPlays(prev => [...prev, newPlay]);
+                return newPlay;
             };
 
             // RBAC State
@@ -14998,7 +16817,7 @@
 
                             {/* WEEKLY PREP CATEGORY */}
                             {/* WEEKLY PREP CATEGORY */}
-                            <CollapsibleCategory title="Offense Prep" icon="Brain" defaultOpen={false}>
+                            <CollapsibleCategory title="Offense" icon="Brain" defaultOpen={false}>
                                 {currentPermissions.playbook.view && (
                                     <>
                                         <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
@@ -15020,6 +16839,9 @@
                                     <>
                                         <button className={`nav-item ${view === 'game-plan' ? 'active' : ''}`} onClick={() => setView('game-plan')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="Clipboard" size={14} style={{ marginRight: '6px' }} /> Game Plan
+                                        </button>
+                                        <button className={`nav-item ${view === 'game-plan-2' ? 'active' : ''}`} onClick={() => setView('game-plan-2')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Zap" size={14} style={{ marginRight: '6px' }} /> Game Plan 2.0
                                         </button>
                                         <button className={`nav-item ${view === 'scouting' ? 'active' : ''}`} onClick={() => setView('scouting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="Swords" size={14} style={{ marginRight: '6px' }} /> Scouting Report
@@ -15083,6 +16905,13 @@
                                         style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
                                     >
                                         <Icon name="Smartphone" size={14} style={{ marginRight: '6px' }} /> Smart Call Sheet
+                                    </button>
+                                    <button
+                                        className={`nav-item ${view === 'simulator' ? 'active' : ''}`}
+                                        onClick={() => setView('simulator')}
+                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                    >
+                                        <Icon name="Gamepad2" size={14} style={{ marginRight: '6px' }} /> Play-Calling Simulator
                                     </button>
                                 </CollapsibleCategory>
                             )}
@@ -15320,7 +17149,8 @@
                         {view === 'formations' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} />}
 
                         {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} />}
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} />}
+                        {view === 'game-plan-2' && <GamePlan2 plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} />}
                         {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
                         {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
                         {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} />}
@@ -15357,7 +17187,8 @@
                         {view === 'ratings' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
                         {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={handleUpdateGameLog} roster={roster} depthChart={currentWeek.depthChart || {}} situation={situation} onUpdateSituation={setSituation} formations={formations} />}
                         {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} />}
-                        {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} />}
+                        {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} />}
+                        {view === 'simulator' && <PlayCallSimulator plays={plays} roster={roster} gamePlan={currentWeek.offensiveGamePlan || {}} onUpdateGamePlan={setGamePlan} />}
                         {view === 'special-teams' && (
                             <SpecialTeamsDashboard
                                 roster={roster}
