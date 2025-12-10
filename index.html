@@ -231,6 +231,119 @@
             .wristband-card.green .wristband-row:nth-child(even) .wristband-play {
                 background: #dcfce7 !important;
             }
+
+            /* --- NEW WRISTBAND STYLES --- */
+
+            /* Grid Card (Diagrams) */
+            .wristband-grid-card {
+                width: 5in;
+                height: 3in;
+                border: 2px solid black !important;
+                background: white;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(5, 1fr);
+                width: 100%;
+                height: 100%;
+                box-sizing: border-box;
+            }
+
+            .wristband-grid-cell {
+                border-right: 1px solid black;
+                border-bottom: 1px solid black;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                position: relative;
+            }
+
+            /* Remove right border for last column */
+            .wristband-grid-cell:nth-child(4n) {
+                border-right: none;
+            }
+
+            /* Remove bottom border for last row */
+            .wristband-grid-cell:nth-nth-child(n+17) {
+                /* 17-20 are last row */
+                border-bottom: none;
+            }
+
+            /* Actually simpler: just let container border handle edges? 
+                Grid borders are tricky. Let's strictly border right/bottom and overlap or use gap.
+                Gap is bad for print alignment. 
+                Let's use outline/negative margin or standard table-like borders.
+             */
+
+            .wristband-grid-cell-header {
+                font-size: 6pt;
+                font-weight: bold;
+                background: #eee;
+                border-bottom: 1px solid #ccc;
+                padding: 1px 2px;
+                display: flex;
+                justify-content: space-between;
+                white-space: nowrap;
+            }
+
+            .wristband-grid-cell-body {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+
+            .wristband-grid-cell-footer {
+                font-size: 7pt;
+                font-weight: 800;
+                /* Extra bold */
+                text-align: center;
+                background: black;
+                color: white;
+                padding: 1px 0;
+                white-space: nowrap;
+                overflow: hidden;
+            }
+
+            /* Updated Text List Styles (High Contrast) */
+            .wristband-card.text-list .wristband-card-header {
+                background: black !important;
+                color: white !important;
+                font-size: 11pt;
+                text-transform: uppercase;
+                padding: 4px 0;
+            }
+
+            .wristband-card.text-list .wristband-row {
+                border-bottom: 1px solid black;
+                height: 12.5%;
+                /* 8 rows per column for 16 items? Or stick to 20-25? User wants specific count. */
+                /* User sample 1 had 301-316 per col? No, sample 2 has 25 rows (101-125). */
+            }
+
+            .wristband-card.text-list .wristband-num {
+                background: black !important;
+                color: white !important;
+                font-weight: bold;
+                font-size: 9pt;
+                width: 32px;
+            }
+
+            .wristband-card.text-list .wristband-play {
+                font-size: 9pt;
+                font-weight: bold;
+                color: black;
+            }
+
+            .wristband-card.text-list .wristband-row:nth-child(even) .wristband-play {
+                background: #e5e5e5 !important;
+                /* Light Grey striping instead of orange */
+            }
+
+            .wristband-card.text-list.green .wristband-row:nth-child(even) .wristband-play {
+                background: #dcfce7 !important;
+                /* Keep green tint for green band */
+            }
         }
     </style>
 </head>
@@ -300,11 +413,11 @@
 
         const INITIAL_MASTER_TASKS = [
             // DAILY
-            { id: 'dt_1', category: 'Daily', task: 'Check Warrior Dials & Outreach (Trends)', recurrence: 'Daily', assignTo: ['All Position Coaches', 'Head Coach'] },
-            { id: 'dt_2', category: 'Daily', task: 'Study Player Profiles (Favorites/Preferences)', recurrence: 'Daily', assignTo: ['All Position Coaches'] },
-            { id: 'dt_hc_1', category: 'Daily', task: 'Staff Communication / Pulse Check', recurrence: 'Daily', assignTo: ['Head Coach'] },
-            { id: 'dt_hc_2', category: 'Daily', task: 'Review Practice Plan & Scripts (Global View)', recurrence: 'Daily', assignTo: ['Head Coach'] },
-            { id: 'dt_hc_3', category: 'Daily', task: 'Admin / Parent Communication Check', recurrence: 'Daily', assignTo: ['Head Coach'] },
+            { id: 'dt_1', category: 'Year-Round', task: 'Check Warrior Dials & Outreach (Trends)', recurrence: 'Daily', assignTo: ['All Position Coaches', 'Head Coach'] },
+            { id: 'dt_2', category: 'Year-Round', task: 'Study Player Profiles (Favorites/Preferences)', recurrence: 'Daily', assignTo: ['All Position Coaches'] },
+            { id: 'dt_hc_1', category: 'Year-Round', task: 'Staff Communication / Pulse Check', recurrence: 'Daily', assignTo: ['Head Coach'] },
+            { id: 'dt_hc_2', category: 'Year-Round', task: 'Review Practice Plan & Scripts (Global View)', recurrence: 'Daily', assignTo: ['Head Coach'] },
+            { id: 'dt_hc_3', category: 'Year-Round', task: 'Admin / Parent Communication Check', recurrence: 'Daily', assignTo: ['Head Coach'] },
 
             // WEEKLY / SATURDAY
             { id: 'wt_1', category: 'Saturday', task: 'Grade Position Groups', recurrence: 'Weekly: Saturday', assignTo: ['All Position Coaches'] },
@@ -2767,44 +2880,115 @@
 
             // Column 1: start to start + mid - 1
             // Column 2: start + mid to end
-            // Wait, standard wristbands often interleave or go down?
-            // User image: 101, 103... vs 102, 104... (Odds/Evens)?
-            // Or 1-24, 25-48?
-            // Let's do straight vertical split for readability: 1-24 on left, 25-48 on right.
+            // Wait, for table layout, we likely want just one long list if it's a single column card? 
+            // Or if it's 2 columns per card (User image shows 4 columns total on page, so 2 per card).
+            // Let's stick to the 2-column per card layout but use TABLES.
+
+            // Actually, HTML tables are great for single columns. To do 2 columns, we can use 2 tables side-by-side.
 
             const col1Slots = [];
             const col2Slots = [];
-
-            // Assuming 24 rows per column for 48 slots
-            const rowsPerCol = 24;
+            const rowsPerCol = Math.ceil((end - start + 1) / 2);
+            // Or fixed 24?
 
             for (let i = 0; i < rowsPerCol; i++) {
-                col1Slots.push(start + i);
-                col2Slots.push(start + rowsPerCol + i);
+                if (start + i <= end) col1Slots.push(start + i);
+                if (start + rowsPerCol + i <= end) col2Slots.push(start + rowsPerCol + i);
             }
 
+            const renderTable = (slots) => (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', tableLayout: 'fixed' }}>
+                    <thead>
+                        <tr style={{ background: '#eee', borderBottom: '1px solid black' }}>
+                            <th style={{ width: '25px', padding: '2px', borderRight: '1px solid #ccc', textAlign: 'center' }}>#</th>
+                            <th style={{ textAlign: 'left', padding: '2px 4px' }}>Play Call</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {slots.map((slot, idx) => {
+                            const play = slot ? slotMap[slot] : null;
+                            return (
+                                <tr key={slot} style={{ borderBottom: '1px solid #ccc', height: '18px', backgroundColor: idx % 2 === 1 ? '#f9fafb' : 'white' }}>
+                                    <td style={{ textAlign: 'center', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>{slot}</td>
+                                    <td style={{ padding: '0 4px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontWeight: '600' }}>
+                                        {play?.name || ''}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            );
+
             return (
-                <div className={`wristband-card ${colorClass}`}>
+                <div className={`wristband-card ${colorClass} text-list`} style={{ display: 'flex', flexDirection: 'column' }}>
                     <div className="wristband-card-header">{title}</div>
-                    <div className="wristband-content">
-                        <div className="wristband-col">
-                            {col1Slots.map(slot => (
-                                <div key={slot} className="wristband-row">
-                                    <div className="wristband-num">{slot}</div>
-                                    <div className="wristband-play">{slotMap[slot]?.name || ''}</div>
-                                </div>
-                            ))}
+                    <div className="wristband-content" style={{ display: 'flex' }}>
+                        <div className="wristband-col" style={{ width: '50%', borderRight: '1px solid black' }}>
+                            {renderTable(col1Slots)}
                         </div>
-                        <div className="wristband-col">
-                            {col2Slots.map(slot => (
-                                <div key={slot} className="wristband-row">
-                                    <div className="wristband-num">{slot}</div>
-                                    <div className="wristband-play">{slotMap[slot]?.name || ''}</div>
-                                </div>
-                            ))}
+                        <div className="wristband-col" style={{ width: '50%' }}>
+                            {renderTable(col2Slots)}
                         </div>
                     </div>
                 </div>
+            );
+        };
+
+        // Helper for SVG rendering to avoid duplication
+        const WristbandDiagramSVG = ({ data, minimal }) => {
+            return (
+                <svg
+                    viewBox="0 0 800 500"
+                    width="100%"
+                    height="100%"
+                    style={{ display: 'block' }}
+                    preserveAspectRatio="xMidYMid meet"
+                >
+                    <g opacity="0.15">
+                        <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth={minimal ? 4 : 2} />
+                        <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth={minimal ? 4 : 2} />
+                        <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth={minimal ? 6 : 4} />
+                        <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth={minimal ? 4 : 2} />
+                        <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth={minimal ? 4 : 2} />
+                    </g>
+                    {data.elements && data.elements.map(el => {
+                        if (el.type === 'player') {
+                            const { x, y } = el.points[0];
+                            const size = minimal ? 50 : 30; // Larger relative dots for small print
+                            const isRect = el.shape === 'square';
+                            return (
+                                <g key={el.id}>
+                                    {isRect ? (
+                                        <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth={minimal ? 4 : 2} />
+                                    ) : (
+                                        <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth={minimal ? 4 : 2} />
+                                    )}
+                                    {!minimal && <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>}
+                                </g>
+                            );
+                        }
+
+                        let d = '';
+                        if (el.style === 'zigzag') {
+                            d = getZigZagPath(el.points);
+                        } else if (el.style === 'curved' && el.points.length >= 2) {
+                            const p = el.points;
+                            d = `M ${p[0].x} ${p[0].y} Q ${p[1].x} ${p[1].y} ${p[p.length - 1].x} ${p[p.length - 1].y}`;
+                        } else {
+                            d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                        }
+
+                        return (
+                            <g key={el.id}>
+                                <path d={d} stroke={el.color} strokeWidth={minimal ? 6 : 3} fill="none" strokeDasharray={el.style === 'dashed' ? '10,5' : 'none'} />
+                                {el.endMarker === 'arrow' && (
+                                    <polygon points="-6,-6 6,0 -6,6" fill={el.color} transform={`translate(${el.points[el.points.length - 1].x}, ${el.points[el.points.length - 1].y})`} />
+                                )}
+                            </g>
+                        );
+                    })}
+                </svg>
             );
         };
 
@@ -2814,103 +2998,49 @@
                     <div className="wristband-card-header">#{slot} - {play?.name || 'Empty'}</div>
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.25rem', overflow: 'hidden', background: '#fff' }}>
                         {play?.diagramData ? (
-                            <svg
-                                viewBox="0 0 800 500"
-                                width="100%"
-                                height="100%"
-                                style={{ display: 'block' }}
-                                preserveAspectRatio="xMidYMid meet"
-                            >
-                                <g opacity="0.1">
-                                    <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
-                                    <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
-                                    <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="4" />
-                                    <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="2" />
-                                    <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
-                                </g>
-                                {play.diagramData.elements && play.diagramData.elements.map(el => {
-                                    if (el.type === 'player') {
-                                        const { x, y } = el.points[0];
-                                        const size = 30;
-                                        const isRect = el.shape === 'square';
-                                        return (
-                                            <g key={el.id}>
-                                                {isRect ? (
-                                                    <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="2" />
-                                                ) : (
-                                                    <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="2" />
-                                                )}
-                                                <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
-                                            </g>
-                                        );
-                                    }
-
-                                    let d = '';
-                                    if (el.style === 'zigzag') {
-                                        d = getZigZagPath(el.points);
-                                    } else if (el.type === 'free' || el.points.length > 1) {
-                                        d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-                                    }
-
-                                    let markerEnd = undefined;
-                                    let tBlock = null;
-
-                                    if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
-                                        markerEnd = `url(#arrowhead-${el.color})`;
-                                    } else if (el.endType === 't') {
-                                        const end = el.points[el.points.length - 1];
-                                        const prev = el.points[el.points.length - 2] || el.points[0];
-                                        const dx = end.x - prev.x;
-                                        const dy = end.y - prev.y;
-                                        const len = Math.hypot(dx, dy) || 1;
-                                        // Thicker/Bigger T for wristband
-                                        const perpX = (-dy / len) * 20;
-                                        const perpY = (dx / len) * 20;
-                                        tBlock = (
-                                            <line
-                                                x1={end.x - perpX} y1={end.y - perpY}
-                                                x2={end.x + perpX} y2={end.y + perpY}
-                                                stroke={el.color}
-                                                strokeWidth="8"
-                                            />
-                                        );
-                                    } else if (el.endType === 'dot') {
-                                        const end = el.points[el.points.length - 1];
-                                        tBlock = (
-                                            <circle cx={end.x} cy={end.y} r="10" fill={el.color} />
-                                        );
-                                    } else if (el.endType === 'none') {
-                                        markerEnd = undefined;
-                                    } else if (el.type === 'arrow') {
-                                        markerEnd = `url(#arrowhead-${el.color})`;
-                                    }
-
-                                    return (
-                                        <g key={el.id}>
-                                            <path
-                                                d={d}
-                                                stroke={el.color}
-                                                strokeWidth="8"
-                                                fill="none"
-                                                strokeDasharray={el.style === 'dashed' ? "10,5" : "none"}
-                                                markerEnd={markerEnd}
-                                            />
-                                            {tBlock}
-                                        </g>
-                                    );
-                                })}
-                            </svg>
-                        ) : play?.image ? (
-                            <img src={play.image} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                            <WristbandDiagramSVG data={play.diagramData} minimal={false} />
                         ) : (
-                            <div style={{ color: '#ccc', fontSize: '0.8rem' }}>No Diagram</div>
+                            <span style={{ color: '#ccc' }}>No Diagram</span>
                         )}
                     </div>
-                    {play && (
-                        <div style={{ padding: '0.25rem', fontSize: '0.7rem', textAlign: 'center', borderTop: '1px solid #eee' }}>
-                            {play.formation} • {play.tags.join(', ')}
-                        </div>
-                    )}
+                </div>
+            );
+        };
+
+        const WristbandGridCard = ({ startSlot, endSlot, slotMap }) => {
+            const slots = [];
+            for (let i = startSlot; i <= endSlot; i++) {
+                slots.push(i);
+            }
+            while (slots.length < 20) {
+                slots.push(null);
+            }
+
+            return (
+                <div className="wristband-grid-card">
+                    {slots.map((slot, index) => {
+                        const play = slot ? slotMap[slot] : null;
+                        return (
+                            <div key={index} className="wristband-grid-cell" style={{ display: 'flex', flexDirection: 'column', height: '100%', border: '1px solid black', overflow: 'hidden' }}>
+                                {/* Top: Diagram (80%) */}
+                                <div className="wristband-grid-cell-body" style={{ flex: '0 0 75%', borderBottom: '1px solid black', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                                    {play?.diagramData ? (
+                                        <div style={{ width: '100%', height: '100%' }}>
+                                            <WristbandDiagramSVG data={play.diagramData} minimal={true} />
+                                        </div>
+                                    ) : (
+                                        <span style={{ fontSize: '8pt', color: '#ddd' }}>-</span>
+                                    )}
+                                </div>
+                                {/* Bottom: Info (20%) */}
+                                <div className="wristband-grid-cell-header" style={{ flex: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6pt', fontWeight: 'bold', background: '#f5f5f5', textAlign: 'center', lineHeight: '1.1' }}>
+                                    {slot ? (
+                                        <span>#{slot} {play?.name ? `- ${play.name.substring(0, 15)}` : ''}</span>
+                                    ) : null}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             );
         };
@@ -2974,18 +3104,35 @@
 
                 sortedSlots.forEach(slot => {
                     const play = slotMap[slot];
-                    // Format tags - get just the first one or primary
-                    let tagStr = '';
-                    if (play.tags && play.tags.length > 0) {
-                        tagStr = play.tags[0].name || play.tags[0];
-                    }
+                    let tagStr = play.tags && play.tags.length > 0 ? play.tags[0] : '';
+                    let concept = play.concept || '';
 
-                    lines.push(`${slot}\t${play.name}\t${play.formation}\t${play.concept || ''}\t${tagStr}`);
+                    // Simple Tab-Separated format for easy pasting
+                    lines.push(`${slot}\t${play.name}\t${play.formation}\t${concept}\t${tagStr}`);
                 });
 
-                const text = lines.join('\n');
-                navigator.clipboard.writeText(text).then(() => {
-                    alert('Wristband data copied to clipboard! You can now paste it directly into Google Sheets or Excel.');
+                const content = lines.join('\n');
+
+                // Copy to clipboard
+                navigator.clipboard.writeText(content).then(() => {
+                    const sheetUrl = localStorage.getItem('hc_wristband_sheet_url');
+                    if (sheetUrl && sheetUrl.startsWith('http')) {
+                        // If user has a sheet saved, open it
+                        window.open(sheetUrl, '_blank');
+                        alert('Data copied! Your Google Sheet has been opened.\n\nClick cell A1 and press Cmd+V (Paste).');
+                    } else {
+                        // Prompt to set URL if not set
+                        const url = prompt('Data copied to clipboard!\n\nTo skip this step next time, enter your Google Sheet URL here to auto-open it:', '');
+                        if (url && url.startsWith('http')) {
+                            localStorage.setItem('hc_wristband_sheet_url', url);
+                            window.open(url, '_blank');
+                        } else {
+                            alert('Data copied! Paste it into your spreadsheet.');
+                        }
+                    }
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Failed to copy. ' + err);
                 });
             };
 
@@ -3043,61 +3190,64 @@
                                     Rooski / Diagrams (300+)
                                 </button>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                {/* Print Mode Selector */}
+                                <select
+                                    className="input"
+                                    value={printMode}
+                                    onChange={(e) => setPrintMode(e.target.value)}
+                                    style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                                >
+                                    <option value="text">Print Text Lists (100/200)</option>
+                                    <option value="rooski_skill">Print Rooski Grid (Skill)</option>
+                                    <option value="rooski_ol">Print Rooski List (OL)</option>
+                                </select>
+
                                 <button className="btn btn-secondary" onClick={handleExportToClipboard}>
                                     <Icon name="Clipboard" size={16} style={{ marginRight: '6px' }} />
-                                    Copy for Sheets
+                                    Copy Data
                                 </button>
                                 <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
                             </div>
                         </div>
 
-                        <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.5rem', alignContent: 'start' }}>
+                        {/* Visual Grid for Screen */}
+                        <div className="wristband-grid">
                             {slots.map(slot => {
                                 const play = slotMap[slot];
+                                const isSelected = selectedPlayId && !play;
                                 return (
                                     <div
                                         key={slot}
-                                        onClick={() => play ? handleClearSlot(play) : handleAssignSlot(slot)}
-                                        style={{
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 'var(--radius)',
-                                            padding: '0.5rem',
-                                            backgroundColor: play ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-panel)',
-                                            cursor: 'pointer',
-                                            minHeight: '80px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            borderColor: (selectedPlayId && !play) ? 'var(--accent)' : 'var(--border)',
-                                            borderStyle: (selectedPlayId && !play) ? 'dashed' : 'solid'
-                                        }}
+                                        className="wristband-slot"
+                                        style={{ borderColor: isSelected ? 'var(--accent)' : 'var(--border)' }}
+                                        onClick={() => handleAssignSlot(slot)}
                                     >
-                                        <div style={{ fontWeight: 'bold', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>#{slot}</div>
+                                        <div className="wristband-slot-header">
+                                            <span>#{slot}</span>
+                                            {play && !isSelected && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleClearSlot(play); }}
+                                                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}
+                                                >
+                                                    <Icon name="X" size={12} />
+                                                </button>
+                                            )}
+                                        </div>
                                         {play ? (
-                                            <>
-                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                                    {play.formation} {play.formationTag ? `(${play.formationTag})` : ''}
-                                                </div>
-                                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                                                    {play.name}
-                                                </div>
-                                                {play.concept && (
-                                                    <div style={{ fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.5rem' }}>
-                                                        Concept: {play.concept}
+                                            <div>
+                                                <div style={{ fontWeight: 'bold' }}>{play.name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{play.formation}</div>
+                                                {/* Preview diagram in Rooski mode */}
+                                                {(mode === 'rooski' || (slot >= 300)) && play.diagramData && (
+                                                    <div style={{ width: '100%', height: '80px', marginTop: '0.5rem', border: '1px solid #eee' }}>
+                                                        <WristbandDiagramSVG data={play.diagramData} minimal={true} />
                                                     </div>
                                                 )}
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.5rem' }}>
-                                                    {play.tags.map(tag => (
-                                                        <span key={tag} style={{ fontSize: '0.7rem', backgroundColor: 'var(--bg-alt)', padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)' }}>
-                                                            {tag}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </>
+                                            </div>
                                         ) : (
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                                                {selectedPlayId ? 'Click to Assign' : 'Empty'}
+                                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                                {isSelected ? 'Click to Assign' : 'Empty'}
                                             </div>
                                         )}
                                     </div>
@@ -3108,43 +3258,37 @@
 
                     {/* Hidden Print Container */}
                     <div className="wristband-print-container">
-                        {/* Card 1: 100s (Green) */}
-                        <WristbandPrintCard
-                            title="WB 1 (100-148)"
-                            start={101}
-                            end={148}
-                            slotMap={slotMap}
-                            colorClass="green"
-                        />
-                        {/* Card 2: 100s (Green) - Duplicate */}
-                        <WristbandPrintCard
-                            title="WB 1 (100-148)"
-                            start={101}
-                            end={148}
-                            slotMap={slotMap}
-                            colorClass="green"
-                        />
-                        {/* Card 3: 200s (Orange) */}
-                        <WristbandPrintCard
-                            title="WB 2 (201-248)"
-                            start={201}
-                            end={248}
-                            slotMap={slotMap}
-                            colorClass="orange"
-                        />
-                        {/* Card 4: 200s (Orange) - Duplicate */}
-                        <WristbandPrintCard
-                            title="WB 2 (201-248)"
-                            start={201}
-                            end={248}
-                            slotMap={slotMap}
-                            colorClass="orange"
-                        />
-
-                        {/* Diagram Cards (300s/400s) */}
-                        {diagramSlots.map(slot => (
-                            <WristbandDiagramCard key={slot} slot={slot} play={slotMap[slot]} />
-                        ))}
+                        {printMode === 'rooski_skill' ? (
+                            /* Rooski Skill: 4 Grid Cards (300/400 duplicated or split) */
+                            <div style={{ display: 'grid', gridTemplateColumns: '5in 5in', gridTemplateRows: '3in 3in', gap: '0.25in' }}>
+                                {/* Top Left: 301-320 */}
+                                <WristbandGridCard startSlot={301} endSlot={320} slotMap={slotMap} />
+                                {/* Top Right: 301-320 (Duplicate for Tri-window wristband) */}
+                                <WristbandGridCard startSlot={301} endSlot={320} slotMap={slotMap} />
+                                {/* Bot Left: 301-320 (Duplicate again? Or different range?) User said "4 rooski cards", usually implies duplicates. */}
+                                {/* Let's default to duplicate 301-320 for now since we have limited range. */}
+                                <WristbandGridCard startSlot={301} endSlot={320} slotMap={slotMap} />
+                                <WristbandGridCard startSlot={301} endSlot={320} slotMap={slotMap} />
+                            </div>
+                        ) : printMode === 'rooski_ol' ? (
+                            /* Rooski OL: 4 Text Cards for 300s (Text Only) */
+                            <div style={{ display: 'grid', gridTemplateColumns: '5in 5in', gridTemplateRows: '3in 3in', gap: '0.25in' }}>
+                                <WristbandPrintCard title="WB ROOSKI OL" start={301} end={320} slotMap={slotMap} colorClass="white text-list" />
+                                <WristbandPrintCard title="WB ROOSKI OL" start={301} end={320} slotMap={slotMap} colorClass="white text-list" />
+                                <WristbandPrintCard title="WB ROOSKI OL" start={301} end={320} slotMap={slotMap} colorClass="white text-list" />
+                                <WristbandPrintCard title="WB ROOSKI OL" start={301} end={320} slotMap={slotMap} colorClass="white text-list" />
+                            </div>
+                        ) : (
+                            /* Default 'text': 2x 100s, 2x 200s (Text Tables) */
+                            <div style={{ display: 'grid', gridTemplateColumns: '5in 5in', gridTemplateRows: '3in 3in', gap: '0.25in' }}>
+                                {/* 100s x2 */}
+                                <WristbandPrintCard title="WB 1 (101-140)" start={101} end={140} slotMap={slotMap} colorClass="green text-list" />
+                                <WristbandPrintCard title="WB 1 (101-140)" start={101} end={140} slotMap={slotMap} colorClass="green text-list" />
+                                {/* 200s x2 */}
+                                <WristbandPrintCard title="WB 2 (201-240)" start={201} end={240} slotMap={slotMap} colorClass="orange text-list" />
+                                <WristbandPrintCard title="WB 2 (201-240)" start={201} end={240} slotMap={slotMap} colorClass="orange text-list" />
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -6071,12 +6215,15 @@
         const RosterManager = ({ roster, onUpdateRoster }) => {
             const [newPlayer, setNewPlayer] = useState({
                 number: '', name: '', position: 'QB/LB', offPosition: 'QB', defPosition: 'LB', year: 'Fr', height: '', weight: '',
+                helmetSize: '', shoulderPadSize: '', pantSize: '',
                 injured: false, traveling: true, captain: false,
                 offenseRoles: [], defenseRoles: [], specialRoles: [],
                 varsity: true, jv: false, jv2: false
             });
             const [isEditing, setIsEditing] = useState(null);
             const [viewProfileId, setViewProfileId] = useState(null);
+
+
 
             const positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'OT', 'OG', 'C', 'DE', 'DT', 'LB', 'CB', 'S', 'K', 'P', 'LS']; // Expanded primary list
             // Filter by Staff ID / Current User Roles
@@ -6105,6 +6252,7 @@
                 onUpdateRoster([...roster, { ...newPlayer, position, id: Date.now().toString() }]);
                 setNewPlayer({
                     number: '', name: '', position: 'QB/LB', offPosition: 'QB', defPosition: 'LB', year: 'Fr', height: '', weight: '',
+                    helmetSize: '', shoulderPadSize: '', pantSize: '',
                     injured: false, traveling: true, captain: false,
                     offenseRoles: [], defenseRoles: [], specialRoles: [],
                     varsity: true, jv: false, jv2: false
@@ -6129,6 +6277,10 @@
                 onUpdateRoster(roster.filter(p => p.id !== id));
             };
 
+
+
+
+
             // Sort by number
             const sortedRoster = [...roster].sort((a, b) => parseInt(a.number) - parseInt(b.number));
 
@@ -6136,7 +6288,10 @@
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                         <h2>Roster Management</h2>
-                        <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Attendance</button>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+
+                            <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Attendance</button>
+                        </div>
                     </div>
 
                     <div className="card" style={{ marginBottom: '2rem' }}>
@@ -6179,6 +6334,31 @@
                             <div style={{ width: '80px' }}>
                                 <label className="form-label">Wt</label>
                                 <input type="text" className="form-input" value={newPlayer.weight} onChange={e => setNewPlayer({ ...newPlayer, weight: e.target.value })} placeholder="210" />
+                            </div>
+                        </div>
+
+                        {/* Row 1.5: Equipment Sizes */}
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Helmet Size</label>
+                                <select className="form-select" value={newPlayer.helmetSize} onChange={e => setNewPlayer({ ...newPlayer, helmetSize: e.target.value })}>
+                                    <option value="">Select...</option>
+                                    {['S', 'M', 'L', 'XL', '2XL'].map(s => <option key={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Shoulder Pad</label>
+                                <select className="form-select" value={newPlayer.shoulderPadSize} onChange={e => setNewPlayer({ ...newPlayer, shoulderPadSize: e.target.value })}>
+                                    <option value="">Select...</option>
+                                    {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(s => <option key={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="form-label">Pant Size</label>
+                                <select className="form-select" value={newPlayer.pantSize} onChange={e => setNewPlayer({ ...newPlayer, pantSize: e.target.value })}>
+                                    <option value="">Select...</option>
+                                    {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(s => <option key={s}>{s}</option>)}
+                                </select>
                             </div>
                         </div>
 
@@ -6254,7 +6434,9 @@
                                     <th style={{ padding: '0.5rem' }}>Roles / Tags</th>
                                     <th style={{ padding: '0.5rem' }}>Year</th>
                                     <th style={{ padding: '0.5rem' }}>Ht</th>
+                                    <th style={{ padding: '0.5rem' }}>Ht</th>
                                     <th style={{ padding: '0.5rem' }}>Wt</th>
+                                    <th style={{ padding: '0.5rem' }}>Equipment</th>
                                     <th style={{ padding: '0.5rem', textAlign: 'center' }}>V</th>
                                     <th style={{ padding: '0.5rem', textAlign: 'center' }}>JV</th>
                                     <th style={{ padding: '0.5rem', textAlign: 'center' }}>J2</th>
@@ -6271,7 +6453,7 @@
                                                 <input
                                                     type="number"
                                                     className="form-input"
-                                                    style={{ width: '60px' }}
+                                                    style={{ width: '50px' }}
                                                     value={player.number}
                                                     onChange={e => updatePlayer(player.id, 'number', e.target.value)}
                                                 />
@@ -6366,6 +6548,39 @@
                                                     onChange={e => updatePlayer(player.id, 'weight', e.target.value)}
                                                 />
                                             ) : player.weight}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>
+                                            {isEditing === player.id ? (
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>H</span>
+                                                        <select className="form-select" style={{ padding: '2px', width: '50px' }} value={player.helmetSize || ''} onChange={e => updatePlayer(player.id, 'helmetSize', e.target.value)}>
+                                                            <option value="">-</option>
+                                                            {['S', 'M', 'L', 'XL', '2XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Pd</span>
+                                                        <select className="form-select" style={{ padding: '2px', width: '50px' }} value={player.shoulderPadSize || ''} onChange={e => updatePlayer(player.id, 'shoulderPadSize', e.target.value)}>
+                                                            <option value="">-</option>
+                                                            {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Pt</span>
+                                                        <select className="form-select" style={{ padding: '2px', width: '50px' }} value={player.pantSize || ''} onChange={e => updatePlayer(player.id, 'pantSize', e.target.value)}>
+                                                            <option value="">-</option>
+                                                            {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div style={{ color: 'var(--text-secondary)', display: 'flex', gap: '0.5rem', fontSize: '0.8rem' }}>
+                                                    <div title="Helmet">H: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{player.helmetSize || '-'}</span></div>
+                                                    <div title="Pads">P: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{player.shoulderPadSize || '-'}</span></div>
+                                                    <div title="Pants">Pa: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{player.pantSize || '-'}</span></div>
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                                             <input type="checkbox" checked={player.varsity || false} onChange={e => updatePlayer(player.id, 'varsity', e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--accent)' }} />
@@ -8616,7 +8831,7 @@
 
             // Expanded Categories - Merge with any unique categories found in tasks
             const DEFAULT_CATEGORIES = [
-                'Daily',
+                'Year-Round',
                 'Game Week - Monday', 'Game Week - Tuesday', 'Game Week - Wednesday', 'Game Week - Thursday', 'Game Week - Friday', 'Game Week - Saturday', 'Game Week - Sunday',
                 'Saturday', 'Weekly',
                 'Pre-Game', 'In-Game', 'Post-Game', 'Travel', 'Arrival', 'Day Before Game',
@@ -8627,7 +8842,7 @@
             const existingCategories = [...new Set((tasks || []).map(t => t.category).filter(Boolean))];
             const CATEGORIES = [...new Set([...DEFAULT_CATEGORIES, ...existingCategories])];
 
-            const RECURRENCE_OPTIONS = ['Daily', 'Weekly: Monday', 'Weekly: Tuesday', 'Weekly: Wednesday', 'Weekly: Thursday', 'Weekly: Friday', 'Weekly: Saturday', 'Seasonal', 'Annual', 'None'];
+            const RECURRENCE_OPTIONS = ['Daily', 'Weekly: Monday', 'Weekly: Tuesday', 'Weekly: Wednesday', 'Weekly: Thursday', 'Weekly: Friday', 'Weekly: Saturday', 'Monthly', 'Seasonal', 'Annual', 'None'];
 
             const handleCollaborationChange = (taskId, type) => {
                 handleTaskChange(taskId, 'collaborationType', type);
@@ -9009,7 +9224,7 @@
         const StaffManager = ({ staff, onUpdateStaff, dutyAssignments, onUpdateDuties, view = 'roster', masterTasks, onUpdateMasterTasks }) => {
             // view: 'roster' | 'duties'
             const [newMember, setNewMember] = useState({
-                name: '', role: '', level: ['Varsity'],
+                name: '', role: '', level: ['Varsity'], shirtSize: '',
                 positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
                 otherDuties: ''
             });
@@ -9042,7 +9257,7 @@
                 const id = 'coach_' + Date.now();
                 onUpdateStaff([...staff, { ...newMember, id }]);
                 setNewMember({
-                    name: '', role: '', level: ['Varsity'],
+                    name: '', role: '', level: ['Varsity'], shirtSize: '',
                     positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
                     otherDuties: ''
                 });
@@ -9203,7 +9418,8 @@
                                                 <tr style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85rem', borderBottom: '1px solid var(--border)' }}>
                                                     <th style={{ padding: '0.5rem', width: '30%' }}>Name</th>
                                                     <th style={{ padding: '0.5rem', width: '20%' }}>Role</th>
-                                                    <th style={{ padding: '0.5rem', width: '40%' }}>Assignments</th>
+                                                    <th style={{ padding: '0.5rem', width: '10%' }}>Size</th>
+                                                    <th style={{ padding: '0.5rem', width: '30%' }}>Assignments</th>
                                                     <th style={{ padding: '0.5rem', width: '10%' }}></th>
                                                 </tr>
                                             </thead>
@@ -9291,6 +9507,30 @@
                                                                         </div>
                                                                     )}
                                                                 </div>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                                            {isEditing === member.id ? (
+                                                                <select
+                                                                    className="form-select"
+                                                                    value={member.shirtSize || ''}
+                                                                    onChange={e => updateMember(member.id, 'shirtSize', e.target.value)}
+                                                                >
+                                                                    <option value="">-</option>
+                                                                    {['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(sz => (
+                                                                        <option key={sz} value={sz}>{sz}</option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                <span style={{
+                                                                    padding: '2px 6px',
+                                                                    background: 'var(--surface)',
+                                                                    border: '1px solid var(--border)',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '0.85rem'
+                                                                }}>
+                                                                    {member.shirtSize || '-'}
+                                                                </span>
                                                             )}
                                                         </td>
                                                         <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>
@@ -9382,6 +9622,20 @@
                                         >
                                             <option value="Coach">Coach</option>
                                             <option value="Manager">Manager</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="form-label">Shirt Size</label>
+                                        <select
+                                            className="form-select"
+                                            value={newMember.shirtSize || ''}
+                                            onChange={e => setNewMember({ ...newMember, shirtSize: e.target.value })}
+                                        >
+                                            <option value="">Select Size</option>
+                                            {['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(sz => (
+                                                <option key={sz} value={sz}>{sz}</option>
+                                            ))}
                                         </select>
                                     </div>
 
@@ -11402,9 +11656,12 @@
                         <h3>Data Management</h3>
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Backup your data or move it to another device.</p>
 
-                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                            <button className="btn btn-primary" onClick={onExportData}>
-                                📥 Export Data Backup
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <button className="btn btn-secondary" onClick={() => window.print()}>
+                                <Icon name="Printer" size={16} /> Print Cards
+                            </button>
+                            <button className="btn btn-primary" onClick={handleExportToClipboard}>
+                                <Icon name="Copy" size={16} /> Copy Data & Open Sheet
                             </button>
                             <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                                 📤 Import Data
@@ -11463,7 +11720,7 @@
                             <option value="regress">⏪ Regress Season (Testing)</option>
                         </select>
                     </div>
-                </div>
+                </div >
             );
         };
 
@@ -15449,8 +15706,49 @@
                     {/* PROFILE TAB */}
                     {activeTab === 'profile' && (
                         <div className="card" style={{ padding: '1.5rem' }}>
-                            <h2 style={{ marginBottom: '1rem' }}>My Profile</h2>
-                            <p style={{ color: 'var(--text-secondary)' }}>Profile editing coming soon...</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                                <div style={{
+                                    width: '80px', height: '80px', borderRadius: '50%', background: 'var(--accent)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', color: 'white'
+                                }}>
+                                    {selectedPlayer.jersey}
+                                </div>
+                                <div>
+                                    <h2 style={{ margin: 0 }}>{selectedPlayer.firstName} {selectedPlayer.lastName}</h2>
+                                    <div style={{ color: 'var(--text-secondary)' }}>
+                                        {selectedPlayer.position} • {selectedPlayer.year}
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                                        Ht: {selectedPlayer.height || '-'} • Wt: {selectedPlayer.weight || '-'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Equipment Info</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>HELMET</div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.helmetSize || '-'}</div>
+                                </div>
+                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PADS</div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.shoulderPadSize || '-'}</div>
+                                </div>
+                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PANTS</div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.pantSize || '-'}</div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,165,0,0.1)', borderRadius: '8px', border: '1px solid rgba(255,165,0,0.3)', display: 'flex', gap: '1rem', alignItems: 'start' }}>
+                                <Icon name="AlertTriangle" color="orange" size={24} />
+                                <div>
+                                    <div style={{ fontWeight: 'bold', color: 'orange', marginBottom: '0.25rem' }}>Needs Update?</div>
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                        If your equipment sizes are incorrect, please see the Equipment Manager or your Position Coach.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -16944,488 +17242,35 @@
                     { id: 'jets', label: 'Jets/Specials', color: '#a8a29e' }
                 ],
                 playTypes: [
-                    { id: 'inside_run_rt', label: 'Inside Run RT' },
-                    { id: 'inside_run_lt', label: 'Inside Run LT' },
-                    { id: 'perimeter_run_rt', label: 'Perimeter Run RT' },
-                    { id: 'perimeter_run_lt', label: 'Perimeter Run LT' },
-                    { id: 'fit_rpo', label: 'FIT RPO' },
-                    { id: 'flow_rpo', label: 'FLOW RPO' },
-                    { id: 'quick_game', label: 'Quick Game' },
-                    { id: 'drop_back', label: 'Drop Back' },
-                    { id: 'movement_pass', label: 'Movement Pass' },
-                    { id: 'screens', label: 'Screens' }
+                    { id: 'strong_run', label: 'STRONG RUN' },
+                    { id: 'weak_run', label: 'WEAK RUN' },
+                    { id: 'quick_game', label: 'QUICK GAME' },
+                    { id: 'drop_back', label: 'DROPBACK' },
+                    { id: 'gadget', label: 'GADGET' }
                 ]
             }
         };
 
         // Game Plan 2.0 Component
-        const GamePlan2 = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay }) => {
-            const [mode, setMode] = useState('full'); // 'guided' or 'full'
-            const [currentPhase, setCurrentPhase] = useState(1);
-            const [currentSituationIndex, setCurrentSituationIndex] = useState(0);
 
-            // Phase definitions
-            const phases = [
-                {
-                    id: 1,
-                    name: 'Core Downs & Distance',
-                    description: 'Start with your base plays that work in multiple situations',
-                    situations: ['base_downs', 'p_and_10', '2nd_xl']
-                },
-                {
-                    id: 2,
-                    name: 'Third Down Conversions',
-                    description: 'Add 3-5 plays for each distance category',
-                    situations: ['convert_short_med', 'convert_long_xl']
-                },
-                {
-                    id: 3,
-                    name: 'Field Zones',
-                    description: 'Many plays can work in multiple zones - reuse when possible',
-                    situations: ['backed_up', 'coming_out', 'open_field', 'fringe', 'high_red', 'low_red', 'goal_line']
-                },
-                {
-                    id: 4,
-                    name: 'Game Management',
-                    description: 'Critical situations - ensure you have go-to plays ready',
-                    situations: ['two_minute', 'four_minute', 'two_point']
-                },
-                {
-                    id: 5,
-                    name: 'Special Situations',
-                    description: 'Pre-scripted sequences for key moments',
-                    situations: ['opening_script', 'one_word']
-                }
-            ];
 
-            // All situation definitions (reusing from SmartCallSheet)
-            const allSituations = [
-                { key: 'base_downs', label: '📊 BASE DOWNS', color: '#14b8a6', recommended: '5-8 plays' },
-                { key: 'p_and_10', label: 'P&10', color: '#ef4444', recommended: '3-5 plays' },
-                { key: '2nd_xl', label: 'GET HALF', color: '#3b82f6', recommended: '4-6 plays', hasSubmenu: true },
-                { key: 'convert_short_med', label: '🎯 CONVERT SHORT/MED', color: '#10b981', recommended: '6-8 plays', hasSubmenu: true },
-                { key: 'convert_long_xl', label: '🎯 CONVERT L/XL 7-12+', color: '#059669', recommended: '4-6 plays', hasSubmenu: true },
-                { key: 'backed_up', label: 'BACKED UP', color: '#1f2937', recommended: '3-4 plays' },
-                { key: 'coming_out', label: 'COMING OUT', color: '#6b7280', recommended: '3-4 plays' },
-                { key: 'open_field', label: 'OPEN FIELD', color: '#16a34a', recommended: '4-5 plays' },
-                { key: 'fringe', label: 'FRINGE (+45-25)', color: '#f97316', recommended: '3-4 plays' },
-                { key: 'high_red', label: 'HIGH RED (25-15)', color: '#ef4444', recommended: '4-5 plays' },
-                { key: 'low_red', label: 'LOW RED (15-6)', color: '#eab308', recommended: '4-5 plays' },
-                { key: 'goal_line', label: 'GOAL LINE (5-GL)', color: '#3b82f6', recommended: '5-6 plays' },
-                { key: 'two_minute', label: '2-MINUTE', color: '#8b5cf6', recommended: '8-10 plays', hasSubmenu: true },
-                { key: 'four_minute', label: '4-MINUTE', color: '#8b5cf6', recommended: '4-5 plays' },
-                { key: 'two_point', label: '2-POINT', color: '#8b5cf6', recommended: '3-4 plays' },
-                { key: 'opening_script', label: 'OPENING SCRIPT', color: '#ec4899', recommended: '10-15 plays', hasSubmenu: true },
-                { key: 'one_word', label: 'ONE-WORD CALLS', color: '#f59e0b', recommended: '5-8 plays', hasSubmenu: true }
-            ];
-
-            // Helper to get play count for a situation
-            const getPlayCount = (situationKey) => {
-                if (situationKey === '2nd_xl') {
-                    return ((gamePlan.sets || []).find(s => s.id === '2nd_xl_lh')?.playIds?.length || 0) +
-                        ((gamePlan.sets || []).find(s => s.id === '2nd_xl_rh')?.playIds?.length || 0);
-                } else if (situationKey === 'convert_short_med') {
-                    return ((gamePlan.sets || []).find(s => s.id === '3rd_short')?.playIds?.length || 0) +
-                        ((gamePlan.sets || []).find(s => s.id === '3rd_med')?.playIds?.length || 0);
-                } else if (situationKey === 'convert_long_xl') {
-                    return ((gamePlan.sets || []).find(s => s.id === '3rd_long')?.playIds?.length || 0) +
-                        ((gamePlan.sets || []).find(s => s.id === '3rd_xl')?.playIds?.length || 0);
-                } else if (situationKey === 'two_minute') {
-                    return ['oob_yac', 'first_down', 'touchdown', 'final_play'].reduce((sum, cat) => {
-                        return sum + ((gamePlan.sets || []).find(s => s.id === `2min_${cat}`)?.playIds?.length || 0);
-                    }, 0);
-                } else if (situationKey === 'opening_script') {
-                    return ((gamePlan.sets || []).find(s => s.id === 'opening_script_left')?.playIds?.length || 0) +
-                        ((gamePlan.sets || []).find(s => s.id === 'opening_script_right')?.playIds?.length || 0);
-                } else if (situationKey === 'one_word') {
-                    return ['form_adj', 'pers_adj', 'motion_adj', 'explosive'].reduce((sum, cat) => {
-                        return sum + ((gamePlan.sets || []).find(s => s.id === `one_word_${cat}`)?.playIds?.length || 0);
-                    }, 0);
-                } else {
-                    return (gamePlan.sets || []).find(s => s.id === situationKey)?.playIds?.length || 0;
-                }
-            };
-
-            // Helper to get status for a situation
-            const getStatus = (situationKey) => {
-                const count = getPlayCount(situationKey);
-                if (count >= 3) return 'complete';
-                if (count > 0) return 'needs-plays';
-                return 'empty';
-            };
-
-            // Calculate overall completion
-            const calculateCompletion = () => {
-                const allSituationKeys = phases.flatMap(p => p.situations);
-                const completed = allSituationKeys.filter(key => getStatus(key) === 'complete').length;
-                return {
-                    completed,
-                    total: allSituationKeys.length,
-                    percentage: Math.round((completed / allSituationKeys.length) * 100)
-                };
-            };
-
-            const completion = calculateCompletion();
-            const currentPhaseData = phases.find(p => p.id === currentPhase);
-            const currentSituation = currentPhaseData ? allSituations.find(s => s.key === currentPhaseData.situations[currentSituationIndex]) : null;
-
-            // Navigation handlers for guided mode
-            const handleNext = () => {
-                if (currentSituationIndex < currentPhaseData.situations.length - 1) {
-                    setCurrentSituationIndex(currentSituationIndex + 1);
-                } else if (currentPhase < phases.length) {
-                    setCurrentPhase(currentPhase + 1);
-                    setCurrentSituationIndex(0);
-                }
-            };
-
-            const handlePrevious = () => {
-                if (currentSituationIndex > 0) {
-                    setCurrentSituationIndex(currentSituationIndex - 1);
-                } else if (currentPhase > 1) {
-                    setCurrentPhase(currentPhase - 1);
-                    const prevPhase = phases.find(p => p.id === currentPhase - 1);
-                    setCurrentSituationIndex(prevPhase.situations.length - 1);
-                }
-            };
-
-            const handleSkip = () => {
-                handleNext();
-            };
-
-            return (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
-                    {/* Header with Mode Toggle */}
-                    <div style={{
-                        background: 'var(--bg-card)',
-                        borderBottom: '2px solid var(--border)',
-                        padding: '1.5rem'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>⚡ Game Plan 2.0</h2>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button
-                                    onClick={() => setMode('guided')}
-                                    className="btn"
-                                    style={{
-                                        background: mode === 'guided' ? 'var(--accent)' : 'var(--bg-panel)',
-                                        color: mode === 'guided' ? 'white' : 'var(--text-primary)',
-                                        border: mode === 'guided' ? 'none' : '2px solid var(--border)',
-                                        fontWeight: 'bold',
-                                        padding: '0.75rem 1.5rem'
-                                    }}
-                                >
-                                    🧭 GUIDED MODE
-                                </button>
-                                <button
-                                    onClick={() => setMode('full')}
-                                    className="btn"
-                                    style={{
-                                        background: mode === 'full' ? 'var(--accent)' : 'var(--bg-panel)',
-                                        color: mode === 'full' ? 'white' : 'var(--text-primary)',
-                                        border: mode === 'full' ? 'none' : '2px solid var(--border)',
-                                        fontWeight: 'bold',
-                                        padding: '0.75rem 1.5rem'
-                                    }}
-                                >
-                                    📋 FULL MENU
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div style={{ marginTop: '1rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                    {completion.completed} of {completion.total} situations complete
-                                </span>
-                                <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                                    {completion.percentage}%
-                                </span>
-                            </div>
-                            <div style={{
-                                width: '100%',
-                                height: '8px',
-                                background: 'var(--bg-panel)',
-                                borderRadius: '4px',
-                                overflow: 'hidden'
-                            }}>
-                                <div style={{
-                                    width: `${completion.percentage}%`,
-                                    height: '100%',
-                                    background: 'linear-gradient(90deg, var(--accent), #10b981)',
-                                    transition: 'width 0.3s ease'
-                                }} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Content Area */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
-                        {mode === 'guided' ? (
-                            // GUIDED MODE
-                            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                                {/* Phase Progress */}
-                                <div style={{
-                                    background: 'var(--bg-card)',
-                                    padding: '1.5rem',
-                                    borderRadius: '8px',
-                                    marginBottom: '2rem',
-                                    border: '2px solid var(--border)'
-                                }}>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                                        Phase {currentPhase} of {phases.length}
-                                    </div>
-                                    <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>
-                                        {currentPhaseData?.name}
-                                    </h3>
-                                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                                        {currentPhaseData?.description}
-                                    </p>
-                                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                        Situation {currentSituationIndex + 1} of {currentPhaseData?.situations.length}
-                                    </div>
-                                </div>
-
-                                {/* Current Situation Card */}
-                                {currentSituation && (
-                                    <div style={{
-                                        background: 'var(--bg-card)',
-                                        padding: '2rem',
-                                        borderRadius: '12px',
-                                        border: `3px solid ${currentSituation.color}`,
-                                        marginBottom: '2rem'
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                                            <div style={{
-                                                width: '48px',
-                                                height: '48px',
-                                                borderRadius: '50%',
-                                                background: currentSituation.color,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '1.5rem'
-                                            }}>
-                                                {getStatus(currentSituation.key) === 'complete' ? '✅' :
-                                                    getStatus(currentSituation.key) === 'needs-plays' ? '⚠️' : '❌'}
-                                            </div>
-                                            <div>
-                                                <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>
-                                                    {currentSituation.label}
-                                                </h2>
-                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                                                    Recommended: {currentSituation.recommended}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{
-                                            background: 'var(--bg-panel)',
-                                            padding: '1.5rem',
-                                            borderRadius: '8px',
-                                            marginBottom: '1.5rem'
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>
-                                                    Current Play Count:
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '1.5rem',
-                                                    fontWeight: 'bold',
-                                                    color: getStatus(currentSituation.key) === 'complete' ? '#10b981' :
-                                                        getStatus(currentSituation.key) === 'needs-plays' ? '#eab308' : '#ef4444'
-                                                }}>
-                                                    {getPlayCount(currentSituation.key)}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div style={{
-                                            background: '#1e40af20',
-                                            border: '2px solid #3b82f6',
-                                            borderRadius: '8px',
-                                            padding: '1rem',
-                                            marginBottom: '1rem'
-                                        }}>
-                                            <div style={{ color: '#3b82f6', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                                                💡 Quick Tip
-                                            </div>
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                {currentSituation.hasSubmenu ?
-                                                    'This situation has multiple categories. Use the Full Menu to add plays to each category.' :
-                                                    'Click "Go to Call Sheet" below to add plays to this situation.'}
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            className="btn"
-                                            style={{
-                                                width: '100%',
-                                                background: currentSituation.color,
-                                                color: 'white',
-                                                border: 'none',
-                                                fontWeight: 'bold',
-                                                padding: '1rem',
-                                                fontSize: '1rem'
-                                            }}
-                                        >
-                                            📋 Go to Call Sheet
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Navigation Buttons */}
-                                <div style={{ display: 'flex', gap: '1rem' }}>
-                                    <button
-                                        onClick={handlePrevious}
-                                        disabled={currentPhase === 1 && currentSituationIndex === 0}
-                                        className="btn"
-                                        style={{
-                                            flex: 1,
-                                            padding: '1rem',
-                                            fontWeight: 'bold',
-                                            opacity: currentPhase === 1 && currentSituationIndex === 0 ? 0.5 : 1
-                                        }}
-                                    >
-                                        ← Previous
-                                    </button>
-                                    <button
-                                        onClick={handleSkip}
-                                        className="btn"
-                                        style={{
-                                            flex: 1,
-                                            padding: '1rem',
-                                            fontWeight: 'bold'
-                                        }}
-                                    >
-                                        Skip for Now
-                                    </button>
-                                    <button
-                                        onClick={handleNext}
-                                        disabled={currentPhase === phases.length && currentSituationIndex === currentPhaseData?.situations.length - 1}
-                                        className="btn"
-                                        style={{
-                                            flex: 1,
-                                            padding: '1rem',
-                                            fontWeight: 'bold',
-                                            background: 'var(--accent)',
-                                            color: 'white',
-                                            border: 'none',
-                                            opacity: currentPhase === phases.length && currentSituationIndex === currentPhaseData?.situations.length - 1 ? 0.5 : 1
-                                        }}
-                                    >
-                                        Next →
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            // FULL MENU MODE
-                            <div>
-                                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '2rem' }}>
-                                    View all situations with status indicators. Click any situation to add plays.
-                                </p>
-
-                                {phases.map(phase => (
-                                    <div key={phase.id} style={{ marginBottom: '3rem' }}>
-                                        <div style={{
-                                            background: 'var(--bg-card)',
-                                            padding: '1rem 1.5rem',
-                                            borderRadius: '8px 8px 0 0',
-                                            borderBottom: '2px solid var(--accent)'
-                                        }}>
-                                            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>
-                                                Phase {phase.id}: {phase.name}
-                                            </h3>
-                                            <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                {phase.description}
-                                            </p>
-                                        </div>
-
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                                            gap: '1rem',
-                                            padding: '1.5rem',
-                                            background: 'var(--bg-panel)',
-                                            borderRadius: '0 0 8px 8px'
-                                        }}>
-                                            {phase.situations.map(sitKey => {
-                                                const sit = allSituations.find(s => s.key === sitKey);
-                                                if (!sit) return null;
-                                                const status = getStatus(sitKey);
-                                                const count = getPlayCount(sitKey);
-
-                                                return (
-                                                    <button
-                                                        key={sitKey}
-                                                        className="btn"
-                                                        style={{
-                                                            background: 'var(--bg-card)',
-                                                            border: `2px solid ${sit.color}`,
-                                                            borderRadius: '8px',
-                                                            padding: '1.5rem',
-                                                            textAlign: 'left',
-                                                            position: 'relative',
-                                                            transition: 'all 0.2s ease'
-                                                        }}
-                                                    >
-                                                        {/* Status Indicator */}
-                                                        <div style={{
-                                                            position: 'absolute',
-                                                            top: '0.75rem',
-                                                            right: '0.75rem',
-                                                            fontSize: '1.25rem'
-                                                        }}>
-                                                            {status === 'complete' ? '✅' :
-                                                                status === 'needs-plays' ? '⚠️' : '❌'}
-                                                        </div>
-
-                                                        <div style={{
-                                                            color: sit.color,
-                                                            fontWeight: 'bold',
-                                                            fontSize: '1rem',
-                                                            marginBottom: '0.5rem',
-                                                            paddingRight: '2rem'
-                                                        }}>
-                                                            {sit.label}
-                                                        </div>
-
-                                                        <div style={{
-                                                            display: 'flex',
-                                                            justifyContent: 'space-between',
-                                                            alignItems: 'center',
-                                                            marginTop: '0.75rem'
-                                                        }}>
-                                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                                                {count} plays
-                                                            </span>
-                                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                                                                {sit.recommended}
-                                                            </span>
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        const FormationBuilder = ({ data, onUpdate }) => {
+        const FormationBuilder = ({ data, onUpdate, phase = 'offense' }) => {
             const [selectedPlayer, setSelectedPlayer] = useState(null); // For editing
             const [draggedId, setDraggedId] = useState(null);
 
-            // Ensure data structure
-            const players = data.formation || [];
+            // Ensure data structure - use phase specific formation data
+            // If data[phase] doesn't exist, we might need to initialize it in the parent or handle it here safely
+            // But usually onUpdate will handle the merge.
+            // We expect data[phase] to have a 'formation' property or just store formation data separately? 
+            // The plan said "store data separately". Let's assume data[phase].formation
+
+            const currentPhaseData = data[phase] || {};
+            const players = currentPhaseData.formation || [];
 
             const updatePlayers = (newPlayers) => {
-                onUpdate({ ...data, formation: newPlayers });
+                // deeply update the specific phase's formation
+                const updatedPhaseData = { ...(data[phase] || {}), formation: newPlayers };
+                onUpdate({ ...data, [phase]: updatedPhaseData });
             };
 
             const handleAddPlayer = () => {
@@ -17436,7 +17281,10 @@
                     weight: '',
                     rating: 70,
                     x: 50, // Center
-                    y: 50
+                    y: 50,
+                    isStar: false,
+                    isTarget: false,
+                    archetype: ''
                 };
                 updatePlayers([...players, newPlayer]);
                 setSelectedPlayer(newPlayer);
@@ -17472,11 +17320,10 @@
 
             // Modal for editing
             const PlayerModal = ({ player, onClose }) => {
-
                 return (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={onClose}>
                         <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', width: '500px', color: '#1e293b' }} onClick={e => e.stopPropagation()}>
-                            <h3 style={{ marginTop: 0 }}>Edit Opponent Player</h3>
+                            <h3 style={{ marginTop: 0 }}>Edit Opponent Player ({phase.toUpperCase()})</h3>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                 <div>
@@ -17497,7 +17344,21 @@
                                 </div>
                             </div>
 
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label className="form-label">Archetype/Notes</label>
+                                <input className="form-input" value={player.archetype || ''} onChange={e => handleUpdatePlayer(player.id, 'archetype', e.target.value)} placeholder="e.g. Speed Rusher" />
+                            </div>
 
+                            <div style={{ display: 'flex', gap: '2rem', marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#eab308', fontWeight: 'bold' }}>
+                                    <input type="checkbox" checked={player.isStar} onChange={e => handleUpdatePlayer(player.id, 'isStar', e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                                    <Icon name="Star" fill="#eab308" size={18} /> Star Player (Watch Out)
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#ef4444', fontWeight: 'bold' }}>
+                                    <input type="checkbox" checked={player.isTarget} onChange={e => handleUpdatePlayer(player.id, 'isTarget', e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                                    <Icon name="Target" size={18} /> Bullseye (Attack Him)
+                                </label>
+                            </div>
 
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                                 <button className="btn btn-secondary" onClick={() => { updatePlayers(players.filter(p => p.id !== player.id)); onClose(); }} style={{ color: 'red' }}>Delete</button>
@@ -17509,9 +17370,10 @@
             };
 
             return (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="btn btn-primary" onClick={handleAddPlayer}><Icon name="Plus" /> Add Opponent Player</button>
+                <div style={{ height: '100%', minHeight: '500px', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+                    <div style={{ padding: '0.5rem', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Formation Editor</span>
+                        <button className="btn btn-sm btn-primary" onClick={handleAddPlayer} style={{ fontSize: '0.8rem', padding: '4px 8px' }}><Icon name="Plus" size={14} /> Add Player</button>
                     </div>
 
                     <div
@@ -17520,9 +17382,6 @@
                             flex: 1,
                             background: '#4ade80', // Grass green
                             position: 'relative',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            border: '2px solid #22c55e',
                             backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255,255,255,0.2) 20px)'
                         }}
                         onDragOver={handleDragOver}
@@ -17545,18 +17404,21 @@
                                     width: '40px',
                                     height: '40px',
                                     borderRadius: '50%',
-                                    background: 'var(--surface)',
-                                    border: '2px solid var(--primary)',
+                                    background: p.isStar ? '#fef08a' : (p.isTarget ? '#fecaaca' : 'var(--surface)'),
+                                    border: p.isStar ? '3px solid #ca8a04' : (p.isTarget ? '3px solid #dc2626' : '2px solid var(--primary)'),
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     fontWeight: 'bold',
                                     cursor: 'grab',
                                     boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                                    zIndex: 10
+                                    zIndex: 10,
+                                    color: 'black'
                                 }}
-                                title={`Rating: ${p.rating}`}
+                                title={`Rating: ${p.rating} | ${p.archetype}`}
                             >
+                                {p.isStar && <div style={{ position: 'absolute', top: '-10px', color: '#ca8a04' }}><Icon name="Star" size={16} fill="#ca8a04" /></div>}
+                                {p.isTarget && <div style={{ position: 'absolute', top: '-10px', color: '#dc2626' }}><Icon name="Target" size={16} /></div>}
                                 {p.number}
                             </div>
                         ))}
@@ -17624,104 +17486,133 @@
                 return (data[activeTab] || []).find(p => p.position === pos) || { position: pos, name: '', jersey: '', archetype: '', ratings: {} };
             };
 
+            const handleUpdateOverview = (field, value) => {
+                const currentPhaseData = data[activeTab] || {};
+                const newPhaseData = { ...currentPhaseData, [field]: value };
+                onUpdate({ ...data, [activeTab]: newPhaseData });
+            };
+            const currentOverview = data[activeTab] || {};
+
             return (
                 <div style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                        <h1>Opponent Scouting</h1>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h1 style={{ margin: 0 }}>Opponent Scouting</h1>
                         <div className="btn-group">
-                            {['offense', 'defense', 'specialTeams', 'formation'].map(tab => (
+                            {['offense', 'defense', 'specialTeams'].map(tab => (
                                 <button
                                     key={tab}
                                     className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
                                     onClick={() => setActiveTab(tab)}
                                 >
-                                    {tab === 'formation' ? 'Formation Builder' : SCOUTING_CONFIG[tab].label}
+                                    {SCOUTING_CONFIG[tab].label}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {activeTab === 'formation' ? (
-                        <FormationBuilder data={data} onUpdate={onUpdate} />
-                    ) : (
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                            gap: '1.5rem',
-                            alignContent: 'start'
-                        }}>
-                            {SCOUTING_CONFIG[activeTab].positions.map(pos => {
-                                const player = getPlayer(pos);
-                                const hasData = player.name || player.jersey;
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 350px) 1fr', gap: '1.5rem', flex: 1, minHeight: 0 }}>
 
-                                return (
-                                    <div
-                                        key={pos}
-                                        className="card"
-                                        onClick={() => setEditingPlayer(player)}
-                                        style={{
-                                            padding: '1.5rem',
-                                            cursor: 'pointer',
-                                            border: hasData ? '2px solid var(--accent)' : '1px solid var(--border)',
-                                            background: hasData ? 'var(--bg-panel)' : 'var(--bg-card)',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                            <span style={{ fontWeight: 'bold', color: 'var(--text-secondary)' }}>{pos}</span>
-                                            {player.jersey && (
-                                                <span style={{
-                                                    background: 'var(--accent)',
-                                                    color: 'white',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '0.8rem',
-                                                    fontWeight: 'bold'
-                                                }}>
-                                                    #{player.jersey}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {hasData ? (
-                                            <>
-                                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                                                    {player.name}
-                                                </div>
-                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '1rem' }}>
-                                                    {player.archetype || 'No Archetype'}
-                                                </div>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                    {Object.entries(player.ratings || {}).slice(0, 4).map(([key, val]) => (
-                                                        <div key={key} style={{
-                                                            background: 'var(--bg-body)',
-                                                            padding: '4px 8px',
-                                                            borderRadius: '4px',
-                                                            fontSize: '0.8rem'
-                                                        }}>
-                                                            <span style={{ opacity: 0.7 }}>{key.substring(0, 3)}:</span> <b>{val}</b>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div style={{
-                                                height: '80px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                color: 'var(--text-tertiary)',
-                                                border: '2px dashed var(--border)',
-                                                borderRadius: '8px'
-                                            }}>
-                                                <Icon name="Plus" size={24} />
+                        {/* LEFT SIDEBAR: Overview & Personnel Palette */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                            <div className="card" style={{ padding: '1rem', flexShrink: 0 }}>
+                                <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1rem' }}>Overview</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {activeTab === 'specialTeams' && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                                            <div>
+                                                <label className="form-label" style={{ fontSize: '0.8rem' }}>FG Max</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    style={{ padding: '4px 8px', fontSize: '0.9rem' }}
+                                                    placeholder="45"
+                                                    value={currentOverview.kickerDistance || ''}
+                                                    onChange={e => handleUpdateOverview('kickerDistance', e.target.value)}
+                                                />
                                             </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                            <div>
+                                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Punt Avg</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    style={{ padding: '4px 8px', fontSize: '0.9rem' }}
+                                                    placeholder="35"
+                                                    value={currentOverview.punterDistance || ''}
+                                                    onChange={e => handleUpdateOverview('punterDistance', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <label className="form-label" style={{ fontSize: '0.8rem' }}>Base Scheme</label>
+                                    <input
+                                        className="form-input"
+                                        style={{ padding: '4px 8px', fontSize: '0.9rem' }}
+                                        placeholder={activeTab === 'specialTeams' ? "e.g. Shield Punt" : "e.g. Spread / 4-2-5"}
+                                        value={currentOverview.scheme || ''}
+                                        onChange={e => handleUpdateOverview('scheme', e.target.value)}
+                                    />
+
+                                    <label className="form-label" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Top Tendencies</label>
+                                    <textarea
+                                        className="form-input"
+                                        rows="3"
+                                        style={{ padding: '4px 8px', fontSize: '0.9rem', fontFamily: 'inherit' }}
+                                        placeholder="- Note key tendencies..."
+                                        value={currentOverview.tendencies || ''}
+                                        onChange={e => handleUpdateOverview('tendencies', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                                <h3 style={{ marginTop: 0.5, marginBottom: '0.5rem', fontSize: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem' }}>Personnel</h3>
+                                {SCOUTING_CONFIG[activeTab].positions.map(pos => {
+                                    const player = getPlayer(pos);
+                                    const hasData = player.name || player.jersey;
+
+                                    return (
+                                        <div
+                                            key={pos}
+                                            className="card"
+                                            onClick={() => setEditingPlayer(player)}
+                                            style={{
+                                                padding: '0.75rem',
+                                                cursor: 'pointer',
+                                                border: hasData ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                                borderLeft: hasData ? '4px solid var(--accent)' : '1px solid var(--border)',
+                                                background: hasData ? 'var(--bg-panel)' : 'var(--bg-card)',
+                                                transition: 'all 0.2s',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                fontSize: '0.9rem'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <span style={{ fontWeight: 'bold', color: 'var(--text-secondary)', minWidth: '30px' }}>{pos}</span>
+                                                    {player.jersey && <span style={{ background: 'var(--accent)', color: 'white', padding: '1px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>#{player.jersey}</span>}
+                                                </div>
+                                                {hasData && <span style={{ fontWeight: '600' }}>{player.name}</span>}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                {hasData && player.isStar && <span title="Star Player"><Icon name="Star" size={16} fill="#ca8a04" color="#ca8a04" /></span>}
+                                                {hasData && player.isTarget && <span title="Target / Weak Link"><Icon name="Target" size={16} color="#dc2626" /></span>}
+                                                {!hasData && <Icon name="Plus" size={16} color="var(--text-tertiary)" />}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    )}
+
+                        {/* RIGHT MAIN: Formation Builder */}
+                        <div style={{ height: '100%', overflow: 'hidden' }}>
+                            <FormationBuilder data={data} onUpdate={onUpdate} phase={activeTab} />
+                        </div>
+                    </div>
 
                     {/* Edit Player Modal */}
                     {editingPlayer && (
@@ -17748,6 +17639,17 @@
                                         onChange={e => setEditingPlayer({ ...editingPlayer, jersey: e.target.value })}
                                         placeholder="#"
                                     />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#eab308', fontWeight: 'bold' }}>
+                                        <input type="checkbox" checked={editingPlayer.isStar} onChange={e => setEditingPlayer({ ...editingPlayer, isStar: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                                        <Icon name="Star" fill="#eab308" size={18} /> Star
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#ef4444', fontWeight: 'bold' }}>
+                                        <input type="checkbox" checked={editingPlayer.isTarget} onChange={e => setEditingPlayer({ ...editingPlayer, isTarget: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                                        <Icon name="Target" size={18} /> Target
+                                    </label>
                                 </div>
 
                                 <div className="form-group">
@@ -17807,9 +17709,23 @@
 
             // For Matrix/Grid Cell Editing
             const [activeCellSetId, setActiveCellSetId] = useState(null); // The setId currently being edited via modal
+            const [editingFormationId, setEditingFormationId] = useState(null); // ID of formation currently being renamed
 
             // For Strike 'Em Out matrix collapsible groups
             const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+            const [collapsedRows, setCollapsedRows] = useState(new Set());
+
+            const toggleRow = (rowId) => {
+                setCollapsedRows(prev => {
+                    const newCollapsed = new Set(prev);
+                    if (newCollapsed.has(rowId)) {
+                        newCollapsed.delete(rowId);
+                    } else {
+                        newCollapsed.add(rowId);
+                    }
+                    return newCollapsed;
+                });
+            };
 
             // Helper to get play objects for a set ID
             const getPlaysForSet = (setId) => {
@@ -17945,6 +17861,12 @@
                 onUpdateGamePlan(newGamePlan);
             };
 
+            const handleUpdateFormationName = (formationId, newName) => {
+                const newOverrides = { ...(gamePlan.formationOverrides || {}), [formationId]: newName };
+                onUpdateGamePlan({ ...gamePlan, formationOverrides: newOverrides });
+                setEditingFormationId(null);
+            };
+
             const renderCallSheet = () => {
                 const layout = GAME_PLAN_LAYOUTS.CALL_SHEET;
                 const miniScripts = gamePlan.miniScripts || [];
@@ -18062,14 +17984,15 @@
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                             <thead>
                                 <tr>
-                                    <th style={{ padding: '0.5rem', border: '1px solid var(--border)', width: '120px', position: 'sticky', left: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>Formation / Type</th>
+                                    <th rowSpan={2} style={{ padding: '0.5rem', border: '1px solid var(--border)', width: '120px', position: 'sticky', left: 0, top: 0, backgroundColor: 'var(--bg-card)', zIndex: 20 }}>Formation / Type</th>
                                     {columnGroups.map(group => {
                                         const isCollapsed = collapsedGroups.has(group.id);
                                         return (
                                             <React.Fragment key={group.id}>
                                                 {isCollapsed ? (
                                                     <th
-                                                        style={{ padding: '0.5rem', border: '1px solid var(--border)', backgroundColor: '#334155', color: 'white', cursor: 'pointer', minWidth: '60px' }}
+                                                        rowSpan={2}
+                                                        style={{ padding: '0.5rem', border: '1px solid var(--border)', backgroundColor: '#334155', color: 'white', cursor: 'pointer', minWidth: '60px', top: 0, position: 'sticky', zIndex: 10 }}
                                                         onClick={() => toggleGroup(group.id)}
                                                         title={`Click to expand ${group.label}`}
                                                     >
@@ -18079,29 +18002,39 @@
                                                         </div>
                                                     </th>
                                                 ) : (
-                                                    <>
-                                                        {group.cols.map((col, idx) => (
-                                                            <th
-                                                                key={col.id}
-                                                                style={{
-                                                                    padding: '0.5rem',
-                                                                    border: '1px solid var(--border)',
-                                                                    backgroundColor: '#334155',
-                                                                    color: 'white',
-                                                                    minWidth: '100px',
-                                                                    cursor: idx === 0 ? 'pointer' : 'default'
-                                                                }}
-                                                                onClick={idx === 0 ? () => toggleGroup(group.id) : undefined}
-                                                                title={idx === 0 ? `Click to collapse ${group.label}` : col.fullLabel}
-                                                            >
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>
-                                                                    {idx === 0 && <span style={{ fontSize: '0.7rem' }}>▼</span>}
-                                                                    <span>{col.fullLabel}</span>
-                                                                </div>
-                                                            </th>
-                                                        ))}
-                                                    </>
+                                                    <th
+                                                        colSpan={2}
+                                                        style={{
+                                                            padding: '0.5rem',
+                                                            border: '1px solid var(--border)',
+                                                            backgroundColor: '#334155',
+                                                            color: 'white',
+                                                            cursor: 'pointer',
+                                                            textAlign: 'center',
+                                                            top: 0,
+                                                            position: 'sticky',
+                                                            zIndex: 10
+                                                        }}
+                                                        onClick={() => toggleGroup(group.id)}
+                                                        title={`Click to collapse ${group.label}`}
+                                                    >
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                                                            <span style={{ fontSize: '0.7rem' }}>▼</span>
+                                                            <span>{group.label}</span>
+                                                        </div>
+                                                    </th>
                                                 )}
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </tr>
+                                <tr>
+                                    {columnGroups.map(group => {
+                                        if (collapsedGroups.has(group.id)) return null;
+                                        return (
+                                            <React.Fragment key={group.id + '_sub'}>
+                                                <th style={{ padding: '0.25rem', border: '1px solid var(--border)', backgroundColor: '#475569', color: 'white', fontSize: '0.7rem', textAlign: 'center', top: '35px', position: 'sticky', zIndex: 10 }}>LEFT HASH</th>
+                                                <th style={{ padding: '0.25rem', border: '1px solid var(--border)', backgroundColor: '#475569', color: 'white', fontSize: '0.7rem', textAlign: 'center', top: '35px', position: 'sticky', zIndex: 10 }}>RIGHT HASH</th>
                                             </React.Fragment>
                                         );
                                     })}
@@ -18112,16 +18045,78 @@
                                     <React.Fragment key={formation.id}>
                                         {/* Formation Header Row */}
                                         <tr>
-                                            <td colSpan={columnGroups.reduce((acc, g) => acc + (collapsedGroups.has(g.id) ? 1 : g.cols.length), 1)} style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold', backgroundColor: formation.color, color: 'white', fontSize: '0.9rem' }}>
-                                                {formation.label}
+                                            <td
+                                                colSpan={columnGroups.reduce((acc, g) => acc + (collapsedGroups.has(g.id) ? 1 : 2), 1)}
+                                                style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold', backgroundColor: formation.color, color: 'white', fontSize: '0.9rem', cursor: 'pointer' }}
+                                                onClick={() => setEditingFormationId(formation.id)}
+                                            >
+                                                {editingFormationId === formation.id ? (
+                                                    <input
+                                                        autoFocus
+                                                        defaultValue={(gamePlan.formationOverrides || {})[formation.id] || formation.label}
+                                                        style={{ background: 'white', color: 'black', border: 'none', padding: '2px 4px', borderRadius: '2px', width: '200px' }}
+                                                        onBlur={(e) => handleUpdateFormationName(formation.id, e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') handleUpdateFormationName(formation.id, e.target.currentTarget.value);
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                ) : (
+                                                    (gamePlan.formationOverrides || {})[formation.id] || formation.label
+                                                )}
                                             </td>
                                         </tr>
                                         {/* Play Type Rows */}
                                         {layout.playTypes.map(playType => {
+                                            const isRowCollapsed = collapsedRows.has(playType.id);
+                                            const totalColSpan = columnGroups.reduce((acc, g) => acc + (collapsedGroups.has(g.id) ? 1 : g.cols.length), 1);
+
+                                            if (isRowCollapsed) {
+                                                return (
+                                                    <tr key={`${formation.id}_${playType.id}`}>
+                                                        <td
+                                                            colSpan={totalColSpan}
+                                                            style={{
+                                                                padding: '0.5rem',
+                                                                border: '1px solid var(--border)',
+                                                                fontWeight: '500',
+                                                                backgroundColor: 'var(--surface)',
+                                                                cursor: 'pointer',
+                                                                color: 'var(--text-secondary)',
+                                                                fontSize: '0.8rem',
+                                                                fontStyle: 'italic'
+                                                            }}
+                                                            onClick={() => toggleRow(playType.id)}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <span style={{ fontSize: '0.7rem' }}>▶</span>
+                                                                <span>{playType.label} (Collapsed)</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            }
+
                                             return (
                                                 <tr key={`${formation.id}_${playType.id}`}>
-                                                    <td style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: '500', backgroundColor: 'var(--surface)', position: 'sticky', left: 0, zIndex: 5 }}>
-                                                        {playType.label}
+                                                    <td
+                                                        style={{
+                                                            padding: '0.5rem',
+                                                            border: '1px solid var(--border)',
+                                                            fontWeight: '500',
+                                                            backgroundColor: 'var(--surface)',
+                                                            position: 'sticky',
+                                                            left: 0,
+                                                            zIndex: 5,
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => toggleRow(playType.id)}
+                                                        title="Click to collapse row"
+                                                    >
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <span style={{ fontSize: '0.7rem' }}>▼</span>
+                                                            {playType.label}
+                                                        </div>
                                                     </td>
                                                     {columnGroups.map(group => {
                                                         const isCollapsed = collapsedGroups.has(group.id);
@@ -19759,7 +19754,7 @@
         };
 
         const App = () => {
-            const [view, setView] = useState('callsheet'); // Default to landing page
+            const [view, setView] = useState('landing'); // Default to My Tasks
             const [editingPlay, setEditingPlay] = useState(null);
             const [plays, setPlays] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-plays');
@@ -20777,7 +20772,7 @@
                                     style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
                                 >
                                     <Icon name="Checkbox" size={18} color="var(--accent)" />
-                                    <span style={{ fontWeight: '600' }}>My Tasks</span>
+                                    <span style={{ fontWeight: '600' }}>MY TASKS</span>
                                 </button>
                             )}
 
@@ -20788,7 +20783,7 @@
                                     style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
                                 >
                                     <Icon name="Clipboard" size={18} color="#3b82f6" />
-                                    <span style={{ fontWeight: '600' }}>Daily Reports</span>
+                                    <span style={{ fontWeight: '600' }}>DAILY REPORT</span>
                                 </button>
                             )}
                             {/* PERSONNEL CATEGORY */}
@@ -20805,14 +20800,14 @@
 
                             {/* DEPTH CHARTS CATEGORY (Moved from Players) */}
                             {/* GAME WEEK CATEGORY */}
-                            <CollapsibleCategory title="GAME WEEK" icon="🥊" defaultOpen={true}>
+                            <CollapsibleCategory title="GAME WEEK" icon="🥊" defaultOpen={false}>
                                 <button className={`nav-item ${view === 'game-week-overview' ? 'active' : ''}`} onClick={() => setView('game-week-overview')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     <Icon name="Info" size={14} style={{ marginRight: '6px' }} /> Overview
                                 </button>
 
                                 {/* Moved Depth Charts */}
                                 {currentPermissions.depth.view && (
-                                    <CollapsibleCategory title="Depth Charts" icon="LayoutDashboard" defaultOpen={false} nested={true}>
+                                    <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
                                         <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
                                             {['OFFENSE', 'DEFENSE', 'KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
                                                 <button key={`V_${type}`} className={`nav-item ${view === 'depth' && depthChartType === `V_${type}` ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType(`V_${type}`); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
@@ -20848,9 +20843,6 @@
                                     <>
                                         <button className={`nav-item ${view === 'game-plan' ? 'active' : ''}`} onClick={() => setView('game-plan')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="Clipboard" size={14} style={{ marginRight: '6px' }} /> Game Plan
-                                        </button>
-                                        <button className={`nav-item ${view === 'game-plan-2' ? 'active' : ''}`} onClick={() => setView('game-plan-2')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="Zap" size={14} style={{ marginRight: '6px' }} /> Game Plan 2.0
                                         </button>
                                         <button
                                             className={`nav-item ${view === 'new-play' ? 'active' : ''}`}
@@ -20913,7 +20905,7 @@
                             {/* PRACTICE CATEGORY */}
                             {/* PRACTICE CATEGORY */}
                             {/* PROGRAM MANAGEMENT CATEGORY */}
-                            <CollapsibleCategory title="Program Mgmt" icon="👔" defaultOpen={true}>
+                            <CollapsibleCategory title="Program Mgmt" icon="👔" defaultOpen={false}>
                                 <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     <Icon name="Users" size={14} style={{ marginRight: '6px' }} /> Manage Roster
                                 </button>
@@ -20924,10 +20916,10 @@
                                     <Icon name="Calendar" size={14} style={{ marginRight: '6px' }} /> Annual Calendar
                                 </button>
                                 <button className={`nav-item ${view === 'budget' ? 'active' : ''}`} onClick={() => setView('budget')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    💰 Budget
+                                    <Icon name="DollarSign" size={14} style={{ marginRight: '6px' }} /> Budget & Wishlist
                                 </button>
                                 <button className={`nav-item ${view === 'onboarding' ? 'active' : ''}`} onClick={() => setView('onboarding')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    🎯 Onboarding
+                                    <Icon name="UserPlus" size={14} style={{ marginRight: '6px' }} /> Onboarding
                                 </button>
                                 <CollapsibleCategory title="Equipment & Inv." icon="Package" defaultOpen={false} nested={true}>
                                     <button className={`nav-item ${view === 'equipment-checkout' ? 'active' : ''}`} onClick={() => setView('equipment-checkout')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
@@ -21518,7 +21510,7 @@
 
                         {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} />}
-                        {view === 'game-plan-2' && <GamePlan2 plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} />}
+
                         {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
                         {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
                         {view === 'game-week-overview' && <GameWeekOverview week={currentWeek} onUpdateWeek={handleUpdateWeek} teamLogo={teamLogo} />}
