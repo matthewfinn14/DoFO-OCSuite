@@ -4527,174 +4527,7 @@
         };
 
         // --- VALHALLA SYSTEM CONSTANTS ---
-        const VALHALLA_CONSTANTS = {
-            CATEGORIES: {
-                COMMITMENT: "Commitment",
-                STRENGTH: "Strength & Performance",
-                IQ: "Football IQ / Skill",
-                TEAM: "Team Contribution",
-                VARSITY: "Varsity Production"
-            },
-            LEVELS: {
-                BRONZE: "Bronze",
-                SILVER: "Silver",
-                GOLD: "Gold",
-                ELITE: "Elite"
-            },
-            XP: {
-                BRONZE: 10,
-                SILVER: 20,
-                GOLD: 40,
-                ELITE: 75
-            }
-        };
 
-        const DEFAULT_QUESTS = [
-            // 1. COMMITMENT
-            {
-                id: "q_attend_iron", name: "Iron Attendance", category: VALHALLA_CONSTANTS.CATEGORIES.COMMITMENT,
-                description: "Consistent off-season and in-season attendance.",
-                dataType: "percentage", verifyType: "auto",
-                thresholds: { Bronze: 90, Silver: 95, Gold: 100, Elite: 100 },
-                eliteCondition: "Full year perfect attendance"
-            },
-            {
-                id: "q_attend_summer", name: "Summer Warrior", category: VALHALLA_CONSTANTS.CATEGORIES.COMMITMENT,
-                description: "Attendance at June/July team activities.",
-                dataType: "percentage", verifyType: "auto",
-                thresholds: { Bronze: 70, Silver: 80, Gold: 90, Elite: 100 }
-            },
-            {
-                id: "q_academic", name: "Academic Anchor", category: VALHALLA_CONSTANTS.CATEGORIES.COMMITMENT,
-                description: "Maintain academic excellence during the season.",
-                dataType: "admin_verified", verifyType: "coach_verify",
-                thresholds: { Bronze: 2.0, Silver: 3.0, Gold: 3.5, Elite: 4.0 }, // Bronze: No Fs mapped to 2.0 for simplicity
-                customLabels: { Bronze: "No Fs" }
-            },
-            {
-                id: "q_summer_comp", name: "Summer Competitions Won", category: VALHALLA_CONSTANTS.CATEGORIES.COMMITMENT,
-                description: "Team wins at summer events (7v7, camps) present for.",
-                dataType: "numeric", verifyType: "coach_verify",
-                thresholds: { Bronze: 1, Silver: 2, Gold: 3, Elite: 4 }
-            },
-            {
-                id: "q_multisport", name: "Multi-Sport Warrior", category: VALHALLA_CONSTANTS.CATEGORIES.COMMITMENT,
-                description: "Participation in other school sports.",
-                dataType: "admin_verified", verifyType: "coach_verify",
-                thresholds: { Bronze: 1, Silver: 2, Gold: 3, Elite: 4 },
-                customLabels: { Bronze: "1 Sport", Silver: "2 Sports", Gold: "3-Sport Athlete", Elite: "State/Capt (Non-FB)" }
-            },
-            {
-                id: "q_ironman_pts_c", name: "Iron Man Points", category: VALHALLA_CONSTANTS.CATEGORIES.COMMITMENT,
-                description: "Program durability score (Games + Practices + Phases).",
-                dataType: "numeric", verifyType: "auto_or_coach",
-                thresholds: { Bronze: 50, Silver: 100, Gold: 150, Elite: 200 }
-            },
-
-            // 2. STRENGTH & PERFORMANCE (Ratios)
-            {
-                id: "q_lift_bench", name: "Iron Bench", category: VALHALLA_CONSTANTS.CATEGORIES.STRENGTH,
-                description: "Bench Press relative to Bodyweight.",
-                dataType: "ratio", verifyType: "auto",
-                thresholds: { Bronze: 1.0, Silver: 1.25, Gold: 1.5, Elite: 1.75 }
-            },
-            {
-                id: "q_lift_squat", name: "Iron Squat", category: VALHALLA_CONSTANTS.CATEGORIES.STRENGTH,
-                description: "Squat relative to Bodyweight.",
-                dataType: "ratio", verifyType: "auto",
-                thresholds: { Bronze: 1.5, Silver: 1.75, Gold: 2.0, Elite: 2.25 }
-            },
-            {
-                id: "q_lift_dead", name: "Iron Deadlift", category: VALHALLA_CONSTANTS.CATEGORIES.STRENGTH,
-                description: "Deadlift relative to Bodyweight.",
-                dataType: "ratio", verifyType: "auto",
-                thresholds: { Bronze: 2.0, Silver: 2.25, Gold: 2.5, Elite: 2.75 }
-            },
-            {
-                id: "q_pullups", name: "Pull-Up Master", category: VALHALLA_CONSTANTS.CATEGORIES.STRENGTH,
-                description: "Strict pull-up count.",
-                dataType: "numeric", verifyType: "coach_verify",
-                thresholds: { Bronze: 5, Silver: 10, Gold: 15, Elite: 20 }
-            },
-            {
-                id: "q_speed", name: "Speed Demon", category: VALHALLA_CONSTANTS.CATEGORIES.STRENGTH,
-                description: "Improvement in 40-yard dash time (seconds dropped).",
-                dataType: "numeric", verifyType: "auto",
-                thresholds: { Bronze: 0.05, Silver: 0.15, Gold: 0.25, Elite: 0.4 } // Elite placeholder
-            },
-
-            // 3. FOOTBALL IQ
-            {
-                id: "q_film", name: "Film Junkie", category: VALHALLA_CONSTANTS.CATEGORIES.IQ,
-                description: "Weekly film study hours.",
-                dataType: "numeric", verifyType: "player_input",
-                thresholds: { Bronze: 3, Silver: 5, Gold: 8, Elite: 10 }
-            },
-            {
-                id: "q_playbook", name: "Playbook Scholar", category: VALHALLA_CONSTANTS.CATEGORIES.IQ,
-                description: "Formation and play test score.",
-                dataType: "percentage", verifyType: "coach_verify",
-                thresholds: { Bronze: 80, Silver: 90, Gold: 100, Elite: 100 }
-            },
-            {
-                id: "q_tech", name: "Technician", category: VALHALLA_CONSTANTS.CATEGORIES.IQ,
-                description: "Mastery of position fundamentals.",
-                dataType: "admin_verified", verifyType: "coach_verify",
-                thresholds: { Bronze: 1, Silver: 2, Gold: 3, Elite: 4 },
-                customLabels: { Bronze: "Fund. Test", Silver: "Adv. Drill", Gold: "Teach Drill", Elite: "Run Station" }
-            },
-
-            // 4. TEAM CONTRIBUTION
-            {
-                id: "q_service", name: "Service Hours", category: VALHALLA_CONSTANTS.CATEGORIES.TEAM,
-                description: "Community service events or hours.",
-                dataType: "numeric", verifyType: "player_input",
-                thresholds: { Bronze: 1, Silver: 3, Gold: 5, Elite: 10 }
-            },
-            {
-                id: "q_mentor", name: "Mentor Program", category: VALHALLA_CONSTANTS.CATEGORIES.TEAM,
-                description: "Mentoring younger players.",
-                dataType: "admin_verified", verifyType: "coach_verify",
-                thresholds: { Bronze: 1, Silver: 2, Gold: 3, Elite: 4 },
-                customLabels: { Bronze: "Assigned", Silver: "Weekly Mtgs", Gold: "Retention", Elite: "2+ Mentees" }
-            },
-            {
-                id: "q_reliable", name: "Reliability", category: VALHALLA_CONSTANTS.CATEGORIES.TEAM,
-                description: "Forms, gear, punctuality.",
-                dataType: "admin_verified", verifyType: "coach_verify",
-                thresholds: { Bronze: 1, Silver: 2, Gold: 3, Elite: 4 },
-                customLabels: { Bronze: "Forms", Silver: "Gear", Gold: "No Tardies", Elite: "Flawless" }
-            },
-            {
-                id: "q_lead_class", name: "Leadership Class", category: VALHALLA_CONSTANTS.CATEGORIES.TEAM,
-                description: "Attendance/Completion of Leadership sessions.",
-                dataType: "numeric", verifyType: "coach_verify",
-                thresholds: { Bronze: 4, Silver: 8, Gold: 12, Elite: 16 } // Example session counts
-            },
-
-            // 5. VARSITY PRODUCTION
-            {
-                id: "q_varsity_con", name: "Varsity Contributor", category: VALHALLA_CONSTANTS.CATEGORIES.VARSITY,
-                description: "Contribution to varsity games.",
-                dataType: "admin_verified", verifyType: "coach_verify",
-                thresholds: { Bronze: 1, Silver: 2, Gold: 3, Elite: 4 },
-                customLabels: { Bronze: "Dress", Silver: "10 Snaps", Gold: "100 Snaps", Elite: "All-Dist/State" }
-            },
-            {
-                id: "q_fn_finish", name: "Friday Night Finisher", category: VALHALLA_CONSTANTS.CATEGORIES.VARSITY,
-                description: "Statistical production in games.",
-                dataType: "admin_verified", verifyType: "coach_verify",
-                thresholds: { Bronze: 1, Silver: 2, Gold: 3, Elite: 4 },
-                customLabels: { Bronze: "Stat Recorded", Silver: "Multi-Game", Gold: "Starter", Elite: "Record/Award" }
-            },
-            {
-                id: "q_ironman_v", name: "Iron Man (Varsity)", category: VALHALLA_CONSTANTS.CATEGORIES.VARSITY,
-                description: "Multi-phase varsity contribution.",
-                dataType: "admin_verified", verifyType: "coach_verify",
-                thresholds: { Bronze: 1, Silver: 2, Gold: 3, Elite: 4 },
-                customLabels: { Bronze: "ST", Silver: "O/D + ST", Gold: "Start + ST", Elite: "2-Way Starter" }
-            }
-        ];
 
         const GamedayDashboard = ({ plays }) => {
             const [filters, setFilters] = useState({
@@ -6174,53 +6007,384 @@
 
         // --- VALHALLA UI COMPONENTS ---
 
-        const QuestCard = ({ quest, progress, onUpdate }) => {
-            const currentLevel = progress?.currentLevel || 'None';
-            const currentValue = progress?.currentValue || 0;
-            const nextThreshold = quest.thresholds[quest.thresholds.Bronze > currentValue ? 'Bronze' : quest.thresholds.Silver > currentValue ? 'Silver' : quest.thresholds.Gold > currentValue ? 'Gold' : 'Elite'];
-            const nextLevelName = quest.thresholds.Bronze > currentValue ? 'Bronze' : quest.thresholds.Silver > currentValue ? 'Silver' : quest.thresholds.Gold > currentValue ? 'Gold' : 'Elite';
-            const percent = Math.min(100, (currentValue / (nextThreshold || quest.thresholds.Elite)) * 100);
+        // --- VALHALLA 2.0 CONSTANTS & HELPERS ---
+        const VALHALLA_CONSTANTS = {
+            PILLARS: {
+                CHARACTER: { id: 'CHARACTER', label: 'Character', color: '#8884d8', description: 'Discipline, integrity, grit, follow-through' },
+                CONNECTION: { id: 'CONNECTION', label: 'Connection', color: '#82ca9d', description: 'Serving others, bonding, showing up' },
+                COMPETENCE: { id: 'COMPETENCE', label: 'Competence', color: '#ffc658', description: 'Strength, skill, IQ, execution' }
+            },
+            SEASONS: {
+                SUMMER: { id: 'SUMMER', label: 'Summer Quests', order: 1 },
+                IN_SEASON: { id: 'IN_SEASON', label: 'In-Season Quests', order: 2 },
+                OFF_SEASON: { id: 'OFF_SEASON', label: 'Off-Season Quests', order: 3 },
+                CORE: { id: 'CORE', label: 'Core / Multipliers', order: 0 }
+            },
+            BADGE_XP: {
+                Iron: 50,
+                Bronze: 75,
+                Silver: 100,
+                Gold: 150,
+                Platinum: 250
+            },
+            QUESTS: {
+                // --- CORE / QUARTERLY (Available Year-Round) ---
+                'bench_pr': {
+                    id: 'bench_pr',
+                    name: 'Bench Press PR (Quarterly)',
+                    season: 'CORE',
+                    pillars: ['COMPETENCE'],
+                    badges: [
+                        { name: 'Iron PR (+5 lbs)', tier: 'Iron' },
+                        { name: 'Bronze PR (+10 lbs)', tier: 'Bronze' },
+                        { name: 'Silver PR (+15 lbs)', tier: 'Silver' },
+                        { name: 'Gold PR (+20 lbs)', tier: 'Gold' },
+                        { name: 'Platinum PR (+25+ lbs)', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'Lbs Added', type: 'Number', xpPerUnit: 0 }]
+                },
+                'squat_pr': {
+                    id: 'squat_pr',
+                    name: 'Squat PR (Quarterly)',
+                    season: 'CORE',
+                    pillars: ['COMPETENCE'],
+                    badges: [
+                        { name: 'Iron PR (+10 lbs)', tier: 'Iron' },
+                        { name: 'Bronze PR (+20 lbs)', tier: 'Bronze' },
+                        { name: 'Silver PR (+30 lbs)', tier: 'Silver' },
+                        { name: 'Gold PR (+40 lbs)', tier: 'Gold' },
+                        { name: 'Platinum PR (+50+ lbs)', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'Lbs Added', type: 'Number', xpPerUnit: 0 }]
+                },
+                'pound_for_pound_bench': {
+                    id: 'pound_for_pound_bench',
+                    name: 'LB/LB Bench Press',
+                    season: 'CORE',
+                    pillars: ['COMPETENCE'],
+                    badges: [
+                        { name: 'Iron Ratio (1.0x)', tier: 'Iron' },
+                        { name: 'Bronze Ratio (1.25x)', tier: 'Bronze' },
+                        { name: 'Silver Ratio (1.50x)', tier: 'Silver' },
+                        { name: 'Gold Ratio (1.75x)', tier: 'Gold' },
+                        { name: 'Platinum Ratio (2.0x)', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'Ratio', type: 'Number', xpPerUnit: 0 }]
+                },
+                'pound_for_pound_squat': {
+                    id: 'pound_for_pound_squat',
+                    name: 'LB/LB Squat',
+                    season: 'CORE',
+                    pillars: ['COMPETENCE'],
+                    badges: [
+                        { name: 'Iron Ratio (1.25x)', tier: 'Iron' },
+                        { name: 'Bronze Ratio (1.50x)', tier: 'Bronze' },
+                        { name: 'Silver Ratio (1.75x)', tier: 'Silver' },
+                        { name: 'Gold Ratio (2.00x)', tier: 'Gold' },
+                        { name: 'Platinum Ratio (2.25x)', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'Ratio', type: 'Number', xpPerUnit: 0 }]
+                },
+                'competitive_lifting': {
+                    id: 'competitive_lifting',
+                    name: 'Competitive Lifting (Quarterly)',
+                    season: 'CORE',
+                    pillars: ['COMPETENCE', 'CHARACTER'],
+                    badges: [
+                        { name: 'Iron (Top 3 Pos)', tier: 'Iron' },
+                        { name: 'Bronze (Best Pos)', tier: 'Bronze' },
+                        { name: 'Silver (Best Grade)', tier: 'Silver' },
+                        { name: 'Gold (Best Program)', tier: 'Gold' },
+                        { name: 'Platinum (Record)', tier: 'Platinum' }
+                    ],
+                    inputs: []
+                },
+                'iron_man_attendance': {
+                    id: 'iron_man_attendance',
+                    name: 'Iron Man - Weight Room (Quarterly)',
+                    season: 'CORE',
+                    pillars: ['CHARACTER', 'COMPETENCE'],
+                    badges: [
+                        { name: 'Iron (85%)', tier: 'Iron' },
+                        { name: 'Bronze (90%)', tier: 'Bronze' },
+                        { name: 'Silver (95%)', tier: 'Silver' },
+                        { name: 'Gold (98%)', tier: 'Gold' },
+                        { name: 'Platinum (100%)', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'Attendance %', type: 'Number', xpPerUnit: 0 }]
+                },
+                'practice_attendance': {
+                    id: 'practice_attendance',
+                    name: 'Practice Attendance',
+                    season: 'CORE',
+                    pillars: ['CHARACTER'],
+                    badges: [
+                        { name: 'Iron (≤2 Abs)', tier: 'Iron' },
+                        { name: 'Bronze (1 Abs)', tier: 'Bronze' },
+                        { name: 'Silver (0 Unexc)', tier: 'Silver' },
+                        { name: 'Gold (Zero Missed)', tier: 'Gold' },
+                        { name: 'Platinum (0 Missed + 2 Cycles)', tier: 'Platinum' }
+                    ],
+                    inputs: []
+                },
+                'volunteer_hours_quarterly': {
+                    id: 'volunteer_hours_quarterly',
+                    name: 'Volunteer Hours (Quarterly)',
+                    season: 'CORE',
+                    pillars: ['CONNECTION'],
+                    badges: [
+                        { name: 'Iron (3 hrs)', tier: 'Iron' },
+                        { name: 'Bronze (6 hrs)', tier: 'Bronze' },
+                        { name: 'Silver (9 hrs)', tier: 'Silver' },
+                        { name: 'Gold (12 hrs)', tier: 'Gold' },
+                        { name: 'Platinum (15+ hrs)', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'Hours', type: 'Number', xpPerUnit: 0 }]
+                },
+                'volunteer_hours_annual': {
+                    id: 'volunteer_hours_annual',
+                    name: 'Volunteer Hours (Annual)',
+                    season: 'CORE',
+                    pillars: ['CONNECTION'],
+                    badges: [
+                        { name: 'Iron (10 hrs)', tier: 'Iron' },
+                        { name: 'Bronze (20 hrs)', tier: 'Bronze' },
+                        { name: 'Silver (30 hrs)', tier: 'Silver' },
+                        { name: 'Gold (40 hrs)', tier: 'Gold' },
+                        { name: 'Platinum (50+ hrs)', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'Total Hours', type: 'Number', xpPerUnit: 0 }]
+                },
+                'leadership_class_q': {
+                    id: 'leadership_class_q',
+                    name: 'Leadership Class (Quarterly)',
+                    season: 'CORE',
+                    pillars: ['CHARACTER', 'CONNECTION'],
+                    badges: [
+                        { name: 'Iron (1 Assign / Demo)', tier: 'Iron' },
+                        { name: 'Bronze (2 Assign / Coach Rec)', tier: 'Bronze' },
+                        { name: 'Silver (3 Assign / Team Rec)', tier: 'Silver' },
+                        { name: 'Gold (4 Assign / Leads Group)', tier: 'Gold' },
+                        { name: 'Platinum (Full / Runs Activity)', tier: 'Platinum' }
+                    ],
+                    inputs: []
+                },
+                'academics_core': {
+                    id: 'academics_core',
+                    name: 'Academics (Quarterly)',
+                    season: 'CORE',
+                    pillars: ['CHARACTER'],
+                    badges: [
+                        { name: 'GPA Iron (3.0)', tier: 'Iron' },
+                        { name: 'GPA Bronze (3.25)', tier: 'Bronze' },
+                        { name: 'GPA Silver (3.50)', tier: 'Silver' },
+                        { name: 'GPA Gold (3.75)', tier: 'Gold' },
+                        { name: 'GPA Platinum (4.0)', tier: 'Platinum' },
+                        { name: 'Imp Iron (+.1)', tier: 'Iron' },
+                        { name: 'Imp Bronze (+.2)', tier: 'Bronze' },
+                        { name: 'Imp Silver (+.3)', tier: 'Silver' },
+                        { name: 'Imp Gold (+.4)', tier: 'Gold' },
+                        { name: 'Imp Platinum (+.5)', tier: 'Platinum' },
+                        { name: 'Att Iron (95%)', tier: 'Iron' },
+                        { name: 'Att Bronze (96%)', tier: 'Bronze' },
+                        { name: 'Att Silver (97%)', tier: 'Silver' },
+                        { name: 'Att Gold (98%)', tier: 'Gold' },
+                        { name: 'Att Platinum (99%)', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'GPA', type: 'Number', xpPerUnit: 0 }]
+                },
+                'multisport_annual': {
+                    id: 'multisport_annual',
+                    name: 'Multi-Sport (Annual)',
+                    season: 'CORE',
+                    pillars: ['COMPETENCE'],
+                    badges: [
+                        { name: 'Iron (1 Extra)', tier: 'Iron' },
+                        { name: 'Bronze (2 Extra)', tier: 'Bronze' },
+                        { name: 'Silver (3 Extra)', tier: 'Silver' },
+                        { name: 'Gold (2 Letters)', tier: 'Gold' },
+                        { name: 'Platinum (3 Letters/State)', tier: 'Platinum' }
+                    ],
+                    inputs: []
+                },
 
-            const getBadgeColor = (level) => {
-                switch (level) {
-                    case 'Bronze': return '#cd7f32';
-                    case 'Silver': return '#c0c0c0';
-                    case 'Gold': return '#ffd700';
-                    case 'Elite': return '#e5e4e2'; // Platinum-ish
-                    default: return 'var(--text-secondary)';
+                // --- IN-SEASON SPECIFIC ---
+                'postseason_honors': {
+                    id: 'postseason_honors',
+                    name: 'Postseason Honors',
+                    season: 'IN_SEASON',
+                    pillars: ['COMPETENCE'],
+                    badges: [
+                        { name: 'HM All-District', tier: 'Iron' },
+                        { name: '2nd Team District', tier: 'Bronze' },
+                        { name: '1st Team District', tier: 'Silver' },
+                        { name: '2nd Team State', tier: 'Gold' },
+                        { name: '1st Team State / Elite', tier: 'Platinum' }
+                    ],
+                    inputs: []
+                },
+                'film_iq': {
+                    id: 'film_iq',
+                    name: 'Film & IQ (Quarterly)',
+                    season: 'IN_SEASON',
+                    pillars: ['COMPETENCE'],
+                    badges: [
+                        { name: 'Film Iron (1)', tier: 'Iron' },
+                        { name: 'Film Bronze (2)', tier: 'Bronze' },
+                        { name: 'Film Silver (3)', tier: 'Silver' },
+                        { name: 'Film Gold (4)', tier: 'Gold' },
+                        { name: 'Film Platinum (5+)', tier: 'Platinum' },
+                        { name: 'Quiz Iron (70%)', tier: 'Iron' },
+                        { name: 'Quiz Bronze (80%)', tier: 'Bronze' },
+                        { name: 'Quiz Silver (85%)', tier: 'Silver' },
+                        { name: 'Quiz Gold (90%)', tier: 'Gold' },
+                        { name: 'Quiz Platinum (95%)', tier: 'Platinum' }
+                    ],
+                    inputs: []
+                },
+                'game_performance': {
+                    id: 'game_performance',
+                    name: 'Game Performance',
+                    season: 'IN_SEASON',
+                    pillars: ['COMPETENCE'],
+                    badges: [
+                        { name: 'Warrior Badge', tier: 'Gold', description: 'First Varsity Start' },
+                        { name: 'Battle Mastery', tier: 'Platinum', description: 'Perfect Assignment Game' },
+                        { name: 'Explosive Maker', tier: 'Silver' },
+                        { name: 'Two-Way Ironman', tier: 'Gold' }
+                    ],
+                    inputs: [
+                        { name: 'Assignment Win %', type: 'Number', xpPerUnit: 1 },
+                        { name: 'Big Play Prevention', type: 'Number', xpPerUnit: 30 }
+                    ]
+                },
+
+                // --- SUMMER SPECIFIC (Legacy / Flavor) ---
+                'summer_7on7': {
+                    id: 'summer_7on7',
+                    name: '7-on-7 / Team Comp',
+                    season: 'SUMMER',
+                    pillars: ['CONNECTION', 'COMPETENCE'],
+                    badges: [
+                        { name: 'Summer Skirmish Champ', tier: 'Gold' },
+                        { name: '2-Minute Drill Master', tier: 'Silver' },
+                        { name: 'Leadership Captain', tier: 'Platinum' }
+                    ],
+                    inputs: [{ name: 'Sessions Attended', type: 'Number', xpPerUnit: 15 }]
                 }
-            };
+            }
+        };
 
+        const calculatePillarXP = (progressData) => {
+            const scores = { CHARACTER: 0, CONNECTION: 0, COMPETENCE: 0, TOTAL: 0 };
+
+            if (!progressData) return scores;
+
+            Object.entries(progressData).forEach(([questId, pData]) => {
+                const questDef = VALHALLA_CONSTANTS.QUESTS[questId];
+                if (!questDef) return;
+
+                // Sum up inputs
+                let questBaseXP = 0;
+                if (pData.inputs) {
+                    Object.entries(pData.inputs).forEach(([inputName, val]) => {
+                        const inputDef = questDef.inputs.find(i => i.name === inputName);
+                        if (inputDef) {
+                            if (inputDef.type === 'Boolean' && val === true) {
+                                questBaseXP += inputDef.xpPerUnit;
+                            } else if (inputDef.type === 'Number' && typeof val === 'number') {
+                                questBaseXP += (val * inputDef.xpPerUnit);
+                            }
+                        }
+                    });
+                }
+
+                // Apply Multipliers
+                let multiplier = 1.0;
+                if (pData.multipliers) {
+                    pData.multipliers.forEach(mLabel => {
+                        const mDef = questDef.multipliers?.find(m => m.label === mLabel);
+                        if (mDef) multiplier += mDef.value;
+                    });
+                }
+
+                // Badge XP
+                let badgeXP = 0;
+                if (pData.badges) {
+                    pData.badges.forEach(bName => {
+                        const bDef = questDef.badges?.find(b => b.name === bName);
+                        if (bDef && bDef.tier && VALHALLA_CONSTANTS.BADGE_XP[bDef.tier]) {
+                            badgeXP += VALHALLA_CONSTANTS.BADGE_XP[bDef.tier];
+                        }
+                    });
+                }
+
+                const finalQuestXP = Math.floor((questBaseXP * multiplier) + badgeXP);
+                scores.TOTAL += finalQuestXP;
+
+                // Split XP among pillars
+                const splitCount = questDef.pillars.length;
+                const xpPerPillar = Math.floor(finalQuestXP / splitCount);
+                questDef.pillars.forEach(pid => {
+                    scores[pid] += xpPerPillar;
+                });
+            });
+
+            return scores;
+        };
+
+
+
+        const StaffCalendar = () => {
             return (
-                <div className="card" style={{ padding: '1rem', borderLeft: `4px solid ${getBadgeColor(currentLevel)}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                        <div>
-                            <h4 style={{ margin: '0 0 0.25rem 0', color: currentLevel !== 'None' ? getBadgeColor(currentLevel) : 'var(--text-primary)' }}>
-                                {quest.name} {currentLevel !== 'None' && <span style={{ fontSize: '0.7em', border: `1px solid ${getBadgeColor(currentLevel)}`, padding: '2px 6px', borderRadius: '4px', marginLeft: '0.5rem' }}>{currentLevel}</span>}
-                            </h4>
-                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{quest.description}</p>
-                        </div>
-                        {quest.verifyType !== 'auto' && (
-                            <button onClick={onUpdate} style={{ background: 'var(--surface)', border: 'none', padding: '0.25rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>
-                                Update
-                            </button>
-                        )}
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem', overflowY: 'auto' }}>
+                    <div className="card" style={{ padding: '2rem' }}>
+                        <h2 style={{ margin: '0 0 0.5rem 0' }}>Annual Program Calendar</h2>
+                        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+                            Master schedule for Staff, Program Events, and Valhalla XP Milestones.
+                        </p>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div style={{ background: 'var(--surface)', height: '8px', borderRadius: '4px', overflow: 'hidden', marginTop: '0.75rem' }}>
-                        <div style={{ width: `${percent}%`, background: getBadgeColor(nextLevelName), height: '100%', transition: 'width 0.3s' }}></div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        <span>Current: {currentValue} {quest.dataType === 'percentage' ? '%' : ''}</span>
-                        <span>Next: {nextLevelName} ({nextThreshold}{quest.dataType === 'percentage' ? '%' : ''})</span>
-                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                        {VALHALLA_CONSTANTS.ANNUAL_CALENDAR_DEFAULTS.map((month, idx) => (
+                            <div key={idx} className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                <div style={{ background: 'var(--surface)', padding: '1rem', fontWeight: 'bold', fontSize: '1.2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    {month.month}
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>{idx + 1}</span>
+                                </div>
+                                <div style={{ padding: '1.5rem' }}>
+                                    {/* Program Events */}
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{
+                                            fontSize: '0.75rem', color: '#60a5fa', fontWeight: 'bold',
+                                            marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em',
+                                            display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                        }}>
+                                            <Icon name="Calendar" size={12} /> Program / Staff
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                            {month.program.map((item, i) => (
+                                                <li key={i} style={{ marginBottom: '6px' }}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
 
-                    {/* Visual Thresholds */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)', fontSize: '0.7rem' }}>
-                        {Object.entries(quest.thresholds).map(([level, val]) => (
-                            <div key={level} style={{ color: currentLevel === level || (VALHALLA_CONSTANTS.LEVELS[level] && getValueForLevel(quest, currentLevel) >= val) ? getBadgeColor(level) : 'var(--text-secondary)', opacity: currentLevel === level ? 1 : 0.6 }}>
-                                {level.charAt(0)}: {quest.customLabels?.[level] || val}
+                                    {/* Valhalla XP */}
+                                    <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
+                                        <div style={{
+                                            fontSize: '0.75rem', color: '#ffd700', fontWeight: 'bold',
+                                            marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em',
+                                            display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                        }}>
+                                            <Icon name="Award" size={12} /> Valhalla XP
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                            {month.valhalla.map((item, i) => (
+                                                <li key={i} style={{ marginBottom: '6px' }}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -6228,39 +6392,202 @@
             );
         };
 
-        // Helper to compare levels logic if needed
-        const getValueForLevel = (quest, level) => quest.thresholds[level] || 0;
-
-
-        const ValhallaDashboard = ({ roster, valhallaData, onUpdateValhalla }) => {
-            const [activeTab, setActiveTab] = useState('player'); // player, quests, admin
+        const ValhallaDashboard = ({ roster, valhallaData, onUpdateValhalla, initialTab = 'player' }) => {
+            const [activeTab, setActiveTab] = useState(initialTab); // player, quests, admin
             const [selectedPlayerId, setSelectedPlayerId] = useState(roster[0]?.id || null);
             const selectedPlayer = roster.find(p => p.id === selectedPlayerId);
 
-            // Calculate total XP for a player
-            const getPlayerXP = (pid) => {
-                const pData = valhallaData.progress[pid] || {};
-                let xp = 0;
-                Object.values(pData).forEach(q => {
-                    if (q.currentLevel && VALHALLA_CONSTANTS.XP[q.currentLevel.toUpperCase()]) {
-                        xp += VALHALLA_CONSTANTS.XP[q.currentLevel.toUpperCase()];
-                    }
-                });
-                return xp;
+            // Modal State
+            const [showEventModal, setShowEventModal] = useState(false);
+            const [editingEvent, setEditingEvent] = useState(null);
+
+            // "Smart" Badge AI Logic
+            const BADGE_SUGGESTIONS = {
+                'fund': [
+                    { name: 'Rainmaker', tier: 'Platinum' },
+                    { name: 'The 500 Club', tier: 'Silver' },
+                    { name: 'Golden Donor', tier: 'Gold' },
+                    { name: 'Fundraising King', tier: 'Gold' },
+                    { name: 'Community Hero', tier: 'Bronze' }
+                ],
+                'lift': [
+                    { name: 'Iron Titan', tier: 'Platinum' },
+                    { name: 'Bar Bender', tier: 'Silver' },
+                    { name: 'Gym Rat', tier: 'Bronze' },
+                    { name: 'Hercules', tier: 'Gold' },
+                    { name: 'Plate Smashing', tier: 'Silver' }
+                ],
+                'strength': [
+                    { name: 'Iron Titan', tier: 'Platinum' },
+                    { name: 'Strongman', tier: 'Gold' },
+                    { name: 'Powerhouse', tier: 'Silver' }
+                ],
+                'run': [
+                    { name: 'Speed Demon', tier: 'Gold' },
+                    { name: 'Flash', tier: 'Silver' },
+                    { name: 'Road Runner', tier: 'Bronze' },
+                    { name: 'Marathon Man', tier: 'Gold' }
+                ],
+                'speed': [
+                    { name: 'Speed Demon', tier: 'Gold' },
+                    { name: 'Flash', tier: 'Silver' },
+                    { name: 'Lightning', tier: 'Bronze' },
+                    { name: 'Afterburners', tier: 'Silver' }
+                ],
+                'camp': [
+                    { name: 'Camp Beast', tier: 'Gold' },
+                    { name: 'Survivor', tier: 'Bronze' },
+                    { name: 'Leadership Council', tier: 'Platinum' },
+                    { name: 'Tone Setter', tier: 'Silver' }
+                ],
+                'combine': [
+                    { name: 'Combine King', tier: 'Platinum' },
+                    { name: 'Off the Charts', tier: 'Gold' },
+                    { name: 'Freak Athlete', tier: 'Silver' },
+                    { name: 'Record Breaker', tier: 'Gold' }
+                ],
+                'community': [
+                    { name: 'Community Hero', tier: 'Gold' },
+                    { name: 'Ambassador', tier: 'Silver' },
+                    { name: 'Servant Leader', tier: 'Platinum' }
+                ],
+                'default': [
+                    { name: 'Valhalla Bound', tier: 'Bronze' },
+                    { name: 'Points Machine', tier: 'Silver' },
+                    { name: 'Program Legend', tier: 'Platinum' },
+                    { name: 'Hard Hat', tier: 'Bronze' },
+                    { name: 'Lunch Pail', tier: 'Bronze' }
+                ]
             };
 
-            const sortedRoster = [...roster].sort((a, b) => getPlayerXP(b.id) - getPlayerXP(a.id));
+            const suggestBadges = (eventName) => {
+                const lowerName = eventName.toLowerCase();
+                let suggestions = [];
+                const seen = new Set();
 
-            const updateQuestProgress = (playerId, questId, newValue, level) => {
+                // Helper to add unique by name
+                const add = (list) => {
+                    list.forEach(b => {
+                        if (!seen.has(b.name)) {
+                            seen.add(b.name);
+                            suggestions.push(b);
+                        }
+                    });
+                };
+
+                Object.keys(BADGE_SUGGESTIONS).forEach(key => {
+                    if (key !== 'default' && lowerName.includes(key)) {
+                        add(BADGE_SUGGESTIONS[key]);
+                    }
+                });
+
+                // If empty or few, add generic
+                if (suggestions.length < 3) {
+                    add(BADGE_SUGGESTIONS['default']);
+                }
+
+                return suggestions.slice(0, 5); // Return top 5 objects
+            };
+
+            // Tier Color Helper
+            const getTierColor = (tier) => {
+                switch (tier) {
+                    case 'Platinum': return '#e5e4e2'; // Platinum/White
+                    case 'Gold': return '#ffd700';
+                    case 'Silver': return '#c0c0c0';
+                    case 'Bronze': return '#cd7f32';
+                    case 'Iron': return '#4a4a4a';
+                    default: return '#3b82f6'; // Blue default
+                }
+            };
+
+            // Calculate total XP for a player using new Pillar Logic + Custom Events
+            const getPlayerScores = (pid) => {
+                const pData = valhallaData.progress[pid] || {};
+                const scores = calculatePillarXP(pData);
+
+                // Add Custom Event XP
+                const customEvents = valhallaData.programEvents || [];
+                const participation = valhallaData.participation || {};
+
+                customEvents.forEach(ev => {
+                    const eventPart = participation[ev.id] || {};
+                    const playerPart = eventPart[pid];
+
+                    if (playerPart) {
+                        // Base Points
+                        const points = parseInt(ev.points || 0);
+                        if (points > 0) {
+                            scores.TOTAL += points;
+                            // Split across pillars (default behavior for generic events)
+                            const split = Math.floor(points / 3);
+                            scores.CHARACTER += split;
+                            scores.CONNECTION += split;
+                            scores.COMPETENCE += split;
+                            // Add remainder to Connection
+                            scores.CONNECTION += (points % 3);
+                        }
+
+                        // Check for Custom Badges (if we implementing tracking specific badges per user later)
+                        // For now assuming binary participation = all points
+                    }
+                });
+
+                return scores;
+            };
+
+            const sortedRoster = [...roster].sort((a, b) => getPlayerScores(b.id).TOTAL - getPlayerScores(a.id).TOTAL);
+
+            const updateQuestInput = (playerId, questId, inputName, value) => {
                 const newData = { ...valhallaData };
                 if (!newData.progress[playerId]) newData.progress[playerId] = {};
+                if (!newData.progress[playerId][questId]) newData.progress[playerId][questId] = { inputs: {}, multipliers: [] };
 
-                // If pure update verify
-                newData.progress[playerId][questId] = {
-                    currentValue: newValue,
-                    currentLevel: level,
-                    lastUpdated: new Date().toISOString()
-                };
+                // Ensure inputs object exists
+                if (!newData.progress[playerId][questId].inputs) newData.progress[playerId][questId].inputs = {};
+
+                newData.progress[playerId][questId].inputs[inputName] = value;
+                newData.progress[playerId][questId].lastUpdated = new Date().toISOString();
+
+                onUpdateValhalla(newData);
+            };
+
+            const toggleQuestMultiplier = (playerId, questId, multiplierLabel) => {
+                const newData = { ...valhallaData };
+                if (!newData.progress[playerId]) newData.progress[playerId] = {};
+                if (!newData.progress[playerId][questId]) newData.progress[playerId][questId] = { inputs: {}, multipliers: [] };
+
+                const currentMultipliers = newData.progress[playerId][questId].multipliers || [];
+                const idx = currentMultipliers.indexOf(multiplierLabel);
+
+                if (idx >= 0) {
+                    currentMultipliers.splice(idx, 1);
+                } else {
+                    currentMultipliers.push(multiplierLabel);
+                }
+
+                newData.progress[playerId][questId].multipliers = currentMultipliers;
+                onUpdateValhalla(newData);
+            };
+
+            const toggleQuestBadge = (playerId, questId, badgeName) => {
+                const newData = { ...valhallaData };
+                if (!newData.progress[playerId]) newData.progress[playerId] = {};
+                if (!newData.progress[playerId][questId]) newData.progress[playerId][questId] = { inputs: {}, multipliers: [], badges: [] };
+
+                // ensure badges array exists
+                if (!newData.progress[playerId][questId].badges) newData.progress[playerId][questId].badges = [];
+
+                const currentBadges = newData.progress[playerId][questId].badges;
+                const idx = currentBadges.indexOf(badgeName);
+
+                if (idx >= 0) {
+                    currentBadges.splice(idx, 1);
+                } else {
+                    currentBadges.push(badgeName);
+                }
+
+                newData.progress[playerId][questId].badges = currentBadges;
                 onUpdateValhalla(newData);
             };
 
@@ -6276,20 +6603,24 @@
                             </p>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--surface)', padding: '4px', borderRadius: '8px' }}>
-                            {['player', 'quests', 'leaderboard', 'admin'].map(tab => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    style={{
-                                        padding: '0.5rem 1rem', border: 'none', borderRadius: '6px',
-                                        background: activeTab === tab ? 'var(--accent)' : 'transparent',
-                                        color: activeTab === tab ? 'white' : 'var(--text-secondary)',
-                                        cursor: 'pointer', fontWeight: 'bold', textTransform: 'capitalize'
-                                    }}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
+                            {['player', 'events', 'leaderboard', 'admin'].map(tab => {
+                                let label = tab;
+                                if (tab === 'events') label = 'Badge & XP System';
+                                return (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        style={{
+                                            padding: '0.5rem 1rem', border: 'none', borderRadius: '6px',
+                                            background: activeTab === tab ? 'var(--accent)' : 'transparent',
+                                            color: activeTab === tab ? 'white' : 'var(--text-secondary)',
+                                            cursor: 'pointer', fontWeight: 'bold', textTransform: 'capitalize'
+                                        }}
+                                    >
+                                        {label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </header>
 
@@ -6297,107 +6628,605 @@
                         <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '1.5rem', flex: 1, overflow: 'hidden' }}>
                             {/* Roster List with XP */}
                             <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                                    <input type="text" placeholder="Search players..." style={{ width: '100%', padding: '0.5rem' }} />
+                                <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold' }}>
+                                    Roster (Ranked)
                                 </div>
                                 <div style={{ overflowY: 'auto', flex: 1 }}>
-                                    {sortedRoster.map(p => (
-                                        <div
-                                            key={p.id}
-                                            onClick={() => setSelectedPlayerId(p.id)}
-                                            style={{
-                                                padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)',
-                                                background: selectedPlayerId === p.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                                cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                                            }}
-                                        >
-                                            <span style={{ fontWeight: selectedPlayerId === p.id ? 'bold' : 'normal' }}>{p.name}</span>
-                                            <span style={{ fontSize: '0.8rem', background: 'var(--surface)', padding: '2px 6px', borderRadius: '4px', color: '#ffd700' }}>
-                                                {getPlayerXP(p.id)} XP
-                                            </span>
-                                        </div>
-                                    ))}
+                                    {sortedRoster.map((p, idx) => {
+                                        const scores = getPlayerScores(p.id);
+                                        return (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => setSelectedPlayerId(p.id)}
+                                                style={{
+                                                    padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)',
+                                                    background: selectedPlayerId === p.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                                    cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <span style={{ color: 'var(--text-secondary)', width: '20px' }}>{idx + 1}</span>
+                                                    <span>{p.name}</span>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontWeight: 'bold', color: '#ffd700' }}>{scores.TOTAL} XP</div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                             </div>
 
-                            {/* Player Detail */}
-                            {selectedPlayer ? (
-                                <div style={{ overflowY: 'auto', paddingRight: '0.5rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: '1.5rem' }}>
-                                        <div>
-                                            <h1 style={{ margin: 0 }}>{selectedPlayer.name}</h1>
-                                            <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                                                <span>{selectedPlayer.position}</span>
-                                                <span>•</span>
-                                                <span>Class of {selectedPlayer.year}</span>
+                            {/* Detailed Player View */}
+                            <div className="card" style={{ padding: '2rem', overflowY: 'auto' }}>
+                                {selectedPlayer ? (
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                            <div>
+                                                <h1 style={{ margin: 0 }}>{selectedPlayer.name}</h1>
+                                                <div style={{ color: 'var(--text-secondary)' }}>{selectedPlayer.position} • {selectedPlayer.year}</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffd700' }}>{getPlayerScores(selectedPlayer.id).TOTAL} XP</div>
+                                                <div style={{ color: 'var(--text-secondary)' }}>Total Valhalla Points</div>
                                             </div>
                                         </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffd700' }}>{getPlayerXP(selectedPlayer.id)}</div>
-                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total XP</div>
+
+                                        {/* 3 Pillars Scoreboard */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+                                            {Object.values(VALHALLA_CONSTANTS.PILLARS).map(pillar => {
+                                                const score = getPlayerScores(selectedPlayer.id)[pillar.id];
+                                                return (
+                                                    <div key={pillar.id} style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', borderLeft: `4px solid ${pillar.color}` }}>
+                                                        <div style={{ color: pillar.color, fontWeight: 'bold', marginBottom: '0.25rem' }}>{pillar.label}</div>
+                                                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{score}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{pillar.description}</div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Seasonal Quests Accordions */}
+                                        {['CORE', 'SUMMER', 'IN_SEASON', 'OFF_SEASON'].map(seasonId => {
+                                            const season = VALHALLA_CONSTANTS.SEASONS[seasonId];
+                                            const seasonQuests = Object.values(VALHALLA_CONSTANTS.QUESTS).filter(q => q.season === seasonId);
+
+                                            return (
+                                                <div key={seasonId} style={{ marginBottom: '2rem' }}>
+                                                    <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        {season.label} <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>({seasonQuests.length} Quests)</span>
+                                                    </h3>
+
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+                                                        {seasonQuests.map(quest => {
+                                                            const pProgress = valhallaData.progress[selectedPlayer.id]?.[quest.id] || { inputs: {}, multipliers: [] };
+
+                                                            return (
+                                                                <div key={quest.id} style={{ background: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                                        <div style={{ fontWeight: 'bold' }}>{quest.name}</div>
+                                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                                            {quest.pillars.map(pid => (
+                                                                                <div key={pid} style={{ width: '8px', height: '8px', borderRadius: '50%', background: VALHALLA_CONSTANTS.PILLARS[pid].color, title: pid }}></div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Inputs */}
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                                                                        {quest.inputs.map((input, idx) => (
+                                                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
+                                                                                <span title={`+${input.xpPerUnit} XP per unit`}>{input.name}</span>
+                                                                                {input.type === 'Boolean' ? (
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={pProgress.inputs[input.name] === true}
+                                                                                        onChange={e => updateQuestInput(selectedPlayer.id, quest.id, input.name, e.target.checked)}
+                                                                                        style={{ width: '16px', height: '16px' }}
+                                                                                    />
+                                                                                ) : (
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        value={pProgress.inputs[input.name] || ''}
+                                                                                        placeholder="0"
+                                                                                        onChange={e => updateQuestInput(selectedPlayer.id, quest.id, input.name, parseFloat(e.target.value))}
+                                                                                        style={{ width: '60px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-panel)', color: 'white', textAlign: 'right' }}
+                                                                                    />
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+
+                                                                    {/* Multipliers */}
+                                                                    {quest.multipliers && quest.multipliers.length > 0 && (
+                                                                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.5rem' }}>
+                                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Multipliers</div>
+                                                                            {quest.multipliers.map((m, mIdx) => (
+                                                                                <label key={mIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={(pProgress.multipliers || []).includes(m.label)}
+                                                                                        onChange={() => toggleQuestMultiplier(selectedPlayer.id, quest.id, m.label)}
+                                                                                    />
+                                                                                    <span>{m.label} <span style={{ color: '#ffd700' }}>(+{m.value * 100}%)</span></span>
+                                                                                </label>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Badges Toggles */}
+                                                                    {quest.badges && (
+                                                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
+                                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Badges</div>
+                                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                                                {quest.badges.map((b, bI) => (
+                                                                                    <label key={bI} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                                                        <input
+                                                                                            type="checkbox"
+                                                                                            checked={(pProgress.badges || []).includes(b.name)}
+                                                                                            onChange={() => toggleQuestBadge(selectedPlayer.id, quest.id, b.name)}
+                                                                                        />
+                                                                                        <span style={{ color: getTierColor(b.tier), fontWeight: 'bold' }}>
+                                                                                            {b.name}
+                                                                                        </span>
+                                                                                        {VALHALLA_CONSTANTS.BADGE_XP[b.tier] && (
+                                                                                            <span style={{ fontSize: '0.7em', color: 'var(--text-secondary)' }}>
+                                                                                                (+{VALHALLA_CONSTANTS.BADGE_XP[b.tier]})
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </label>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Program Event Participation Tracker - Kept for Custom Events */}
+                                        <div style={{ marginTop: '3rem', borderTop: '1px solid var(--border)', paddingTop: '2rem' }}>
+                                            <div style={{ marginBottom: '1.5rem' }}>
+                                                <h2 style={{ margin: 0 }}>Custom / Extra Events</h2>
+                                                <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
+                                                    Additional events created in the Events tab.
+                                                </p>
+                                            </div>
+                                            {/* ... existing Program Events rendering ... */}
+                                            {/* Simplifying for this block replacement - just invoking the loop if needed or keeping standard */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                {(valhallaData.programEvents || []).map(ev => {
+                                                    const playerData = valhallaData.participation?.[ev.id]?.[selectedPlayer.id] || {};
+                                                    return (
+                                                        <div key={ev.id} style={{ padding: '1rem', background: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                            <div style={{ fontWeight: 'bold' }}>{ev.name}</div>
+                                                            {/* Simplified read-only for now or quick edit - keeping basic structure */}
+                                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Event tracking is separate from Seasonal Quests directly</div>
+                                                            { /* Re-implement fully if needed, but Valhalla 2.0 subsumes most generically */}
+                                                        </div>
+                                                    )
+                                                })}
+                                                {(!valhallaData.programEvents || valhallaData.programEvents.length === 0) && (
+                                                    <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No custom events defined.</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Select a player to view details.</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'events' && (
+                        <div className="card" style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <h2 style={{ margin: 0 }}>Valhalla Badge & XP System</h2>
+                                    <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
+                                        Manage custom events and view system standards.
+                                    </p>
+                                </div>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => {
+                                        setEditingEvent({
+                                            id: Date.now(),
+                                            name: '',
+                                            points: 0,
+                                            metrics: [],
+                                            badges: []
+                                        });
+                                        setShowEventModal(true);
+                                    }}
+                                >
+                                    ➕ Add New Event
+                                </button>
+                            </div>
+                            {/* Custom Events Header */}
+                            <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Custom Events</h3>
+                            <div style={{ overflowY: 'auto', flex: 1 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-panel)' }}>
+                                        <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                                            <th style={{ padding: '1rem' }}>Event Name</th>
+                                            <th style={{ padding: '1rem' }}>Points</th>
+                                            <th style={{ padding: '1rem' }}>Metrics</th>
+                                            <th style={{ padding: '1rem' }}>Badges</th>
+                                            <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(valhallaData.programEvents || []).map(ev => (
+                                            <tr key={ev.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                <td style={{ padding: '1rem', fontWeight: 'bold' }}>{ev.name}</td>
+                                                <td style={{ padding: '1rem', color: '#ffd700' }}>{ev.points}</td>
+                                                <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                                                    {(ev.metrics || []).length > 0 ? (
+                                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                            {ev.metrics.map((m, i) => (
+                                                                <span key={i} style={{ background: 'var(--surface)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                                    {m.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : <span style={{ color: 'var(--text-secondary)' }}>None</span>}
+                                                </td>
+                                                <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                                                    {(ev.badges || []).length > 0 ? (
+                                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                            {ev.badges.map((b, i) => {
+                                                                const bName = typeof b === 'string' ? b : b.name;
+                                                                const bTier = typeof b === 'string' ? 'Blue' : b.tier;
+                                                                return (
+                                                                    <span key={i} style={{
+                                                                        background: getTierColor(bTier),
+                                                                        color: bTier === 'Platinum' || bTier === 'Silver' ? 'black' : 'white',
+                                                                        padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px'
+                                                                    }}>
+                                                                        <Icon name="Award" size={10} /> {bName}
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ) : <span style={{ color: 'var(--text-secondary)' }}>None</span>}
+                                                </td>
+
+                                                <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                                    <button
+                                                        className="btn btn-sm btn-secondary"
+                                                        style={{ marginRight: '0.5rem' }}
+                                                        title="Edit Event"
+                                                        onClick={() => {
+                                                            setEditingEvent({ ...ev });
+                                                            setShowEventModal(true);
+                                                        }}
+                                                    >
+                                                        <Icon name="Edit" size={14} />
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-sm btn-secondary"
+                                                        style={{ marginRight: '0.5rem' }}
+                                                        title="Duplicate Event"
+                                                        onClick={() => {
+                                                            const newEvent = {
+                                                                ...ev,
+                                                                id: Date.now(),
+                                                                name: ev.name + " (Copy)",
+                                                            };
+                                                            const newData = { ...valhallaData };
+                                                            newData.programEvents.push(newEvent);
+                                                            onUpdateValhalla(newData);
+                                                        }}
+                                                    >
+                                                        <Icon name="Copy" size={14} />
+                                                    </button>
+                                                    <button
+                                                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                                                        onClick={() => {
+                                                            if (!confirm("Delete this event definition?")) return;
+                                                            const newData = { ...valhallaData };
+                                                            newData.programEvents = newData.programEvents.filter(e => e.id !== ev.id);
+                                                            onUpdateValhalla(newData);
+                                                        }}
+                                                    >
+                                                        ➖
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div >
+                        </div >
+                    )}
+
+                    {
+                        activeTab === 'leaderboard' && (
+                            <div className="card" style={{ padding: '2rem' }}>
+                                <h2>XP Leaderboard</h2>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                                            <th style={{ padding: '1rem' }}>Rank</th>
+                                            <th style={{ padding: '1rem' }}>Player</th>
+                                            <th style={{ padding: '1rem' }}>Level</th>
+                                            <th style={{ padding: '1rem', textAlign: 'right' }}>Total XP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sortedRoster.map((p, i) => (
+                                            <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                <td style={{ padding: '1rem' }}>#{i + 1}</td>
+                                                <td style={{ padding: '1rem', fontWeight: 'bold' }}>{p.name}</td>
+                                                <td style={{ padding: '1rem' }}>Warrior</td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', fontFamily: 'monospace', fontSize: '1.1rem', color: '#ffd700' }}>{getPlayerScores(p.id).TOTAL}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )
+                    }
+
+                    {
+                        activeTab === 'admin' && (
+                            <div className="card" style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                                Admin Panel Coming Soon - Use Player tab to manually update values for now.
+                            </div>
+                        )
+                    }
+
+                    {/* Event Editor Modal */}
+                    {
+                        showEventModal && editingEvent && (
+                            <div style={{
+                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                background: 'rgba(0,0,0,0.8)', zIndex: 1000,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <div style={{
+                                    width: '600px', maxWidth: '95%',
+                                    background: 'var(--bg-app)', border: '1px solid var(--border)',
+                                    borderRadius: '12px', padding: '2rem',
+                                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                                }}>
+                                    <h2 style={{ marginTop: 0 }}>{editingEvent.id ? 'Edit Event' : 'New Event'}</h2>
+
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '4px' }}>Event Name</label>
+                                        <input
+                                            type="text"
+                                            value={editingEvent.name}
+                                            onChange={e => setEditingEvent({ ...editingEvent, name: e.target.value })}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-panel)', color: 'white' }}
+                                        />
+                                    </div>
+
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '4px' }}>Default Points</label>
+                                        <input
+                                            type="number"
+                                            value={editingEvent.points}
+                                            onChange={e => setEditingEvent({ ...editingEvent, points: parseInt(e.target.value) || 0 })}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-panel)', color: 'white' }}
+                                        />
+                                    </div>
+
+                                    {/* Metrics Section */}
+                                    <div style={{ marginBottom: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Metrics</h3>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingEvent({
+                                                        ...editingEvent,
+                                                        metrics: [...(editingEvent.metrics || []), { name: 'New Metric', type: 'Number' }]
+                                                    });
+                                                }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                                                title="Add Metric"
+                                            >
+                                                ➕
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {(editingEvent.metrics || []).map((m, idx) => (
+                                                <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={m.name}
+                                                        onChange={e => {
+                                                            const newM = [...editingEvent.metrics];
+                                                            newM[idx].name = e.target.value;
+                                                            setEditingEvent({ ...editingEvent, metrics: newM });
+                                                        }}
+                                                        style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-panel)', color: 'white' }}
+                                                    />
+                                                    <select
+                                                        value={m.type}
+                                                        onChange={e => {
+                                                            const newM = [...editingEvent.metrics];
+                                                            newM[idx].type = e.target.value;
+                                                            setEditingEvent({ ...editingEvent, metrics: newM });
+                                                        }}
+                                                        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-panel)', color: 'white' }}
+                                                    >
+                                                        <option value="Number">Number</option>
+                                                        <option value="Boolean">Yes/No</option>
+                                                        <option value="Text">Text</option>
+                                                    </select>
+                                                    <button
+                                                        onClick={() => {
+                                                            const newM = editingEvent.metrics.filter((_, i) => i !== idx);
+                                                            setEditingEvent({ ...editingEvent, metrics: newM });
+                                                        }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                                                        title="Remove Metric"
+                                                    >
+                                                        ➖
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                                        {Object.values(VALHALLA_CONSTANTS.CATEGORIES).map(cat => (
-                                            <div key={cat}>
-                                                <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--accent)' }}>{cat}</h3>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                                                    {DEFAULT_QUESTS.filter(q => q.category === cat).map(quest => (
-                                                        <QuestCard
-                                                            key={quest.id}
-                                                            quest={quest}
-                                                            progress={valhallaData.progress[selectedPlayer.id]?.[quest.id]}
-                                                            onUpdate={() => {
-                                                                // Placeholder for manual update modal triggering
-                                                                const val = prompt(`Enter new value for ${quest.name} (${quest.dataType}):`);
-                                                                if (val !== null) updateQuestProgress(selectedPlayer.id, quest.id, parseFloat(val) || val, 'Pending'); // Simple prompt for now
+                                    {/* Badges Section */}
+                                    <div style={{ marginBottom: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Badges</h3>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Associate achievement badges</div>
+                                        </div>
+
+                                        {/* Badges List */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                                            {(editingEvent.badges || []).map((b, idx) => {
+                                                const bName = typeof b === 'string' ? b : b.name;
+                                                const bTier = typeof b === 'string' ? 'Blue' : b.tier;
+                                                return (
+                                                    <div key={idx} style={{
+                                                        background: 'var(--surface)', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px',
+                                                        border: `1px solid ${getTierColor(bTier)}`
+                                                    }}>
+                                                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: getTierColor(bTier) }}></span>
+                                                        <span>{bName}</span>
+                                                        <button
+                                                            title="Edit Badge"
+                                                            onClick={() => {
+                                                                const newB = editingEvent.badges.filter((_, i) => i !== idx);
+                                                                setEditingEvent({ ...editingEvent, badges: newB });
+                                                                // Load into inputs
+                                                                setTimeout(() => {
+                                                                    const nameInput = document.getElementById('newBadgeName');
+                                                                    const tierInput = document.getElementById('newBadgeTier');
+                                                                    if (nameInput) {
+                                                                        nameInput.value = bName;
+                                                                        nameInput.focus();
+                                                                    }
+                                                                    if (tierInput) tierInput.value = bTier;
+                                                                }, 0);
                                                             }}
-                                                        />
-                                                    ))}
-                                                </div>
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: '4px', fontSize: '1rem' }}
+                                                        >
+                                                            ✎
+                                                        </button>
+                                                        <button
+                                                            title="Remove Badge"
+                                                            onClick={() => {
+                                                                const newB = editingEvent.badges.filter((_, i) => i !== idx);
+                                                                setEditingEvent({ ...editingEvent, badges: newB });
+                                                            }}
+                                                            style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: '4px' }}
+                                                        >
+                                                            ➖
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Add Badge Control */}
+                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                            <input
+                                                id="newBadgeName"
+                                                type="text"
+                                                placeholder="Badge Name"
+                                                style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-panel)', color: 'white' }}
+                                            />
+                                            <select
+                                                id="newBadgeTier"
+                                                defaultValue="Bronze"
+                                                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-panel)', color: 'white' }}
+                                            >
+                                                <option value="Iron">Iron</option>
+                                                <option value="Bronze">Bronze</option>
+                                                <option value="Silver">Silver</option>
+                                                <option value="Gold">Gold</option>
+                                                <option value="Platinum">Platinum</option>
+                                            </select>
+                                            <button
+                                                className="btn btn-secondary"
+                                                onClick={() => {
+                                                    const nameInput = document.getElementById('newBadgeName');
+                                                    const tierInput = document.getElementById('newBadgeTier');
+                                                    if (nameInput.value) {
+                                                        setEditingEvent({
+                                                            ...editingEvent,
+                                                            badges: [...(editingEvent.badges || []), { name: nameInput.value, tier: tierInput.value }]
+                                                        });
+                                                        nameInput.value = '';
+                                                    }
+                                                }}
+                                            >
+                                                ➕
+                                            </button>
+                                        </div>
+
+                                        {/* Smart Suggestions */}
+                                        <div style={{ marginTop: '0.5rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>AI Suggestions:</span>
+                                                <button
+                                                    onClick={() => {
+                                                        const suggestions = suggestBadges(editingEvent.name);
+                                                        // Filter out already added
+                                                        const currentNames = new Set((editingEvent.badges || []).map(b => typeof b === 'string' ? b : b.name));
+                                                        const newSuggestions = suggestions.filter(s => !currentNames.has(s.name));
+
+                                                        if (newSuggestions.length > 0) {
+                                                            setEditingEvent({
+                                                                ...editingEvent,
+                                                                badges: [...(editingEvent.badges || []), ...newSuggestions]
+                                                            });
+                                                        } else {
+                                                            alert("No new suggestions found based on event name.");
+                                                        }
+                                                    }}
+                                                    style={{ background: 'none', border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: '12px', padding: '2px 8px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                >
+                                                    ✨ Auto-Suggest
+                                                </button>
                                             </div>
-                                        ))}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => setShowEventModal(false)}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={() => {
+                                                const newData = { ...valhallaData };
+                                                if (!newData.programEvents) newData.programEvents = [];
+
+                                                // Update or Add logic
+                                                const existingIdx = newData.programEvents.findIndex(e => e.id === editingEvent.id);
+                                                if (existingIdx >= 0) {
+                                                    newData.programEvents[existingIdx] = editingEvent;
+                                                } else {
+                                                    newData.programEvents.push(editingEvent);
+                                                }
+
+                                                onUpdateValhalla(newData);
+                                                setShowEventModal(false);
+                                            }}
+                                        >
+                                            Save Event
+                                        </button>
                                     </div>
                                 </div>
-                            ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>Select a player to view their Quest Log</div>
-                            )}
-                        </div>
-                    )}
-
-                    {activeTab === 'leaderboard' && (
-                        <div className="card" style={{ padding: '2rem' }}>
-                            <h2>XP Leaderboard</h2>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
-                                        <th style={{ padding: '1rem' }}>Rank</th>
-                                        <th style={{ padding: '1rem' }}>Player</th>
-                                        <th style={{ padding: '1rem' }}>Level</th>
-                                        <th style={{ padding: '1rem', textAlign: 'right' }}>Total XP</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {sortedRoster.map((p, i) => (
-                                        <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '1rem' }}>#{i + 1}</td>
-                                            <td style={{ padding: '1rem', fontWeight: 'bold' }}>{p.name}</td>
-                                            <td style={{ padding: '1rem' }}>Warrior</td>
-                                            <td style={{ padding: '1rem', textAlign: 'right', fontFamily: 'monospace', fontSize: '1.1rem', color: '#ffd700' }}>{getPlayerXP(p.id)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    {activeTab === 'admin' && (
-                        <div className="card" style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                            Admin Panel Coming Soon - Use Player tab to manually update values for now.
-                        </div>
-                    )}
-                </div>
+                            </div>
+                        )
+                    }
+                </div >
             );
         };
 
@@ -16680,7 +17509,11 @@
             const [summerCompData, setSummerCompData] = useLocalStorage('oc-dashboard-summer-comp', null);
             const [valhallaData, setValhallaData] = useLocalStorage('oc-dashboard-valhalla', {
                 progress: {},
-                xpLog: []
+                xpLog: [],
+                careerEvents: {},
+                lastCareerUpdate: null,
+                programEvents: [],
+                participation: {}
             });
 
             // Game Situation State (Lifted for Smart Call Sheet)
@@ -17121,6 +17954,13 @@
 
                             {/* PRACTICE CATEGORY */}
                             {/* PRACTICE CATEGORY */}
+                            {/* PROGRAM MANAGEMENT CATEGORY */}
+                            <CollapsibleCategory title="Program Mgmt" icon="Briefcase" defaultOpen={true}>
+                                <button className={`nav-item ${view === 'calendar' ? 'active' : ''}`} onClick={() => setView('calendar')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    <Icon name="Calendar" size={14} style={{ marginRight: '6px' }} /> Annual Calendar
+                                </button>
+                            </CollapsibleCategory>
+
                             {(currentPermissions.scripts.view || currentPermissions.install.view) && (
                                 <CollapsibleCategory title="Practice" icon="Calendar" defaultOpen={false}>
                                     {currentPermissions.install.view && (
@@ -17213,6 +18053,9 @@
                                 <button className={`nav-item ${view === 'valhalla' ? 'active' : ''}`} onClick={() => setView('valhalla')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', color: '#ffd700', fontWeight: 'bold' }}>
                                     <Icon name="Swords" size={14} style={{ marginRight: '6px' }} /> Quest for Valhalla
                                 </button>
+                                <button className={`nav-item ${view === 'valhalla-events' ? 'active' : ''}`} onClick={() => setView('valhalla-events')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    <Icon name="Calendar" size={14} style={{ marginRight: '6px' }} /> Valhalla Events
+                                </button>
                                 <button className={`nav-item ${view === 'testing-records' ? 'active' : ''}`} onClick={() => setView('testing-records')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                     <Icon name="Award" size={14} style={{ marginRight: '6px' }} /> Program Records
                                 </button>
@@ -17261,6 +18104,10 @@
 
                         {view === 'scouting' && <ScoutingView data={opponentScoutData} onUpdate={setOpponentScoutData} />}
                         {view === 'dashboard' && <GamedayDashboard plays={plays} />}
+                        {view === 'calendar' && <StaffCalendar />}
+
+                        {view === 'valhalla' && <ValhallaDashboard roster={roster} valhallaData={valhallaData || { progress: {}, xpLog: [], programEvents: [], participation: {} }} onUpdateValhalla={setValhallaData} initialTab="player" />}
+                        {view === 'valhalla-events' && <ValhallaDashboard roster={roster} valhallaData={valhallaData || { progress: {}, xpLog: [], programEvents: [], participation: {} }} onUpdateValhalla={setValhallaData} initialTab="events" />}
 
                         {view === 'new-play' && (
                             <PlayInput
@@ -17422,7 +18269,7 @@
                                 view={view === 'staff-duties' ? 'duties' : 'roster'}
                             />
                         )}
-                        {view === 'valhalla' && <ValhallaDashboard roster={roster} valhallaData={valhallaData} onUpdateValhalla={(d) => setValhallaData(d)} />}
+
 
                         {view === 'testing-records' && <TestingRecords />}
 
