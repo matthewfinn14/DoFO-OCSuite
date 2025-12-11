@@ -296,13 +296,32 @@
             .wristband-grid-cell-footer {
                 font-size: 7pt;
                 font-weight: 800;
-                /* Extra bold */
                 text-align: center;
                 background: black;
                 color: white;
                 padding: 1px 0;
                 white-space: nowrap;
                 overflow: hidden;
+            }
+
+            /* --- DEPTH CHART PRINT STYLES --- */
+            .depth-chart-container {
+                display: block !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            .depth-chart-viewport {
+                display: block !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+                border: none !important;
+            }
+
+            /* Hide controls when printing */
+            .depth-chart-controls {
+                display: none !important;
             }
 
             /* Updated Text List Styles (High Contrast) */
@@ -657,6 +676,7 @@
                 Brain: '🧠',
                 FileText: '📝',
                 PlusCircle: '➕',
+                Plus: '➕',
                 List: '📋',
                 Grid: '🔢',
                 Clock: '⏰',
@@ -9682,26 +9702,34 @@
             const [isEditing, setIsEditing] = useState(null);
             const [selectedCoach, setSelectedCoach] = useState(null);
 
-            // Sorting Logic
-            const getRoleWeight = (roleStr) => {
-                if (!roleStr) return 99;
-                const r = roleStr.toLowerCase();
-                if (r.includes('hc') || r.includes('head coach')) return 1;
-                if (r.includes('dc') || r.includes('defensive coordinator')) return 2;
-                if (r.includes('ol') || r.includes('offensive line')) return 3;
-                if (r.includes('special teams') || r.includes('stc')) return 4;
-                return 99;
+            // Drag and Drop Logic
+            const handleDragStart = (e, id) => {
+                e.dataTransfer.setData('staffId', id);
+                e.dataTransfer.effectAllowed = 'move';
             };
 
-            const sortedStaff = useMemo(() => {
-                return [...staff].sort((a, b) => {
-                    const weightA = getRoleWeight(a.role);
-                    const weightB = getRoleWeight(b.role);
-                    if (weightA !== weightB) return weightA - weightB;
-                    return a.name.localeCompare(b.name);
-                });
-            }, [staff]);
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
 
+            const handleDrop = (e, targetId) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData('staffId');
+
+                if (draggedId === targetId) return;
+
+                const draggedIndex = staff.findIndex(m => m.id === draggedId);
+                const targetIndex = staff.findIndex(m => m.id === targetId);
+
+                if (draggedIndex === -1 || targetIndex === -1) return;
+
+                const newStaff = [...staff];
+                const [draggedItem] = newStaff.splice(draggedIndex, 1);
+                newStaff.splice(targetIndex, 0, draggedItem);
+
+                onUpdateStaff(newStaff);
+            };
 
             const addMember = () => {
                 const id = 'coach_' + Date.now();
@@ -9857,8 +9885,8 @@
                     ) : (
                         <div style={{ flex: 1, overflowY: 'auto' }}>
                             {(() => {
-                                const coaches = sortedStaff.filter(m => !m.type || m.type === 'Coach');
-                                const managers = sortedStaff.filter(m => m.type === 'Manager');
+                                const coaches = staff.filter(m => !m.type || m.type === 'Coach');
+                                const managers = staff.filter(m => m.type === 'Manager');
 
                                 const renderStaffTable = (list, title) => (
                                     <div style={{ marginBottom: '2rem' }}>
@@ -9866,6 +9894,7 @@
                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                             <thead>
                                                 <tr style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85rem', borderBottom: '1px solid var(--border)' }}>
+                                                    <th style={{ padding: '0.5rem', width: '30px' }}></th>
                                                     <th style={{ padding: '0.5rem', width: '30%' }}>Name</th>
                                                     <th style={{ padding: '0.5rem', width: '20%' }}>Role</th>
                                                     <th style={{ padding: '0.5rem', width: '10%' }}>Size</th>
@@ -9875,7 +9904,17 @@
                                             </thead>
                                             <tbody>
                                                 {list.map(member => (
-                                                    <tr key={member.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <tr
+                                                        key={member.id}
+                                                        style={{ borderBottom: '1px solid var(--border)', cursor: 'move' }}
+                                                        draggable
+                                                        onDragStart={(e) => handleDragStart(e, member.id)}
+                                                        onDragOver={handleDragOver}
+                                                        onDrop={(e) => handleDrop(e, member.id)}
+                                                    >
+                                                        <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)' }}>
+                                                            <div style={{ cursor: 'grab' }}>⋮⋮</div>
+                                                        </td>
                                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                                             {isEditing === member.id ? (
                                                                 <input
@@ -10430,7 +10469,7 @@
             );
         };
 
-        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout, positionNames = {} }) => {
+        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout, positionNames = {}, onUpdatePositionNames }) => {
 
             // Derive base type and squad level
             const formattedType = chartType || 'OFFENSE';
@@ -10441,87 +10480,88 @@
             // Standard coordinate mappings for different formations
             const FORMATIONS = {
                 'OFFENSE': [
-                    { id: 'OFF_LWR', name: positionNames['X'] || 'X', x: 20, y: 100 },
-                    { id: 'OFF_LT', name: positionNames['LT'] || 'LT', x: 340, y: 100 },
-                    { id: 'OFF_LG', name: positionNames['LG'] || 'LG', x: 520, y: 100 },
-                    { id: 'OFF_C', name: positionNames['C'] || 'C', x: 700, y: 100 },
-                    { id: 'OFF_RG', name: positionNames['RG'] || 'RG', x: 880, y: 100 },
-                    { id: 'OFF_RT', name: positionNames['RT'] || 'RT', x: 1060, y: 100 },
-                    { id: 'OFF_RWR', name: positionNames['Z'] || 'Z', x: 1240, y: 200 },
-                    { id: 'OFF_QB', name: positionNames['QB'] || 'QB', x: 700, y: 300 },
-                    { id: 'OFF_RB', name: positionNames['RB'] || 'RB', x: 700, y: 500 },
-                    { id: 'OFF_SWR', name: positionNames['A'] || 'A', x: 170, y: 200 },
-                    { id: 'OFF_TE', name: positionNames['Y'] || 'Y', x: 1420, y: 100 }
+                    { id: 'OFF_LWR', key: 'X', defaultName: 'X', x: 100, y: 100 },
+                    { id: 'OFF_LT', key: 'LT', defaultName: 'LT', x: 340, y: 100 },
+                    { id: 'OFF_LG', key: 'LG', defaultName: 'LG', x: 520, y: 100 },
+                    { id: 'OFF_C', key: 'C', defaultName: 'C', x: 700, y: 100 },
+                    { id: 'OFF_RG', key: 'RG', defaultName: 'RG', x: 880, y: 100 },
+                    { id: 'OFF_RT', key: 'RT', defaultName: 'RT', x: 1060, y: 100 },
+                    { id: 'OFF_RWR', key: 'Z', defaultName: 'Z', x: 1240, y: 200 },
+                    { id: 'OFF_QB', key: 'QB', defaultName: 'QB', x: 700, y: 300 },
+                    { id: 'OFF_RB', key: 'RB', defaultName: 'RB', x: 700, y: 500 },
+                    { id: 'OFF_SWR', key: 'A', defaultName: 'A', x: 170, y: 200 },
+                    { id: 'OFF_TE', key: 'Y', defaultName: 'Y', x: 1420, y: 100 }
                 ],
                 'DEFENSE': [
-                    { id: 'DEF_LDE', name: 'DE', x: 340, y: 100 },
-                    { id: 'DEF_LDT', name: 'DT', x: 520, y: 100 },
-                    { id: 'DEF_RDT', name: 'NT', x: 880, y: 100 },
-                    { id: 'DEF_RDE', name: 'DE', x: 1060, y: 100 },
-                    { id: 'DEF_WLB', name: 'Will', x: 520, y: 300 },
-                    { id: 'DEF_MLB', name: 'Mike', x: 880, y: 300 },
-                    { id: 'DEF_LCB', name: 'CB', x: 20, y: 200 },
-                    { id: 'DEF_RCB', name: 'CB', x: 1380, y: 200 },
-                    { id: 'DEF_FS', name: 'FS', x: 520, y: 500 },
-                    { id: 'DEF_SS', name: 'SS', x: 880, y: 500 },
-                    { id: 'DEF_NICK', name: 'Nickel', x: 1100, y: 300 }
+                    { id: 'DEF_LDE', key: 'DE', defaultName: 'DE', x: 340, y: 100 },
+                    { id: 'DEF_LDT', key: 'DT', defaultName: 'DT', x: 520, y: 100 },
+                    { id: 'DEF_RDT', key: 'NT', defaultName: 'NT', x: 880, y: 100 },
+                    { id: 'DEF_RDE', key: 'DE', defaultName: 'DE', x: 1060, y: 100 },
+                    { id: 'DEF_WLB', key: 'Will', defaultName: 'Will', x: 520, y: 300 },
+                    { id: 'DEF_MLB', key: 'Mike', defaultName: 'Mike', x: 880, y: 300 },
+                    { id: 'DEF_LCB', key: 'CB', defaultName: 'CB', x: 100, y: 200 },
+                    { id: 'DEF_RCB', key: 'CB', defaultName: 'CB', x: 1380, y: 200 },
+                    { id: 'DEF_FS', key: 'FS', defaultName: 'FS', x: 520, y: 500 },
+                    { id: 'DEF_SS', key: 'SS', defaultName: 'SS', x: 880, y: 500 },
+                    { id: 'DEF_NICK', key: 'Nickel', defaultName: 'Nickel', x: 1100, y: 300 }
                 ],
                 'KICKOFF': [
-                    { id: 'KO_K', name: 'K', x: 700, y: 500 },
-                    { id: 'KO_L1', name: 'L1', x: 600, y: 300 }, { id: 'KO_R1', name: 'R1', x: 800, y: 300 },
-                    { id: 'KO_L2', name: 'L2', x: 500, y: 300 }, { id: 'KO_R2', name: 'R2', x: 900, y: 300 },
-                    { id: 'KO_L3', name: 'L3', x: 400, y: 300 }, { id: 'KO_R3', name: 'R3', x: 1000, y: 300 },
-                    { id: 'KO_L4', name: 'L4', x: 300, y: 300 }, { id: 'KO_R4', name: 'R4', x: 1100, y: 300 },
-                    { id: 'KO_L5', name: 'L5', x: 200, y: 300 }, { id: 'KO_R5', name: 'R5', x: 1200, y: 300 }
+                    { id: 'KO_K', key: 'K', defaultName: 'K', x: 700, y: 500 },
+                    { id: 'KO_L1', key: 'L1', defaultName: 'L1', x: 600, y: 300 }, { id: 'KO_R1', key: 'R1', defaultName: 'R1', x: 800, y: 300 },
+                    { id: 'KO_L2', key: 'L2', defaultName: 'L2', x: 500, y: 300 }, { id: 'KO_R2', key: 'R2', defaultName: 'R2', x: 900, y: 300 },
+                    { id: 'KO_L3', key: 'L3', defaultName: 'L3', x: 400, y: 300 }, { id: 'KO_R3', key: 'R3', defaultName: 'R3', x: 1000, y: 300 },
+                    { id: 'KO_L4', key: 'L4', defaultName: 'L4', x: 300, y: 300 }, { id: 'KO_R4', key: 'R4', defaultName: 'R4', x: 1100, y: 300 },
+                    { id: 'KO_L5', key: 'L5', defaultName: 'L5', x: 200, y: 300 }, { id: 'KO_R5', key: 'R5', defaultName: 'R5', x: 1200, y: 300 }
                 ],
+                // ... other units if needed, adding key/defaultName to ensure consistency if renamed
                 'KICK_RETURN': [
-                    { id: 'KR_R1', name: 'KR', x: 600, y: 600 }, { id: 'KR_R2', name: 'KR', x: 800, y: 600 },
-                    { id: 'KR_FL1', name: 'Front', x: 200, y: 200 }, { id: 'KR_FL2', name: 'Front', x: 1200, y: 200 },
-                    { id: 'KR_M1', name: 'Mid', x: 400, y: 300 }, { id: 'KR_M2', name: 'Mid', x: 1000, y: 300 },
-                    { id: 'KR_M3', name: 'Mid', x: 600, y: 300 }, { id: 'KR_M4', name: 'Mid', x: 800, y: 300 },
-                    { id: 'KR_B1', name: 'Back', x: 500, y: 450 }, { id: 'KR_B2', name: 'Back', x: 900, y: 450 },
-                    { id: 'KR_OFF', name: 'Off', x: 700, y: 450 }
+                    { id: 'KR_R1', defaultName: 'KR', x: 600, y: 600 }, { id: 'KR_R2', defaultName: 'KR', x: 800, y: 600 },
+                    { id: 'KR_FL1', defaultName: 'Front', x: 200, y: 200 }, { id: 'KR_FL2', defaultName: 'Front', x: 1200, y: 200 },
+                    { id: 'KR_M1', defaultName: 'Mid', x: 400, y: 300 }, { id: 'KR_M2', defaultName: 'Mid', x: 1000, y: 300 },
+                    { id: 'KR_M3', defaultName: 'Mid', x: 600, y: 300 }, { id: 'KR_M4', defaultName: 'Mid', x: 800, y: 300 },
+                    { id: 'KR_B1', defaultName: 'Back', x: 500, y: 450 }, { id: 'KR_B2', defaultName: 'Back', x: 900, y: 450 },
+                    { id: 'KR_OFF', defaultName: 'Off', x: 700, y: 450 }
                 ],
                 'PUNT': [
-                    { id: 'P_P', name: 'P', x: 700, y: 600 },
-                    { id: 'P_PP', name: 'PP', x: 700, y: 400 },
-                    { id: 'P_LS', name: 'LS', x: 700, y: 100 },
-                    { id: 'P_L1', name: 'L1', x: 600, y: 100 }, { id: 'P_R1', name: 'R1', x: 800, y: 100 },
-                    { id: 'P_L2', name: 'L2', x: 500, y: 100 }, { id: 'P_R2', name: 'R2', x: 900, y: 100 },
-                    { id: 'P_L3', name: 'Wing', x: 400, y: 150 }, { id: 'P_R3', name: 'Wing', x: 1000, y: 150 },
-                    { id: 'P_G1', name: 'Gunner', x: 100, y: 100 }, { id: 'P_G2', name: 'Gunner', x: 1300, y: 100 }
+                    { id: 'P_P', defaultName: 'P', x: 700, y: 600 },
+                    { id: 'P_PP', defaultName: 'PP', x: 700, y: 400 },
+                    { id: 'P_LS', defaultName: 'LS', x: 700, y: 100 },
+                    { id: 'P_L1', defaultName: 'L1', x: 600, y: 100 }, { id: 'P_R1', defaultName: 'R1', x: 800, y: 100 },
+                    { id: 'P_L2', defaultName: 'L2', x: 500, y: 100 }, { id: 'P_R2', defaultName: 'R2', x: 900, y: 100 },
+                    { id: 'P_L3', defaultName: 'Wing', x: 400, y: 150 }, { id: 'P_R3', defaultName: 'Wing', x: 1000, y: 150 },
+                    { id: 'P_G1', defaultName: 'Gunner', x: 100, y: 100 }, { id: 'P_G2', defaultName: 'Gunner', x: 1300, y: 100 }
                 ],
                 'PUNT_RETURN': [
-                    { id: 'PR_R', name: 'Ret', x: 700, y: 600 },
-                    { id: 'PR_J1', name: 'Jam', x: 100, y: 200 }, { id: 'PR_J2', name: 'Jam', x: 1300, y: 200 },
-                    { id: 'PR_L1', name: 'Rush', x: 300, y: 150 }, { id: 'PR_R1', name: 'Rush', x: 1100, y: 150 },
-                    { id: 'PR_L2', name: 'Rush', x: 400, y: 150 }, { id: 'PR_R2', name: 'Rush', x: 1000, y: 150 },
-                    { id: 'PR_L3', name: 'Rush', x: 500, y: 150 }, { id: 'PR_R3', name: 'Rush', x: 900, y: 150 },
-                    { id: 'PR_L4', name: 'Rush', x: 600, y: 150 }, { id: 'PR_R4', name: 'Rush', x: 800, y: 150 }
+                    { id: 'PR_R', defaultName: 'Ret', x: 700, y: 600 },
+                    { id: 'PR_J1', defaultName: 'Jam', x: 100, y: 200 }, { id: 'PR_J2', defaultName: 'Jam', x: 1300, y: 200 },
+                    { id: 'PR_L1', defaultName: 'Rush', x: 300, y: 150 }, { id: 'PR_R1', defaultName: 'Rush', x: 1100, y: 150 },
+                    { id: 'PR_L2', defaultName: 'Rush', x: 400, y: 150 }, { id: 'PR_R2', defaultName: 'Rush', x: 1000, y: 150 },
+                    { id: 'PR_L3', defaultName: 'Rush', x: 500, y: 150 }, { id: 'PR_R3', defaultName: 'Rush', x: 900, y: 150 },
+                    { id: 'PR_L4', defaultName: 'Rush', x: 600, y: 150 }, { id: 'PR_R4', defaultName: 'Rush', x: 800, y: 150 }
                 ],
                 'HANDS_TEAM': [
-                    { id: 'HT_FL1', name: 'Front', x: 200, y: 100 }, { id: 'HT_FL2', name: 'Front', x: 1200, y: 100 },
-                    { id: 'HT_FL3', name: 'Front', x: 400, y: 100 }, { id: 'HT_FL4', name: 'Front', x: 1000, y: 100 },
-                    { id: 'HT_FL5', name: 'Front', x: 600, y: 100 }, { id: 'HT_FL6', name: 'Front', x: 800, y: 100 },
-                    { id: 'HT_M1', name: 'Mid', x: 300, y: 300 }, { id: 'HT_M2', name: 'Mid', x: 1100, y: 300 },
-                    { id: 'HT_M3', name: 'Mid', x: 700, y: 300 },
-                    { id: 'HT_D1', name: 'Deep', x: 500, y: 500 }, { id: 'HT_D2', name: 'Deep', x: 900, y: 500 }
+                    { id: 'HT_FL1', defaultName: 'Front', x: 200, y: 100 }, { id: 'HT_FL2', defaultName: 'Front', x: 1200, y: 100 },
+                    { id: 'HT_FL3', defaultName: 'Front', x: 400, y: 100 }, { id: 'HT_FL4', defaultName: 'Front', x: 1000, y: 100 },
+                    { id: 'HT_FL5', defaultName: 'Front', x: 600, y: 100 }, { id: 'HT_FL6', defaultName: 'Front', x: 800, y: 100 },
+                    { id: 'HT_M1', defaultName: 'Mid', x: 300, y: 300 }, { id: 'HT_M2', defaultName: 'Mid', x: 1100, y: 300 },
+                    { id: 'HT_M3', defaultName: 'Mid', x: 700, y: 300 },
+                    { id: 'HT_D1', defaultName: 'Deep', x: 500, y: 500 }, { id: 'HT_D2', defaultName: 'Deep', x: 900, y: 500 }
                 ],
                 'ONSIDE_KICK': [
-                    { id: 'OS_K', name: 'K', x: 700, y: 500 },
-                    { id: 'OS_L1', name: 'L1', x: 650, y: 300 }, { id: 'OS_R1', name: 'R1', x: 750, y: 300 },
-                    { id: 'OS_L2', name: 'L2', x: 600, y: 300 }, { id: 'OS_R2', name: 'R2', x: 800, y: 300 },
-                    { id: 'OS_L3', name: 'L3', x: 550, y: 300 }, { id: 'OS_R3', name: 'R3', x: 850, y: 300 },
-                    { id: 'OS_L4', name: 'L4', x: 500, y: 300 }, { id: 'OS_R4', name: 'R4', x: 900, y: 300 },
-                    { id: 'OS_L5', name: 'L5', x: 450, y: 300 }, { id: 'OS_R5', name: 'R5', x: 950, y: 300 }
+                    { id: 'OS_K', defaultName: 'K', x: 700, y: 500 },
+                    { id: 'OS_L1', defaultName: 'L1', x: 650, y: 300 }, { id: 'OS_R1', defaultName: 'R1', x: 750, y: 300 },
+                    { id: 'OS_L2', defaultName: 'L2', x: 600, y: 300 }, { id: 'OS_R2', defaultName: 'R2', x: 800, y: 300 },
+                    { id: 'OS_L3', defaultName: 'L3', x: 550, y: 300 }, { id: 'OS_R3', defaultName: 'R3', x: 850, y: 300 },
+                    { id: 'OS_L4', defaultName: 'L4', x: 500, y: 300 }, { id: 'OS_R4', defaultName: 'R4', x: 900, y: 300 },
+                    { id: 'OS_L5', defaultName: 'L5', x: 450, y: 300 }, { id: 'OS_R5', defaultName: 'R5', x: 950, y: 300 }
                 ],
                 'PAT_BLOCK': [
-                    { id: 'PB_1', name: 'Rush', x: 100, y: 100 }, { id: 'PB_11', name: 'Rush', x: 1300, y: 100 },
-                    { id: 'PB_2', name: 'Rush', x: 220, y: 100 }, { id: 'PB_10', name: 'Rush', x: 1180, y: 100 },
-                    { id: 'PB_3', name: 'Rush', x: 340, y: 100 }, { id: 'PB_9', name: 'Rush', x: 1060, y: 100 },
-                    { id: 'PB_4', name: 'Rush', x: 460, y: 100 }, { id: 'PB_8', name: 'Rush', x: 940, y: 100 },
-                    { id: 'PB_5', name: 'Rush', x: 580, y: 100 }, { id: 'PB_7', name: 'Rush', x: 820, y: 100 },
-                    { id: 'PB_6', name: 'Safe', x: 700, y: 400 }
+                    { id: 'PB_1', defaultName: 'Rush', x: 100, y: 100 }, { id: 'PB_11', defaultName: 'Rush', x: 1300, y: 100 },
+                    { id: 'PB_2', defaultName: 'Rush', x: 220, y: 100 }, { id: 'PB_10', defaultName: 'Rush', x: 1180, y: 100 },
+                    { id: 'PB_3', defaultName: 'Rush', x: 340, y: 100 }, { id: 'PB_9', defaultName: 'Rush', x: 1060, y: 100 },
+                    { id: 'PB_4', defaultName: 'Rush', x: 460, y: 100 }, { id: 'PB_8', defaultName: 'Rush', x: 940, y: 100 },
+                    { id: 'PB_5', defaultName: 'Rush', x: 580, y: 100 }, { id: 'PB_7', defaultName: 'Rush', x: 820, y: 100 },
+                    { id: 'PB_6', defaultName: 'Safe', x: 700, y: 400 }
                 ]
             };
 
@@ -10530,7 +10570,10 @@
             // Merge default positions with saved custom layout
             const positions = defaultPositions.map(pos => {
                 const saved = savedLayout[pos.id];
-                return saved ? { ...pos, x: saved.x, y: saved.y } : pos;
+                // Determine name: user key override > default key override > default name
+                // Note: user key override is positionNames[pos.key]
+                const name = (pos.key ? positionNames[pos.key] : null) || pos.defaultName;
+                return saved ? { ...pos, x: saved.x, y: saved.y, name } : { ...pos, name };
             });
 
             const getPlayer = (id) => roster.find(p => p.id === id);
@@ -10554,14 +10597,21 @@
                 'PAT_BLOCK': 'PAT / FG Block'
             };
 
-            // Draggable Logic
+            // Draggable & Renaming Logic
+            const [isLocked, setIsLocked] = useLocalStorage('depthChartLocked', false);
             const [draggingId, setDraggingId] = useState(null);
             const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
             const [tempPosition, setTempPosition] = useState(null); // { x, y } while dragging
 
+            // Renaming State
+            const [editingId, setEditingId] = useState(null);
+            const [editName, setEditName] = useState("");
+
             const handleMouseDown = (e, pos) => {
-                // Prevent drag if clicking on select or anything that shouldn't be dragged
-                if (e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION') return;
+                // Prevent drag if locked, clicking select, or editing
+                if (isLocked) return;
+                if (e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION' || e.target.tagName === 'INPUT') return;
+                if (editingId) return; // Don't drag while editing
 
                 setDraggingId(pos.id);
                 setDragOffset({
@@ -10569,6 +10619,20 @@
                     y: e.clientY - pos.y
                 });
                 setTempPosition({ x: pos.x, y: pos.y });
+            };
+
+            const handleDoubleClick = (pos) => {
+                if (pos.key) {
+                    setEditingId(pos.id);
+                    setEditName(pos.name);
+                }
+            };
+
+            const saveName = (pos) => {
+                if (pos.key && onUpdatePositionNames) {
+                    onUpdatePositionNames({ ...positionNames, [pos.key]: editName.toUpperCase().slice(0, 3) });
+                }
+                setEditingId(null);
             };
 
             const handleMouseMove = (e) => {
@@ -10598,19 +10662,38 @@
                         window.removeEventListener('mouseup', handleMouseUp);
                     };
                 }
-            }, [draggingId, tempPosition]); // Dependency required for closure state access if not using functional updates, but simple enough here.
+            }, [draggingId, tempPosition]);
 
             return (
-                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <div className="depth-chart-container" style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+                    <div className="depth-chart-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                         <h2>{squadName} {chartTitles[baseChartType] || chartTitles['OFFENSE']}</h2>
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button className="btn btn-secondary" onClick={onResetLayout} title="Reset positions to default">Reset Layout</button>
+                            <button
+                                className={`btn ${isLocked ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => setIsLocked(!isLocked)}
+                                title={isLocked ? "Unlock positions to move them" : "Lock positions to prevent changes"}
+                            >
+                                {isLocked ? '🔒 Layout Locked' : '🔓 Lock Layout'}
+                            </button>
+                            {!isLocked && (
+                                <button className="btn btn-secondary" onClick={onResetLayout} title="Reset positions to default">Reset Layout</button>
+                            )}
                             <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
                         </div>
                     </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', position: 'relative', minHeight: '600px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--surface)', userSelect: 'none' }}>
+                    <div className="depth-chart-viewport" style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        overflowX: 'auto',
+                        position: 'relative',
+                        minHeight: '600px',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        background: 'var(--surface)',
+                        userSelect: 'none'
+                    }}>
                         {/* Field Background Hint */}
                         <div style={{
                             position: 'absolute', top: '50px', left: '0', right: '0', height: '2px', background: 'var(--border)',
@@ -10621,11 +10704,13 @@
                             const isDragging = draggingId === pos.id;
                             const x = isDragging ? tempPosition.x : pos.x;
                             const y = isDragging ? tempPosition.y : pos.y;
+                            const isEditing = editingId === pos.id;
 
                             return (
                                 <div
                                     key={pos.id}
                                     onMouseDown={(e) => handleMouseDown(e, pos)}
+                                    onDoubleClick={() => handleDoubleClick(pos)}
                                     style={{
                                         position: 'absolute',
                                         left: `${x}px`,
@@ -10638,12 +10723,41 @@
                                         background: isDragging ? 'var(--highlight)' : 'rgba(0,0,0,0.5)',
                                         padding: '8px',
                                         borderRadius: '8px',
-                                        cursor: isDragging ? 'grabbing' : 'grab',
+                                        cursor: isDragging ? 'grabbing' : (pos.key ? 'pointer' : 'default'),
                                         border: isDragging ? '1px solid var(--accent)' : '1px solid transparent',
                                         zIndex: isDragging ? 10 : 1
                                     }}
                                 >
-                                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '4px' }}>{pos.name}</div>
+                                    {isEditing ? (
+                                        <input
+                                            autoFocus
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            onBlur={() => saveName(pos)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') saveName(pos);
+                                                if (e.key === 'Escape') setEditingId(null);
+                                            }}
+                                            maxLength={3}
+                                            style={{
+                                                textAlign: 'center',
+                                                fontWeight: 'bold',
+                                                color: 'var(--text-primary)',
+                                                marginBottom: '4px',
+                                                background: 'var(--surface)',
+                                                border: '1px solid var(--accent)',
+                                                borderRadius: '4px',
+                                                padding: '2px',
+                                                width: '100%'
+                                            }}
+                                            onClick={(e) => e.stopPropagation()} // Prevent drag start
+                                        />
+                                    ) : (
+                                        <div style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '4px' }}>
+                                            {pos.name}
+                                        </div>
+                                    )}
+
                                     {[0, 1, 2].map(depth => {
                                         const playerId = depthChart[pos.id]?.[depth];
                                         return (
@@ -10667,6 +10781,132 @@
                                 </div>
                             );
                         })}
+                    </div>
+                </div>
+            );
+        };
+
+        const DumbCallSheet = ({ data = {}, onUpdateData, gamePlanLayouts }) => {
+            // Default grid size: 25 rows, 4 columns
+            // Using a simple array of col indices [0,1,2,3]
+            const COLS = 8;
+
+            const ROWS = 25;
+            const [showClearConfirm, setShowClearConfirm] = useState(false);
+            const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+
+            const handleCellChange = (row, col, value) => {
+                const key = `${row}-${col}`;
+                onUpdateData({ ...data, [key]: value });
+            };
+
+            const handleHeaderChange = (col, value) => {
+                const key = `header-${col}`;
+                onUpdateData({ ...data, [key]: value });
+            };
+
+            const clearSheet = () => {
+                onUpdateData({});
+                setShowClearConfirm(false);
+            };
+
+            const syncHeaders = () => {
+                if (!gamePlanLayouts) return;
+
+                const sections = gamePlanLayouts.CALL_SHEET.sections;
+                // Try to grab headers from the second section (Situations) which typically map to columns
+                const sourceRows = sections[1] ? sections[1].rows : (sections[0] ? sections[0].rows : []);
+
+                const newData = { ...data };
+                // Map top 4 categories to 8 columns (LH / RH pairs)
+                sourceRows.slice(0, 4).forEach((cell, idx) => {
+                    newData[`header-${idx * 2}`] = `${cell.header} (LH)`;
+                    newData[`header-${idx * 2 + 1}`] = `${cell.header} (RH)`;
+                });
+                onUpdateData(newData);
+                setShowSyncConfirm(false);
+            };
+
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h2>Basic Call Sheet</h2>
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            {gamePlanLayouts && (
+                                showSyncConfirm ? (
+                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#e5e7eb', padding: '4px', borderRadius: '4px' }}>
+                                        <span style={{ fontSize: '0.8rem' }}>Overwrite headers?</span>
+                                        <button className="btn btn-sm btn-primary" onClick={syncHeaders}>Yes</button>
+                                        <button className="btn btn-sm" onClick={() => setShowSyncConfirm(false)}>No</button>
+                                    </div>
+                                ) : (
+                                    <button className="btn btn-secondary" onClick={() => setShowSyncConfirm(true)} title="Sync headers from Game Plan">🔄 Sync Headers</button>
+                                )
+                            )}
+
+                            {showClearConfirm ? (
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#fee2e2', padding: '4px', borderRadius: '4px' }}>
+                                    <span style={{ fontSize: '0.8rem', color: '#991b1b' }}>Clear all?</span>
+                                    <button className="btn btn-sm" style={{ background: '#dc2626', color: 'white' }} onClick={clearSheet}>Yes</button>
+                                    <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>No</button>
+                                </div>
+                            ) : (
+                                <button className="btn btn-secondary" onClick={() => setShowClearConfirm(true)} title="Clear all entries">Clear Sheet</button>
+                            )}
+
+                            <button className="btn btn-primary" onClick={() => window.print()}>🖨️ Print Call Sheet</button>
+                        </div>
+                    </div>
+
+                    <div className="dumb-sheet-container" style={{
+                        flex: 1,
+                        overflow: 'auto',
+                        background: 'white',
+                        color: 'black',
+                        padding: '1rem',
+                        borderRadius: '8px'
+                    }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}>
+                            <thead>
+                                <tr>
+                                    {[...Array(COLS)].map((_, colIndex) => (
+                                        <th key={colIndex} style={{ border: '2px solid black', padding: '0', height: '40px', background: '#e5e5e5', minWidth: '80px', width: `${100 / COLS}%` }}>
+                                            <input
+                                                type="text"
+                                                value={data[`header-${colIndex}`] || ''}
+                                                onChange={(e) => handleHeaderChange(colIndex, e.target.value)}
+                                                style={{
+                                                    width: '100%', height: '100%', border: 'none', background: 'transparent',
+                                                    textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', padding: '0.5rem',
+                                                    color: 'black'
+                                                }}
+                                                placeholder={`Header ${colIndex + 1}`}
+                                            />
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[...Array(ROWS)].map((_, rowIndex) => (
+                                    <tr key={rowIndex}>
+                                        {[...Array(COLS)].map((_, colIndex) => (
+                                            <td key={colIndex} style={{ border: '1px solid black', padding: '0', height: '32px' }}>
+                                                <input
+                                                    type="text"
+                                                    value={data[`${rowIndex}-${colIndex}`] || ''}
+                                                    onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                                                    style={{
+                                                        width: '100%', height: '100%', border: 'none', padding: '4px 8px', fontSize: '0.9rem',
+                                                        outline: 'none', background: rowIndex % 2 === 0 ? 'white' : '#f9f9f9', color: 'black'
+                                                    }}
+                                                />
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             );
@@ -12390,7 +12630,7 @@
         };
 
 
-        const SmartCallSheet = ({ gamePlan, situation, plays, onUpdateSituation, zonePhilosophies, onUpdatePhilosophy, onUpdateGamePlan, onQuickAddPlay, activePlay, setActivePlay }) => {
+        const SmartCallSheet = ({ gamePlan, situation, plays, onUpdateSituation, zonePhilosophies, onUpdatePhilosophy, onUpdateGamePlan, onQuickAddPlay, activePlay, setActivePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS }) => {
             const [selectedSection, setSelectedSection] = useState(null); // null = main menu, otherwise section key
             const [selectedHash, setSelectedHash] = useState('left'); // For opening script submenu
             const [selected2MinCategory, setSelected2MinCategory] = useState('oob_yac'); // For 2-minute submenu
@@ -12472,51 +12712,83 @@
                 });
             };
 
-            // Define all game plan sections - ORGANIZED BY CATEGORY
-            const gamePlanSections = [
-                // MINI SCRIPTS (Dynamic)
-                ...((gamePlan.miniScripts || []).length > 0 ? [
-                    { type: 'header', label: 'MINI SCRIPTS' },
-                    ...(gamePlan.miniScripts || []).map(ms => ({
-                        key: ms.id,
-                        label: ms.name,
-                        color: ms.color,
-                        icon: 'FileText'
-                    }))
-                ] : []),
+            // Define all game plan sections - DYNAMICALLY DERIVED from gamePlanLayouts
+            const gamePlanSections = useMemo(() => {
+                const layout = gamePlanLayouts.CALL_SHEET;
+                const derivedSections = [];
 
-                // SCRIPTS & SERIES
-                { type: 'header', label: 'SCRIPTS & SERIES' },
-                { key: 'opening_script', label: '🎬 OPENING SCRIPT', color: '#10b981', icon: 'Play', hasSubmenu: true },
-                { key: 'mini_script_1', label: '📝 MINI SCRIPT 1', color: '#06b6d4', icon: 'FileText' },
-                { key: 'mini_script_2', label: '📝 MINI SCRIPT 2', color: '#06b6d4', icon: 'FileText' },
-                { key: 'second_half_openers', label: '🔄 SECOND HALF OPENERS', color: '#f97316', icon: 'RefreshCw' },
+                // Helper to find icon/submenu config from original static list or defaults
+                const getMeta = (key) => {
+                    // Fallback metadata map
+                    const metaMap = {
+                        'player_touches': { icon: 'Users' },
+                        'mini_script_1': { icon: 'FileText' },
+                        'mini_script_2': { icon: 'FileText' },
+                        'opening_script': { icon: 'Play', hasSubmenu: true },
+                        'second_half_openers': { icon: 'RefreshCw' },
+                        'p_and_10': { icon: 'AlertCircle' },
+                        'base_downs': { icon: 'BarChart2' },
+                        '2nd_xl_lh': { icon: 'TrendingDown', hasSubmenu: true }, // Mapped from 2nd_xl in static list?
+                        'eoh': { icon: 'Clock' },
+                        'one_word': { icon: 'Hash', hasSubmenu: true }, // from Matrix?
+                        'form_adj': { icon: 'Grid' },
+                        'motion': { icon: 'Move' },
+                        'tag': { icon: 'Tag' },
+                        '3rd_short': { icon: 'CheckCircle' },
+                        '3rd_med': { icon: 'CheckSquare' },
+                        '3rd_long': { icon: 'AlertTriangle' },
+                        '3rd_xl': { icon: 'XCircle' },
+                        'backed_up': { icon: 'ArrowLeft' },
+                        'coming_out': { icon: 'ArrowRight' },
+                        'open_field': { icon: 'Maximize2' },
+                        'fringe': { icon: 'Navigation' },
+                        'high_red': { icon: 'Flag' },
+                        'low_red': { icon: 'Flag' },
+                        'goal_line': { icon: 'Award' },
+                        '2-point': { icon: 'Star' },
+                        'two_minute_oob_yac': { icon: 'Zap', hasSubmenu: true },
+                        'four_minute': { icon: 'Timer' }
+                    };
+                    return metaMap[key] || { icon: 'Circle' };
+                };
 
+                // Add Mini Scripts (Dynamic)
+                if ((gamePlan.miniScripts || []).length > 0) {
+                    derivedSections.push({ type: 'header', label: 'MINI SCRIPTS' });
+                    (gamePlan.miniScripts || []).forEach(ms => {
+                        derivedSections.push({
+                            key: ms.id,
+                            label: ms.name,
+                            color: ms.color,
+                            icon: 'FileText'
+                        });
+                    });
+                }
 
-                // DOWN & DISTANCE
-                { type: 'header', label: 'Down and Distance' },
-                { key: 'p_and_10', label: 'P&10', color: '#ef4444', icon: 'AlertCircle' },
-                { key: 'base_downs', label: '📊 BASE DOWNS', color: '#14b8a6', icon: 'BarChart2' },
-                { key: '2nd_xl', label: 'GET HALF', color: '#3b82f6', icon: 'TrendingDown', hasSubmenu: true },
-                { key: 'convert_short_med', label: '🎯 CONVERT SHORT/MED', color: '#10b981', icon: 'Target', hasSubmenu: true },
-                { key: 'convert_long_xl', label: '🎯 CONVERT L/XL 7-12+', color: '#059669', icon: 'Crosshair', hasSubmenu: true },
+                // Add Drag-and-Drop Sections from Grid Logic
+                // We'll treat the first section as "Scripts" and second as "Situations" generally, 
+                // but simpler to just map them all in order.
+                derivedSections.push({ type: 'header', label: 'CALL SHEET GRID' });
 
-                // FIELD ZONES
-                { type: 'header', label: 'FIELD ZONES' },
-                { key: 'backed_up', label: 'BACKED UP', color: '#1f2937', icon: 'AlertTriangle' },
-                { key: 'coming_out', label: 'COMING OUT', color: '#6b7280', icon: 'TrendingUp' },
-                { key: 'open_field', label: 'OPEN FIELD', color: '#16a34a', icon: 'Maximize2' },
-                { key: 'fringe', label: 'FRINGE (+45-25)', color: '#f97316', icon: 'Navigation' },
-                { key: 'high_red', label: 'HIGH RED (25-15)', color: '#ef4444', icon: 'Flag' },
-                { key: 'low_red', label: 'LOW RED (15-6)', color: '#eab308', icon: 'Flag' },
-                { key: 'goal_line', label: 'GOAL LINE (5-GL)', color: '#3b82f6', icon: 'Award' },
+                layout.sections.forEach(section => {
+                    section.rows.forEach(cell => {
+                        const meta = getMeta(cell.setId);
 
-                // GAME SITUATIONS
-                { type: 'header', label: 'GAME SITUATIONS' },
-                { key: 'two_minute', label: '2-MINUTE', color: '#8b5cf6', icon: 'Zap', hasSubmenu: true },
-                { key: 'two_point', label: '2-POINT', color: '#8b5cf6', icon: 'Star' },
-                { key: 'four_minute', label: '4-MINUTE', color: '#8b5cf6', icon: 'Timer' }
-            ];
+                        // Handle special re-mapping for legacy keys if needed
+                        // e.g. 2nd_xl_lh vs 2nd_xl. In the grid it is 2nd_xl_lh.
+                        // We use the cell's header as the label.
+                        derivedSections.push({
+                            key: cell.setId,
+                            label: cell.header, // Use the customized header!
+                            color: cell.color,
+                            icon: meta.icon,
+                            hasSubmenu: meta.hasSubmenu
+                        });
+                    });
+                });
+
+                return derivedSections;
+            }, [gamePlanLayouts, gamePlan.miniScripts]);
 
             // Formation groups for matrix view
             const formationGroups = [
@@ -12623,7 +12895,7 @@
             // Main Menu View
             if (!selectedSection) {
                 return (
-                    <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem' }}>
+                    <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem', background: 'white', borderRadius: '8px' }}>
                         <div style={{ textAlign: 'center' }}>
                             <h2 style={{ margin: 0, marginBottom: '0.5rem' }}>Smart Call Sheet</h2>
 
@@ -17508,7 +17780,7 @@
 
 
 
-        const ProgramDashboard = ({ currentWeek, roster, userRole = 'Head Coach', permissions = { view: true, edit: true }, masterTasks = [] }) => {
+        const ProgramDashboard = ({ currentWeek, roster, userRole = 'Head Coach', permissions = { view: true, edit: true }, masterTasks = [], onUpdateTask }) => {
             // Checklist State (Daily, Weekly, Monthly)
             const [dailyFocus, setDailyFocus] = useState([]);
             const [weeklyFocus, setWeeklyFocus] = useState([]);
@@ -17516,6 +17788,7 @@
 
             const [inputs, setInputs] = useState({ daily: '', weekly: '', monthly: '' });
             const [draggedItem, setDraggedItem] = useState(null); // { type: 'daily'|'weekly'|'monthly'|'assigned', index: number, item: object }
+            const [viewingTaskNotes, setViewingTaskNotes] = useState(null); // Task being viewed in modal
 
             // Helper: Wellness Alerts (Unchanged)
             const getWellnessAlerts = (currentRoster) => {
@@ -17716,6 +17989,60 @@
                 return 'someday'; // Default fallback
             };
 
+            // Helper to determine task updates when dropped into a new bucket
+            const getUpdatesForBucket = (task, targetBucket) => {
+                const updates = {};
+                const todayWeekDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+                // If moving to 'today', set recurrence to Daily or category to today-specific
+                if (targetBucket === 'today') {
+                    // Ideally we don't change recurrence unless user wants to, but for "Focus"
+                    // we might just want to ensure it shows up today.
+                    // The simplest way to force it into 'today' bucket logic is:
+                    // 1. If it's a "Game Week" task, maybe we don't change it, just let it be? 
+                    //    But the user explicitly dragged it here.
+                    //    Let's set a temporary override or just simple category change for now.
+                    //    Changing 'recurrence' might be too aggressive.
+                    //    Let's try setting category to 'Administrative' (always shows) + force it to be "today" relevant?
+                    //    Actually, relying on the 'getTaskBucket' logic:
+                    if (task.recurrence !== 'Daily') {
+                        // If we drag to today, maybe we make it a one-off for today?
+                        // Or just set assignDate to today?
+                        updates.assignDate = new Date().toISOString().split('T')[0];
+                        // Also need to ensure it falls into 'today' bucket in getTaskBucket
+                        // simple hack: recurrence = 'Daily' might be too much.
+                        // Let's just assume for this prototype we aren't changing the task DEFINITION
+                        // but rather its properties to make it fit.
+                        // If I move a "Weekly" task to "Today", it should probably stay Weekly but just be done today?
+                        // The user asking for "Drag and Drop" implies changing the STATE of the task.
+                        // Best bet: AssignDate = Today.
+                    }
+                }
+
+                // For now, let's keep it simple: We rely on the user manually editing if they want deep changes.
+                // Drag and drop in this dashboard is visual organization.
+                // WE REMOVED THE INVALID setTasks call.
+                // To support true re-bucketing, we'd need to change categories/recurrence.
+
+                // logic:
+                if (targetBucket === 'ongoing') {
+                    updates.category = 'Ongoing';
+                    updates.recurrence = 'Ongoing';
+                } else if (targetBucket === 'someday') {
+                    updates.category = 'Offseason';
+                    updates.recurrence = 'Annual';
+                } else if (targetBucket === 'today') {
+                    // Force it to be today
+                    updates.recurrence = 'Daily'; // Strong change
+                } else if (targetBucket === 'thisWeek') {
+                    updates.recurrence = 'Weekly';
+                } else if (targetBucket === 'thisMonth') {
+                    updates.recurrence = 'Seasonal';
+                }
+
+                return updates;
+            };
+
             // Seasonal Filtering - Determine current season and filter tasks
             const getCurrentSeason = () => {
                 const month = new Date().getMonth() + 1; // 1-12
@@ -17815,15 +18142,13 @@
                     const sourceCol = sourceType.replace('assigned_', '');
 
                     // Remove from source bucket
-                    const sourceAssigned = assignedBuckets[sourceCol];
-                    const updatedSource = sourceAssigned.filter((_, i) => i !== sourceIndex);
-                    assignedBuckets[sourceCol] = updatedSource;
+                    // Calculate updates based on target bucket
+                    const updates = getUpdatesForBucket(item, targetType);
 
-                    // Add to target bucket
-                    assignedBuckets[targetType] = [...assignedBuckets[targetType], item];
+                    if (onUpdateTask) {
+                        onUpdateTask({ ...item, ...updates });
+                    }
 
-                    // Force re-render by updating state
-                    setTasks([...tasks]);
                     setDraggedItem(null);
                     return;
                 }
@@ -17843,6 +18168,102 @@
                 }
                 setDraggedItem(null);
             };
+
+            // Task Notes Modal Component
+            const TaskNotesModal = ({ task, onClose }) => {
+                if (!task) return null;
+
+                return (
+                    <div
+                        style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.7)', zIndex: 9999,
+                            display: 'flex', justifyContent: 'center', alignItems: 'center'
+                        }}
+                        onClick={onClose}
+                    >
+                        <div
+                            style={{
+                                background: 'var(--bg-panel)', padding: '2rem',
+                                borderRadius: '12px', maxWidth: '600px', width: '90%',
+                                maxHeight: '80vh', overflowY: 'auto',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
+                                <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>{task.task || 'Task Details'}</h2>
+                                <button
+                                    onClick={onClose}
+                                    style={{
+                                        background: 'none', border: 'none', fontSize: '2rem',
+                                        cursor: 'pointer', color: 'var(--text-secondary)',
+                                        lineHeight: 1, padding: 0
+                                    }}
+                                >×</button>
+                            </div>
+
+                            {task.notes && (
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Notes:</h3>
+                                    <div style={{
+                                        background: 'var(--bg-card)', padding: '1rem',
+                                        borderRadius: '6px', whiteSpace: 'pre-wrap',
+                                        border: '1px solid var(--border)',
+                                        color: 'var(--text-primary)'
+                                    }}>
+                                        {task.notes}
+                                    </div>
+                                </div>
+                            )}
+
+                            {!task.notes && (
+                                <div style={{
+                                    padding: '2rem', textAlign: 'center',
+                                    color: 'var(--text-secondary)', fontStyle: 'italic',
+                                    background: 'var(--bg-card)', borderRadius: '6px',
+                                    border: '1px dashed var(--border)'
+                                }}>
+                                    No notes for this task
+                                </div>
+                            )}
+
+                            {/* Display other task properties */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
+                                {task.priority && (
+                                    <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Priority</div>
+                                        <div style={{ fontWeight: 'bold', color: task.priority === 'High' ? '#ef4444' : 'var(--text-primary)' }}>
+                                            {task.priority === 'High' ? '🔥 High' : task.priority}
+                                        </div>
+                                    </div>
+                                )}
+                                {task.estimatedTime && (
+                                    <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Est. Time</div>
+                                        <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{task.estimatedTime}</div>
+                                    </div>
+                                )}
+                                {task.deadline && (
+                                    <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Deadline</div>
+                                        <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                                            {new Date(task.deadline).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                )}
+                                {task.category && (
+                                    <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Category</div>
+                                        <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{task.category}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
 
             return (
                 <div style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
@@ -17907,6 +18328,7 @@
                                                     setDraggedItem({ type: `assigned_${col}`, index: idx, item: task });
                                                     e.dataTransfer.effectAllowed = "move";
                                                 }}
+                                                onDoubleClick={() => setViewingTaskNotes(task)}
                                                 style={{
                                                     padding: '0.75rem',
                                                     background: 'var(--surface)',
@@ -17931,7 +18353,11 @@
                                                 draggable
                                                 onDragStart={(e) => {
                                                     setDraggedItem({ type: col, index: idx, item });
-                                                    e.effectAllowed = "move";
+                                                    e.dataTransfer.effectAllowed = "move";
+                                                }}
+                                                onDoubleClick={() => {
+                                                    const taskObj = typeof item === 'string' ? { task: item } : item;
+                                                    setViewingTaskNotes(taskObj);
                                                 }}
                                                 style={{
                                                     padding: '0.75rem',
@@ -17979,8 +18405,14 @@
                         })}
                     </div>
 
-
-                </div >
+                    {/* Task Notes Modal */}
+                    {viewingTaskNotes && (
+                        <TaskNotesModal
+                            task={viewingTaskNotes}
+                            onClose={() => setViewingTaskNotes(null)}
+                        />
+                    )}
+                </div>
             );
         };
 
@@ -17991,21 +18423,15 @@
                 id: 'CALL_SHEET',
                 name: 'Call Sheet',
                 sections: [
-                    // Top Row: Scripts, Opening, 2nd & XL, End of Half
+                    // Top Row: Scripts, Opening, 2nd & XL
                     {
                         type: 'grid',
-                        cols: 10,
+                        cols: 5,
                         rows: [
-                            { header: 'PLAYER TOUCHES', setId: 'player_touches', colSpan: 1, color: '#8b5cf6' },
-                            { header: 'OPENING SCRIPT LH', setId: '1st_ten_lh', colSpan: 1, color: '#10b981' },
-                            { header: 'OPENING SCRIPT RH', setId: '1st_ten_rh', colSpan: 1, color: '#10b981' },
-                            { header: 'MINI SCRIPT 1', setId: 'mini_script_1', colSpan: 1, color: '#06b6d4' },
-                            { header: 'MINI SCRIPT 2', setId: 'mini_script_2', colSpan: 1, color: '#06b6d4' },
-                            { header: '2ND HALF OPENERS', setId: 'second_half_openers', colSpan: 1, color: '#f97316' },
+                            { header: 'OPENING SCRIPT', setId: 'opening_script', colSpan: 2, color: '#10b981' },
+                            { header: '2ND HALF OPENER', setId: 'second_half_openers', colSpan: 1, color: '#f97316' },
                             { header: 'P&10', setId: 'p_and_10', colSpan: 1, color: '#ef4444' },
                             { header: '2ND & XL (LH)', setId: '2nd_xl_lh', colSpan: 1, color: '#3b82f6' },
-                            { header: '2ND & XL RH', setId: '2nd_xl_rh', colSpan: 1, color: '#3b82f6' },
-                            { header: 'END OF HALF', setId: 'eoh', colSpan: 1, color: '#8b5cf6' },
                         ]
                     },
                     // Situational Rows
@@ -18044,6 +18470,12 @@
                             // Other Time Situations
                             { header: '4-MINUTE', setId: 'four_minute', colSpan: 1, color: '#8b5cf6' },
                         ]
+                    },
+                    {
+                        type: 'grid',
+                        cols: 4,
+                        title: 'MINI SCRIPTS',
+                        rows: []
                     }
                 ]
             },
@@ -18828,7 +19260,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay }) => {
+        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts }) => {
 
             const [viewMode, setViewMode] = useState('call-sheet'); // 'call-sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
@@ -18838,6 +19270,9 @@
             // For Matrix/Grid Cell Editing
             const [activeCellSetId, setActiveCellSetId] = useState(null); // The setId currently being edited via modal
             const [editingFormationId, setEditingFormationId] = useState(null); // ID of formation currently being renamed
+
+            const [isCreatingScript, setIsCreatingScript] = useState(false); // For inline script creation
+            const [confirmDeleteScriptId, setConfirmDeleteScriptId] = useState(null); // For inline delete confirmation
 
             // For Strike 'Em Out matrix collapsible groups
             const [collapsedGroups, setCollapsedGroups] = useState(new Set());
@@ -18951,8 +19386,34 @@
                 return (
                     <div style={{ padding: '0.25rem' }}>
                         {playsInSet.map(p => (
-                            <div key={p.id} style={{ fontSize: '0.7rem', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {p.name}
+                            <div key={p.id} style={{ fontSize: '0.7rem', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {/* Wristband Slot Input */}
+                                <input
+                                    type="text"
+                                    value={p.wristbandSlot || ''}
+                                    onChange={(e) => {
+                                        if (onUpdatePlay) {
+                                            onUpdatePlay({ ...p, wristbandSlot: e.target.value });
+                                        }
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    placeholder="WB"
+                                    style={{
+                                        width: '35px',
+                                        padding: '2px 4px',
+                                        fontSize: '0.65rem',
+                                        border: '1px solid #ccc',
+                                        borderRadius: '3px',
+                                        textAlign: 'center',
+                                        background: 'white',
+                                        color: p.wristbandSlot ? '#0ea5e9' : '#666',
+                                        fontWeight: p.wristbandSlot ? 'bold' : 'normal'
+                                    }}
+                                />
+                                {/* Play Name */}
+                                <div style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {p.name}
+                                </div>
                             </div>
                         ))}
                         {playsInSet.length === 0 && <div style={{ fontSize: '0.7rem', color: '#ccc', fontStyle: 'italic' }}>+ Add Play</div>}
@@ -18960,33 +19421,74 @@
                 );
             };
 
-            const handleCreateMiniScript = () => {
-                const name = prompt("Enter Mini Script Name (e.g. 'Red Zone Series'):");
-                if (!name) return;
+            const handleSaveNewScript = (name) => {
+                if (!name.trim()) {
+                    setIsCreatingScript(false);
+                    return;
+                }
 
+                const newScriptId = `ms_${Date.now()}`;
                 const newScript = {
-                    id: `ms_${Date.now()}`,
-                    name,
+                    id: newScriptId,
+                    name: name.trim(),
                     playIds: [],
                     color: '#8b5cf6' // Default purple
                 };
 
+                // Add to game plan data
                 const newGamePlan = {
                     ...gamePlan,
                     miniScripts: [...(gamePlan.miniScripts || []), newScript]
                 };
                 onUpdateGamePlan(newGamePlan);
+
+                // Add to layout (if supported)
+                if (onUpdateLayouts && gamePlanLayouts) {
+                    const newLayouts = { ...gamePlanLayouts };
+                    const sheet = { ...newLayouts.CALL_SHEET };
+                    sheet.sections = [...sheet.sections];
+
+                    // Find 'MINI SCRIPTS' section or last section
+                    let targetIdx = sheet.sections.findIndex(s => s.title === 'MINI SCRIPTS');
+                    if (targetIdx === -1) targetIdx = sheet.sections.length - 1;
+
+                    const targetSection = { ...sheet.sections[targetIdx] };
+                    targetSection.rows = [...targetSection.rows, {
+                        header: newScript.name,
+                        setId: newScript.id,
+                        colSpan: 1,
+                        color: newScript.color
+                    }];
+                    sheet.sections[targetIdx] = targetSection;
+                    newLayouts.CALL_SHEET = sheet;
+                    onUpdateLayouts(newLayouts);
+                }
+
+                setIsCreatingScript(false);
             };
 
             const handleDeleteMiniScript = (scriptId, e) => {
-                e.stopPropagation();
-                if (!confirm('Delete this mini script?')) return;
+                if (e) e.stopPropagation();
 
+                // Update Game Plan Data
                 const newGamePlan = {
                     ...gamePlan,
                     miniScripts: (gamePlan.miniScripts || []).filter(s => s.id !== scriptId)
                 };
                 onUpdateGamePlan(newGamePlan);
+                setConfirmDeleteScriptId(null);
+
+                // Update Layout
+                if (onUpdateLayouts && gamePlanLayouts) {
+                    const newLayouts = { ...gamePlanLayouts };
+                    const sheet = { ...newLayouts.CALL_SHEET };
+                    sheet.sections = sheet.sections.map(section => ({
+                        ...section,
+                        rows: section.rows.filter(row => row.setId !== scriptId)
+                    }));
+                    newLayouts.CALL_SHEET = sheet;
+                    onUpdateLayouts(newLayouts);
+                }
             };
 
             const handleUpdateFormationName = (formationId, newName) => {
@@ -18995,92 +19497,282 @@
                 setEditingFormationId(null);
             };
 
-            const renderCallSheet = () => {
-                const layout = GAME_PLAN_LAYOUTS.CALL_SHEET;
-                const miniScripts = gamePlan.miniScripts || [];
+            // Layout Lock & Drag State
+            const [isLocked, setIsLocked] = useLocalStorage('gamePlanLocked', true);
+            const [confirmResetLayout, setConfirmResetLayout] = useState(false);
+            const [draggedCell, setDraggedCell] = useState(null); // { sectionIdx, rowIdx }
+            const [editingHeader, setEditingHeader] = useState(null); // { sectionIdx, rowIdx }
 
+            const handleDragStart = (e, sectionIdx, rowIdx) => {
+                if (isLocked) return;
+                setDraggedCell({ sectionIdx, rowIdx });
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleDragOver = (e) => {
+                if (isLocked) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDrop = (e, targetSectionIdx, targetRowIdx) => {
+                if (isLocked || !draggedCell) return;
+                e.preventDefault();
+
+                // Clone layouts
+                const newLayouts = { ...gamePlanLayouts };
+                const sheet = { ...newLayouts.CALL_SHEET };
+                sheet.sections = [...sheet.sections];
+
+                // Get source and target arrays
+                const sourceRows = [...sheet.sections[draggedCell.sectionIdx].rows];
+                const targetRows = draggedCell.sectionIdx === targetSectionIdx ? sourceRows : [...sheet.sections[targetSectionIdx].rows];
+
+                // Get items
+                const sourceItem = sourceRows[draggedCell.rowIdx];
+                const targetItem = targetRows[targetRowIdx];
+
+                // Swap!
+                sourceRows[draggedCell.rowIdx] = targetItem;
+                targetRows[targetRowIdx] = sourceItem;
+
+                // Update sections
+                sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], rows: sourceRows };
+                if (draggedCell.sectionIdx !== targetSectionIdx) {
+                    sheet.sections[targetSectionIdx] = { ...sheet.sections[targetSectionIdx], rows: targetRows };
+                }
+
+                newLayouts.CALL_SHEET = sheet;
+                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                setDraggedCell(null);
+            };
+
+            const saveHeader = (sectionIdx, rowIdx, newName) => {
+                if (!onUpdateLayouts) return;
+                const newLayouts = { ...gamePlanLayouts };
+                const sheet = { ...newLayouts.CALL_SHEET };
+                sheet.sections = [...sheet.sections];
+                const rows = [...sheet.sections[sectionIdx].rows];
+                rows[rowIdx] = { ...rows[rowIdx], header: newName };
+                sheet.sections[sectionIdx].rows = rows;
+                newLayouts.CALL_SHEET = sheet;
+                onUpdateLayouts(newLayouts);
+                setEditingHeader(null);
+            };
+
+            // Extracted logic for Active Plays
+            const getAllActivePlays = () => {
+                const allActivePlayIds = new Set();
+                (gamePlan.sets || []).forEach(set => set.playIds.forEach(id => allActivePlayIds.add(id)));
+                (gamePlan.miniScripts || []).forEach(script => script.playIds.forEach(id => allActivePlayIds.add(id)));
+                return Array.from(allActivePlayIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
+            };
+
+            const renderPlayerTouches = () => {
+                const allActivePlays = getAllActivePlays();
+                const targets = TAG_CATEGORIES["Primary Target"] || [];
                 return (
-                    <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', paddingRight: '1rem' }}>
-                        {/* MINI SCRIPTS SECTION */}
-                        <div style={{ marginBottom: '2rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                <h3 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>MINI SCRIPTS</h3>
-                                <button onClick={handleCreateMiniScript} className="btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
-                                    + ADD SCRIPT
-                                </button>
+                    <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', paddingRight: '1rem', background: 'white', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ marginBottom: '1.5rem', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                            <div style={{ background: '#f8fafc', padding: '0.5rem 1rem', borderBottom: '1px solid #ddd', fontWeight: 'bold', color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                                Player Touches Summary
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
-                                {miniScripts.map(script => (
-                                    <div
-                                        key={script.id}
-                                        style={{ gridColumn: 'span 1', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden', minHeight: '150px', backgroundColor: 'var(--bg-panel)' }}
-                                        onClick={() => openPlaySelector(script.id)}
-                                    >
-                                        <div style={{ backgroundColor: script.color, color: 'white', padding: '0.25rem 0.5rem', fontWeight: 'bold', fontSize: '0.8rem', textAlign: 'center', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span>{script.name}</span>
-                                            <span
-                                                onClick={(e) => handleDeleteMiniScript(script.id, e)}
-                                                style={{ cursor: 'pointer', opacity: 0.8, fontSize: '1rem', lineHeight: 1 }}
-                                            >×</span>
+                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${targets.length}, 1fr)`, divideX: '1px solid #eee' }}>
+                                {targets.map((target, idx) => {
+                                    const targetPlays = allActivePlays.filter(p => (p.tags || []).includes(target) || p.primaryTarget === target || p.tag1 === target || p.tag2 === target);
+
+                                    return (
+                                        <div key={target} style={{ borderRight: idx < targets.length - 1 ? '1px solid #eee' : 'none' }}>
+                                            <div style={{ background: '#f1f5f9', padding: '0.25rem', textAlign: 'center', fontWeight: 'bold', fontSize: '0.9rem', borderBottom: '1px solid #eee' }}>
+                                                {target} <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginLeft: '4px' }}>({targetPlays.length})</span>
+                                            </div>
+                                            <div style={{ padding: '0.5rem', maxHeight: '600px', overflowY: 'auto' }}>
+                                                {targetPlays.length > 0 ? (
+                                                    targetPlays.map(p => (
+                                                        <div key={p.id} style={{ fontSize: '0.7rem', marginBottom: '4px', padding: '2px 4px', background: 'white', border: '1px solid #eee', borderRadius: '3px' }}>
+                                                            {p.name}
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div style={{ fontSize: '0.7rem', color: '#cbd5e1', textAlign: 'center', fontStyle: 'italic', padding: '0.5rem 0' }}>-</div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div style={{ padding: '0.5rem' }}>
-                                            {renderPlayListSimple(script.id)}
-                                        </div>
-                                    </div>
-                                ))}
-                                {miniScripts.length === 0 && (
-                                    <div style={{ gridColumn: 'span 4', padding: '1rem', border: '1px dashed var(--border)', borderRadius: '4px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                                        No mini scripts created. Click "+ ADD SCRIPT" to create custom play sequences.
-                                    </div>
-                                )}
+                                    );
+                                })}
                             </div>
                         </div>
+                    </div>
+                );
+            };
+
+            const renderCallSheet = () => {
+                const layout = gamePlanLayouts.CALL_SHEET;
+                const miniScripts = gamePlan.miniScripts || [];
+
+
+
+                return (
+                    <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', paddingRight: '1rem', background: 'white', padding: '1rem', borderRadius: '8px' }}>
+                        {/* CONTROL BAR */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem', gap: '0.5rem', alignItems: 'center' }}>
+                            {!isLocked && (
+                                <>
+                                    {confirmResetLayout ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 'bold' }}>Reset?</span>
+                                            <button
+                                                className="btn btn-sm"
+                                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: '#dc2626', color: 'white' }}
+                                                onClick={() => {
+                                                    onUpdateLayouts(GAME_PLAN_LAYOUTS);
+                                                    setConfirmResetLayout(false);
+                                                }}
+                                            >
+                                                Yes
+                                            </button>
+                                            <button
+                                                className="btn btn-sm"
+                                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: '#e5e7eb', color: '#374151' }}
+                                                onClick={() => setConfirmResetLayout(false)}
+                                            >
+                                                No
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            className="btn btn-sm"
+                                            style={{ fontSize: '0.75rem', background: '#e5e7eb', color: '#374151' }}
+                                            onClick={() => setConfirmResetLayout(true)}
+                                        >
+                                            ↺ Reset Layout
+                                        </button>
+                                    )}
+                                    <div style={{ width: '1px', height: '20px', background: '#ccc', margin: '0 0.5rem' }}></div>
+                                    {isCreatingScript ? (
+                                        <input
+                                            autoFocus
+                                            placeholder="New Script Name..."
+                                            style={{ fontSize: '0.8rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid var(--primary)' }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleSaveNewScript(e.target.value);
+                                                if (e.key === 'Escape') setIsCreatingScript(false);
+                                            }}
+                                            onBlur={() => setIsCreatingScript(false)}
+                                        />
+                                    ) : (
+                                        <button onClick={() => setIsCreatingScript(true)} className="btn-sm btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                                            + Add Script
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                            <button
+                                className={`btn ${isLocked ? 'btn-secondary' : 'btn-primary'}`}
+                                onClick={() => setIsLocked(!isLocked)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <Icon name={isLocked ? "Lock" : "Unlock"} size={14} />
+                                {isLocked ? "Unlock Layout" : "Lock Layout"}
+                            </button>
+                        </div>
+
+
+                        {/* PLAYER TOUCHES SUMMARY */}
 
                         {layout.sections.map((section, idx) => (
                             <div key={idx} style={{ marginBottom: '2rem' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${section.cols}, 1fr)`, gap: '4px' }}>
-                                    {section.rows.map((cell, cellIdx) => (
-                                        <div
-                                            key={cell.setId}
-                                            style={{ gridColumn: `span ${cell.colSpan}`, border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden', minHeight: '150px', backgroundColor: 'var(--bg-panel)' }}
-                                            onClick={() => openPlaySelector(cell.setId)}
-                                        >
-                                            <div style={{ backgroundColor: cell.color, color: 'white', padding: '0.25rem 0.5rem', fontWeight: 'bold', fontSize: '0.8rem', textAlign: 'center', textTransform: 'uppercase' }}>
-                                                {cell.header}
-                                            </div>
-                                            <div style={{ padding: '0.5rem' }}>
-                                                {renderPlayListSimple(cell.setId)}
-                                                {onQuickAddPlay && (
-                                                    <input
-                                                        type="text"
-                                                        placeholder="+"
-                                                        style={{
-                                                            width: '100%',
-                                                            marginTop: '6px',
-                                                            padding: '4px 6px',
-                                                            fontSize: '0.8rem',
-                                                            border: '1px dashed var(--border)',
-                                                            borderRadius: '4px',
-                                                            background: 'rgba(255,255,255,0.1)'
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && e.target.value.trim()) {
-                                                                handleQuickAddToSet(cell.setId, e.target.value);
-                                                                e.target.value = '';
-                                                                e.preventDefault();
-                                                            }
-                                                        }}
-                                                    />
-                                                )}
+                                    {section.rows.map((cell, cellIdx) => {
+                                        const isEditing = editingHeader && editingHeader.sectionIdx === idx && editingHeader.rowIdx === cellIdx;
+                                        return (
+                                            <div
+                                                key={cell.setId} // Ideally use a stable ID but we swap setId so this is actually OK for stability, but Dnd might prefer index key if items move? No, key should follow data.
+                                                draggable={!isLocked}
+                                                onDragStart={(e) => handleDragStart(e, idx, cellIdx)}
+                                                onDragOver={handleDragOver}
+                                                onDrop={(e) => handleDrop(e, idx, cellIdx)}
+                                                style={{
+                                                    gridColumn: `span ${cell.colSpan}`,
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: '4px',
+                                                    overflow: 'hidden',
+                                                    minHeight: '150px',
+                                                    backgroundColor: 'white',
+                                                    cursor: !isLocked ? 'move' : 'default',
+                                                    opacity: draggedCell && draggedCell.sectionIdx === idx && draggedCell.rowIdx === cellIdx ? 0.5 : 1
+                                                }}
+                                                onClick={() => !isEditing && openPlaySelector(cell.setId)}
+                                            >
+                                                <div
+                                                    style={{ backgroundColor: cell.color, color: 'white', padding: '0.25rem 0.5rem', fontWeight: 'bold', fontSize: '0.8rem', textAlign: 'center', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                                    onDoubleClick={(e) => {
+                                                        if (!isLocked) {
+                                                            e.stopPropagation();
+                                                            setEditingHeader({ sectionIdx: idx, rowIdx: cellIdx });
+                                                        }
+                                                    }}
+                                                >
+                                                    {isEditing ? (
+                                                        <input
+                                                            autoFocus
+                                                            defaultValue={cell.header}
+                                                            onBlur={(e) => saveHeader(idx, cellIdx, e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') saveHeader(idx, cellIdx, e.target.value);
+                                                                if (e.key === 'Escape') setEditingHeader(null);
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            style={{ width: '100%', border: 'none', background: 'white', color: 'black', fontSize: 'inherit', padding: '0' }}
+                                                        />
+                                                    ) : (
+                                                        <>
+                                                            <span>{cell.header}</span>
+                                                            {!isLocked && cell.setId.startsWith('ms_') && (
+                                                                <span
+                                                                    onClick={(e) => handleDeleteMiniScript(cell.setId, e)}
+                                                                    style={{ cursor: 'pointer', opacity: 0.8, fontSize: '1rem', lineHeight: 1 }}
+                                                                    title="Delete Mini Script"
+                                                                >×</span>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <div style={{ padding: '0.5rem' }}>
+                                                    {renderPlayListSimple(cell.setId)}
+                                                    {onQuickAddPlay && (
+                                                        <input
+                                                            type="text"
+                                                            placeholder="+"
+                                                            style={{
+                                                                width: '100%',
+                                                                marginTop: '6px',
+                                                                padding: '4px 6px',
+                                                                fontSize: '0.8rem',
+                                                                border: '1px dashed var(--border)',
+                                                                borderRadius: '4px',
+                                                                background: 'rgba(255,255,255,0.1)'
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && e.target.value.trim()) {
+                                                                    handleQuickAddToSet(cell.setId, e.target.value);
+                                                                    e.target.value = '';
+                                                                    e.preventDefault();
+                                                                }
+                                                            }}
+                                                        />
+                                                    )}
 
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        ))
+                        }
+                    </div >
                 );
             };
 
@@ -19265,7 +19957,7 @@
                                                                 return (
                                                                     <td
                                                                         key={setId}
-                                                                        style={{ padding: '0.25rem', border: '1px solid var(--border)', verticalAlign: 'top', cursor: 'pointer', minHeight: '60px', backgroundColor: 'var(--bg-card)' }}
+                                                                        style={{ padding: '0.25rem', border: '1px solid #ddd', verticalAlign: 'top', cursor: 'pointer', minHeight: '60px', backgroundColor: 'white' }}
                                                                         onClick={() => openPlaySelector(setId)}
                                                                     >
                                                                         {renderPlayListSimple(setId)}
@@ -19316,14 +20008,18 @@
                         <button className={`btn ${viewMode === 'call-sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('call-sheet')}>
                             Call Sheet
                         </button>
+                        <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
+                            Player Touches
+                        </button>
                         <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
                             Strike 'Em Out
                         </button>
                     </div>
 
                     {/* View Content */}
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ flex: 1, overflow: 'hidden', background: 'white', padding: '1rem', borderRadius: '8px' }}>
                         {viewMode === 'call-sheet' && renderCallSheet()}
+                        {viewMode === 'player-touches' && renderPlayerTouches()}
                         {viewMode === 'matrix' && renderMatrix()}
                     </div>
 
@@ -21521,6 +22217,8 @@
 
 
             // Layout Persistence
+            const [dumbCallSheetData, setDumbCallSheetData] = useLocalStorage('dumbCallSheetData', {});
+            const [gamePlanLayouts, setGamePlanLayouts] = useLocalStorage('gamePlanLayouts', GAME_PLAN_LAYOUTS);
             const [formationLayouts, setFormationLayouts] = useLocalStorage('formationLayouts', {});
 
             const updateFormationLayout = (chartType, posId, x, y) => {
@@ -22007,6 +22705,16 @@
                             {/* SEASON CATEGORY */}
                             {/* Week Selector */}
                             <div style={{ padding: '0 0.5rem 1.5rem 0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }}>
+                                {/* Active Year Display */}
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem', display: 'block' }}>
+                                        Active Season
+                                    </label>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '0.05em' }}>
+                                        {activeYear || '2024'}
+                                    </div>
+                                </div>
+
                                 <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block' }}>
                                     Active Week
                                 </label>
@@ -22161,6 +22869,11 @@
                                             <Icon name="FileText" size={14} style={{ marginRight: '6px' }} /> Practice Scripts
                                         </button>
                                     )}
+
+                                    {/* New "Dumb" Call Sheet - Visible to all with game week access for now */}
+                                    <button className={`nav-item ${view === 'dumb-callsheet' ? 'active' : ''}`} onClick={() => setView('dumb-callsheet')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="FileText" size={14} style={{ marginRight: '6px' }} /> Dumb Call Sheet
+                                    </button>
 
                                     <button className={`nav-item ${view === 'pregame' ? 'active' : ''}`} onClick={() => setView('pregame')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="Clock" size={14} style={{ marginRight: '6px' }} /> Pre-game Timeline
@@ -22353,7 +23066,9 @@
 
                     <main className="main-content">
                         {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} currentUser={currentUser} />}
-                        {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} roster={roster} userRole={(currentUser?.roles && currentUser.roles[0]) || 'Head Coach'} permissions={currentPermissions.dashboard} masterTasks={masterTasks} />}
+                        {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} roster={roster} userRole={(currentUser?.roles && currentUser.roles[0]) || 'Head Coach'} permissions={currentPermissions.dashboard} masterTasks={masterTasks} onUpdateTask={(updatedTask) => {
+                            setMasterTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+                        }} />}
                         {view === 'daily-reports' && <DailyReportsView roster={roster} attendance={attendance} setAttendance={setAttendance} permissions={currentPermissions.dashboard} />}
                         {view === 'drill-library' && <DrillLibraryView />}
                         {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
@@ -22813,7 +23528,7 @@
                         {view === 'formations' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} />}
 
                         {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} />}
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} />}
 
                         {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
                         {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
@@ -22838,6 +23553,7 @@
                             savedLayout={formationLayouts[depthChartType] || {}}
                             onUpdateLayout={(posId, x, y) => updateFormationLayout(depthChartType, posId, x, y)}
                             positionNames={positionNames}
+                            onUpdatePositionNames={setPositionNames}
                             onResetLayout={() => resetFormationLayout(depthChartType)}
                         />}
                         {(view === 'staff-roster' || view === 'staff-duties') && (
@@ -22865,7 +23581,8 @@
                         {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} />}
                         {view === 'coach-app' && <PracticeCoachApp staff={staff} roster={roster} plans={currentWeek.practicePlans || []} plays={plays} drills={DRILL_DATA} />}
                         {view === 'self-assessment' && <AthleteSelfAssessment roster={roster} staff={staff} currentUser={currentUser} />}
-                        {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} />}
+                        {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} gamePlanLayouts={gamePlanLayouts} />}
+                        {view === 'dumb-callsheet' && <DumbCallSheet data={dumbCallSheetData} onUpdateData={setDumbCallSheetData} gamePlanLayouts={gamePlanLayouts} />}
                         {view === 'simulator' && <PlayCallSimulator plays={plays} roster={roster} gamePlan={currentWeek.offensiveGamePlan || {}} onUpdateGamePlan={setGamePlan} />}
                         {view === 'special-teams' && (
                             <SpecialTeamsDashboard
@@ -22906,7 +23623,7 @@
                         {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} />}
                         {view === 'help' && <UserGuide />}
                     </main>
-                </div>
+                </div >
             );
         };
 
