@@ -681,10 +681,12 @@
                 Bus: '🚌',
                 Checkbox: '☑️',
                 Minus: '⛔', // Using 'No Entry' for delete/remove to be distinct
-                Lock: '🔒'
+                Lock: '🔒',
+                Star: '★',
+                Target: '⌖'
             };
-            // Default to 🏈 if not found, which conveniently handles the "Football" request if I used a random name, 
-            // but for Madden I used Gamepad2. 
+            // Default to ❓ if not found
+            // but for Madden I used Gamepad2.
             // User request: "Put a football icon next to Madden Ratings".
             // So Gamepad2 should map to 🏈.
 
@@ -695,7 +697,7 @@
                 return <span style={{ fontSize: '1.2rem', marginRight: '0.5rem', display: 'inline-block', width: '1.2em', textAlign: 'center', ...style, color: color }}>{name}</span>;
             }
 
-            return <span style={{ fontSize: '1.2rem', marginRight: '0.5rem', display: 'inline-block', width: '1.2em', textAlign: 'center', ...style, color: color }}>{iconChar || '🏈'}</span>;
+            return <span style={{ fontSize: '1.2rem', marginRight: '0.5rem', display: 'inline-block', width: '1.2em', textAlign: 'center', ...style, color: color }}>{iconChar || '❓'}</span>;
         };
 
         const OPS_CALENDAR = [
@@ -1304,6 +1306,71 @@
                 ];
             };
 
+            // Scout Defense Defaults (4-3 Over)
+            const getScoutDefenseFormation = () => {
+                const center = 400;
+                const los = 340;
+                // Defense is ABOVE the LOS (smaller Y values)
+
+                const cDL = '#1f2937'; // Dark Grey
+                const cLB = '#374151';
+                const cDB = '#4b5563';
+
+                return [
+                    // DL
+                    { id: Date.now() + 1, type: 'player', points: [{ x: center - 90, y: los - 18 }], color: cDL, label: 'E', shape: 'square', variant: 'filled' }, // LE
+                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 30, y: los - 18 }], color: cDL, label: 'T', shape: 'square', variant: 'filled' }, // LT (3-tech)
+                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 30, y: los - 18 }], color: cDL, label: 'N', shape: 'square', variant: 'filled' }, // RT (1-tech)
+                    { id: Date.now() + 4, type: 'player', points: [{ x: center + 90, y: los - 18 }], color: cDL, label: 'E', shape: 'square', variant: 'filled' }, // RE
+
+                    // LB
+                    { id: Date.now() + 5, type: 'player', points: [{ x: center - 110, y: los - 80 }], color: cLB, label: 'W', shape: 'square' }, // Will
+                    { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los - 80 }], color: cLB, label: 'M', shape: 'square' },       // Mike
+                    { id: Date.now() + 7, type: 'player', points: [{ x: center + 110, y: los - 80 }], color: cLB, label: 'S', shape: 'star', variant: 'filled' }, // Sam (Star)
+
+                    // DB
+                    { id: Date.now() + 8, type: 'player', points: [{ x: center - 180, y: los - 35 }], color: cDB, label: 'C', shape: 'circle' }, // LCB
+                    { id: Date.now() + 9, type: 'player', points: [{ x: center + 180, y: los - 35 }], color: cDB, label: 'C', shape: 'circle' }, // RCB
+                    { id: Date.now() + 10, type: 'player', points: [{ x: center - 60, y: los - 200 }], color: cDB, label: 'F', shape: 'circle' }, // FS
+                    { id: Date.now() + 11, type: 'player', points: [{ x: center + 60, y: los - 180 }], color: cDB, label: 'R', shape: 'circle' }, // Rover/SS
+                ];
+            };
+
+            const handleScoutDefense = () => {
+                if (elements.length > 0 && !window.confirm('Replace current diagram with Scout Defense?')) return;
+                setElements(getScoutDefenseFormation());
+            };
+
+            const getScoutOffenseFormation = () => {
+                const center = 400;
+                const los = 340;
+                const cScout = '#eab308'; // Yellow
+
+                return [
+                    // OL
+                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cScout, label: 'C', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 40, y: los + 18 }], color: cScout, label: 'G', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 40, y: los + 18 }], color: cScout, label: 'G', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 80, y: los + 18 }], color: cScout, label: 'T', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 80, y: los + 18 }], color: cScout, label: 'T', shape: 'circle', variant: 'filled' },
+                    // QB
+                    { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 50 }], color: cScout, label: 'Q', shape: 'circle' },
+                    // RB
+                    { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 120 }], color: cScout, label: 'R', shape: 'circle' },
+                    // WRs
+                    { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: cScout, label: 'X', shape: 'circle' },
+                    { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: cScout, label: 'Z', shape: 'circle' },
+                    // TE/Slot
+                    { id: Date.now() + 10, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: cScout, label: 'Y', shape: 'circle' },
+                    { id: Date.now() + 11, type: 'player', points: [{ x: 200, y: los + 35 }], color: cScout, label: 'H', shape: 'circle' },
+                ];
+            };
+
+            const handleScoutOffense = () => {
+                if (elements.length > 0 && !window.confirm('Replace current diagram with Scout Offense?')) return;
+                setElements(getScoutOffenseFormation());
+            };
+
             // Initialize with data OR default formation
             const [elements, setElements] = useState(() => {
                 if (initialData && initialData.elements && initialData.elements.length > 0) {
@@ -1348,7 +1415,9 @@
                 { label: 'F', shape: 'circle' },
                 { label: 'C', shape: 'square' },
                 { label: 'G', shape: 'square' },
-                { label: 'T', shape: 'square' }
+                { label: 'T', shape: 'square' },
+                { label: 'S', shape: 'star' },  // Scout/Star
+                { label: 'T', shape: 'target' } // Target
             ];
 
             // Coordinate calibration: Map mouse event to SVG coordinates
@@ -1585,6 +1654,13 @@
                                     points={`${x},${y - size / 1.5} ${x + size / 3},${y - size / 4} ${x + size / 1.2},${y - size / 4} ${x + size / 2},${y + size / 4} ${x + size / 1.5},${y + size / 1.2} ${x},${y + size / 2} ${x - size / 1.5},${y + size / 1.2} ${x - size / 2},${y + size / 4} ${x - size / 1.2},${y - size / 4} ${x - size / 3},${y - size / 4}`}
                                     fill={fillColor} stroke={strokeColor} strokeWidth="2"
                                 />
+                            ) : el.shape === 'target' ? (
+                                <g>
+                                    <circle cx={x} cy={y} r={size / 2} fill="none" stroke={strokeColor} strokeWidth="2" />
+                                    <circle cx={x} cy={y} r={size / 4} fill={fillColor} stroke={strokeColor} strokeWidth="1" />
+                                    <line x1={x - size / 2} y1={y} x2={x + size / 2} y2={y} stroke={strokeColor} strokeWidth="1" />
+                                    <line x1={x} y1={y - size / 2} x2={x} y2={y + size / 2} stroke={strokeColor} strokeWidth="1" />
+                                </g>
                             ) : (
                                 <circle cx={x} cy={y} r={size / 2} fill={fillColor} stroke={strokeColor} strokeWidth="2" />
                             )}
@@ -1752,13 +1828,15 @@
                                 <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', background: '#e2e8f0', padding: '0.25rem', borderRadius: '4px' }}>
                                     {PLAYER_ICONS.map(p => (
                                         <button
-                                            key={p.label} onClick={() => setSelectedPlayerIcon(p)}
-                                            style={{ width: '24px', height: '24px', borderRadius: '4px', border: selectedPlayerIcon.label === p.label ? '2px solid var(--accent)' : '1px solid #ccc', background: 'white', fontWeight: 'bold', fontSize: '0.7rem', color: 'black', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            key={p.label + p.shape} onClick={() => setSelectedPlayerIcon(p)}
+                                            style={{ width: '24px', height: '24px', borderRadius: '4px', border: selectedPlayerIcon.label === p.label && selectedPlayerIcon.shape === p.shape ? '2px solid var(--accent)' : '1px solid #ccc', background: 'white', fontWeight: 'bold', fontSize: '0.7rem', color: 'black', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         >
-                                            {p.label}
+                                            {p.shape === 'star' ? '★' : p.shape === 'target' ? '⌖' : p.label}
                                         </button>
                                     ))}
                                     <button className="btn btn-secondary" onClick={handleQuickOffense} title="11-Man Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem' }}>⚡ Quick 11</button>
+                                    <button className="btn btn-secondary" onClick={handleScoutDefense} title="Scout Defense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#374151', color: 'white' }}>🛡 Scout Def</button>
+                                    <button className="btn btn-secondary" onClick={handleScoutOffense} title="Scout Offense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#eab308', color: 'black' }}>⚔️ Scout Off</button>
                                     <button className="btn btn-secondary" onClick={handleRooskiOffense} title="Rooski Skill Colors" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>🎨 Rooski</button>
                                 </div>
                             )}
@@ -3047,6 +3125,7 @@
 
         const WristbandBuilder = ({ plays, onUpdatePlay }) => {
             const [mode, setMode] = useState('text'); // 'text' (100-299) or 'rooski' (300+)
+            const [printMode, setPrintMode] = useState('text'); // 'text', 'rooski_skill', 'rooski_ol'
             const [selectedPlayId, setSelectedPlayId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
 
@@ -5187,7 +5266,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {plan.segments
+                                    {(plan.segments || [])
                                         .sort((a, b) => a.startTime.localeCompare(b.startTime))
                                         .map(seg => (
                                             <tr key={seg.id}>
@@ -6728,19 +6807,70 @@
                 CORE: { id: 'CORE', label: 'Core / Multipliers', order: 0 }
             },
             ANNUAL_CALENDAR_DEFAULTS: [
-                { month: 'January', program: ['Off-Season Lifts Begin', 'Player Meetings'], valhalla: ['Winter Warrior Challenge'] },
-                { month: 'February', program: ['Combine Testing', 'Super Bowl Watch Party'], valhalla: ['Combine King Badge'] },
-                { month: 'March', program: ['Spring Ball Install', '7on7 Tryouts'], valhalla: ['Speed Demon Badge'] },
-                { month: 'April', program: ['Spring Game', 'Fundraising Kickoff'], valhalla: [] },
-                { month: 'May', program: ['Spring Football', 'Academic Review'], valhalla: ['Scholar Athlete Award'] },
-                { month: 'June', program: ['Summer Camp Starts', '7on7 League'], valhalla: ['Summer Skirmish Points'] },
-                { month: 'July', program: ['Team Camp', 'Dead Period'], valhalla: ['Iron Man Attendance'] },
-                { month: 'August', program: ['Fall Camp', 'Scrimmage 1'], valhalla: ['Camp Beast Badge'] },
-                { month: 'September', program: ['Season Opener', 'Homecoming'], valhalla: ['In-Season Maintenance'] },
-                { month: 'October', program: ['Conference Play', 'Pink Out'], valhalla: [] },
-                { month: 'November', program: ['Senior Night', 'Playoffs Round 1'], valhalla: [] },
-                { month: 'December', program: ['State Championship', 'Banquet'], valhalla: ['Player of the Year'] }
+                { month: 'January', program: ['Off-Season Lifts Begin', 'Player Meetings'], valhalla: ['Winter Warrior Challenge'], tasks: [] },
+                { month: 'February', program: ['Combine Testing', 'Super Bowl Watch Party'], valhalla: ['Combine King Badge'], tasks: [] },
+                { month: 'March', program: ['Spring Ball Install', '7on7 Tryouts'], valhalla: ['Speed Demon Badge'], tasks: [] },
+                { month: 'April', program: ['Spring Game', 'Fundraising Kickoff'], valhalla: [], tasks: [] },
+                { month: 'May', program: ['Spring Football', 'Academic Review'], valhalla: ['Scholar Athlete Award'], tasks: [] },
+                { month: 'June', program: ['Summer Camp Starts', '7on7 League'], valhalla: ['Summer Skirmish Points'], tasks: [] },
+                { month: 'July', program: ['Team Camp', 'Dead Period'], valhalla: ['Iron Man Attendance'], tasks: [] },
+                { month: 'August', program: ['Fall Camp', 'Scrimmage 1'], valhalla: ['Camp Beast Badge'], tasks: [] },
+                { month: 'September', program: ['Season Opener', 'Homecoming'], valhalla: ['In-Season Maintenance'], tasks: [] },
+                { month: 'October', program: ['Conference Play', 'Pink Out'], valhalla: [], tasks: [] },
+                { month: 'November', program: ['Senior Night', 'Playoffs Round 1'], valhalla: [], tasks: [] },
+                { month: 'December', program: ['State Championship', 'Banquet'], valhalla: ['Player of the Year'], tasks: [] }
             ],
+            SUMMER_CALENDAR_DEFAULTS: [
+                { month: 'Week 1', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 2', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 3', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 4', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 5', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 6', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 7', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 8', program: [], valhalla: [], tasks: [] }
+            ],
+            PRESEASON_CALENDAR_DEFAULTS: [
+                { month: 'Family Week', program: [], valhalla: [], tasks: [] },
+                // Camp Week (Sun-Sat)
+                { month: 'Camp Week: Sun', program: [], valhalla: [], tasks: [] },
+                { month: 'Camp Week: Mon', program: [], valhalla: [], tasks: [] },
+                { month: 'Camp Week: Tue', program: [], valhalla: [], tasks: [] },
+                { month: 'Camp Week: Wed', program: [], valhalla: [], tasks: [] },
+                { month: 'Camp Week: Thu', program: [], valhalla: [], tasks: [] },
+                { month: 'Camp Week: Fri', program: [], valhalla: [], tasks: [] },
+                { month: 'Camp Week: Sat', program: [], valhalla: [], tasks: [] },
+                // First Week (Sun-Sat)
+                { month: 'First Week: Sun', program: [], valhalla: [], tasks: [] },
+                { month: 'First Week: Mon', program: [], valhalla: [], tasks: [] },
+                { month: 'First Week: Tue', program: [], valhalla: [], tasks: [] },
+                { month: 'First Week: Wed', program: [], valhalla: [], tasks: [] },
+                { month: 'First Week: Thu', program: [], valhalla: [], tasks: [] },
+                { month: 'First Week: Fri', program: [], valhalla: [], tasks: [] },
+                { month: 'First Week: Sat', program: [], valhalla: [], tasks: [] },
+                // Week 0 (Sun-Sat)
+                { month: 'Week 0: Sun', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 0: Mon', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 0: Tue', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 0: Wed', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 0: Thu', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 0: Fri', program: [], valhalla: [], tasks: [] },
+                { month: 'Week 0: Sat', program: [], valhalla: [], tasks: [] }
+            ],
+            GAME_WEEK_DEFAULTS: [
+                { month: 'Monday', program: [], valhalla: [], tasks: [] },
+                { month: 'Tuesday', program: [], valhalla: [], tasks: [] },
+                { month: 'Wednesday', program: [], valhalla: [], tasks: [] },
+                { month: 'Thursday', program: [], valhalla: [], tasks: [] },
+                { month: 'Friday', program: [], valhalla: [], tasks: [] },
+                { month: 'Saturday', program: [], valhalla: [], tasks: [] },
+                { month: 'Sunday', program: [], valhalla: [], tasks: [] }
+            ],
+            SIDEBAR_DEFAULTS: {
+                program: ['Staff Meeting', 'Parent Meeting', 'Fundraiser', 'Alumni Event'],
+                tasks: ['Order Spirit Pack', 'Confirm Bus Schedule', 'Inventory Check', 'Facility Request', 'Upload Hudl Film'],
+                valhalla: ['Community Service', 'Leadership Council', 'Grade Check']
+            },
             BADGE_XP: {
                 Iron: 50,
                 Bronze: 75,
@@ -7059,83 +7189,154 @@
         const StaffCalendar = ({ data, onUpdate, staff = [] }) => {
             const [editingEvent, setEditingEvent] = useState(null); // { monthIndex, field, eventIndex, eventData }
             const [draggedItem, setDraggedItem] = useState(null); // { monthIndex, field, index }
+            const [sidebarItems, setSidebarItems] = useLocalStorage('oc-dashboard-sidebar', VALHALLA_CONSTANTS.SIDEBAR_DEFAULTS);
+            const [activeSidebarTab, setActiveSidebarTab] = useState('program');
 
-            // Effect to migrate legacy string data to objects
+            // View Mode State
+            const [viewMode, setViewMode] = useState('full'); // 'full', 'summer', 'preseason', 'game'
+
+            // Local Storage for sub-views
+            const [summerData, setSummerData] = useLocalStorage('oc-dashboard-calendar-summer', VALHALLA_CONSTANTS.SUMMER_CALENDAR_DEFAULTS);
+            const [preseasonData, setPreseasonData] = useLocalStorage('oc-dashboard-calendar-preseason', VALHALLA_CONSTANTS.PRESEASON_CALENDAR_DEFAULTS);
+            const [gameWeekData, setGameWeekData] = useLocalStorage('oc-dashboard-calendar-gameweek', VALHALLA_CONSTANTS.GAME_WEEK_DEFAULTS);
+
+            // Derived Data based on View
+            const currentData = useMemo(() => {
+                if (viewMode === 'summer') return summerData;
+                if (viewMode === 'preseason') return preseasonData;
+                if (viewMode === 'game') return gameWeekData;
+                return data || VALHALLA_CONSTANTS.ANNUAL_CALENDAR_DEFAULTS; // Fallback for 'full'
+            }, [viewMode, summerData, preseasonData, gameWeekData, data]);
+
+            const handleCurrentUpdate = (newData) => {
+                if (viewMode === 'summer') setSummerData(newData);
+                else if (viewMode === 'preseason') setPreseasonData(newData);
+                else if (viewMode === 'game') setGameWeekData(newData);
+                else onUpdate(newData); // Prop update for Full Year
+            };
+
+            // Effect to migrate legacy string data for current view
             useEffect(() => {
-                if (!data) return;
+                if (!currentData) return;
                 let hasChanges = false;
-                const newData = data.map(month => {
-                    const migrateList = (list) => (list || []).map(item => {
-                        if (typeof item === 'string') {
-                            hasChanges = true;
-                            return { id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, title: item, tasks: [] };
-                        }
-                        return item;
-                    });
-
-                    return {
-                        ...month,
-                        program: migrateList(month.program),
-                        valhalla: migrateList(month.valhalla)
-                    };
+                const migrateList = (list) => (list || []).map(item => {
+                    if (typeof item === 'string') {
+                        hasChanges = true;
+                        return { id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, title: item, notes: '', tasks: [] };
+                    }
+                    return { ...item, notes: item.notes || '' };
                 });
 
+                const migrated = currentData.map(month => ({
+                    ...month,
+                    program: migrateList(month.program),
+                    valhalla: migrateList(month.valhalla)
+                }));
+
                 if (hasChanges) {
-                    onUpdate(newData);
+                    handleCurrentUpdate(migrated);
                 }
-            }, [data, onUpdate]);
+            }, [viewMode]); // Trigger on view change
 
             // Helper to ensure view doesn't crash on mixed (during migration)
             const normalizeEvent = (item) => {
-                if (typeof item === 'string') {
-                    // Temporary stable view for strings before effect kicks in
-                    return { id: item, title: item, tasks: [] };
-                }
-                return item;
+                if (typeof item === 'string') return { id: item, title: item, tasks: [] };
+                return { ...item, tasks: item.tasks || [] };
             };
 
             const handleAddItem = (monthIndex, field) => {
-                const text = prompt(`Add item to ${field === 'program' ? 'Program/Staff' : 'Valhalla XP'}:`);
-                if (!text) return;
-
-                const newData = [...data];
-                const currentList = [...(newData[monthIndex][field] || [])];
-
-                // Add as object
-                currentList.push({
-                    id: `evt_${Date.now()}_${Math.random()}`,
-                    title: text,
+                const newEvent = {
+                    id: Date.now(),
+                    title: 'New Event',
+                    notes: '',
                     tasks: []
-                });
-
-                newData[monthIndex] = { ...newData[monthIndex], [field]: currentList };
-                onUpdate(newData);
+                };
+                const newData = [...currentData];
+                const currentList = [...(newData[monthIndex][field] || [])];
+                newData[monthIndex] = { ...newData[monthIndex], [field]: [...currentList, newEvent] };
+                handleCurrentUpdate(newData);
+                setEditingEvent({ monthIndex, field, eventIndex: currentList.length, eventData: newEvent });
             };
 
-            const handleRemoveItem = (monthIndex, field, itemIndex, e) => {
+            const handleRemoveItem = (monthIndex, field, index, e) => {
                 e.stopPropagation();
-                if (!confirm('Remove this event?')) return;
-                const newData = [...data];
-                const currentList = [...(newData[monthIndex][field] || [])];
-                currentList.splice(itemIndex, 1);
-                newData[monthIndex] = { ...newData[monthIndex], [field]: currentList };
-                onUpdate(newData);
+                if (!window.confirm('Delete this event?')) return;
+                const newData = [...currentData];
+                const list = [...(newData[monthIndex][field] || [])];
+                list.splice(index, 1);
+                newData[monthIndex] = { ...newData[monthIndex], [field]: list };
+                handleCurrentUpdate(newData);
+            };
+
+            // Edit Sidebar Item (New)
+            const handleEditSidebarItem = (field, idx) => {
+                const itemRaw = sidebarItems[field][idx];
+                // Normalize to full object for editing
+                const eventData = {
+                    title: typeof itemRaw === 'string' ? itemRaw : itemRaw.title,
+                    notes: typeof itemRaw === 'string' ? '' : (itemRaw.note || ''),
+                    hasValhallaXP: typeof itemRaw === 'object' ? (itemRaw.hasValhallaXP || false) : false,
+                    tasks: typeof itemRaw === 'object' ? (itemRaw.tasks || []) : [],
+                    id: `temp_sidebar_${idx}` // Temp ID
+                };
+
+                setEditingEvent({ isSidebar: true, field, eventIndex: idx, eventData });
             };
 
             const handleUpdateEvent = (updatedEvent) => {
                 if (!editingEvent) return;
+
+                // SIDEBAR UPDATE
+                if (editingEvent.isSidebar) {
+                    const { field, eventIndex } = editingEvent;
+                    setSidebarItems(prev => {
+                        const newList = [...prev[field]];
+                        // Save back as concise object, but now supports full tasks/xp
+                        newList[eventIndex] = {
+                            title: updatedEvent.title,
+                            note: updatedEvent.notes, // maintain 'note' field name for compatibility, or migrate? keeping 'note' for sidebar view logic
+                            hasValhallaXP: updatedEvent.hasValhallaXP,
+                            tasks: updatedEvent.tasks
+                        };
+                        return { ...prev, [field]: newList };
+                    });
+                    setEditingEvent(null);
+                    return;
+                }
+
+                // CALENDAR UPDATE
                 const { monthIndex, field, eventIndex } = editingEvent;
-                const newData = [...data];
+                const newData = [...currentData];
                 const currentList = [...(newData[monthIndex][field] || [])];
                 currentList[eventIndex] = updatedEvent;
                 newData[monthIndex] = { ...newData[monthIndex], [field]: currentList };
-                onUpdate(newData);
-                setEditingEvent({ ...editingEvent, eventData: updatedEvent }); // Update modal view
+                handleCurrentUpdate(newData);
+                setEditingEvent({ ...editingEvent, eventData: updatedEvent });
             };
 
+            // Add Sidebar Item
+            const handleAddSidebarItem = (field) => {
+                const text = prompt(`Enter new ${field} template Title:`);
+                if (!text) return;
+                const note = prompt(`Enter optional default note (or leave blank):`);
+
+                const newItem = { title: text, note: note || '' };
+                setSidebarItems(prev => ({ ...prev, [field]: [...prev[field], newItem] }));
+            };
+
+            // Remove Sidebar Item
+            const handleRemoveSidebarItem = (field, idx) => {
+                setSidebarItems(prev => {
+                    const newList = [...prev[field]];
+                    newList.splice(idx, 1);
+                    return { ...prev, [field]: newList };
+                });
+            };
+
+
             // Drag & Drop Handlers
-            const onDragStart = (e, monthIndex, field, index) => {
-                setDraggedItem({ monthIndex, field, index });
+            const onDragStart = (e, monthIndex, field, index, isSidebar = false) => {
+                setDraggedItem({ monthIndex, field, index, isSidebar });
                 e.dataTransfer.effectAllowed = "move";
                 // Ghost image styling if needed
             };
@@ -7143,34 +7344,84 @@
             const onDragOver = (e, monthIndex, field, index) => {
                 e.preventDefault(); // Necessary for drop
                 if (!draggedItem) return;
-                if (draggedItem.monthIndex !== monthIndex || draggedItem.field !== field) return; // Only allow reorder within same list for now
-                if (draggedItem.index === index) return;
+                // Allow cross-month dragging if fields match
+                if (draggedItem.field !== field) return;
+                // Visual feedback logic could go here
             };
 
             const onDrop = (e, monthIndex, field, dropIndex) => {
                 e.preventDefault();
                 if (!draggedItem) return;
-                if (draggedItem.monthIndex !== monthIndex || draggedItem.field !== field) return;
+                if (draggedItem.field !== field) return;
 
-                const dragIndex = draggedItem.index;
-                if (dragIndex === dropIndex) return;
+                const newData = [...currentData];
 
-                const newData = [...data];
-                const currentList = [...(newData[monthIndex][field] || [])];
+                // CASE 1: Dragging FROM Sidebar
+                if (draggedItem.isSidebar) {
+                    const itemRaw = sidebarItems[field][draggedItem.index];
+                    if (!itemRaw) return;
 
-                // Move item
-                const [movedItem] = currentList.splice(dragIndex, 1);
-                currentList.splice(dropIndex, 0, movedItem);
+                    // Create new event from template (Support full object)
+                    const title = typeof itemRaw === 'string' ? itemRaw : itemRaw.title;
+                    const note = typeof itemRaw === 'string' ? '' : (itemRaw.note || '');
+                    const hasValhallaXP = typeof itemRaw === 'object' ? (itemRaw.hasValhallaXP || false) : false;
+                    const tasks = typeof itemRaw === 'object' ? (JSON.parse(JSON.stringify(itemRaw.tasks || []))) : []; // Deep copy tasks
 
-                newData[monthIndex] = { ...newData[monthIndex], [field]: currentList };
-                onUpdate(newData);
+                    const newEvent = {
+                        id: Date.now(),
+                        title: title,
+                        notes: note,
+                        hasValhallaXP: hasValhallaXP,
+                        tasks: tasks,
+                        date: '' // Reset date for new event
+                    };
+
+                    const targetList = [...(newData[monthIndex][field] || [])];
+                    // Insert at drop index or end
+                    if (dropIndex !== undefined) {
+                        targetList.splice(dropIndex, 0, newEvent);
+                    } else {
+                        targetList.push(newEvent);
+                    }
+                    newData[monthIndex] = { ...newData[monthIndex], [field]: targetList };
+                    handleCurrentUpdate(newData);
+                    // Note: We keep the item in sidebar (template behavior)
+                    setDraggedItem(null);
+                    return;
+                }
+
+                // CASE 2: Dragging FROM Calendar (Reorder or Cross-Month)
+                const sourceList = [...(newData[draggedItem.monthIndex][field] || [])];
+                const targetList = (draggedItem.monthIndex === monthIndex)
+                    ? sourceList
+                    : [...(newData[monthIndex][field] || [])];
+
+                // Remove from source
+                const [movedItem] = sourceList.splice(draggedItem.index, 1);
+
+                // Add to target
+                if (draggedItem.monthIndex === monthIndex) {
+                    // Same list reorder
+                    targetList.splice(dropIndex, 0, movedItem);
+                    newData[monthIndex] = { ...newData[monthIndex], [field]: targetList };
+                } else {
+                    // Cross-list move
+                    targetList.splice(dropIndex, 0, movedItem);
+                    newData[draggedItem.monthIndex] = { ...newData[draggedItem.monthIndex], [field]: sourceList };
+                    newData[monthIndex] = { ...newData[monthIndex], [field]: targetList };
+                }
+
+                handleCurrentUpdate(newData);
                 setDraggedItem(null);
             };
 
             // Task Modal Component (Internal)
             const EventModal = ({ event, onClose, onSave, staffList }) => {
-                const [localEvent, setLocalEvent] = useState(event);
-                const [newTaskText, setNewTaskText] = useState('');
+                const [localEvent, setLocalEvent] = useState({
+                    ...event,
+                    tasks: (event.tasks || []).map(t => ({ ...t, category: t.category || 'prep' }))
+                });
+                const [newTaskTexts, setNewTaskTexts] = useState({ prep: '', during: '', after: '' });
 
                 const toggleTask = (taskId) => {
                     setLocalEvent(prev => ({
@@ -7179,16 +7430,27 @@
                     }));
                 };
 
-                const addTask = () => {
-                    if (!newTaskText.trim()) return;
+                const addTask = (category) => {
+                    const text = newTaskTexts[category];
+                    if (!text || !text.trim()) return;
+
                     const newTask = {
-                        id: `task_${Date.now()}`,
-                        text: newTaskText,
+                        id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                        text: text,
                         completed: false,
-                        assignedTo: '' // staff member ID or name
+                        assignedTo: '',
+                        date: '',
+                        category: category
                     };
                     setLocalEvent(prev => ({ ...prev, tasks: [...prev.tasks, newTask] }));
-                    setNewTaskText('');
+                    setNewTaskTexts(prev => ({ ...prev, [category]: '' }));
+                };
+
+                const updateTaskDate = (taskId, date) => {
+                    setLocalEvent(prev => ({
+                        ...prev,
+                        tasks: prev.tasks.map(t => t.id === taskId ? { ...t, date: date } : t)
+                    }));
                 };
 
                 const removeTask = (taskId) => {
@@ -7224,7 +7486,7 @@
 
                             {/* Title Editing */}
                             <div className="form-group">
-                                <label className="form-label">Event Title</label>
+                                <label className="form-label">Title</label>
                                 <input
                                     className="form-input"
                                     value={localEvent.title}
@@ -7232,73 +7494,130 @@
                                 />
                             </div>
 
-                            {/* Tasks Section */}
-                            <div style={{ marginTop: '1.5rem' }}>
-                                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>Associated Tasks</span>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                        {localEvent.tasks.filter(t => t.completed).length} / {localEvent.tasks.length}
-                                    </span>
-                                </label>
-
-                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                                {/* Event Date */}
+                                <div className="form-group">
+                                    <label className="form-label">Date</label>
                                     <input
+                                        type="date"
                                         className="form-input"
-                                        placeholder="New task..."
-                                        value={newTaskText}
-                                        onChange={e => setNewTaskText(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && addTask()}
+                                        value={localEvent.date || ''}
+                                        onChange={e => setLocalEvent({ ...localEvent, date: e.target.value })}
                                     />
-                                    <button className="btn btn-primary" onClick={addTask}>Add</button>
                                 </div>
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {localEvent.tasks.map(task => (
-                                        <div key={task.id} style={{
-                                            padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0',
-                                            display: 'flex', alignItems: 'center', gap: '0.75rem'
-                                        }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={task.completed}
-                                                onChange={() => toggleTask(task.id)}
-                                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                            />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{
-                                                    textDecoration: task.completed ? 'line-through' : 'none',
-                                                    color: task.completed ? '#94a3b8' : 'inherit',
-                                                    fontSize: '0.9rem'
-                                                }}>
-                                                    {task.text}
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', marginTop: '4px' }}>
-                                                    <Icon name="User" size={10} style={{ marginRight: '4px', opacity: 0.5 }} />
-                                                    <select
-                                                        value={task.assignedTo || ''}
-                                                        onChange={(e) => assignTask(task.id, e.target.value)}
-                                                        style={{
-                                                            fontSize: '0.75rem', padding: '1px 4px', border: 'none', background: 'transparent',
-                                                            color: task.assignedTo ? 'var(--accent)' : '#94a3b8', cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <option value="">Unassigned</option>
-                                                        {staffList.map(s => (
-                                                            <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => removeTask(task.id)}
-                                                style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }}
-                                            >
-                                                <Icon name="Trash" size={12} />
-                                            </button>
-                                        </div>
-                                    ))}
+                                {/* Valhalla XP Toggle */}
+                                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem', fontWeight: 'bold' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={localEvent.hasValhallaXP || false}
+                                            onChange={e => setLocalEvent({ ...localEvent, hasValhallaXP: e.target.checked })}
+                                            style={{ width: '18px', height: '18px' }}
+                                        />
+                                        <span style={{ color: localEvent.hasValhallaXP ? '#ffd700' : 'inherit' }}>
+                                            Valhalla XP Attached
+                                            {localEvent.hasValhallaXP && <Icon name="Award" size={14} style={{ marginLeft: '4px' }} />}
+                                        </span>
+                                    </label>
                                 </div>
                             </div>
+
+                            <div className="form-group" style={{ marginTop: '1rem' }}>
+                                <label className="form-label">Notes</label>
+                                <textarea
+                                    className="form-input"
+                                    rows={3}
+                                    value={localEvent.notes || ''}
+                                    onChange={e => setLocalEvent({ ...localEvent, notes: e.target.value })}
+                                    placeholder="Add general notes..."
+                                    style={{ resize: 'vertical' }}
+                                />
+                            </div>
+
+                            {/* Tasks Sections */}
+                            {['prep', 'during', 'after'].map(cat => (
+                                <div key={cat} style={{ marginTop: '1.5rem' }}>
+                                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', textTransform: 'capitalize' }}>
+                                        <span>{cat === 'prep' ? 'Event Prep' : cat === 'during' ? 'During Event' : 'After Event'} Tasks</span>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                            {localEvent.tasks.filter(t => t.category === cat && t.completed).length} / {localEvent.tasks.filter(t => t.category === cat).length}
+                                        </span>
+                                    </label>
+
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                        <input
+                                            className="form-input"
+                                            placeholder={`Add ${cat} task...`}
+                                            value={newTaskTexts[cat]}
+                                            onChange={e => setNewTaskTexts(prev => ({ ...prev, [cat]: e.target.value }))}
+                                            onKeyDown={e => e.key === 'Enter' && addTask(cat)}
+                                        />
+                                        <button className="btn btn-primary" onClick={() => addTask(cat)}>Add</button>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {localEvent.tasks.filter(t => t.category === cat).map(task => (
+                                            <div key={task.id} style={{
+                                                padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0',
+                                                display: 'flex', alignItems: 'center', gap: '0.75rem'
+                                            }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={task.completed}
+                                                    onChange={() => toggleTask(task.id)}
+                                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                />
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{
+                                                        textDecoration: task.completed ? 'line-through' : 'none',
+                                                        color: task.completed ? '#94a3b8' : 'inherit',
+                                                        fontSize: '0.9rem'
+                                                    }}>
+                                                        {task.text}
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '4px' }}>
+                                                        <Icon name="User" size={10} style={{ marginRight: '4px', opacity: 0.5 }} />
+                                                        <select
+                                                            value={task.assignedTo || ''}
+                                                            onChange={(e) => assignTask(task.id, e.target.value)}
+                                                            style={{
+                                                                fontSize: '0.75rem', padding: '1px 4px', border: 'none', background: 'transparent',
+                                                                color: task.assignedTo ? 'var(--accent)' : '#94a3b8', cursor: 'pointer', marginRight: '8px'
+                                                            }}
+                                                        >
+                                                            <option value="">Unassigned</option>
+                                                            {staffList.map(s => (
+                                                                <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
+                                                            ))}
+                                                        </select>
+                                                        <input
+                                                            type="date"
+                                                            value={task.date || ''}
+                                                            onChange={(e) => updateTaskDate(task.id, e.target.value)}
+                                                            style={{
+                                                                fontSize: '0.75rem', border: 'none', background: 'transparent',
+                                                                color: task.date ? 'var(--text-primary)' : '#94a3b8', cursor: 'pointer'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => removeTask(task.id)}
+                                                    style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }}
+                                                >
+                                                    <Icon name="Trash" size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {localEvent.tasks.filter(t => t.category === cat).length === 0 && (
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>
+                                                No tasks
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
 
                             <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                                 <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
@@ -7306,6 +7625,30 @@
                         </div>
                     </div>
                 );
+            };
+
+            // Reorder calendar based on view
+            let renderIndices = [];
+            let columns = 3;
+            if (viewMode === 'full') {
+                renderIndices = [11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Dec -> Nov
+                columns = 3;
+            } else if (viewMode === 'summer') {
+                renderIndices = [0, 1, 2, 3, 4, 5, 6, 7]; // Week 1-8
+                columns = 4;
+            } else if (viewMode === 'preseason') {
+                renderIndices = Array.from({ length: 22 }, (_, i) => i); // 0-21
+                columns = 7;
+            } else if (viewMode === 'game') {
+                renderIndices = [6, 0, 1, 2, 3, 4, 5]; // Sun-Sat
+                columns = 4;
+            }
+
+            const getHeaderLabel = (f) => {
+                if (f === 'program') return 'EVENTS';
+                if (f === 'tasks') return 'TASKS';
+                if (f === 'valhalla') return 'VALHALLA XP';
+                return f; // Fallback
             };
 
             const renderList = (month, idx, field, icon, color) => {
@@ -7321,20 +7664,20 @@
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                         }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icon name={icon} size={12} /> {field === 'program' ? 'Program / Staff' : 'Valhalla XP'}
+                                <Icon name={icon} size={12} /> {getHeaderLabel(field)}
                             </span>
                             <button onClick={() => handleAddItem(idx, field)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: color }}>
                                 <Icon name="PlusCircle" size={14} />
                             </button>
                         </div>
-                        <ul className="calendar-list" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                        <ul className="calendar-list" style={{ margin: 0, padding: 0, listStyle: 'none', minHeight: '30px' }} onDragOver={(e) => onDragOver(e, idx, field, list.length)} onDrop={(e) => onDrop(e, idx, field, list.length)}>
                             {list.map((item, i) => (
                                 <li
                                     key={item.id}
                                     draggable
                                     onDragStart={(e) => onDragStart(e, idx, field, i)}
-                                    onDragOver={(e) => onDragOver(e, idx, field, i)}
-                                    onDrop={(e) => onDrop(e, idx, field, i)}
+                                    onDragOver={(e) => { e.stopPropagation(); onDragOver(e, idx, field, i); }}
+                                    onDrop={(e) => { e.stopPropagation(); onDrop(e, idx, field, i); }}
                                     onClick={() => setEditingEvent({ monthIndex: idx, field, eventIndex: i, eventData: item })}
                                     style={{
                                         marginBottom: '6px', padding: '6px', borderRadius: '4px',
@@ -7365,38 +7708,145 @@
                                     </button>
                                 </li>
                             ))}
-                            {list.length === 0 && <li style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px' }}>No events added</li>}
+                            {list.length === 0 && <li style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px' }}>Drop items here...</li>}
                         </ul>
                     </div>
                 );
             };
 
-            // Safety fallback if data is still loading or undefined
-            const calendarEvents = data || VALHALLA_CONSTANTS.ANNUAL_CALENDAR_DEFAULTS;
+            const renderSidebarSection = (field, icon, color, title) => (
+                <div style={{ marginBottom: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <h4 style={{ margin: 0, color: color, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                            <Icon name={icon} size={14} /> {title}
+                        </h4>
+                        <button onClick={() => handleAddSidebarItem(field)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: color, opacity: 0.8 }}>
+                            <Icon name="Plus" size={14} />
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {sidebarItems[field].map((item, i) => {
+                            const title = typeof item === 'string' ? item : item.title;
+                            const note = typeof item === 'object' && item.note ? item.note : '';
+
+                            return (
+                                <div
+                                    key={i}
+                                    draggable
+                                    onDragStart={(e) => onDragStart(e, null, field, i, true)}
+                                    style={{
+                                        padding: '0.5rem', background: 'var(--bg-panel)', border: '1px solid var(--border)',
+                                        borderRadius: '4px', fontSize: '0.85rem', cursor: 'grab', display: 'flex', justifyContent: 'space-between',
+                                        flexDirection: 'column'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span>{title}</span>
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            <button onClick={() => handleEditSidebarItem(field, i)} style={{ border: 'none', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', opacity: 0.6 }} title="Edit Template">
+                                                <Icon name="Edit" size={12} />
+                                            </button>
+                                            <button onClick={() => handleRemoveSidebarItem(field, i)} style={{ border: 'none', background: 'none', color: '#ef4444', opacity: 0.5, cursor: 'pointer' }} title="Remove Template">&times;</button>
+                                        </div>
+                                    </div>
+                                    {note && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note}</div>}
+                                    {item.tasks && item.tasks.length > 0 && <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{item.tasks.length} tasks</div>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
 
             return (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem', overflowY: 'auto' }}>
-                    <div className="card" style={{ padding: '2rem' }}>
-                        <h2 style={{ margin: '0 0 0.5rem 0' }}>Annual Program Calendar</h2>
-                        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-                            Master schedule for Staff, Program Events, and Valhalla XP Milestones.
-                            <br /><span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Drag to reorder • Click to add tasks & assign staff</span>
-                        </p>
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div className="card" style={{ padding: '1.5rem', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h2 style={{ margin: '0 0 0.25rem 0' }}>Annual Program Calendar</h2>
+                            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>
+                                Master schedule for Staff, Program Events, and Valhalla XP.
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <label style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>VIEW:</label>
+                            <select
+                                value={viewMode}
+                                onChange={(e) => setViewMode(e.target.value)}
+                                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '1rem', cursor: 'pointer' }}
+                            >
+                                <option value="full">Full Year (Quarterly)</option>
+                                <option value="summer">Summer (8-Week)</option>
+                                <option value="preseason">Pre-Season (4-Week)</option>
+                                <option value="game">Game Week (Daily)</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem', paddingBottom: '2rem' }}>
-                        {calendarEvents.map((month, idx) => (
-                            <div key={idx} className="card" style={{ padding: 0, overflow: 'visible', border: '1px solid var(--border)' }}>
-                                <div style={{ background: 'var(--surface)', padding: '1rem', fontWeight: 'bold', fontSize: '1.2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
-                                    {month.month}
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>{idx + 1}</span>
-                                </div>
-                                <div style={{ padding: '1.5rem', background: '#f8fafc', minHeight: '200px' }}>
-                                    {renderList(month, idx, 'program', 'Calendar', '#60a5fa')}
-                                    {renderList(month, idx, 'valhalla', 'Award', '#ffd700')}
+                    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: '1.5rem', padding: '1rem' }}>
+                        {/* Sidebar */}
+                        <div style={{ width: '250px', background: 'var(--surface)', borderRadius: '8px', padding: '1rem', overflowY: 'auto', border: '1px solid var(--border)', flexShrink: 0 }}>
+                            <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                                    TEMPLATE CATEGORY
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <select
+                                        value={activeSidebarTab}
+                                        onChange={(e) => setActiveSidebarTab(e.target.value)}
+                                        style={{
+                                            width: '100%', padding: '0.5rem', borderRadius: '6px',
+                                            border: '1px solid var(--border)', fontSize: '0.9rem',
+                                            background: 'white', appearance: 'none', cursor: 'pointer'
+                                        }}
+                                    >
+                                        <option value="program">Events (Staff/Program)</option>
+                                        <option value="tasks">Tasks (To-Do)</option>
+                                        <option value="valhalla">Valhalla XP Defaults</option>
+                                    </select>
+                                    <Icon name="ChevronDown" size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }} />
                                 </div>
                             </div>
-                        ))}
+
+                            {activeSidebarTab === 'program' && renderSidebarSection('program', 'Calendar', '#60a5fa', 'Events')}
+                            {activeSidebarTab === 'tasks' && renderSidebarSection('tasks', 'CheckSquare', '#f97316', 'Tasks')}
+                            {activeSidebarTab === 'valhalla' && renderSidebarSection('valhalla', 'Award', '#ffd700', 'Valhalla XP')}
+                        </div>
+
+                        {/* Calendar Grid */}
+                        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                                gap: '1rem', paddingBottom: '2rem'
+                            }}>
+                                {renderIndices.map(idx => {
+                                    const month = currentData[idx];
+                                    if (!month) return null;
+                                    const isFamilyWeek = viewMode === 'preseason' && idx === 0;
+
+                                    return (
+                                        <div key={idx} className="card" style={{
+                                            padding: 0,
+                                            overflow: 'visible',
+                                            border: '1px solid var(--border)',
+                                            gridColumn: isFamilyWeek ? '1 / -1' : 'auto' // Family Week spans full width
+                                        }}>
+                                            <div style={{ background: 'var(--surface)', padding: '1rem', fontWeight: 'bold', fontSize: '1.2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
+                                                {month.month}
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>
+                                                    {viewMode === 'full' ? (idx + 1) : ''}
+                                                </span>
+                                            </div>
+                                            <div style={{ padding: '1rem', background: '#f8fafc', minHeight: '200px' }}>
+                                                {renderList(month, idx, 'program', 'Calendar', '#60a5fa')}
+                                                {renderList(month, idx, 'tasks', 'CheckSquare', '#f97316')}
+                                                {renderList(month, idx, 'valhalla', 'Award', '#ffd700')}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
 
                     {editingEvent && (
@@ -8842,7 +9292,7 @@
             const existingCategories = [...new Set((tasks || []).map(t => t.category).filter(Boolean))];
             const CATEGORIES = [...new Set([...DEFAULT_CATEGORIES, ...existingCategories])];
 
-            const RECURRENCE_OPTIONS = ['Daily', 'Weekly: Monday', 'Weekly: Tuesday', 'Weekly: Wednesday', 'Weekly: Thursday', 'Weekly: Friday', 'Weekly: Saturday', 'Monthly', 'Seasonal', 'Annual', 'None'];
+            const RECURRENCE_OPTIONS = ['Daily', 'Daily In-Season', 'Weekly: Monday', 'Weekly: Tuesday', 'Weekly: Wednesday', 'Weekly: Thursday', 'Weekly: Friday', 'Weekly: Saturday', 'Monthly', 'Seasonal', 'Annual', 'None'];
 
             const handleCollaborationChange = (taskId, type) => {
                 handleTaskChange(taskId, 'collaborationType', type);
@@ -15838,84 +16288,90 @@
                     )}
 
                     {/* PROFILE TAB */}
-                    {activeTab === 'profile' && (
-                        <div className="card" style={{ padding: '1.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-                                <div style={{
-                                    width: '80px', height: '80px', borderRadius: '50%', background: 'var(--accent)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', color: 'white'
-                                }}>
-                                    {selectedPlayer.jersey}
-                                </div>
-                                <div>
-                                    <h2 style={{ margin: 0 }}>{selectedPlayer.firstName} {selectedPlayer.lastName}</h2>
-                                    <div style={{ color: 'var(--text-secondary)' }}>
-                                        {selectedPlayer.position} • {selectedPlayer.year}
+                    {
+                        activeTab === 'profile' && (
+                            <div className="card" style={{ padding: '1.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                                    <div style={{
+                                        width: '80px', height: '80px', borderRadius: '50%', background: 'var(--accent)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', color: 'white'
+                                    }}>
+                                        {selectedPlayer.jersey}
                                     </div>
-                                    <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                                        Ht: {selectedPlayer.height || '-'} • Wt: {selectedPlayer.weight || '-'}
+                                    <div>
+                                        <h2 style={{ margin: 0 }}>{selectedPlayer.firstName} {selectedPlayer.lastName}</h2>
+                                        <div style={{ color: 'var(--text-secondary)' }}>
+                                            {selectedPlayer.position} • {selectedPlayer.year}
+                                        </div>
+                                        <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                                            Ht: {selectedPlayer.height || '-'} • Wt: {selectedPlayer.weight || '-'}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Equipment Info</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>HELMET</div>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.helmetSize || '-'}</div>
+                                <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Equipment Info</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>HELMET</div>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.helmetSize || '-'}</div>
+                                    </div>
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PADS</div>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.shoulderPadSize || '-'}</div>
+                                    </div>
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PANTS</div>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.pantSize || '-'}</div>
+                                    </div>
                                 </div>
-                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PADS</div>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.shoulderPadSize || '-'}</div>
-                                </div>
-                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PANTS</div>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.pantSize || '-'}</div>
-                                </div>
-                            </div>
 
-                            <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,165,0,0.1)', borderRadius: '8px', border: '1px solid rgba(255,165,0,0.3)', display: 'flex', gap: '1rem', alignItems: 'start' }}>
-                                <Icon name="AlertTriangle" color="orange" size={24} />
-                                <div>
-                                    <div style={{ fontWeight: 'bold', color: 'orange', marginBottom: '0.25rem' }}>Needs Update?</div>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                        If your equipment sizes are incorrect, please see the Equipment Manager or your Position Coach.
+                                <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,165,0,0.1)', borderRadius: '8px', border: '1px solid rgba(255,165,0,0.3)', display: 'flex', gap: '1rem', alignItems: 'start' }}>
+                                    <Icon name="AlertTriangle" color="orange" size={24} />
+                                    <div>
+                                        <div style={{ fontWeight: 'bold', color: 'orange', marginBottom: '0.25rem' }}>Needs Update?</div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                            If your equipment sizes are incorrect, please see the Equipment Manager or your Position Coach.
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )
+                    }
 
                     {/* ATTENDANCE TAB */}
-                    {activeTab === 'attendance' && (
-                        <div className="card" style={{ padding: '1.5rem' }}>
-                            <h2 style={{ marginBottom: '1rem' }}>My Attendance</h2>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                                <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#22c55e' }}>{attendancePercentage}%</div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Attendance</div>
+                    {
+                        activeTab === 'attendance' && (
+                            <div className="card" style={{ padding: '1.5rem' }}>
+                                <h2 style={{ marginBottom: '1rem' }}>My Attendance</h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                                    <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
+                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#22c55e' }}>{attendancePercentage}%</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Attendance</div>
+                                    </div>
+                                    <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
+                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3b82f6' }}>{calculateStreak()}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Day Streak</div>
+                                    </div>
+                                    <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px' }}>
+                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#a855f7' }}>{attendanceStats.total}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Events</div>
+                                    </div>
                                 </div>
-                                <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3b82f6' }}>{calculateStreak()}</div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Day Streak</div>
-                                </div>
-                                <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#a855f7' }}>{attendanceStats.total}</div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Events</div>
-                                </div>
+                                <p style={{ color: 'var(--text-secondary)' }}>Detailed attendance history coming soon...</p>
                             </div>
-                            <p style={{ color: 'var(--text-secondary)' }}>Detailed attendance history coming soon...</p>
-                        </div>
-                    )}
+                        )
+                    }
 
                     {/* ACHIEVEMENTS TAB */}
-                    {activeTab === 'achievements' && (
-                        <div className="card" style={{ padding: '1.5rem' }}>
-                            <h2 style={{ marginBottom: '1rem' }}>My Progress</h2>
-                            <p style={{ color: 'var(--text-secondary)' }}>Achievements and progress tracking coming soon...</p>
-                        </div>
-                    )}
-                </div>
+                    {
+                        activeTab === 'achievements' && (
+                            <div className="card" style={{ padding: '1.5rem' }}>
+                                <h2 style={{ marginBottom: '1rem' }}>My Progress</h2>
+                                <p style={{ color: 'var(--text-secondary)' }}>Achievements and progress tracking coming soon...</p>
+                            </div>
+                        )
+                    }
+                </div >
             );
         };
 
@@ -16175,6 +16631,247 @@
                             </div>
                         )}
                     </div>
+                </div>
+            );
+        };
+
+
+        // ===== FOOTBALL 101 COMPONENT =====
+        const Football101 = ({ data, onUpdateData }) => {
+            const [activeTab, setActiveTab] = useState('rules'); // rules, offense, defense, special-teams
+            const [searchTerm, setSearchTerm] = useState('');
+            const [editingItem, setEditingItem] = useState(null); // Item being edited/added
+            const [newItemMode, setNewItemMode] = useState(false);
+            const [filterCategory, setFilterCategory] = useState('ALL');
+
+            const OFFENSE_CATEGORIES = [
+                'Formation', 'Formation Tags', 'RB Alignment', 'Protections',
+                'Shifts', 'Motions', 'Run Concepts', 'Pass Concepts',
+                'RPO Tags', 'Read/Navigation Tags', 'Cadence Tags', 'Other'
+            ];
+
+            // Ensure data structure exists
+            const currentData = data || {
+                rules: [],
+                offense: { terms: [], fundamentals: [] },
+                defense: { terms: [], fundamentals: [] },
+                specialTeams: { terms: [], fundamentals: [] }
+            };
+
+            // Helper to get current list based on tab
+            const getList = () => {
+                if (activeTab === 'rules') return currentData.rules || [];
+                if (activeTab === 'offense') return currentData.offense?.terms || [];
+                if (activeTab === 'defense') return currentData.defense?.terms || [];
+                if (activeTab === 'special-teams') return currentData.specialTeams?.terms || [];
+                return [];
+            };
+
+            const handleSaveItem = (item) => {
+                const list = getList();
+                // Ensure category is set if in Offense tab
+                const itemToSave = { ...item };
+                if (activeTab === 'offense' && !itemToSave.category) {
+                    itemToSave.category = 'Other';
+                }
+
+                let updatedList;
+                if (newItemMode) {
+                    updatedList = [...list, { ...itemToSave, id: Date.now().toString() }];
+                } else {
+                    updatedList = list.map(i => i.id === itemToSave.id ? itemToSave : i);
+                }
+
+                // Update Big Data Object
+                const newData = { ...currentData };
+                if (activeTab === 'rules') newData.rules = updatedList;
+                else if (activeTab === 'offense') newData.offense.terms = updatedList;
+                else if (activeTab === 'defense') newData.defense.terms = updatedList;
+                else if (activeTab === 'special-teams') newData.specialTeams.terms = updatedList;
+
+                onUpdateData(newData);
+                setEditingItem(null);
+                setNewItemMode(false);
+            };
+
+            const handleDeleteItem = (id) => {
+                if (!confirm('Delete this term?')) return;
+                const list = getList();
+                const updatedList = list.filter(i => i.id !== id);
+
+                const newData = { ...currentData };
+                if (activeTab === 'rules') newData.rules = updatedList;
+                else if (activeTab === 'offense') newData.offense.terms = updatedList;
+                else if (activeTab === 'defense') newData.defense.terms = updatedList;
+                else if (activeTab === 'special-teams') newData.specialTeams.terms = updatedList;
+
+                onUpdateData(newData);
+            };
+
+            const filteredList = getList().filter(i => {
+                const matchesSearch = i.term.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (i.definition || '').toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesCategory = activeTab !== 'offense' || filterCategory === 'ALL' || i.category === filterCategory;
+                return matchesSearch && matchesCategory;
+            });
+
+            // File Upload Handler (Data URI)
+            const handleFileUpload = (e, setItem) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File is too large! Please use videos under 5MB.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    setItem(prev => ({ ...prev, mediaUrl: event.target.result, mediaType: file.type.startsWith('video') ? 'video' : 'image' }));
+                };
+                reader.readAsDataURL(file);
+            };
+
+            return (
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {['rules', 'offense', 'defense', 'special-teams'].map(tab => (
+                                <button
+                                    key={tab}
+                                    className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
+                                    onClick={() => { setActiveTab(tab); setSearchTerm(''); setFilterCategory('ALL'); }}
+                                    style={{ textTransform: 'capitalize' }}
+                                >
+                                    {tab.replace('-', ' ')}
+                                </button>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input
+                                type="text"
+                                placeholder="Search glossary..."
+                                className="form-input"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                            <button className="btn btn-primary" onClick={() => { setEditingItem({ term: '', definition: '', category: activeTab === 'offense' ? OFFENSE_CATEGORIES[0] : '' }); setNewItemMode(true); }}>
+                                <Icon name="PlusCircle" size={16} style={{ marginRight: '4px' }} /> Add Term
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Offense Category Filter */}
+                    {activeTab === 'offense' && (
+                        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                            <button
+                                className={`btn ${filterCategory === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                                style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                                onClick={() => setFilterCategory('ALL')}
+                            >
+                                ALL
+                            </button>
+                            {OFFENSE_CATEGORIES.map(cat => (
+                                <button
+                                    key={cat}
+                                    className={`btn ${filterCategory === cat ? 'btn-primary' : 'btn-secondary'}`}
+                                    style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}
+                                    onClick={() => setFilterCategory(cat)}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', overflowY: 'auto' }}>
+                        {filteredList.map(item => (
+                            <div key={item.id} className="card" onClick={() => { setEditingItem(item); setNewItemMode(false); }} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                                    {item.term}
+                                    {item.mediaUrl && <Icon name={item.mediaType === 'video' ? 'Video' : 'Image'} size={16} />}
+                                </div>
+                                {activeTab === 'offense' && item.category && (
+                                    <span style={{ fontSize: '0.75rem', background: 'var(--primary)', color: 'white', padding: '2px 6px', borderRadius: '4px', alignSelf: 'flex-start', marginBottom: '0.5rem' }}>
+                                        {item.category}
+                                    </span>
+                                )}
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', flex: 1 }}>
+                                    {item.definition.substring(0, 100)}{item.definition.length > 100 ? '...' : ''}
+                                </div>
+                            </div>
+                        ))}
+                        {filteredList.length === 0 && <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No terms found.</div>}
+                    </div>
+
+                    {/* Edit Modal */}
+                    {editingItem && (
+                        <div className="modal-overlay" onClick={() => setEditingItem(null)}>
+                            <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '600px', maxWidth: '90vw' }}>
+                                <h3>{newItemMode ? 'Add Term' : 'Edit Term'}</h3>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label>Term / Rule Name</label>
+                                    <input
+                                        className="form-input"
+                                        style={{ width: '100%' }}
+                                        value={editingItem.term}
+                                        onChange={e => setEditingItem({ ...editingItem, term: e.target.value })}
+                                    />
+                                </div>
+
+                                {activeTab === 'offense' && (
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label>Category</label>
+                                        <select
+                                            className="form-select"
+                                            style={{ width: '100%' }}
+                                            value={editingItem.category || 'Other'}
+                                            onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}
+                                        >
+                                            {OFFENSE_CATEGORIES.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label>Definition / Explanation</label>
+                                    <textarea
+                                        className="form-input"
+                                        style={{ width: '100%', minHeight: '150px' }}
+                                        value={editingItem.definition}
+                                        onChange={e => setEditingItem({ ...editingItem, definition: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Media Upload Section */}
+                                <div style={{ marginBottom: '1rem', padding: '1rem', border: '1px dashed var(--border)', borderRadius: '8px' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Signal / Media Library</label>
+                                    {editingItem.mediaUrl ? (
+                                        <div style={{ marginBottom: '0.5rem' }}>
+                                            {editingItem.mediaType === 'video' ? (
+                                                <video src={editingItem.mediaUrl} controls style={{ maxWidth: '100%', maxHeight: '300px' }} />
+                                            ) : (
+                                                <img src={editingItem.mediaUrl} alt="Visual" style={{ maxWidth: '100%', maxHeight: '300px' }} />
+                                            )}
+                                            <div style={{ marginTop: '0.5rem' }}>
+                                                <button className="btn btn-secondary" onClick={() => setEditingItem({ ...editingItem, mediaUrl: null, mediaType: null })}>Remove Media</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <input type="file" accept="video/*,image/*" onChange={e => handleFileUpload(e, setEditingItem)} />
+                                    )}
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                    {!newItemMode && <button className="btn btn-secondary" style={{ color: 'red', marginRight: 'auto' }} onClick={() => handleDeleteItem(editingItem.id)}>Delete</button>}
+                                    <button className="btn btn-secondary" onClick={() => setEditingItem(null)}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={() => handleSaveItem(editingItem)}>Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -17503,11 +18200,74 @@
                 );
             };
 
+            // Presets for Formation Builder
+            const getGPScoutOffense = () => {
+                // Returns 11 players for Scout Offense (Yellow/Gold)
+                // Percentages: X=0-100, Y=0-100.
+                // Center is roughly 50, 50.
+                const formation = [];
+                const cOL = '#eab308'; // Yellow
+
+                // OL (Center at 50,50)
+                formation.push({ id: Date.now() + '1', number: 'C', x: 50, y: 50, rating: 75, isStar: false, isTarget: false, archetype: 'OL' });
+                formation.push({ id: Date.now() + '2', number: 'LG', x: 45, y: 50, rating: 75, isStar: false, isTarget: false, archetype: 'OL' });
+                formation.push({ id: Date.now() + '3', number: 'RG', x: 55, y: 50, rating: 75, isStar: false, isTarget: false, archetype: 'OL' });
+                formation.push({ id: Date.now() + '4', number: 'LT', x: 40, y: 50, rating: 75, isStar: false, isTarget: false, archetype: 'OL' });
+                formation.push({ id: Date.now() + '5', number: 'RT', x: 60, y: 50, rating: 75, isStar: false, isTarget: false, archetype: 'OL' });
+
+                // QB
+                formation.push({ id: Date.now() + '6', number: 'QB', x: 50, y: 60, rating: 85, isStar: true, isTarget: false, archetype: 'Pocket' });
+
+                // RB
+                formation.push({ id: Date.now() + '7', number: 'RB', x: 50, y: 70, rating: 80, isStar: false, isTarget: false, archetype: 'Power' });
+
+                // WRs
+                formation.push({ id: Date.now() + '8', number: 'X', x: 15, y: 50, rating: 80, isStar: false, isTarget: false, archetype: 'Speed' });
+                formation.push({ id: Date.now() + '9', number: 'Z', x: 85, y: 50, rating: 80, isStar: false, isTarget: false, archetype: 'Speed' });
+
+                // TE
+                formation.push({ id: Date.now() + '10', number: 'Y', x: 65, y: 50, rating: 78, isStar: false, isTarget: false, archetype: 'Blocking' });
+
+                // Slot
+                formation.push({ id: Date.now() + '11', number: 'H', x: 25, y: 55, rating: 78, isStar: false, isTarget: false, archetype: 'Slot' });
+
+                return formation;
+            };
+
+            const getGPScoutDefense = () => {
+                // Scout Defense (Grey/Black)
+                // 4-3 Over
+                const formation = [];
+
+                // DL
+                formation.push({ id: Date.now() + '1', number: 'LE', x: 60, y: 48, rating: 80, isStar: false, isTarget: false, archetype: 'Edge' });
+                formation.push({ id: Date.now() + '2', number: 'NT', x: 52, y: 48, rating: 80, isStar: false, isTarget: false, archetype: 'Nose' });
+                formation.push({ id: Date.now() + '3', number: 'DT', x: 46, y: 48, rating: 80, isStar: false, isTarget: false, archetype: '3-Tech' });
+                formation.push({ id: Date.now() + '4', number: 'RE', x: 38, y: 48, rating: 80, isStar: false, isTarget: false, archetype: 'Edge' });
+
+                // LB
+                formation.push({ id: Date.now() + '5', number: 'W', x: 42, y: 35, rating: 82, isStar: false, isTarget: true, archetype: 'Will' }); // Target Will
+                formation.push({ id: Date.now() + '6', number: 'M', x: 50, y: 35, rating: 85, isStar: false, isTarget: false, archetype: 'Mike' });
+                formation.push({ id: Date.now() + '7', number: 'S', x: 62, y: 35, rating: 85, isStar: true, isTarget: false, archetype: 'Sam' }); // Star Sam
+
+                // DB
+                formation.push({ id: Date.now() + '8', number: 'LC', x: 15, y: 45, rating: 78, isStar: false, isTarget: false, archetype: 'CB' });
+                formation.push({ id: Date.now() + '9', number: 'RC', x: 85, y: 45, rating: 78, isStar: false, isTarget: false, archetype: 'CB' });
+                formation.push({ id: Date.now() + '10', number: 'FS', x: 45, y: 15, rating: 82, isStar: false, isTarget: false, archetype: 'Safety' });
+                formation.push({ id: Date.now() + '11', number: 'SS', x: 55, y: 20, rating: 82, isStar: false, isTarget: false, archetype: 'Safety' });
+
+                return formation;
+            };
+
             return (
                 <div style={{ height: '100%', minHeight: '500px', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                     <div style={{ padding: '0.5rem', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Formation Editor</span>
-                        <button className="btn btn-sm btn-primary" onClick={handleAddPlayer} style={{ fontSize: '0.8rem', padding: '4px 8px' }}><Icon name="Plus" size={14} /> Add Player</button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button className="btn btn-sm btn-secondary" onClick={() => { if (confirm('Load Scout Offense?')) updatePlayers(getGPScoutOffense()); }} style={{ fontSize: '0.8rem', padding: '4px 8px', color: '#eab308' }}>⚔️ Scout Off</button>
+                            <button className="btn btn-sm btn-secondary" onClick={() => { if (confirm('Load Scout Defense?')) updatePlayers(getGPScoutDefense()); }} style={{ fontSize: '0.8rem', padding: '4px 8px', color: '#9ca3af' }}>🛡 Scout Def</button>
+                            <button className="btn btn-sm btn-primary" onClick={handleAddPlayer} style={{ fontSize: '0.8rem', padding: '4px 8px' }}><Icon name="Plus" size={14} /> Add Player</button>
+                        </div>
                     </div>
 
                     <div
@@ -17559,16 +18319,180 @@
                     </div>
 
                     {selectedPlayer && <PlayerModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
+
+                    {/* LEGEND */}
+                    <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(255,255,255,0.9)', padding: '0.5rem', borderRadius: '4px', fontSize: '0.75rem', border: '1px solid #ccc', pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Legend</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', background: '#eab308', borderRadius: '50%', border: '1px solid #ca8a04' }}></span> Offense / Star</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', background: '#9ca3af', borderRadius: '50%', border: '1px solid #4b5563' }}></span> Defense / Standard</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', border: '1px solid #b91c1c' }}></span> QB / Threat</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="Star" size={10} fill="#ca8a04" color="#ca8a04" /> Star Player</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="Target" size={10} color="#dc2626" /> Target (Attack)</div>
+                    </div>
                 </div>
             );
         };
 
+        // --- BOUND IMPORT HELPER ---
+        const parseBoundData = (html) => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const tables = Array.from(doc.querySelectorAll('table'));
+
+            const stats = {
+                passing: [],
+                rushing: [],
+                receiving: [],
+                defense: []
+            };
+
+            tables.forEach(table => {
+                // Identify table by header/caption or column names
+                const headerText = Array.from(table.querySelectorAll('th')).map(th => th.innerText.trim().toLowerCase());
+                const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+                // Extract Row Data helper
+                const extractRows = (row) => {
+                    const cells = Array.from(row.querySelectorAll('td'));
+                    if (cells.length < 3) return null;
+                    // Usually first cell is Athlete Name (often has a link or image)
+                    // We try to find text.
+                    const nameCell = cells[0].innerText.trim().split('\n')[0]; // Split to remove 'Jr.', 'Sr.' lines if distinct
+                    // Try to find number in name string e.g. "Bob Smith #12" or "12 Bob Smith"
+                    // Bound usually formats as: "Bob Smith" (no number visible in simple text sometimes, or "Bob Smith 12")
+                    // Often number is in a separate span or not present in simple copy. We'll fallback to name matches.
+
+                    return {
+                        name: nameCell,
+                        cells: cells.map(c => c.innerText.trim())
+                    };
+                };
+
+                if (headerText.includes('att') && headerText.includes('yds') && headerText.includes('td') && headerText.includes('int')) {
+                    // PASSING
+                    stats.passing = rows.map(extractRows).filter(r => r).map(r => ({
+                        name: r.name,
+                        yds: parseInt(r.cells[3]) || 0,
+                        bTd: parseInt(r.cells[6]) || 0,
+                        int: parseInt(r.cells[7]) || 0
+                    }));
+                } else if (headerText.includes('car') && headerText.includes('yds') && headerText.includes('td')) {
+                    // RUSHING
+                    stats.rushing = rows.map(extractRows).filter(r => r).map(r => ({
+                        name: r.name,
+                        car: parseInt(r.cells[1]) || 0,
+                        yds: parseInt(r.cells[2]) || 0,
+                        td: parseInt(r.cells[4]) || 0
+                    }));
+                } else if (headerText.includes('rec') && headerText.includes('yds') && headerText.includes('td')) {
+                    // RECEIVING
+                    stats.receiving = rows.map(extractRows).filter(r => r).map(r => ({
+                        name: r.name,
+                        rec: parseInt(r.cells[1]) || 0,
+                        yds: parseInt(r.cells[2]) || 0,
+                        td: parseInt(r.cells[4]) || 0
+                    }));
+                } else if (headerText.includes('tkl') && headerText.includes('solo') && headerText.includes('sack')) {
+                    // DEFENSE
+                    stats.defense = rows.map(extractRows).filter(r => r).map(r => ({
+                        name: r.name,
+                        tkl: parseFloat(r.cells[1]) || 0,
+                        sack: parseFloat(r.cells[4]) || 0,
+                        int: parseFloat(r.cells[6]) || 0
+                    }));
+                }
+            });
+
+            return stats;
+        };
+
         const ScoutingView = ({ data, onUpdate, roster = [] }) => {
-            const [activeTab, setActiveTab] = useState('defense'); // Default to defense (scouting opponent)
+            const [activeTab, setActiveTab] = useState('personnel'); // Start on Personnel tab
             const [editingPlayer, setEditingPlayer] = useState(null);
+            const [showImport, setShowImport] = useState(false);
+            const [importText, setImportText] = useState('');
+
+            const handleProcessImport = () => {
+                if (!importText) return;
+                const stats = parseBoundData(importText);
+                let newOffense = [...((data.offense || {}).formation || [])];
+                let newDefense = [...((data.defense || {}).formation || [])];
+
+                const findOrAdd = (list, pos, name, ratings) => {
+                    if (!name) return;
+                    // Check if player exists by name (fuzzy match?) or just empty slot
+                    // For now, simple append or update if matches exact name
+                    const existingIdx = list.findIndex(p => p.name === name || (p.position === pos && !p.name));
+
+                    if (existingIdx !== -1) {
+                        list[existingIdx] = { ...list[existingIdx], name, ratings: { ...(list[existingIdx].ratings || {}), ...ratings } };
+                    } else {
+                        // Find a slot with this position that isn't filled? 
+                        // Actually, let's just push. FormationBuilder handles extra players fine.
+                        // Or better: try to find the "starter" for this position.
+                        const slot = list.find(p => p.position === pos && !p.name);
+                        if (slot) {
+                            slot.name = name;
+                            slot.ratings = { ...(slot.ratings || {}), ...ratings };
+                        } else {
+                            list.push({
+                                id: Date.now() + Math.random(),
+                                position: pos,
+                                number: name.split(' ').pop().match(/^\d+$/) ? name.split(' ').pop() : '00',
+                                name: name,
+                                x: 50, y: 50,
+                                isStar: false,
+                                rating: 75,
+                                ratings
+                            });
+                        }
+                    }
+                };
+
+                // --- MAP OFFENSE ---
+                if (stats.passing.length > 0) {
+                    const qb = stats.passing.sort((a, b) => b.yds - a.yds)[0];
+                    findOrAdd(newOffense, 'QB', qb.name, { 'Awareness': 80 + (qb.bTd * 2) - (qb.int * 2) });
+                }
+
+                if (stats.rushing.length > 0) {
+                    // Filter out QB if possible (if name matches QB)
+                    const topRushers = stats.rushing.sort((a, b) => b.yds - a.yds);
+                    const qbName = stats.passing.length > 0 ? stats.passing[0].name : '';
+                    const rb = topRushers.find(r => r.name !== qbName) || topRushers[0];
+                    if (rb) findOrAdd(newOffense, 'RB', rb.name, { 'Speed': 80 + (rb.yds / 50) });
+                }
+
+                const wrs = stats.receiving.sort((a, b) => b.yds - a.yds).slice(0, 3);
+                if (wrs[0]) findOrAdd(newOffense, 'WR1', wrs[0].name, {});
+                if (wrs[1]) findOrAdd(newOffense, 'WR2', wrs[1].name, {});
+                if (wrs[2]) findOrAdd(newOffense, 'WR3', wrs[2].name, {});
+
+                // --- MAP DEFENSE ---
+                const tacklers = stats.defense.sort((a, b) => b.tkl - a.tkl);
+                if (tacklers[0]) findOrAdd(newDefense, 'MLB', tacklers[0].name, { 'Tackling': 90 });
+                if (tacklers[1]) findOrAdd(newDefense, 'WLB', tacklers[1].name, { 'Tackling': 85 });
+                if (tacklers[2]) findOrAdd(newDefense, 'SLB', tacklers[2].name, { 'Tackling': 80 });
+
+                const sackers = stats.defense.sort((a, b) => b.sack - a.sack);
+                if (sackers[0] && sackers[0].sack > 0) findOrAdd(newDefense, 'DE', sackers[0].name, { 'Power Move': 85 });
+
+                const interceptors = stats.defense.sort((a, b) => b.int - a.int);
+                if (interceptors[0] && interceptors[0].int > 0) findOrAdd(newDefense, 'CB1', interceptors[0].name, { 'Coverage': 85 });
+
+                onUpdate({
+                    ...data,
+                    offense: { ...data.offense, formation: newOffense },
+                    defense: { ...data.defense, formation: newDefense }
+                });
+                setShowImport(false);
+                setImportText('');
+                alert('Imported Stats for ' + (stats.passing.length + stats.rushing.length + stats.receiving.length + stats.defense.length) + ' players!');
+            };
 
             // Configuration
             const SCOUTING_CONFIG = {
+                personnel: { label: 'Personnel', positions: [] },
                 offense: {
                     label: 'Opponent Offense',
                     positions: ['QB', 'RB', 'WR1', 'WR2', 'WR3', 'TE', 'LT', 'LG', 'C', 'RG', 'RT'],
@@ -17597,27 +18521,54 @@
                     return ['Speed', 'Collision', 'Coverage', 'Ball Skills']; // DBs
                 }
                 if (phase === 'specialTeams') return SCOUTING_CONFIG.specialTeams.ratingFields;
-                return SCOUTING_CONFIG.offense.ratingFields;
+                if (phase === 'offense') return SCOUTING_CONFIG.offense.ratingFields;
+                return [];
             };
 
-            const handleSavePlayer = (playerData) => {
-                const newData = { ...data };
-                const list = [...(newData[activeTab] || [])];
-                const idx = list.findIndex(p => p.position === playerData.position);
+            const handleSavePlayer = (playerData, phase) => {
+                // If phase is not provided, infer from activeTab or require it (Personnel tab passes it explicity)
+                const targetPhase = phase || activeTab;
+                if (targetPhase === 'personnel') return; // Should not happen
 
-                if (idx >= 0) {
-                    list[idx] = playerData;
+                const newData = { ...data };
+                const currentPhase = newData[targetPhase] || {};
+                const list = [...(currentPhase.formation || [])];
+
+                // Try to find existing player by Number or ID
+                const existingIndex = list.findIndex(p => p.number === playerData.number);
+
+                if (existingIndex >= 0) {
+                    list[existingIndex] = playerData;
                 } else {
                     list.push(playerData);
                 }
 
-                newData[activeTab] = list;
+                newData[targetPhase] = { ...currentPhase, formation: list };
                 onUpdate(newData);
                 setEditingPlayer(null);
             };
 
-            const getPlayer = (pos) => {
-                return (data[activeTab] || []).find(p => p.position === pos) || { position: pos, name: '', jersey: '', archetype: '', ratings: {} };
+            const getPlayer = (pos, phase) => {
+                const targetPhase = phase || activeTab;
+                const formation = (data[targetPhase] || {}).formation || [];
+                return formation.find(p => p.number === pos) || {
+                    id: Date.now() + Math.random(),
+                    number: pos,
+                    name: '',
+                    rating: 70,
+                    x: 50, y: 50,
+                    isStar: false, isTarget: false,
+                    archetype: '',
+                    ratings: {},
+                    position: pos
+                };
+            };
+
+            // Helper for updating from table
+            const updatePlayerField = (pos, phase, field, value) => {
+                const player = getPlayer(pos, phase);
+                const updated = { ...player, [field]: value };
+                handleSavePlayer(updated, phase);
             };
 
             const handleUpdateOverview = (field, value) => {
@@ -17625,130 +18576,173 @@
                 const newPhaseData = { ...currentPhaseData, [field]: value };
                 onUpdate({ ...data, [activeTab]: newPhaseData });
             };
+
             const currentOverview = data[activeTab] || {};
 
-            return (
-                <div style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h1 style={{ margin: 0 }}>Opponent Scouting</h1>
-                        <div className="btn-group">
-                            {['offense', 'defense', 'specialTeams'].map(tab => (
-                                <button
-                                    key={tab}
-                                    className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
-                                    onClick={() => setActiveTab(tab)}
-                                >
-                                    {SCOUTING_CONFIG[tab].label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 350px) 1fr', gap: '1.5rem', flex: 1, minHeight: 0 }}>
-
-                        {/* LEFT SIDEBAR: Overview & Personnel Palette */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                            <div className="card" style={{ padding: '1rem', flexShrink: 0 }}>
-                                <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1rem' }}>Overview</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {activeTab === 'specialTeams' && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
-                                            <div>
-                                                <label className="form-label" style={{ fontSize: '0.8rem' }}>FG Max</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-input"
-                                                    style={{ padding: '4px 8px', fontSize: '0.9rem' }}
-                                                    placeholder="45"
-                                                    value={currentOverview.kickerDistance || ''}
-                                                    onChange={e => handleUpdateOverview('kickerDistance', e.target.value)}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Punt Avg</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-input"
-                                                    style={{ padding: '4px 8px', fontSize: '0.9rem' }}
-                                                    placeholder="35"
-                                                    value={currentOverview.punterDistance || ''}
-                                                    onChange={e => handleUpdateOverview('punterDistance', e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <label className="form-label" style={{ fontSize: '0.8rem' }}>Base Scheme</label>
-                                    <input
-                                        className="form-input"
-                                        style={{ padding: '4px 8px', fontSize: '0.9rem' }}
-                                        placeholder={activeTab === 'specialTeams' ? "e.g. Shield Punt" : "e.g. Spread / 4-2-5"}
-                                        value={currentOverview.scheme || ''}
-                                        onChange={e => handleUpdateOverview('scheme', e.target.value)}
-                                    />
-
-                                    <label className="form-label" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Top Tendencies</label>
-                                    <textarea
-                                        className="form-input"
-                                        rows="3"
-                                        style={{ padding: '4px 8px', fontSize: '0.9rem', fontFamily: 'inherit' }}
-                                        placeholder="- Note key tendencies..."
-                                        value={currentOverview.tendencies || ''}
-                                        onChange={e => handleUpdateOverview('tendencies', e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                                <h3 style={{ marginTop: 0.5, marginBottom: '0.5rem', fontSize: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem' }}>Personnel</h3>
-                                {SCOUTING_CONFIG[activeTab].positions.map(pos => {
-                                    const player = getPlayer(pos);
-                                    const hasData = player.name || player.jersey;
-
+            // Render a Table for a specific phase
+            const renderPersonnelTable = (phase) => {
+                const config = SCOUTING_CONFIG[phase];
+                return (
+                    <div style={{ marginBottom: '2rem' }}>
+                        <h3 style={{ borderBottom: '2px solid var(--accent)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>{config.label}</h3>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                            <thead style={{ background: 'var(--bg-panel)' }}>
+                                <tr>
+                                    <th style={{ padding: '6px', textAlign: 'left', borderBottom: '1px solid var(--border)', width: '50px' }}>#</th>
+                                    <th style={{ padding: '6px', textAlign: 'left', borderBottom: '1px solid var(--border)', width: '60px' }}>Slot</th>
+                                    <th style={{ padding: '6px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Name / Note</th>
+                                    <th style={{ padding: '6px', textAlign: 'left', borderBottom: '1px solid var(--border)', width: '50px' }}>OVR</th>
+                                    <th style={{ padding: '6px', textAlign: 'left', borderBottom: '1px solid var(--border)', width: '100px' }}>Archetype</th>
+                                    <th style={{ padding: '6px', textAlign: 'center', borderBottom: '1px solid var(--border)', width: '60px' }}>Key</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {config.positions.map(pos => {
+                                    const player = getPlayer(pos, phase);
                                     return (
-                                        <div
-                                            key={pos}
-                                            className="card"
-                                            onClick={() => setEditingPlayer(player)}
-                                            style={{
-                                                padding: '0.75rem',
-                                                cursor: 'pointer',
-                                                border: hasData ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                                borderLeft: hasData ? '4px solid var(--accent)' : '1px solid var(--border)',
-                                                background: hasData ? 'var(--bg-panel)' : 'var(--bg-card)',
-                                                transition: 'all 0.2s',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                fontSize: '0.9rem'
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <span style={{ fontWeight: 'bold', color: 'var(--text-secondary)', minWidth: '30px' }}>{pos}</span>
-                                                    {player.jersey && <span style={{ background: 'var(--accent)', color: 'white', padding: '1px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>#{player.jersey}</span>}
+                                        <tr key={pos} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                            <td style={{ padding: '4px' }}>
+                                                <input
+                                                    className="table-input"
+                                                    value={player.number || ''}
+                                                    onChange={e => updatePlayerField(pos, phase, 'number', e.target.value)}
+                                                    style={{ width: '100%', border: '1px solid var(--border-light)', borderRadius: '4px', padding: '2px 4px', textAlign: 'center' }}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '4px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
+                                                {pos}
+                                            </td>
+                                            <td style={{ padding: '4px' }}>
+                                                <input
+                                                    className="table-input"
+                                                    value={player.name || ''}
+                                                    onChange={e => updatePlayerField(pos, phase, 'name', e.target.value)}
+                                                    style={{ width: '100%', border: '1px solid var(--border-light)', borderRadius: '4px', padding: '2px 4px' }}
+                                                    placeholder="Name..."
+                                                />
+                                            </td>
+                                            <td style={{ padding: '4px' }}>
+                                                <input
+                                                    type="number"
+                                                    className="table-input"
+                                                    value={player.rating || 70}
+                                                    onChange={e => updatePlayerField(pos, phase, 'rating', parseInt(e.target.value))}
+                                                    style={{ width: '100%', border: '1px solid var(--border-light)', borderRadius: '4px', padding: '2px 4px', textAlign: 'center' }}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '4px' }}>
+                                                <input
+                                                    className="table-input"
+                                                    value={player.archetype || ''}
+                                                    onChange={e => updatePlayerField(pos, phase, 'archetype', e.target.value)}
+                                                    style={{ width: '100%', border: '1px solid var(--border-light)', borderRadius: '4px', padding: '2px 4px' }}
+                                                    list={`archs-${phase}`}
+                                                />
+                                                <datalist id={`archs-${phase}`}>
+                                                    {config.archetypes.map(a => <option key={a} value={a} />)}
+                                                </datalist>
+                                            </td>
+                                            <td style={{ padding: '4px', textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                                    <button
+                                                        title="Star Player"
+                                                        onClick={() => updatePlayerField(pos, phase, 'isStar', !player.isStar)}
+                                                        style={{ border: 'none', background: 'none', cursor: 'pointer', opacity: player.isStar ? 1 : 0.2, padding: 0 }}
+                                                    >
+                                                        <Icon name="Star" size={16} fill={player.isStar ? "#ca8a04" : "none"} color="#ca8a04" />
+                                                    </button>
+                                                    <button
+                                                        title="Target Weakness"
+                                                        onClick={() => updatePlayerField(pos, phase, 'isTarget', !player.isTarget)}
+                                                        style={{ border: 'none', background: 'none', cursor: 'pointer', opacity: player.isTarget ? 1 : 0.2, padding: 0 }}
+                                                    >
+                                                        <Icon name="Target" size={16} color="#dc2626" />
+                                                    </button>
                                                 </div>
-                                                {hasData && <span style={{ fontWeight: '600' }}>{player.name}</span>}
-                                            </div>
-
-                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                {hasData && player.isStar && <span title="Star Player"><Icon name="Star" size={16} fill="#ca8a04" color="#ca8a04" /></span>}
-                                                {hasData && player.isTarget && <span title="Target / Weak Link"><Icon name="Target" size={16} color="#dc2626" /></span>}
-                                                {!hasData && <Icon name="Plus" size={16} color="var(--text-tertiary)" />}
-                                            </div>
-                                        </div>
+                                            </td>
+                                        </tr>
                                     );
                                 })}
-                            </div>
-                        </div>
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            };
 
-                        {/* RIGHT MAIN: Formation Builder */}
-                        <div style={{ height: '100%', overflow: 'hidden' }}>
-                            <FormationBuilder data={data} onUpdate={onUpdate} phase={activeTab} />
+            return (
+                <div style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h1 style={{ margin: 0 }}>Opponent Scouting</h1>
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            {activeTab === 'personnel' && (
+                                <button className="btn btn-secondary" onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}>
+                                    <Icon name="Search" size={14} /> Import Bound
+                                </button>
+                            )}
+                            <div className="btn-group">
+                                {['personnel', 'offense', 'defense', 'specialTeams'].map(tab => (
+                                    <button
+                                        key={tab}
+                                        className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
+                                        onClick={() => setActiveTab(tab)}
+                                    >
+                                        {SCOUTING_CONFIG[tab].label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Edit Player Modal */}
+                    {/* VIEW CONTENT */}
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+
+                        {activeTab === 'personnel' ? (
+                            <div className="card" style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+                                {renderPersonnelTable('offense')}
+                                {renderPersonnelTable('defense')}
+                                {renderPersonnelTable('specialTeams')}
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 350px) 1fr', gap: '1.5rem', height: '100%' }}>
+                                {/* LEFT SIDEBAR: Overview stats only */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                                    <div className="card" style={{ padding: '1rem', flexShrink: 0 }}>
+                                        <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1rem' }}>Overview</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {activeTab === 'specialTeams' && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                                                    <div>
+                                                        <label className="form-label" style={{ fontSize: '0.8rem' }}>FG Max</label>
+                                                        <input type="number" className="form-input" style={{ padding: '4px 8px', fontSize: '0.9rem' }} placeholder="45" value={currentOverview.kickerDistance || ''} onChange={e => handleUpdateOverview('kickerDistance', e.target.value)} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="form-label" style={{ fontSize: '0.8rem' }}>Punt Avg</label>
+                                                        <input type="number" className="form-input" style={{ padding: '4px 8px', fontSize: '0.9rem' }} placeholder="35" value={currentOverview.punterDistance || ''} onChange={e => handleUpdateOverview('punterDistance', e.target.value)} />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <label className="form-label" style={{ fontSize: '0.8rem' }}>Base Scheme</label>
+                                            <input className="form-input" style={{ padding: '4px 8px', fontSize: '0.9rem' }} placeholder={activeTab === 'specialTeams' ? "e.g. Shield Punt" : "e.g. Spread / 4-2-5"} value={currentOverview.scheme || ''} onChange={e => handleUpdateOverview('scheme', e.target.value)} />
+
+                                            <label className="form-label" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Top Tendencies</label>
+                                            <textarea className="form-input" rows="3" style={{ padding: '4px 8px', fontSize: '0.9rem' }} placeholder="- Note key tendencies..." value={currentOverview.tendencies || ''} onChange={e => handleUpdateOverview('tendencies', e.target.value)} />
+                                        </div>
+                                    </div>
+
+                                    <div className="card" style={{ padding: '1rem', flex: 1 }}>
+                                        <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1rem' }}>Notes</h3>
+                                        <textarea className="form-input" style={{ height: '100%', minHeight: '150px', resize: 'none' }} placeholder="General scouting notes..." value={currentOverview.notes || ''} onChange={e => handleUpdateOverview('notes', e.target.value)} />
+                                    </div>
+                                </div>
+
+                                {/* RIGHT MAIN: Formation Builder */}
+                                <div style={{ height: '100%', overflow: 'hidden' }}>
+                                    <FormationBuilder data={data} onUpdate={onUpdate} phase={activeTab} />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     {editingPlayer && (
                         <div className="modal-overlay" onClick={() => setEditingPlayer(null)}>
                             <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
@@ -17758,7 +18752,7 @@
                                     <label className="form-label">Full Name</label>
                                     <input
                                         className="form-input"
-                                        value={editingPlayer.name}
+                                        value={editingPlayer.name || ''}
                                         onChange={e => setEditingPlayer({ ...editingPlayer, name: e.target.value })}
                                         placeholder="Enter name"
                                         autoFocus
@@ -17769,19 +18763,19 @@
                                     <label className="form-label">Jersey Number</label>
                                     <input
                                         className="form-input"
-                                        value={editingPlayer.jersey}
-                                        onChange={e => setEditingPlayer({ ...editingPlayer, jersey: e.target.value })}
+                                        value={editingPlayer.number || ''}
+                                        onChange={e => setEditingPlayer({ ...editingPlayer, number: e.target.value })}
                                         placeholder="#"
                                     />
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#eab308', fontWeight: 'bold' }}>
-                                        <input type="checkbox" checked={editingPlayer.isStar} onChange={e => setEditingPlayer({ ...editingPlayer, isStar: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                                        <input type="checkbox" checked={editingPlayer.isStar || false} onChange={e => setEditingPlayer({ ...editingPlayer, isStar: e.target.checked })} style={{ width: '18px', height: '18px' }} />
                                         <Icon name="Star" fill="#eab308" size={18} /> Star
                                     </label>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#ef4444', fontWeight: 'bold' }}>
-                                        <input type="checkbox" checked={editingPlayer.isTarget} onChange={e => setEditingPlayer({ ...editingPlayer, isTarget: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                                        <input type="checkbox" checked={editingPlayer.isTarget || false} onChange={e => setEditingPlayer({ ...editingPlayer, isTarget: e.target.checked })} style={{ width: '18px', height: '18px' }} />
                                         <Icon name="Target" size={18} /> Target
                                     </label>
                                 </div>
@@ -17790,11 +18784,11 @@
                                     <label className="form-label">Archetype</label>
                                     <select
                                         className="form-select"
-                                        value={editingPlayer.archetype}
+                                        value={editingPlayer.archetype || ''}
                                         onChange={e => setEditingPlayer({ ...editingPlayer, archetype: e.target.value })}
                                     >
                                         <option value="">Select Archetype...</option>
-                                        {SCOUTING_CONFIG[activeTab].archetypes.map(arch => (
+                                        {SCOUTING_CONFIG[activeTab === 'personnel' ? 'offense' : activeTab].archetypes.map(arch => (
                                             <option key={arch} value={arch}>{arch}</option>
                                         ))}
                                     </select>
@@ -17803,7 +18797,7 @@
                                 <div className="form-group">
                                     <label className="form-label">Ratings (0-99)</label>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                        {getRatingFields(editingPlayer.position, activeTab).map(field => (
+                                        {getRatingFields(editingPlayer.position, activeTab === 'personnel' ? 'offense' : activeTab).map(field => (
                                             <div key={field}>
                                                 <label style={{ fontSize: '0.85rem', marginBottom: '4px', display: 'block' }}>{field}</label>
                                                 <input
@@ -17825,7 +18819,7 @@
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
                                     <button className="btn btn-secondary" onClick={() => setEditingPlayer(null)}>Cancel</button>
-                                    <button className="btn btn-primary" onClick={() => handleSavePlayer(editingPlayer)}>Save Player</button>
+                                    <button className="btn btn-primary" onClick={() => handleSavePlayer(editingPlayer, activeTab === 'personnel' ? 'offense' : activeTab)}>Save Player</button>
                                 </div>
                             </div>
                         </div>
@@ -19900,6 +20894,14 @@
                 localStorage.setItem('hc-active-year', activeYear);
             }, [activeYear]);
 
+            // Football 101 Data
+            const [football101Data, setFootball101Data] = useLocalStorage('hc-football-101', {
+                rules: [],
+                offense: { terms: [], fundamentals: [] },
+                defense: { terms: [], fundamentals: [] },
+                specialTeams: { terms: [], fundamentals: [] }
+            });
+
             const [visibleFeatures, setVisibleFeatures] = useState(() => {
                 const saved = localStorage.getItem('hc-visible-features');
                 if (saved) {
@@ -21185,6 +22187,9 @@
                                     <button className={`nav-item ${view === 'formations' ? 'active' : ''}`} onClick={() => setView('formations')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="Grid" size={14} style={{ marginRight: '6px' }} /> Formations
                                     </button>
+                                    <button className={`nav-item ${view === 'football-101' ? 'active' : ''}`} onClick={() => setView('football-101')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Book" size={14} style={{ marginRight: '6px' }} /> Football 101 & Glossary
+                                    </button>
                                     {(currentPermissions.scripts.view || currentPermissions.install.view) && (
                                         <button className={`nav-item ${view === 'drill-library' ? 'active' : ''}`} onClick={() => setView('drill-library')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="Book" size={14} style={{ marginRight: '6px' }} /> Drill Library
@@ -21262,32 +22267,32 @@
                                         <Icon name="Clipboard" size={14} style={{ marginRight: '6px' }} /> Practice Coach App
                                     </button>
 
-                                    {currentPermissions.callsheet.view && (
-                                        <>
-                                            <button
-                                                className={`nav-item ${view === 'callsheet' ? 'active' : ''}`}
-                                                onClick={() => setView('callsheet')}
-                                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                            >
-                                                <Icon name="Smartphone" size={14} style={{ marginRight: '6px' }} /> Smart Call Sheet
-                                            </button>
-                                            <button
-                                                className={`nav-item ${view === 'simulator' ? 'active' : ''}`}
-                                                onClick={() => setView('simulator')}
-                                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                            >
-                                                <Icon name="Gamepad2" size={14} style={{ marginRight: '6px' }} /> Play-Calling Simulator
-                                            </button>
-                                            <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Monitor" size={14} style={{ marginRight: '6px' }} /> Pressbox
-                                            </button>
-                                            <button className={`nav-item ${view === 'grading' ? 'active' : ''}`} onClick={() => setView('grading')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                    {/* ATHLETIC DEVELOPMENT CATEGORY */}
+                                    <>
+                                        <button
+                                            className={`nav-item ${view === 'callsheet' ? 'active' : ''}`}
+                                            onClick={() => setView('callsheet')}
+                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                        >
+                                            <Icon name="Smartphone" size={14} style={{ marginRight: '6px' }} /> Smart Call Sheet
+                                        </button>
+                                        <button
+                                            className={`nav-item ${view === 'simulator' ? 'active' : ''}`}
+                                            onClick={() => setView('simulator')}
+                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                        >
+                                            <Icon name="Gamepad2" size={14} style={{ marginRight: '6px' }} /> Play-Calling Simulator
+                                        </button>
+                                        <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Monitor" size={14} style={{ marginRight: '6px' }} /> Pressbox
+                                        </button>
+                                        <button className={`nav-item ${view === 'grading' ? 'active' : ''}`} onClick={() => setView('grading')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
 
-                                            </button>
-                                            <button className={`nav-item ${view === 'special-teams' ? 'active' : ''}`} onClick={() => setView('special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Target" size={14} style={{ marginRight: '6px' }} /> Special Teams
-                                            </button>
-                                        </>
+                                        </button>
+                                        <button className={`nav-item ${view === 'special-teams' ? 'active' : ''}`} onClick={() => setView('special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Target" size={14} style={{ marginRight: '6px' }} /> Special Teams
+                                        </button>
+                                    </>
                                     )}
                                 </CollapsibleCategory>
                             )}
@@ -21353,7 +22358,8 @@
                         {view === 'drill-library' && <DrillLibraryView />}
                         {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
-                        {view === 'scouting' && <ScoutingView data={opponentScoutData} onUpdate={setOpponentScoutData} roster={roster} />}
+                        {view === 'scouting' && <ScoutingDashboard activeYear={activeYear} />}
+                        {view === 'football-101' && <Football101 data={football101Data} onUpdateData={setFootball101Data} />}
                         {view === 'dashboard' && <GamedayDashboard plays={plays} />}
                         {view === 'calendar' && <StaffCalendar data={calendarData} onUpdate={setCalendarData} staff={staff} />}
                         {view === 'budget' && (
