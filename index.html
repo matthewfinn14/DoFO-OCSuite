@@ -7526,7 +7526,7 @@
                 currentList[eventIndex] = updatedEvent;
                 newData[monthIndex] = { ...newData[monthIndex], [field]: currentList };
                 handleCurrentUpdate(newData);
-                setEditingEvent({ ...editingEvent, eventData: updatedEvent });
+                setEditingEvent(null);
             };
 
             // Add Sidebar Item
@@ -25877,7 +25877,7 @@
                         {view === 'drill-library' && <DrillLibraryView />}
                         {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
-                        {view === 'scouting' && <ScoutingDashboard activeYear={activeYear} />}
+                        {view === 'scouting' && <ScoutingView data={opponentScoutData} onUpdate={setOpponentScoutData} roster={roster} />}
                         {/* {view === 'football-101' && <Football101 data={football101Data} onUpdateData={setFootball101Data} />} */}
                         {view === 'dashboard' && <GamedayDashboard plays={plays} />}
                         {view === 'calendar' && <StaffCalendar data={calendarData} onUpdate={setCalendarData} staff={staff} roster={roster} tasks={masterTasks} onUpdateTasks={setMasterTasks} />}
