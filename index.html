@@ -25320,8 +25320,8 @@
                         onCancel={() => { setEditingPlay(null); setView('playbook'); }}
                         onDelete={handleDeletePlay}
                         initialData={editingPlay}
-                        availableMiniScripts={gamePlan.miniScripts || []}
-                        initialAssignedScriptIds={editingPlay ? (gamePlan.miniScripts || []).filter(s => s.playIds.includes(editingPlay.id)).map(s => s.id) : []}
+                        availableMiniScripts={currentWeek.offensiveGamePlan?.miniScripts || []}
+                        initialAssignedScriptIds={editingPlay ? (currentWeek.offensiveGamePlan?.miniScripts || []).filter(s => s.playIds.includes(editingPlay.id)).map(s => s.id) : []}
                     />
                 )
             }
