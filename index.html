@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Head Coach Dashboard</title>
+    <title>DoFO</title>
     <link rel="stylesheet" href="style.css">
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
@@ -12,7 +12,7 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
         .wristband-print-container {
             display: none;
@@ -703,7 +703,8 @@
                 Minus: '⛔', // Using 'No Entry' for delete/remove to be distinct
                 Lock: '🔒',
                 Star: '★',
-                Target: '⌖'
+                Target: '⌖',
+                HardHat: '🪖'
             };
             // Default to ❓ if not found
             // but for Madden I used Gamepad2.
@@ -1866,7 +1867,7 @@
                             {/* Color Picker */}
                             <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
                                 {COLORS.map(c => (
-                                    <button key={c} onClick={() => setColor(c)} style={{ width: '20px', height: '20px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px var(--accent)' : 'none', transform: color === c ? 'scale(1.1)' : 'scale(1)' }} />
+                                    <button key={c} onClick={() => setColor(c)} style={{ width: '20px', height: '20px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px var(--accent)' : 'none', transform: color === c ? 'scale(1.1)' : 'scale(1)' }}></button>
                                 ))}
                             </div>
 
@@ -1913,7 +1914,7 @@
 
                                 {/* Field Background Logic */}
                                 {mode === 'detailed' ? (
-                                    <>
+                                    <g>
                                         <rect width="100%" height="100%" fill="white" />
                                         {/* Detailed grid/field lines (High School Specs) */}
                                         {/* Field Width 53.33 yards = 800px => 15px/yard */}
@@ -1936,10 +1937,10 @@
 
                                                     {/* Yard Numbers (Contrast Fixed) */}
                                                     {Math.abs(350 - y) % 150 === 0 && y !== 350 && (
-                                                        <>
+                                                        <React.Fragment>
                                                             <text x="135" y={y + 8} fill="#64748b" fontSize="24" fontWeight="bold" textAnchor="middle" style={{ opacity: 0.6 }}>{(350 - y) / 15}</text>
                                                             <text x="665" y={y + 8} fill="#64748b" fontSize="24" fontWeight="bold" textAnchor="middle" style={{ opacity: 0.6 }}>{(350 - y) / 15}</text>
-                                                        </>
+                                                        </React.Fragment>
                                                     )}
                                                 </g>
                                             );
@@ -1947,9 +1948,9 @@
                                         {/* LOS Marker */}
                                         <text x="20" y="345" fontSize="12" fontWeight="bold" fill="#000">LOS</text>
                                         <text x="780" y="345" fontSize="12" fontWeight="bold" fill="#000" textAnchor="end">LOS</text>
-                                    </>
+                                    </g>
                                 ) : (
-                                    <>
+                                    <g>
                                         {/* Simple/Rooski Field */}
                                         <rect width="100%" height="100%" fill="white" />
                                         <rect width="100%" height="100%" fill="url(#grid)" />
@@ -1986,7 +1987,7 @@
                                                 <line x1="440" y1={y - 5} x2="440" y2={y + 5} stroke="#ccc" strokeWidth="1" />
                                             </g>
                                         ))}
-                                    </>
+                                    </g>
                                 )}
 
                                 {elements.map(el => renderElement(el))} // Render saved elements
@@ -5378,8 +5379,25 @@
             if (!metrics.warriorDialLogs) metrics.warriorDialLogs = [];
             if (!metrics.testHistory) metrics.testHistory = []; // New: Historic Testing
             if (!metrics.weightLog) metrics.weightLog = []; // New: Weight Log
-            const favorites = profile.favorites || {};
             const goals = profile.goals || {};
+
+            // Ensure sizes object exists (migration from root fields if needed)
+            const sizes = player.sizes || {
+                helmet: player.helmetSize || '',
+                shoulderPad: player.shoulderPadSize || '',
+                pant: player.pantSize || '',
+                jersey: '',
+                shoe: '',
+                shirt: '',
+                short: ''
+            };
+
+            const updateSizes = (field, value) => {
+                const newSizes = { ...sizes, [field]: value };
+                onUpdate(player.id, 'sizes', newSizes);
+                // Also update legacy root fields for backward compatibility if we want, or just rely on 'sizes' object now.
+                // For cleanliness, we'll try to stick to the 'sizes' object going forward.
+            };
 
             const updateProfile = (section, field, value) => {
                 const newProfile = { ...profile };
@@ -5568,6 +5586,70 @@
                                                 </div>
                                             );
                                         })()}
+                                    </div>
+
+                                    {/* Equipment & Sizes Card */}
+                                    <div className="card" style={{ padding: '1.5rem', background: 'var(--card-bg)', color: 'var(--text)' }}>
+                                        <h3 style={{ borderBottom: '2px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text)' }}>
+                                            <Icon name="Shield" size={20} /> Apparel & Equipment Sizes
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ color: 'var(--text)' }}>Helmet</label>
+                                                <select className="form-select" value={sizes.helmet} onChange={e => updateSizes('helmet', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                    <option value="">--</option>
+                                                    {['S', 'M', 'L', 'XL', '2XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ color: 'var(--text)' }}>Shoulder Pads</label>
+                                                <select className="form-select" value={sizes.shoulderPad} onChange={e => updateSizes('shoulderPad', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                    <option value="">--</option>
+                                                    {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ color: 'var(--text)' }}>Jersey Size</label>
+                                                <select className="form-select" value={sizes.jersey} onChange={e => updateSizes('jersey', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                    <option value="">--</option>
+                                                    {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ color: 'var(--text)' }}>Game Pants</label>
+                                                <select className="form-select" value={sizes.pant} onChange={e => updateSizes('pant', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                    <option value="">--</option>
+                                                    {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ color: 'var(--text)' }}>T-Shirt</label>
+                                                <select className="form-select" value={sizes.shirt} onChange={e => updateSizes('shirt', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                    <option value="">--</option>
+                                                    {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ color: 'var(--text)' }}>Shorts</label>
+                                                <select className="form-select" value={sizes.short} onChange={e => updateSizes('short', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                    <option value="">--</option>
+                                                    {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ color: 'var(--text)' }}>Shoe Size</label>
+                                                <input
+                                                    type="number" step="0.5"
+                                                    className="form-input"
+                                                    value={sizes.shoe}
+                                                    onChange={e => updateSizes('shoe', e.target.value)}
+                                                    placeholder="10.5"
+                                                    style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Personal Favorites */}
@@ -6443,7 +6525,7 @@
             const positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'OT', 'OG', 'C', 'DE', 'DT', 'LB', 'CB', 'S', 'K', 'P', 'LS']; // Expanded primary list
             // Filter by Staff ID / Current User Roles
             // In Person-Centric view, we show tasks assigned to ANY of the user's roles.
-            // const [selectedRole, setSelectedRole] = useState('ALL'); // Deprecated role selector, 'C', 'DE', 'DT', 'LB', 'CB', 'S', 'K', 'P', 'LS']; // Expanded primary list
+            // const [selectedRole, setSelectedRole] = useState('ALL'); // Deprecated role selector
             const years = ['Fr', 'So', 'Jr', 'Sr'];
 
             const OFFENSE_TAGS = ['QB', 'RB', 'WR', 'TE', 'OL'];
@@ -7646,7 +7728,7 @@
                 const updatedTasks = tasks.filter(t => t.id !== taskToDelete.id);
                 onUpdateTasks(updatedTasks);
             };
-            const [newTaskData, setNewTaskData] = useState({ task: '', assignTo: [], deadline: '', priority: 'Medium' });
+            const [newTaskData, setNewTaskData] = useState({ task: '', assignTo: [], deadline: '', priority: 'Medium', phase: 'Prep' });
 
             const handleCreateTaskFromEvent = () => {
                 if (!newTaskData.task) return;
@@ -7658,11 +7740,12 @@
                     ...newTaskData,
                     recurrence: 'None',
                     collaborationType: newTaskData.assignTo.length > 1 ? 'Individual' : 'Individual',
-                    createdFromEventId: editingEvent.eventData.id
+                    createdFromEventId: editingEvent.eventData.id,
+                    eventPhase: newTaskData.phase
                 };
 
                 onUpdateTasks([...tasks, newTask]);
-                setNewTaskData({ task: '', assignTo: [], deadline: '', priority: 'Medium' }); // Reset
+                setNewTaskData({ task: '', assignTo: [], deadline: '', priority: 'Medium', phase: 'Prep' }); // Reset
             };
 
             // Assignment Options
@@ -7960,6 +8043,18 @@
                                             </select>
                                         </div>
 
+                                        <div style={{ marginBottom: '0.5rem' }}>
+                                            <select
+                                                className="form-select" style={{ width: '100%' }}
+                                                value={newTaskData.phase}
+                                                onChange={e => setNewTaskData({ ...newTaskData, phase: e.target.value })}
+                                            >
+                                                <option value="Prep">Event Prep</option>
+                                                <option value="During">During Event</option>
+                                                <option value="After">After Event</option>
+                                            </select>
+                                        </div>
+
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                                             {/* Assign To Dropdown - Multi-select Logic Simplified for now */}
                                             <select
@@ -8021,14 +8116,35 @@
                                 {editingEvent.field !== 'tasks' && (
                                     <div style={{ flex: 1, overflowY: 'auto' }}>
                                         <h5 style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Tasks Linked to "{editingEvent.eventData.title}"</h5>
-                                        {tasks.filter(t => t.category === editingEvent.eventData.title || t.createdFromEventId === editingEvent.eventData.id).map(task => (
-                                            <div key={task.id} style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ textDecoration: task.completed ? 'line-through' : 'none', color: task.completed ? 'var(--text-secondary)' : 'var(--text)' }}>{task.task}</span>
-                                                <span style={{ fontSize: '0.8rem', background: 'var(--bg-body)', padding: '2px 4px' }}>
-                                                    {task.assignTo.length} assigned
-                                                </span>
-                                            </div>
-                                        ))}
+
+                                        {['Prep', 'During', 'After'].map(phase => {
+                                            const phaseTasks = tasks.filter(t => (t.category === editingEvent.eventData.title || t.createdFromEventId === editingEvent.eventData.id) && (t.eventPhase === phase || (!t.eventPhase && phase === 'Prep'))); // Default to Prep for legacy
+                                            if (phaseTasks.length === 0) return null;
+
+                                            return (
+                                                <div key={phase} style={{ marginBottom: '1rem' }}>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--accent)', borderBottom: '1px solid var(--border)', marginBottom: '0.25rem' }}>
+                                                        {phase === 'Prep' ? 'Event Prep' : phase === 'During' ? 'During Event' : 'After Event'}
+                                                    </div>
+                                                    {phaseTasks.map(task => (
+                                                        <div key={task.id} style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <input type="checkbox" checked={task.completed} onChange={() => {
+                                                                    const updated = tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t);
+                                                                    onUpdateTasks(updated);
+                                                                }} />
+                                                                <span style={{ textDecoration: task.completed ? 'line-through' : 'none', color: task.completed ? 'var(--text-secondary)' : 'var(--text)' }}>
+                                                                    {task.task}
+                                                                </span>
+                                                            </div>
+                                                            <span style={{ fontSize: '0.8rem', background: 'var(--bg-body)', padding: '2px 4px', borderRadius: '4px' }}>
+                                                                {task.assignTo.length > 0 ? `${task.assignTo.length} assigned` : 'Unassigned'}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
 
@@ -10076,6 +10192,8 @@
             const [newMember, setNewMember] = useState({
                 name: '', role: '', level: ['Varsity'], shirtSize: '',
                 positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
+                name: '', role: '', level: ['Varsity'], shirtSize: '', phone: '', email: '',
+                positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
                 otherDuties: ''
             });
 
@@ -10116,6 +10234,8 @@
                 onUpdateStaff([...staff, { ...newMember, id }]);
                 setNewMember({
                     name: '', role: '', level: ['Varsity'], shirtSize: '',
+                    positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
+                    name: '', role: '', level: ['Varsity'], shirtSize: '', phone: '', email: '',
                     positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
                     otherDuties: ''
                 });
@@ -10275,10 +10395,11 @@
                                             <thead>
                                                 <tr style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85rem', borderBottom: '1px solid var(--border)' }}>
                                                     <th style={{ padding: '0.5rem', width: '30px' }}></th>
-                                                    <th style={{ padding: '0.5rem', width: '30%' }}>Name</th>
-                                                    <th style={{ padding: '0.5rem', width: '20%' }}>Role</th>
-                                                    <th style={{ padding: '0.5rem', width: '10%' }}>Size</th>
-                                                    <th style={{ padding: '0.5rem', width: '30%' }}>Assignments</th>
+                                                    <th style={{ padding: '0.5rem', width: '25%' }}>Name</th>
+                                                    <th style={{ padding: '0.5rem', width: '15%' }}>Role</th>
+                                                    <th style={{ padding: '0.5rem', width: '20%' }}>Contact</th>
+                                                    <th style={{ padding: '0.5rem', width: '5%' }}>Size</th>
+                                                    <th style={{ padding: '0.5rem', width: '25%' }}>Assignments</th>
                                                     <th style={{ padding: '0.5rem', width: '10%' }}></th>
                                                 </tr>
                                             </thead>
@@ -10318,57 +10439,24 @@
                                                         </td>
                                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                                             {isEditing === member.id ? (
-                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                                    <input
-                                                                        className="form-input"
-                                                                        value={member.role}
-                                                                        onChange={e => updateMember(member.id, 'role', e.target.value)}
-                                                                    />
-                                                                    {member.type !== 'Manager' && (
-                                                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                                                            {['Varsity', 'JV', 'JV2'].map(lvl => {
-                                                                                // Normalize to array
-                                                                                const currentLevels = Array.isArray(member.level) ? member.level : (member.level ? [member.level] : []);
-                                                                                const isSelected = currentLevels.includes(lvl);
-                                                                                return (
-                                                                                    <button
-                                                                                        key={lvl}
-                                                                                        onClick={() => {
-                                                                                            const newLevels = isSelected
-                                                                                                ? currentLevels.filter(l => l !== lvl)
-                                                                                                : [...currentLevels, lvl];
-                                                                                            updateMember(member.id, 'level', newLevels);
-                                                                                        }}
-                                                                                        style={{
-                                                                                            padding: '2px 6px',
-                                                                                            fontSize: '0.7rem',
-                                                                                            borderRadius: '4px',
-                                                                                            border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                                                                            background: isSelected ? 'var(--accent)' : 'transparent',
-                                                                                            color: isSelected ? 'white' : 'var(--text-secondary)',
-                                                                                            cursor: 'pointer'
-                                                                                        }}
-                                                                                    >
-                                                                                        {lvl}
-                                                                                    </button>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                                <input
+                                                                    className="form-input"
+                                                                    value={member.role || ''}
+                                                                    onChange={e => updateMember(member.id, 'role', e.target.value)}
+                                                                    placeholder="Role"
+                                                                />
                                                             ) : (
-                                                                <div>
-                                                                    <div>{member.role}</div>
-                                                                    {member.type !== 'Manager' && (
-                                                                        <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
-                                                                            {(Array.isArray(member.level) ? member.level : [member.level]).filter(Boolean).map(lvl => (
-                                                                                <span key={lvl} style={{
-                                                                                    fontSize: '0.7rem',
-                                                                                    padding: '1px 5px',
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                                    <div style={{ fontWeight: 500 }}>{member.role}</div>
+                                                                    {member.level && (
+                                                                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                                                                            {(Array.isArray(member.level) ? member.level : [member.level]).filter(Boolean).map((lvl, i) => (
+                                                                                <span key={i} style={{
+                                                                                    fontSize: '0.75rem',
+                                                                                    padding: '0.1rem 0.4rem',
                                                                                     borderRadius: '4px',
-                                                                                    background: 'var(--surface)',
-                                                                                    border: '1px solid var(--border)',
-                                                                                    color: 'var(--text-secondary)'
+                                                                                    background: 'var(--bg-tertiary)',
+                                                                                    border: '1px solid var(--border)'
                                                                                 }}>
                                                                                     {lvl}
                                                                                 </span>
@@ -10380,21 +10468,54 @@
                                                         </td>
                                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                                             {isEditing === member.id ? (
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                    <input
+                                                                        className="form-input"
+                                                                        value={member.phone || ''}
+                                                                        onChange={e => updateMember(member.id, 'phone', e.target.value)}
+                                                                        placeholder="Phone"
+                                                                    />
+                                                                    <input
+                                                                        className="form-input"
+                                                                        value={member.email || ''}
+                                                                        onChange={e => updateMember(member.id, 'email', e.target.value)}
+                                                                        placeholder="Email"
+                                                                    />
+                                                                </div>
+                                                            ) : (
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.9rem' }}>
+                                                                    {member.phone && (
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                            <Icon name="Phone" size={14} style={{ color: 'var(--text-secondary)' }} />
+                                                                            <span>{member.phone}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {member.email && (
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                            <Icon name="Mail" size={14} style={{ color: 'var(--text-secondary)' }} />
+                                                                            <span>{member.email}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {!member.phone && !member.email && <span style={{ opacity: 0.5 }}>-</span>}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                                                            {isEditing === member.id ? (
                                                                 <select
                                                                     className="form-select"
                                                                     value={member.shirtSize || ''}
                                                                     onChange={e => updateMember(member.id, 'shirtSize', e.target.value)}
                                                                 >
                                                                     <option value="">-</option>
-                                                                    {['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(sz => (
+                                                                    {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(sz => (
                                                                         <option key={sz} value={sz}>{sz}</option>
                                                                     ))}
                                                                 </select>
                                                             ) : (
                                                                 <span style={{
-                                                                    padding: '2px 6px',
-                                                                    background: 'var(--surface)',
-                                                                    border: '1px solid var(--border)',
+                                                                    padding: '0.2rem 0.5rem',
+                                                                    background: 'var(--bg-tertiary)',
                                                                     borderRadius: '4px',
                                                                     fontSize: '0.85rem'
                                                                 }}>
@@ -10402,53 +10523,59 @@
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>
+                                                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.9rem' }}>
                                                             {isEditing === member.id ? (
-                                                                <div style={{ display: 'grid', gap: '0.5rem' }}>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                        <span style={{ width: '30px', color: 'var(--text-secondary)' }}>Off:</span>
-                                                                        <input className="form-input" value={member.positions?.offense || ''} onChange={e => updatePosition(member.id, 'offense', e.target.value)} />
-                                                                    </div>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                        <span style={{ width: '30px', color: 'var(--text-secondary)' }}>Def:</span>
-                                                                        <input className="form-input" value={member.positions?.defense || ''} onChange={e => updatePosition(member.id, 'defense', e.target.value)} />
-                                                                    </div>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: '0.5rem', alignItems: 'center' }}>
+                                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Off</span>
+                                                                    <input
+                                                                        className="form-input"
+                                                                        value={member.positions?.offense || ''}
+                                                                        onChange={e => updatePosition(member.id, 'offense', e.target.value)}
+                                                                    />
+                                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Def</span>
+                                                                    <input
+                                                                        className="form-input"
+                                                                        value={member.positions?.defense || ''}
+                                                                        onChange={e => updatePosition(member.id, 'defense', e.target.value)}
+                                                                    />
+                                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Spc</span>
+                                                                    <input
+                                                                        className="form-input"
+                                                                        value={member.positions?.specials || ''}
+                                                                        onChange={e => updatePosition(member.id, 'specials', e.target.value)}
+                                                                    />
                                                                 </div>
                                                             ) : (
-                                                                <div style={{ display: 'grid', gap: '0.25rem' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                                     {member.positions?.offense && <div><span style={{ color: 'var(--text-secondary)' }}>Off:</span> {member.positions.offense}</div>}
                                                                     {member.positions?.defense && <div><span style={{ color: 'var(--text-secondary)' }}>Def:</span> {member.positions.defense}</div>}
-                                                                    {formatSpecials(member.positions?.specials) !== '-' && (
-                                                                        <div style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>Specials: {formatSpecials(member.positions.specials)}</div>
+                                                                    {(member.positions?.specials && member.positions.specials !== ' - ') && (
+                                                                        <div><span style={{ color: 'var(--text-secondary)' }}>Spc:</span> {member.positions.specials}</div>
                                                                     )}
                                                                 </div>
                                                             )}
                                                         </td>
-                                                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
+                                                        <td style={{ padding: '0.75rem 0.5rem' }}>
                                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                                                 {isEditing === member.id ? (
-                                                                    <button className="btn btn-primary" onClick={() => setIsEditing(null)}>Save</button>
+                                                                    <button className="btn btn-primary btn-sm" onClick={() => setIsEditing(null)}>Save</button>
                                                                 ) : (
                                                                     <>
-                                                                        <button className="btn btn-secondary" onClick={() => setIsEditing(member.id)}>
-                                                                            <Icon name="Settings" size={14} />
+                                                                        <button className="btn btn-ghost btn-sm" onClick={() => setIsEditing(member.id)}>
+                                                                            <Icon name="Edit2" size={14} />
                                                                         </button>
-                                                                        <button className="btn btn-secondary" style={{ color: '#ef4444' }} onClick={() => deleteMember(member.id)}>
-                                                                            <Icon name="Minus" size={14} />
+                                                                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => deleteMember(member.id)}>
+                                                                            <Icon name="Trash2" size={14} />
                                                                         </button>
                                                                     </>
                                                                 )}
                                                             </div>
                                                         </td>
+
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
-                                        {list.length === 0 && (
-                                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--surface)', borderRadius: '8px' }}>
-                                                No {title.toLowerCase()} found.
-                                            </div>
-                                        )}
                                     </div>
                                 );
 
@@ -10506,6 +10633,25 @@
                                                 <option key={sz} value={sz}>{sz}</option>
                                             ))}
                                         </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="form-label">Phone</label>
+                                        <input
+                                            className="form-input"
+                                            value={newMember.phone || ''}
+                                            onChange={e => setNewMember({ ...newMember, phone: e.target.value })}
+                                            placeholder="(555) 555-5555"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Email</label>
+                                        <input
+                                            className="form-input"
+                                            value={newMember.email || ''}
+                                            onChange={e => setNewMember({ ...newMember, email: e.target.value })}
+                                            placeholder="coach@example.com"
+                                        />
                                     </div>
 
                                     {(!newMember.type || newMember.type === 'Coach') && (
@@ -10573,9 +10719,9 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </div >
                     )}
-                </div>
+                </div >
             );
         };
 
@@ -17539,7 +17685,7 @@
                         {[
                             { id: 'attendance', label: 'Attendance', icon: 'Clipboard' },
                             { id: 'injuries', label: 'Injury Report', icon: 'Activity' },
-                            { id: 'wellness', label: 'Warrior Dial Dashboard', icon: 'Heart' }
+                            { id: 'wellness', label: 'Warrior Dial Dashboard', icon: 'HardHat' }
                         ].map(tab => (
                             <button
                                 key={tab.id}
@@ -20081,7 +20227,7 @@
 
 
 
-        const ProgramDashboard = ({ currentWeek, roster, userRole = 'Head Coach', permissions = { view: true, edit: true }, masterTasks = [], onUpdateTask, depthChart }) => {
+        const ProgramDashboard = ({ currentWeek, roster, inventory = [], attendance = {}, userRole = 'Head Coach', permissions = { view: true, edit: true }, masterTasks = [], onUpdateTask, depthChart }) => {
             // Checklist State (Daily, Weekly, Monthly)
             const [dailyFocus, setDailyFocus] = useState([]);
             const [weeklyFocus, setWeeklyFocus] = useState([]);
@@ -20181,6 +20327,120 @@
             const [outreach, setOutreach] = useLocalStorage('oc-dashboard-outreach', []);
             const [newOutreach, setNewOutreach] = useState('');
             const [outreachAssignee, setOutreachAssignee] = useState('ALL');
+
+            // Helper: Attendance Alerts
+            const getAttendanceAlerts = (rosterData, attendanceData) => {
+                const alerts = [];
+                const today = new Date().toISOString().split('T')[0];
+                const todayLog = attendanceData[today] || {};
+
+                // Iterate through today's log entries to find anomalies
+                Object.entries(todayLog).forEach(([playerId, status]) => {
+                    if (status === 'Absent' || status === 'Tardy') {
+                        const player = rosterData.find(p => p.id === playerId);
+                        if (player) {
+                            alerts.push({
+                                id: playerId + '-attendance',
+                                player,
+                                type: status,
+                                level: status === 'Absent' ? 'high' : 'medium',
+                                message: `Marked as ${status} today`
+                            });
+                        }
+                    }
+                });
+                return alerts;
+            };
+
+            const attendanceAlerts = useMemo(() => getAttendanceAlerts(roster, attendance), [roster, attendance]);
+
+            // Helper: Inventory Alerts
+            const getInventoryAlerts = (rosterData, inventoryData) => {
+                const alerts = [];
+                const needs = {};
+
+                // 1. Calculate Needs based on Roster
+                rosterData.forEach(p => {
+                    const sizes = p.sizes || {};
+                    // Check main items
+                    const requirements = [
+                        { type: 'Helmet', size: sizes.helmet || p.helmetSize },
+                        { type: 'Shoulder Pad', size: sizes.shoulderPad || p.shoulderPadSize },
+                        { type: 'Practice Jersey', size: sizes.jersey || p.jerseySize }, // Assuming Jersey means Practice Jersey for now
+                        { type: 'Practice Pants', size: sizes.pant || p.pantSize }
+                    ];
+
+                    requirements.forEach(req => {
+                        if (req.size) {
+                            const key = `${req.type}|${req.size}`;
+                            needs[key] = (needs[key] || 0) + 1;
+                        }
+                    });
+                });
+
+                // 2. Compare against Inventory
+                Object.entries(needs).forEach(([key, neededQty]) => {
+                    const [type, size] = key.split('|');
+
+                    // Filter inventory for matching items
+                    const stockItems = inventoryData.filter(i =>
+                        i.type === type &&
+                        i.size === size &&
+                        i.condition !== 'Damage' // Exclude damaged items
+                    );
+
+                    // Sum quantities
+                    const inStock = stockItems.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
+
+                    if (inStock < neededQty) {
+                        alerts.push({
+                            item: type,
+                            size: size,
+                            inStock,
+                            needed: neededQty,
+                            severity: 'high',
+                            message: `Shortage: Need ${neededQty}, Have ${inStock}`
+                        });
+                    } else if (inStock < neededQty + 2) {
+                        alerts.push({
+                            item: type,
+                            size: size,
+                            inStock,
+                            needed: neededQty,
+                            severity: 'medium',
+                            message: `Low Stock: Need ${neededQty}, Have ${inStock}`
+                        });
+                    }
+                });
+
+                return alerts;
+            };
+
+            const inventoryAlerts = useMemo(() => getInventoryAlerts(roster, inventory), [roster, inventory]);
+
+            // Helper: Injury Report
+            const getInjuryReport = (rosterData) => {
+                // Filter for any player that is NOT Active (e.g. Limited, Out, Questionable)
+                // We check player.metrics.status or implied status from recent logs if status is missing
+                return rosterData.filter(p => {
+                    const status = p.metrics?.status || 'Active';
+                    return status !== 'Active' && status !== 'Healthy';
+                }).map(p => {
+                    // Try to find recent injury details from logs
+                    const logs = (p.metrics?.warriorDialLogs || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+                    const latest = logs[0] || {};
+
+                    return {
+                        id: p.id,
+                        name: `${p.firstName} ${p.lastName}`,
+                        status: p.metrics.status || 'Unknown',
+                        injury: p.metrics.injury || latest.painLocation || 'Undisclosed',
+                        returnDate: p.metrics.returnDate || 'TBD'
+                    };
+                });
+            };
+
+            const injuryReport = useMemo(() => getInjuryReport(roster), [roster]);
 
             // Program Focus Persistence (Role & Type Specific)
             useEffect(() => {
@@ -20424,6 +20684,9 @@
 
                 const allSeasonalCategories = [...inSeasonCategories, ...postseasonCategories, ...offseasonCategories, ...summerCategories];
 
+                // 0. Whitelist/Safeguard "Annual" / "Someday" tasks
+                if (rec === 'Annual') return true;
+
                 // 1. Strict Seasonal Category Check (Prioritize this over generic recurrence)
                 if (allSeasonalCategories.includes(cat)) {
                     if (currentSeason === 'in-season' && inSeasonCategories.includes(cat)) return true;
@@ -20478,7 +20741,6 @@
                 today: dailyFocus,
                 thisWeek: weeklyFocus,
                 thisMonth: monthlyFocus,
-                thisMonth: monthlyFocus,
                 ongoing: ongoingFocus,
                 someday: somedayFocus,
                 completed: completedFocus
@@ -20494,8 +20756,9 @@
             };
 
             // Enhanced Drop Handler for 5 columns
-            const handleDrop = (e, targetType) => {
+            const handleDrop = (e, targetType, targetIndex = null) => {
                 e.preventDefault();
+                e.stopPropagation(); // Stop bubbling to container
                 if (!draggedItem) return;
 
                 const { type: sourceType, index: sourceIndex, item } = draggedItem;
@@ -20528,13 +20791,28 @@
                 const targetList = lists[targetType];
 
                 if (sourceType === targetType) {
-                    // Reorder (simple append for now)
-                    const newList = sourceList.filter((_, i) => i !== sourceIndex);
-                    listSetters[sourceType]([...newList, item]);
+                    // Reorder within the same list
+                    const newList = [...sourceList];
+                    const [movedItem] = newList.splice(sourceIndex, 1);
+
+                    // If dropping on container (targetIndex is null), append to end
+                    const finalIndex = targetIndex !== null ? targetIndex : newList.length;
+
+                    newList.splice(finalIndex, 0, movedItem);
+                    listSetters[sourceType](newList);
                 } else {
+                    // Move to different list
                     const newSource = sourceList.filter((_, i) => i !== sourceIndex);
                     listSetters[sourceType](newSource);
-                    listSetters[targetType]([...targetList, item]);
+
+                    // If dropping specific index, insert there; otherwise append
+                    if (targetIndex !== null) {
+                        const newTarget = [...targetList];
+                        newTarget.splice(targetIndex, 0, item);
+                        listSetters[targetType](newTarget);
+                    } else {
+                        listSetters[targetType]([...targetList, item]);
+                    }
                 }
                 setDraggedItem(null);
             };
@@ -20647,199 +20925,280 @@
                         </div>
                     </div>
 
-                    {/* WELLNESS ALERTS */}
-                    {wellnessAlerts.length > 0 && (
-                        <div className="card" style={{ marginBottom: '2rem', borderLeft: '6px solid #ef4444', background: '#fef2f2' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#b91c1c' }}>
-                                <Icon name="AlertTriangle" size={24} /> Wellness Checks ({wellnessAlerts.length})
+                    {/* DASHBOARD WIDGETS GRID */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+
+                        {/* 1. ATTENDANCE WIDGET */}
+                        <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                <Icon name="Users" size={20} /> Attendance
+                                {attendanceAlerts.length > 0 && <span className="badge badge-red">{attendanceAlerts.length}</span>}
                             </h2>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                                {wellnessAlerts.map(alert => (
-                                    <div key={alert.id} style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold' }}>{alert.player.name}</div>
-                                            <div style={{ fontSize: '0.9rem', color: alert.level === 'high' ? '#dc2626' : '#ea580c' }}>
-                                                {alert.type}: {alert.message}
+                            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px' }}>
+                                {attendanceAlerts.length === 0 ? (
+                                    <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.6, fontStyle: 'italic' }}>
+                                        No attendance issues.
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {attendanceAlerts.map(alert => (
+                                            <div key={alert.id} style={{
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                padding: '0.5rem', borderRadius: '4px',
+                                                background: alert.level === 'high' ? '#fef2f2' : '#fffbeb',
+                                                border: `1px solid ${alert.level === 'high' ? '#fee2e2' : '#fef3c7'}`
+                                            }}>
+                                                <span style={{ fontWeight: '600' }}>{alert.player.firstName} {alert.player.lastName}</span>
+                                                <span style={{
+                                                    fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px',
+                                                    background: alert.type === 'Absent' ? '#dc2626' : '#d97706', color: 'white'
+                                                }}>
+                                                    {alert.type.toUpperCase()}
+                                                </span>
                                             </div>
-                                        </div>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
-                    )}
 
-                    {/* WORKLOAD ALERTS */}
-                    {loadAlerts.length > 0 && (
-                        <div className="card" style={{ marginBottom: '2rem', borderLeft: '6px solid #ef4444', background: '#fef2f2' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#b91c1c' }}>
-                                <Icon name="Target" size={24} /> Workload Alerts ({loadAlerts.length})
+                        {/* 2. INJURY REPORT WIDGET */}
+                        <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                <Icon name="Activity" size={20} /> Injury Report
+                                {injuryReport.length > 0 && <span className="badge badge-red">{injuryReport.length}</span>}
                             </h2>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                                {loadAlerts.map(alert => (
-                                    <div key={alert.id} style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #fee2e2' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                            <div style={{ fontWeight: 'bold' }}>{alert.player.name}</div>
-                                            <div style={{ fontWeight: 'bold', color: '#dc2626' }}>{alert.message}</div>
-                                        </div>
-                                        <div style={{ fontSize: '0.8rem', opacity: 0.8, lineHeight: '1.4' }}>
-                                            {alert.details.map((d, i) => (
-                                                <div key={i}>{d.unit}: {d.role}</div>
-                                            ))}
-                                        </div>
+                            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px' }}>
+                                {injuryReport.length === 0 ? (
+                                    <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.6, fontStyle: 'italic' }}>
+                                        No active injuries.
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* FATIGUE ALERTS */}
-                    {fatigueAlerts.length > 0 && (
-                        <div className="card" style={{ marginBottom: '2rem', borderLeft: '6px solid #f97316', background: '#fff7ed' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#c2410c' }}>
-                                <Icon name="Zap" size={24} /> Fatigue Alerts ({fatigueAlerts.length})
-                            </h2>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                                {fatigueAlerts.map(alert => (
-                                    <div key={alert.id} style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                            <div style={{ fontWeight: 'bold' }}>{alert.player.name}</div>
-                                            <div style={{ fontWeight: 'bold', color: '#ea580c' }}>{alert.message}</div>
-                                        </div>
-                                        <div style={{ fontSize: '0.8rem', opacity: 0.8, lineHeight: '1.4' }}>
-                                            {alert.details.map((d, i) => (
-                                                <div key={i}>{d.unit}: {d.position} (+{d.fatigue})</div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 5-COLUMN DASHBOARD */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', flex: 1, minHeight: 0 }}>
-                        {['today', 'thisWeek', 'thisMonth', 'ongoing', 'someday'].map(col => {
-                            const titleMap = { today: 'Today', thisWeek: 'This Week', thisMonth: 'This Month', ongoing: 'Ongoing', someday: 'Someday' };
-                            const personalList = lists[col];
-                            const assignedList = assignedBuckets[col];
-
-                            return (
-                                <div
-                                    key={col}
-                                    className="card"
-                                    style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-panel)', border: '1px solid var(--border)' }}
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, col)}
-                                >
-                                    <h3 style={{ fontSize: '1.2rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                                        {titleMap[col]}
-                                        <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{personalList.length + assignedList.length}</span>
-                                    </h3>
-
-                                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', minHeight: '200px' }}>
-                                        {/* Assigned Tasks (Auto-Populated) */}
-                                        {assignedList.map((task, idx) => (
-                                            <div
-                                                key={task.id}
-                                                draggable
-                                                onDragStart={(e) => {
-                                                    setDraggedItem({ type: `assigned_${col}`, index: idx, item: task });
-                                                    e.dataTransfer.effectAllowed = "move";
-                                                }}
-                                                onDoubleClick={() => setViewingTaskNotes(task)}
-                                                style={{
-                                                    padding: '0.75rem',
-                                                    background: 'var(--surface)',
-                                                    borderRadius: '6px',
-                                                    borderLeft: `4px solid ${task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#eab308' : '#3b82f6'}`,
-                                                    fontSize: '0.9rem',
-                                                    cursor: 'grab',
-                                                    opacity: task.completed ? 0.6 : 1
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!task.completed}
-                                                        onChange={(e) => {
-                                                            if (onUpdateTask) {
-                                                                onUpdateTask({ ...task, completed: e.target.checked });
-                                                            }
-                                                        }}
-                                                        style={{ marginTop: '0.25rem' }}
-                                                    />
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ fontWeight: '500', textDecoration: task.completed ? 'line-through' : 'none' }}>{task.task}</div>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                            <span>{task.priority === 'High' ? '🔥 High' : task.priority}</span>
-                                                            <span>{task.estimatedTime}</span>
-                                                        </div>
-                                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {injuryReport.map(report => (
+                                            <div key={report.id} style={{
+                                                padding: '0.5rem', borderRadius: '4px',
+                                                background: report.status === 'Out' ? '#fef2f2' : '#fffbeb',
+                                                border: `1px solid ${report.status === 'Out' ? '#fee2e2' : '#fef3c7'}`
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontWeight: '600' }}>{report.name}</span>
+                                                    <span style={{
+                                                        fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px',
+                                                        background: report.status === 'Out' ? '#dc2626' : '#f59e0b', color: 'white'
+                                                    }}>
+                                                        {report.status.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                                                    <span style={{ fontWeight: '500' }}>{report.injury}</span>
+                                                    <span style={{ margin: '0 0.5rem', color: '#ccc' }}>|</span>
+                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Return: {report.returnDate}</span>
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                                        {/* Personal Checklist Items */}
-                                        {personalList.map((item, idx) => (
-                                            <div
-                                                key={idx}
-                                                draggable
-                                                onDragStart={(e) => {
-                                                    setDraggedItem({ type: col, index: idx, item });
-                                                    e.dataTransfer.effectAllowed = "move";
-                                                }}
-                                                onDoubleClick={() => {
-                                                    const taskObj = typeof item === 'string' ? { task: item } : item;
-                                                    setViewingTaskNotes(taskObj);
-                                                }}
-                                                style={{
-                                                    padding: '0.75rem',
-                                                    background: 'white',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid var(--border)',
-                                                    fontSize: '0.9rem',
-                                                    cursor: 'grab',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                <span>{typeof item === 'string' ? item : item.task || JSON.stringify(item)}</span>
-                                                <button
-                                                    onClick={() => {
-                                                        const newList = personalList.filter((_, i) => i !== idx);
-                                                        listSetters[col](newList);
-                                                    }}
-                                                    style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }}
-                                                >
-                                                    <Icon name="X" size={14} />
-                                                </button>
+                        {/* 3. WARRIOR DIAL (WELLNESS) WIDGET */}
+                        <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                <Icon name="Heart" size={20} /> Wellness
+                                {(wellnessAlerts.length + loadAlerts.length) > 0 && <span className="badge badge-red">{wellnessAlerts.length + loadAlerts.length}</span>}
+                            </h2>
+                            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px' }}>
+                                {(wellnessAlerts.length === 0 && loadAlerts.length === 0) ? (
+                                    <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.6, fontStyle: 'italic' }}>
+                                        All systems go.
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {[...wellnessAlerts, ...loadAlerts].map(alert => (
+                                            <div key={alert.id} style={{
+                                                padding: '0.5rem', borderRadius: '4px',
+                                                background: alert.level === 'high' ? '#fef2f2' : '#fffbeb',
+                                                border: `1px solid ${alert.level === 'high' ? '#fee2e2' : '#fef3c7'}`
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <span style={{ fontWeight: '600' }}>{alert.player.firstName} {alert.player.lastName}</span>
+                                                    <span style={{ fontSize: '0.75rem', color: alert.level === 'high' ? '#dc2626' : '#d97706', fontWeight: 'bold' }}>{alert.type}</span>
+                                                </div>
+                                                <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '2px' }}>{alert.message}</div>
                                             </div>
                                         ))}
                                     </div>
+                                )}
+                            </div>
+                        </div>
 
-                                    {canEdit && (
-                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
-                                            <input
-                                                className="form-input"
-                                                style={{ fontSize: '0.9rem', padding: '0.4rem' }}
-                                                placeholder={`Add item...`}
-                                                value={inputs[col] || ''}
-                                                onChange={e => setInputs(prev => ({ ...prev, [col]: e.target.value }))}
-                                                onKeyDown={e => e.key === 'Enter' && addItem(col, inputs[col])}
-                                            />
-                                            <button className="btn-sm btn-primary" onClick={() => addItem(col, inputs[col])} style={{ padding: '0 0.5rem' }}>
-                                                <Icon name="Plus" size={16} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        {/* 4. INVENTORY ALERTS WIDGET */}
+                        <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                <Icon name="Package" size={20} /> Inventory
+                                {inventoryAlerts.length > 0 && <span className="badge badge-red">{inventoryAlerts.length}</span>}
+                            </h2>
+                            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px' }}>
+                                {inventoryAlerts.length === 0 ? (
+                                    <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.6, fontStyle: 'italic' }}>
+                                        Stock levels active.
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {inventoryAlerts.map((alert, idx) => (
+                                            <div key={idx} style={{
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                padding: '0.5rem', borderRadius: '4px',
+                                                background: alert.severity === 'high' ? '#fef2f2' : '#fffbeb',
+                                                border: `1px solid ${alert.severity === 'high' ? '#fee2e2' : '#fef3c7'}`
+                                            }}>
+                                                <div>
+                                                    <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{alert.item} ({alert.size})</div>
+                                                    <div style={{ fontSize: '0.8rem', color: alert.severity === 'high' ? '#dc2626' : '#d97706' }}>
+                                                        {alert.message}
+                                                    </div>
+                                                </div>
+                                                <Icon name="AlertCircle" size={16} color={alert.severity === 'high' ? '#dc2626' : '#d97706'} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
+                    {/* 5-COLUMN DASHBOARD (Task List) */}
+                    < div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', flex: 1, minHeight: 0 }}>
+                        {
+                            ['today', 'thisWeek', 'thisMonth', 'ongoing', 'someday'].map(col => {
+                                const titleMap = { today: 'Today', thisWeek: 'This Week', thisMonth: 'This Month', ongoing: 'Ongoing', someday: 'Someday' };
+                                const personalList = lists[col];
+                                const assignedList = assignedBuckets[col];
+
+                                return (
+                                    <div
+                                        key={col}
+                                        className="card"
+                                        style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-panel)', border: '1px solid var(--border)' }}
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, col)}
+                                    >
+                                        <h3 style={{ fontSize: '1.2rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                                            {titleMap[col]}
+                                            <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{personalList.length + assignedList.length}</span>
+                                        </h3>
+
+                                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', minHeight: '200px' }}>
+                                            {/* Assigned Tasks (Auto-Populated) */}
+                                            {assignedList.map((task, idx) => (
+                                                <div
+                                                    key={task.id}
+                                                    draggable
+                                                    onDragStart={(e) => {
+                                                        setDraggedItem({ type: `assigned_${col}`, index: idx, item: task });
+                                                        e.dataTransfer.effectAllowed = "move";
+                                                    }}
+                                                    onDoubleClick={() => setViewingTaskNotes(task)}
+                                                    style={{
+                                                        padding: '0.75rem',
+                                                        background: 'var(--surface)',
+                                                        borderRadius: '6px',
+                                                        borderLeft: `4px solid ${task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#eab308' : '#3b82f6'}`,
+                                                        fontSize: '0.9rem',
+                                                        cursor: 'grab',
+                                                        opacity: task.completed ? 0.6 : 1
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!task.completed}
+                                                            onChange={(e) => {
+                                                                if (onUpdateTask) {
+                                                                    onUpdateTask({ ...task, completed: e.target.checked });
+                                                                }
+                                                            }}
+                                                            style={{ marginTop: '0.25rem' }}
+                                                        />
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontWeight: '500', textDecoration: task.completed ? 'line-through' : 'none' }}>{task.task}</div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                                <span>{task.priority === 'High' ? '🔥 High' : task.priority}</span>
+                                                                <span>{task.estimatedTime}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {/* Personal Checklist Items */}
+                                            {personalList.map((item, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    draggable
+                                                    onDragStart={(e) => {
+                                                        setDraggedItem({ type: col, index: idx, item });
+                                                        e.dataTransfer.effectAllowed = "move";
+                                                    }}
+                                                    onDragOver={(e) => {
+                                                        e.preventDefault(); // Necessary to allow dropping
+                                                        e.stopPropagation();
+                                                    }}
+                                                    onDrop={(e) => handleDrop(e, col, idx)}
+                                                    onDoubleClick={() => {
+                                                        const taskObj = typeof item === 'string' ? { task: item } : item;
+                                                        setViewingTaskNotes(taskObj);
+                                                    }}
+                                                    style={{
+                                                        padding: '0.75rem',
+                                                        background: 'white',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid var(--border)',
+                                                        fontSize: '0.9rem',
+                                                        cursor: 'grab',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    <span>{typeof item === 'string' ? item : item.task || JSON.stringify(item)}</span>
+                                                    <button
+                                                        onClick={() => {
+                                                            const newList = personalList.filter((_, i) => i !== idx);
+                                                            listSetters[col](newList);
+                                                        }}
+                                                        style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }}
+                                                    >
+                                                        <Icon name="X" size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {canEdit && (
+                                            <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+                                                <input
+                                                    className="form-input"
+                                                    style={{ fontSize: '0.9rem', padding: '0.4rem' }}
+                                                    placeholder={`Add item...`}
+                                                    value={inputs[col] || ''}
+                                                    onChange={e => setInputs(prev => ({ ...prev, [col]: e.target.value }))}
+                                                    onKeyDown={e => e.key === 'Enter' && addItem(col, inputs[col])}
+                                                />
+                                                <button className="btn-sm btn-primary" onClick={() => addItem(col, inputs[col])} style={{ padding: '0 0.5rem' }}>
+                                                    <Icon name="Plus" size={16} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        }
+                    </div >
+
                     {/* COMPLETED TASKS BUCKET (Collapsible) */}
-                    <div
+                    < div
                         className="card"
                         style={{
                             marginTop: '2rem',
@@ -20871,50 +21230,54 @@
                             </div>
                         </div>
 
-                        {isCompletedExpanded && (
-                            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', paddingTop: '1rem', borderTop: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
-                                {assignedBuckets.completed.length === 0 ? (
-                                    <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Drag tasks here to mark as complete</div>
-                                ) : (
-                                    assignedBuckets.completed.map((task, idx) => (
-                                        <div
-                                            key={task.id}
-                                            draggable
-                                            onDragStart={(e) => {
-                                                setDraggedItem({ type: `assigned_completed`, index: idx, item: task });
-                                                e.dataTransfer.effectAllowed = "move";
-                                            }}
-                                            style={{
-                                                padding: '0.5rem 1rem',
-                                                background: 'var(--bg-input)',
-                                                borderRadius: '20px',
-                                                border: '1px solid var(--border)',
-                                                fontSize: '0.9rem',
-                                                color: 'var(--text-secondary)',
-                                                cursor: 'grab',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                textDecoration: 'line-through'
-                                            }}
-                                        >
-                                            <Icon name="Check" size={12} color="#10b981" />
-                                            {task.task}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        )}
-                    </div>
+                        {
+                            isCompletedExpanded && (
+                                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', paddingTop: '1rem', borderTop: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
+                                    {assignedBuckets.completed.length === 0 ? (
+                                        <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Drag tasks here to mark as complete</div>
+                                    ) : (
+                                        assignedBuckets.completed.map((task, idx) => (
+                                            <div
+                                                key={task.id}
+                                                draggable
+                                                onDragStart={(e) => {
+                                                    setDraggedItem({ type: `assigned_completed`, index: idx, item: task });
+                                                    e.dataTransfer.effectAllowed = "move";
+                                                }}
+                                                style={{
+                                                    padding: '0.5rem 1rem',
+                                                    background: 'var(--bg-input)',
+                                                    borderRadius: '20px',
+                                                    border: '1px solid var(--border)',
+                                                    fontSize: '0.9rem',
+                                                    color: 'var(--text-secondary)',
+                                                    cursor: 'grab',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    textDecoration: 'line-through'
+                                                }}
+                                            >
+                                                <Icon name="Check" size={12} color="#10b981" />
+                                                {task.task}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )
+                        }
+                    </div >
 
                     {/* Task Notes Modal */}
-                    {viewingTaskNotes && (
-                        <TaskNotesModal
-                            task={viewingTaskNotes}
-                            onClose={() => setViewingTaskNotes(null)}
-                        />
-                    )}
-                </div>
+                    {
+                        viewingTaskNotes && (
+                            <TaskNotesModal
+                                task={viewingTaskNotes}
+                                onClose={() => setViewingTaskNotes(null)}
+                            />
+                        )
+                    }
+                </div >
             );
         };
 
@@ -22998,7 +23361,7 @@
         };
 
         const EquipmentManager = ({ view, roster, inventory, onUpdateInventory, checkouts, onUpdateCheckouts, issuance, onUpdateIssuance, wishlist, onUpdateWishlist, lotteryData, onUpdateLottery }) => {
-            const [newItem, setNewItem] = useState({ name: '', type: '', quantity: 0, condition: 'New' });
+            const [newItem, setNewItem] = useState({ name: '', type: '', quantity: 0, condition: 'New', size: '' });
             const [selectedPlayerId, setSelectedPlayerId] = useState('');
             const [newWish, setNewWish] = useState({ item: '', priority: 'Medium', cost: 0, link: '' });
 
@@ -23010,7 +23373,7 @@
                 if (!newItem.name) return;
                 const id = 'item_' + Date.now();
                 onUpdateInventory([...inventory, { ...newItem, id }]);
-                setNewItem({ name: '', type: '', quantity: 0, condition: 'New' });
+                setNewItem({ name: '', type: '', quantity: 0, condition: 'New', size: '' });
             };
 
             const deleteInventoryItem = (id) => {
@@ -23088,6 +23451,16 @@
                                     {itemTypes.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                             </div>
+                            <div style={{ width: '100px' }}>
+                                <label className="form-label">Size</label>
+                                <select className="form-select" value={newItem.size} onChange={e => setNewItem({ ...newItem, size: e.target.value })}>
+                                    <option value="">--</option>
+                                    {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                    <optgroup label="Shoe">
+                                        {[8, 9, 10, 11, 12, 13, 14, 15].map(s => <option key={s} value={s}>{s}</option>)}
+                                    </optgroup>
+                                </select>
+                            </div>
                             <div style={{ width: '80px' }}>
                                 <label className="form-label">Qty</label>
                                 <input className="form-input" type="number" value={newItem.quantity} onChange={e => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 0 })} />
@@ -23106,6 +23479,7 @@
                                 <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
                                     <th style={{ padding: '0.5rem' }}>Name</th>
                                     <th style={{ padding: '0.5rem' }}>Type</th>
+                                    <th style={{ padding: '0.5rem' }}>Size</th>
                                     <th style={{ padding: '0.5rem' }}>Qty</th>
                                     <th style={{ padding: '0.5rem' }}>Condition</th>
                                     <th style={{ padding: '0.5rem' }}>Actions</th>
@@ -23116,6 +23490,7 @@
                                     <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                         <td style={{ padding: '0.5rem' }}>{item.name}</td>
                                         <td style={{ padding: '0.5rem' }}>{item.type}</td>
+                                        <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>{item.size}</td>
                                         <td style={{ padding: '0.5rem' }}>{item.quantity}</td>
                                         <td style={{ padding: '0.5rem' }}>
                                             <span style={{
@@ -25209,20 +25584,20 @@
 
 
             /*
-                        const [dutyAssignments, setDutyAssignments] = useState(() => {
-                            try {
-                                const saved = localStorage.getItem('oc-dashboard-duties');
-                                return (saved && saved !== "null") ? JSON.parse(saved) : {};
-                            } catch (e) { return {}; }
-                        });
-            
-                        // Save duties to localStorage
-                        useEffect(() => {
-                            localStorage.setItem('oc-dashboard-duties', JSON.stringify(dutyAssignments));
-                        }, [dutyAssignments]);
+            const [dutyAssignments, setDutyAssignments] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('oc-dashboard-duties');
+                    return (saved && saved !== "null") ? JSON.parse(saved) : {};
+                } catch (e) { return {}; }
+            });
+
+            // Save duties to localStorage
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-duties', JSON.stringify(dutyAssignments));
+            }, [dutyAssignments]);
             */
 
-            // Save plays to localStorage whenever they change
+            // Save plays to localStorage whenever it changes
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
             }, [plays]);
@@ -25504,9 +25879,9 @@
             return (
                 <div className="app-container">
                     <div className="sidebar">
-                        <h1 style={{ fontSize: '1.25rem', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
-                            <span style={{ color: 'var(--accent)' }}>HC</span> Dashboard
-                        </h1>
+                        <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem' }}>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>DoFO</h1>
+                        </div>
                         <nav style={{ flex: 1, overflowY: 'auto' }}>
                             {/* SEASON CATEGORY */}
                             {/* Week Selector */}
@@ -25576,7 +25951,7 @@
                                     style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
                                 >
                                     <Icon name="Checkbox" size={18} color="var(--accent)" />
-                                    <span style={{ fontWeight: '600' }}>MY TASKS</span>
+                                    <span style={{ fontWeight: '600' }}>MY DASHBOARD</span>
                                 </button>
                             )}
 
@@ -25870,7 +26245,7 @@
 
                     <main className="main-content">
                         {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} currentUser={currentUser} />}
-                        {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} roster={roster} userRole={(currentUser?.roles && currentUser.roles[0]) || 'Head Coach'} permissions={currentPermissions.dashboard} masterTasks={masterTasks} depthChart={depthChart} onUpdateTask={(updatedTask) => {
+                        {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} roster={roster} inventory={inventory} attendance={attendance} userRole={(currentUser?.roles && currentUser.roles[0]) || 'Head Coach'} permissions={currentPermissions.dashboard} masterTasks={masterTasks} depthChart={depthChart} onUpdateTask={(updatedTask) => {
                             setMasterTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
                         }} />}
                         {view === 'daily-reports' && <DailyReportsView roster={roster} attendance={attendance} setAttendance={setAttendance} permissions={currentPermissions.dashboard} />}
