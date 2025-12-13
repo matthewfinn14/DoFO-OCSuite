@@ -23817,8 +23817,9 @@
                                                     position: 'relative'
                                                 }}
                                                 onClick={(e) => {
-                                                    // Don't open Play Selector if clicking the pencil icon
+                                                    // Don't open Play Selector if clicking the pencil icon or edit menu
                                                     if (e.target.closest('.pencil-icon-container')) return;
+                                                    if (e.target.closest('.box-edit-menu')) return;
                                                     if (!isEditing) openPlaySelector(cell.setId);
                                                 }}
                                             >
@@ -23843,7 +23844,7 @@
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
                                                             }}
-                                                            onMouseDown={(e) => {
+                                                            onClick={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
                                                                 setEditingHeader({ sectionIdx: idx, rowIdx: cellIdx });
@@ -23854,14 +23855,16 @@
                                                     )}
 
                                                     {isEditing && (
-                                                        <div style={{
-                                                            position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                                                            width: '240px', maxHeight: '300px', overflowY: 'auto', zIndex: 9999,
-                                                            background: 'white', border: '1px solid #ccc', borderRadius: '4px',
-                                                            boxShadow: '0 4px 10px rgba(0,0,0,0.2)', padding: '0.75rem',
-                                                            display: 'flex', flexDirection: 'column', gap: '8px', color: '#1e293b',
-                                                            cursor: 'default', marginTop: '4px'
-                                                        }}
+                                                        <div
+                                                            className="box-edit-menu"
+                                                            style={{
+                                                                position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                                                                width: '240px', maxHeight: '300px', overflowY: 'auto', zIndex: 9999,
+                                                                background: 'white', border: '1px solid #ccc', borderRadius: '4px',
+                                                                boxShadow: '0 4px 10px rgba(0,0,0,0.2)', padding: '0.75rem',
+                                                                display: 'flex', flexDirection: 'column', gap: '8px', color: '#1e293b',
+                                                                cursor: 'default', marginTop: '4px'
+                                                            }}
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Edit Box</div>
@@ -23947,18 +23950,18 @@
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     e.preventDefault();
-                                                                    const confirmed = window.confirm('Delete this box?');
-                                                                    if (confirmed) {
-                                                                        const newLayouts = { ...gamePlanLayouts };
-                                                                        const sheet = { ...newLayouts.CALL_SHEET };
-                                                                        sheet.sections = [...sheet.sections];
-                                                                        const rows = [...sheet.sections[idx].rows];
-                                                                        rows.splice(cellIdx, 1);
-                                                                        sheet.sections[idx] = { ...sheet.sections[idx], rows };
-                                                                        newLayouts.CALL_SHEET = sheet;
-                                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                                    }
-                                                                    // Close menu after user responds to confirmation
+
+                                                                    // Delete the box immediately without confirmation
+                                                                    const newLayouts = { ...gamePlanLayouts };
+                                                                    const sheet = { ...newLayouts.CALL_SHEET };
+                                                                    sheet.sections = [...sheet.sections];
+                                                                    const rows = [...sheet.sections[idx].rows];
+                                                                    rows.splice(cellIdx, 1);
+                                                                    sheet.sections[idx] = { ...sheet.sections[idx], rows };
+                                                                    newLayouts.CALL_SHEET = sheet;
+                                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+
+                                                                    // Close menu after deletion
                                                                     setEditingHeader(null);
                                                                 }}
                                                                 style={{
