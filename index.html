@@ -23343,12 +23343,14 @@
             const [isLocked, setIsLocked] = useLocalStorage('gamePlanLocked', true);
             const [confirmResetLayout, setConfirmResetLayout] = useState(false);
             const [draggedCell, setDraggedCell] = useState(null); // { sectionIdx, rowIdx }
+            const [draggedSection, setDraggedSection] = useState(null); // { sectionIdx }
             const [editingHeader, setEditingHeader] = useState(null); // { sectionIdx, rowIdx }
 
             const handleDragStart = (e, sectionIdx, rowIdx) => {
-                if (isLocked) return;
+                if (isLocked || draggedSection) return; // Don't allow cell drag if section is being dragged
                 setDraggedCell({ sectionIdx, rowIdx });
                 e.dataTransfer.effectAllowed = 'move';
+                e.stopPropagation(); // Prevent section drag from firing
             };
 
             const handleDragOver = (e) => {
@@ -23423,6 +23425,49 @@
                 if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                 setDraggedCell(null);
             };
+
+            // Section drag handlers
+            const handleSectionDragStart = (e, sectionIdx) => {
+                if (isLocked) return;
+                setDraggedSection({ sectionIdx });
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleSectionDragOver = (e) => {
+                if (isLocked || !draggedSection) return;
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleSectionDrop = (e, targetSectionIdx) => {
+                if (isLocked || !draggedSection) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const sourceSectionIdx = draggedSection.sectionIdx;
+                if (sourceSectionIdx === targetSectionIdx) {
+                    setDraggedSection(null);
+                    return;
+                }
+
+                // Reorder sections array
+                const newLayouts = { ...gamePlanLayouts };
+                const sheet = { ...newLayouts.CALL_SHEET };
+                const sections = [...sheet.sections];
+
+                // Remove source section
+                const [movedSection] = sections.splice(sourceSectionIdx, 1);
+
+                // Insert at target position
+                sections.splice(targetSectionIdx, 0, movedSection);
+
+                sheet.sections = sections;
+                newLayouts.CALL_SHEET = sheet;
+                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                setDraggedSection(null);
+            };
+
 
             const saveHeader = (sectionIdx, rowIdx, newName) => {
                 if (!onUpdateLayouts) return;
@@ -23617,7 +23662,22 @@
                         {/* PLAYER TOUCHES SUMMARY */}
 
                         {layout.sections.map((section, idx) => (
-                            <div key={idx} style={{ marginBottom: '2rem' }}>
+                            <div
+                                key={idx}
+                                draggable={!isLocked}
+                                onDragStart={(e) => handleSectionDragStart(e, idx)}
+                                onDragOver={handleSectionDragOver}
+                                onDrop={(e) => handleSectionDrop(e, idx)}
+                                style={{
+                                    marginBottom: '2rem',
+                                    cursor: !isLocked ? 'grab' : 'default',
+                                    opacity: draggedSection?.sectionIdx === idx ? 0.5 : 1,
+                                    border: draggedSection && draggedSection.sectionIdx !== idx ? '2px dashed #cbd5e1' : 'none',
+                                    borderRadius: '8px',
+                                    padding: draggedSection ? '0.5rem' : '0',
+                                    transition: 'opacity 0.2s, border 0.2s'
+                                }}
+                            >
                                 {/* Section Header */}
                                 {section.title && (
                                     <div
@@ -23654,13 +23714,29 @@
                                             setDraggedCell(null);
                                         }}
                                     >
-                                        {/* Editable Title */}
-                                        <h3
-                                            style={{ fontSize: '1.1rem', fontWeight: 'bold', color: section.headerColor || '#1e293b', margin: 0, cursor: !isLocked ? 'pointer' : 'default', textTransform: 'uppercase', display: 'inline-block' }}
-                                            onClick={() => !isLocked && setEditingHeader({ sectionIdx: idx, isSectionTitle: true })}
-                                        >
-                                            {section.title}
-                                        </h3>
+                                        {/* Editable Title with Drag Handle */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            {!isLocked && (
+                                                <span
+                                                    style={{
+                                                        cursor: 'grab',
+                                                        fontSize: '1.2rem',
+                                                        opacity: 0.5,
+                                                        userSelect: 'none',
+                                                        lineHeight: 1
+                                                    }}
+                                                    title="Drag to reorder section"
+                                                >
+                                                    ⋮⋮
+                                                </span>
+                                            )}
+                                            <h3
+                                                style={{ fontSize: '1.1rem', fontWeight: 'bold', color: section.headerColor || '#1e293b', margin: 0, cursor: !isLocked ? 'pointer' : 'default', textTransform: 'uppercase', display: 'inline-block' }}
+                                                onClick={() => !isLocked && setEditingHeader({ sectionIdx: idx, isSectionTitle: true })}
+                                            >
+                                                {section.title}
+                                            </h3>
+                                        </div>
 
                                         {/* Section Edit Menu */}
                                         {editingHeader && editingHeader.sectionIdx === idx && editingHeader.isSectionTitle && (
