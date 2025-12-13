@@ -304,6 +304,62 @@ button {
   justify-content: space-between;
 }
 
+/* Wristband Spreadsheet Table - Screen View */
+.wristband-spreadsheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.6rem;
+  table-layout: fixed;
+}
+
+.wristband-spreadsheet-table td {
+  padding: 0 2px;
+  border: 1px solid #333;
+  height: 11px;
+  max-height: 11px;
+  vertical-align: middle;
+  color: #000;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 11px;
+  box-sizing: border-box;
+  font-size: 0.45rem;
+}
+
+.wristband-spreadsheet-table tr {
+  height: 11px;
+  max-height: 11px;
+  line-height: 11px;
+}
+
+.wristband-clear-btn {
+  background: transparent;
+  color: #ef4444;
+  font-size: 0.9rem;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.wristband-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #dc2626;
+}
+
 /* Print Styles */
 @media print {
   @page {
@@ -402,6 +458,12 @@ button {
     /* Remaining height */
   }
 
+  .wristband-spreadsheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.6rem;
+  }
+
   .wristband-col {
     width: 50%;
     display: flex;
@@ -483,6 +545,26 @@ button {
   .wristband-diagram-img {
     max-width: 100%;
     max-height: 100%;
+  }
+
+  /* Header inputs in print view */
+  .wristband-header-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    font-size: 9pt !important;
+    font-weight: bold !important;
+    color: black !important;
+  }
+
+  .wristband-header-input::placeholder {
+    color: #999 !important;
+    opacity: 1 !important;
+  }
+
+  /* Hide delete buttons in print */
+  .wristband-clear-btn {
+    display: none !important;
   }
 }
 
