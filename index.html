@@ -24190,6 +24190,27 @@
                 if (onUpdateLayouts) onUpdateLayouts(newLayouts);
             };
 
+            const handleAddBoxToSection = (sectionIdx) => {
+                const newLayouts = { ...gamePlanLayouts };
+                const sheet = { ...newLayouts.CALL_SHEET };
+                const section = { ...sheet.sections[sectionIdx] };
+
+                // Create new Box
+                const newBox = {
+                    header: 'New Box',
+                    color: '#3b82f6',
+                    setId: `box_${Date.now()}`,
+                    colSpan: 1,
+                    hidden: false
+                };
+
+                section.rows.push(newBox);
+
+                sheet.sections[sectionIdx] = section;
+                newLayouts.CALL_SHEET = sheet;
+                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+            };
+
             const toggleTempo = (sectionIdx, rowIdx) => {
                 const newLayouts = { ...gamePlanLayouts };
                 const sheet = { ...newLayouts.CALL_SHEET };
@@ -24503,7 +24524,7 @@
                                     border: isLocked ? '1px solid #cbd5e1' : 'none'
                                 }}
                             >
-                                + Add Box
+                                + Add Section
                             </button>
                             <button
                                 className={`btn ${isLocked ? 'btn-secondary' : 'btn-primary'}`}
@@ -24984,6 +25005,20 @@
                                                 </div>
                                             );
                                         })}
+                                        {!isLocked && (
+                                            <div
+                                                onClick={() => handleAddBoxToSection(idx)}
+                                                style={{
+                                                    border: '2px dashed #cbd5e1', borderRadius: '4px',
+                                                    minHeight: '150px',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    cursor: 'pointer', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 'bold',
+                                                    background: 'rgba(255,255,255,0.5)'
+                                                }}
+                                            >
+                                                + Add Box
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div >
@@ -25343,6 +25378,11 @@
                     // Standard defaults (Spreadsheet)
                     section.cols = 1; // It renders as a list
                     if (!section.rows) section.rows = [];
+                } else if (type === 'grid') {
+                    // Situational Grid defaults
+                    section.cols = 4;
+                    if (!section.rows) section.rows = [];
+                    // Optionally add one initial box?
                 }
 
                 sheet.sections[sectionIdx] = section;
@@ -25420,6 +25460,24 @@
                                         <div>
                                             <div style={{ fontWeight: 'bold' }}>Standard Menu</div>
                                             <div style={{ fontSize: '0.8rem', color: '#666' }}>Spreadsheet-style list with quick add support.</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Situational Menu (Grid) */}
+                                    <div
+                                        onClick={() => handleConfigureSection(sectionIdx, 'grid')}
+                                        style={{
+                                            border: '1px solid #ddd', borderRadius: '8px', padding: '1rem', cursor: 'pointer',
+                                            display: 'flex', gap: '1rem', alignItems: 'center',
+                                            background: '#f8fafc', transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                        onMouseLeave={e => e.currentTarget.style.borderColor = '#ddd'}
+                                    >
+                                        <div style={{ fontSize: '2rem' }}>🔢</div>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold' }}>Situational Menu</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#666' }}>Grid layout for holding Situational Boxes (e.g. 3rd Down).</div>
                                         </div>
                                     </div>
                                 </div>
