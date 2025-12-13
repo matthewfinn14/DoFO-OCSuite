@@ -15468,31 +15468,18 @@
                     return metaMap[key] || { icon: 'Circle' };
                 };
 
-                // Add Mini Scripts (Dynamic)
-                if ((gamePlan.miniScripts || []).length > 0) {
-                    derivedSections.push({ type: 'header', label: 'MINI SCRIPTS' });
-                    (gamePlan.miniScripts || []).forEach(ms => {
-                        derivedSections.push({
-                            key: ms.id,
-                            label: ms.name,
-                            color: ms.color,
-                            icon: 'FileText'
-                        });
-                    });
-                }
-
-                // Add Drag-and-Drop Sections from Grid Logic
-                // We'll treat the first section as "Scripts" and second as "Situations" generally, 
-                // but simpler to just map them all in order.
-                derivedSections.push({ type: 'header', label: 'CALL SHEET GRID' });
-
+                // Iterate through layout sections and use their titles as headers
                 layout.sections.forEach(section => {
+                    // Add section header if title exists
+                    if (section.title) {
+                        derivedSections.push({ type: 'header', label: section.title });
+                    }
+
+                    // Add all cells from this section
                     section.rows.forEach(cell => {
                         const meta = getMeta(cell.setId);
 
-                        // Handle special re-mapping for legacy keys if needed
-                        // e.g. 2nd_xl_lh vs 2nd_xl. In the grid it is 2nd_xl_lh.
-                        // We use the cell's header as the label.
+                        // Use the cell's header as the label
                         derivedSections.push({
                             key: cell.setId,
                             label: cell.header, // Use the customized header!
@@ -15622,7 +15609,7 @@
                                     className="btn"
                                     style={{
                                         background: viewMode === 'matrix' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'matrix' ? 'white' : 'var(--text-primary)',
+                                        color: viewMode === 'matrix' ? 'white' : '#1e293b',
                                         border: viewMode === 'matrix' ? 'none' : '2px solid var(--border)',
                                         fontWeight: 'bold',
                                         padding: '0.75rem 2rem',
@@ -15636,7 +15623,7 @@
                                     className="btn"
                                     style={{
                                         background: viewMode === 'situations' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'situations' ? 'white' : 'var(--text-primary)',
+                                        color: viewMode === 'situations' ? 'white' : '#1e293b',
                                         border: viewMode === 'situations' ? 'none' : '2px solid var(--border)',
                                         fontWeight: 'bold',
                                         padding: '0.75rem 2rem',
@@ -15650,7 +15637,7 @@
                                     className="btn"
                                     style={{
                                         background: viewMode === 'play_type' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'play_type' ? 'white' : 'var(--text-primary)',
+                                        color: viewMode === 'play_type' ? 'white' : '#1e293b',
                                         border: viewMode === 'play_type' ? 'none' : '2px solid var(--border)',
                                         fontWeight: 'bold',
                                         padding: '0.75rem 2rem',
@@ -15664,7 +15651,7 @@
                                     className="btn"
                                     style={{
                                         background: viewMode === 'player_touches' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'player_touches' ? 'white' : 'var(--text-primary)',
+                                        color: viewMode === 'player_touches' ? 'white' : '#1e293b',
                                         border: viewMode === 'player_touches' ? 'none' : '2px solid var(--border)',
                                         fontWeight: 'bold',
                                         padding: '0.75rem 2rem',
@@ -15675,7 +15662,7 @@
                                 </button>
                             </div>
 
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                            <p style={{ color: '#475569', fontSize: '0.9rem', marginTop: '0.5rem' }}>
                                 {viewMode === 'situations' ? 'Select a game situation to view plays' : viewMode === 'play_type' ? 'View plays organized by play type' : viewMode === 'player_touches' ? 'Manage plays designed to get the ball to key players' : 'View plays organized by formation'}
                             </p>
                         </div>
@@ -15726,7 +15713,7 @@
                                             {/* Buttons Grid */}
                                             <div style={{
                                                 display: 'grid',
-                                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                                                gridTemplateColumns: 'repeat(4, 1fr)',
                                                 gap: '1rem'
                                             }}>
                                                 {group.items.map(section => {
@@ -22914,6 +22901,12 @@
             const [collapsedGroups, setCollapsedGroups] = useState(new Set());
             const [collapsedRows, setCollapsedRows] = useState(new Set());
 
+            // For Strike 'Em Out matrix collapsible hash columns (LEFT/RIGHT)
+            const [collapsedHashColumns, setCollapsedHashColumns] = useState(() => {
+                const saved = localStorage.getItem('collapsedHashColumns_strikeEmOut');
+                return saved ? new Set(JSON.parse(saved)) : new Set();
+            });
+
             const toggleRow = (rowId) => {
                 setCollapsedRows(prev => {
                     const newCollapsed = new Set(prev);
@@ -22923,6 +22916,20 @@
                         newCollapsed.add(rowId);
                     }
                     return newCollapsed;
+                });
+            };
+
+            const toggleHashColumn = (groupId, hashSide) => {
+                const key = `${groupId}_${hashSide}`;
+                setCollapsedHashColumns(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(key)) {
+                        newSet.delete(key);
+                    } else {
+                        newSet.add(key);
+                    }
+                    localStorage.setItem('collapsedHashColumns_strikeEmOut', JSON.stringify([...newSet]));
+                    return newSet;
                 });
             };
 
@@ -23251,7 +23258,7 @@
                                 </div>
                             );
                         })}
-                        {playsInSet.length === 0 && <div style={{ fontSize: '0.7rem', color: '#ccc', fontStyle: 'italic' }}>+ Add Play</div>}
+                        {playsInSet.length === 0 && <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>+ Add Play</div>}
                     </div>
                 );
             };
@@ -23801,7 +23808,7 @@
                                                 onDrop={(e) => {
                                                     // Stop container drop from firing
                                                     e.preventDefault();
-                                                    e.stopImmediatePropagation();
+                                                    e.stopPropagation();
                                                     handleDrop(e, idx, cellIdx);
                                                 }}
                                                 style={{
@@ -24097,10 +24104,92 @@
                                 <tr>
                                     {columnGroups.map(group => {
                                         if (collapsedGroups.has(group.id)) return null;
+                                        const leftHashCollapsed = collapsedHashColumns.has(`${group.id}_LEFT`);
+                                        const rightHashCollapsed = collapsedHashColumns.has(`${group.id}_RIGHT`);
                                         return (
                                             <React.Fragment key={group.id + '_sub'}>
-                                                <th style={{ padding: '0.25rem', border: '1px solid var(--border)', backgroundColor: '#475569', color: 'white', fontSize: '0.7rem', textAlign: 'center', top: '35px', position: 'sticky', zIndex: 10 }}>LEFT HASH</th>
-                                                <th style={{ padding: '0.25rem', border: '1px solid var(--border)', backgroundColor: '#475569', color: 'white', fontSize: '0.7rem', textAlign: 'center', top: '35px', position: 'sticky', zIndex: 10 }}>RIGHT HASH</th>
+                                                {!leftHashCollapsed && (
+                                                    <th
+                                                        style={{
+                                                            padding: '0.25rem',
+                                                            border: '1px solid var(--border)',
+                                                            backgroundColor: '#475569',
+                                                            color: 'white',
+                                                            fontSize: '0.7rem',
+                                                            textAlign: 'center',
+                                                            top: '35px',
+                                                            position: 'sticky',
+                                                            zIndex: 10,
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => toggleHashColumn(group.id, 'LEFT')}
+                                                        title="Click to collapse LEFT HASH"
+                                                    >
+                                                        ◀ LEFT HASH
+                                                    </th>
+                                                )}
+                                                {leftHashCollapsed && (
+                                                    <th
+                                                        style={{
+                                                            padding: '0.25rem',
+                                                            border: '1px solid var(--border)',
+                                                            backgroundColor: '#64748b',
+                                                            color: 'white',
+                                                            fontSize: '0.7rem',
+                                                            textAlign: 'center',
+                                                            top: '35px',
+                                                            position: 'sticky',
+                                                            zIndex: 10,
+                                                            cursor: 'pointer',
+                                                            width: '20px'
+                                                        }}
+                                                        onClick={() => toggleHashColumn(group.id, 'LEFT')}
+                                                        title="Click to expand LEFT HASH"
+                                                    >
+                                                        ▶
+                                                    </th>
+                                                )}
+                                                {!rightHashCollapsed && (
+                                                    <th
+                                                        style={{
+                                                            padding: '0.25rem',
+                                                            border: '1px solid var(--border)',
+                                                            backgroundColor: '#475569',
+                                                            color: 'white',
+                                                            fontSize: '0.7rem',
+                                                            textAlign: 'center',
+                                                            top: '35px',
+                                                            position: 'sticky',
+                                                            zIndex: 10,
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => toggleHashColumn(group.id, 'RIGHT')}
+                                                        title="Click to collapse RIGHT HASH"
+                                                    >
+                                                        RIGHT HASH ▶
+                                                    </th>
+                                                )}
+                                                {rightHashCollapsed && (
+                                                    <th
+                                                        style={{
+                                                            padding: '0.25rem',
+                                                            border: '1px solid var(--border)',
+                                                            backgroundColor: '#64748b',
+                                                            color: 'white',
+                                                            fontSize: '0.7rem',
+                                                            textAlign: 'center',
+                                                            top: '35px',
+                                                            position: 'sticky',
+                                                            zIndex: 10,
+                                                            cursor: 'pointer',
+                                                            width: '20px'
+                                                        }}
+                                                        onClick={() => toggleHashColumn(group.id, 'RIGHT')}
+                                                        title="Click to expand RIGHT HASH"
+                                                    >
+                                                        ◀
+                                                    </th>
+                                                )}
                                             </React.Fragment>
                                         );
                                     })}
@@ -24112,7 +24201,13 @@
                                         {/* Formation Header Row */}
                                         <tr>
                                             <td
-                                                colSpan={columnGroups.reduce((acc, g) => acc + (collapsedGroups.has(g.id) ? 1 : 2), 1)}
+                                                colSpan={columnGroups.reduce((acc, g) => {
+                                                    if (collapsedGroups.has(g.id)) return acc + 1;
+                                                    let cols = 2;
+                                                    if (collapsedHashColumns.has(`${g.id}_LEFT`)) cols--;
+                                                    if (collapsedHashColumns.has(`${g.id}_RIGHT`)) cols--;
+                                                    return acc + cols;
+                                                }, 1)}
                                                 style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold', backgroundColor: formation.color, color: 'white', fontSize: '0.9rem', cursor: 'pointer' }}
                                                 onClick={() => setEditingFormationId(formation.id)}
                                             >
@@ -24135,7 +24230,13 @@
                                         {/* Play Type Rows */}
                                         {layout.playTypes.map(playType => {
                                             const isRowCollapsed = collapsedRows.has(playType.id);
-                                            const totalColSpan = columnGroups.reduce((acc, g) => acc + (collapsedGroups.has(g.id) ? 1 : g.cols.length), 1);
+                                            const totalColSpan = columnGroups.reduce((acc, g) => {
+                                                if (collapsedGroups.has(g.id)) return acc + 1;
+                                                let cols = g.cols.length;
+                                                if (collapsedHashColumns.has(`${g.id}_LEFT`)) cols--;
+                                                if (collapsedHashColumns.has(`${g.id}_RIGHT`)) cols--;
+                                                return acc + cols;
+                                            }, 1);
 
                                             if (isRowCollapsed) {
                                                 return (
@@ -24186,6 +24287,9 @@
                                                     </td>
                                                     {columnGroups.map(group => {
                                                         const isCollapsed = collapsedGroups.has(group.id);
+                                                        const leftHashCollapsed = collapsedHashColumns.has(`${group.id}_LEFT`);
+                                                        const rightHashCollapsed = collapsedHashColumns.has(`${group.id}_RIGHT`);
+
                                                         if (isCollapsed) {
                                                             // Show collapsed placeholder
                                                             return (
@@ -24197,8 +24301,13 @@
                                                                 </td>
                                                             );
                                                         } else {
-                                                            // Show expanded columns
+                                                            // Show expanded columns, but skip collapsed hash columns
                                                             return group.cols.map(col => {
+                                                                // Skip LEFT HASH if collapsed
+                                                                if (col.id === 'LEFT' && leftHashCollapsed) return null;
+                                                                // Skip RIGHT HASH if collapsed
+                                                                if (col.id === 'RIGHT' && rightHashCollapsed) return null;
+
                                                                 const setId = `matrix_${formation.id}_${playType.id}_${col.id}`;
                                                                 return (
                                                                     <td
