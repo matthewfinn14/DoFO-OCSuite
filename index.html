@@ -16473,6 +16473,8 @@
         };
 
         const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures }) => {
+            const { currentUser } = useAuth(); // Get current user from auth context
+
             const [expandedCategories, setExpandedCategories] = useState({
                 gameWeek: true,
                 scheme: true,
@@ -16496,18 +16498,15 @@
                 }
             };
 
+
             const [migrationStatus, setMigrationStatus] = useState(null); // null, 'loading', 'success', 'error'
+            const [migrationError, setMigrationError] = useState('');
+            const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-            const handleMigrateToCloud = async () => {
-                const { currentUser } = window.auth;
-                if (!currentUser) {
-                    alert('You must be logged in to migrate data.');
-                    return;
-                }
-
-                if (!confirm('This will upload your local data (Roster, Plays, Settings) to the cloud. Continue?')) return;
-
+            const performMigration = async () => {
                 setMigrationStatus('loading');
+                setShowConfirmModal(false);
+
                 try {
                     const dataToMigrate = {
                         roster: JSON.parse(localStorage.getItem('roster_data') || '[]'),
@@ -16515,24 +16514,46 @@
                         settings: {
                             teamLogo: localStorage.getItem('oc-dashboard-logo'),
                             accentColor: localStorage.getItem('user_accent_color'),
-                            theme: localStorage.getItem('user_theme'), // if exists
+                            theme: localStorage.getItem('user_theme'),
                             activeYear: localStorage.getItem('hc-active-year'),
                             visibleFeatures: JSON.parse(localStorage.getItem('hc-visible-features') || '{}')
                         },
                         timestamp: new Date().toISOString()
                     };
+                    console.log("Data prepared for migration:", dataToMigrate);
 
-                    // Save to Firestore under user's ID
                     await window.db.collection('users').doc(currentUser.uid).set(dataToMigrate, { merge: true });
+                    console.log("Migration write complete");
 
                     setMigrationStatus('success');
                     setTimeout(() => setMigrationStatus(null), 3000);
-                    alert('Migration Successful! Your data is now in the cloud.');
                 } catch (err) {
                     console.error("Migration failed:", err);
                     setMigrationStatus('error');
-                    alert('Migration Failed: ' + err.message);
+                    setMigrationError('Migration Failed: ' + (err.message || err));
                 }
+            };
+
+            const handleMigrateToCloud = async () => {
+                console.log("Migration started...");
+                setMigrationError('');
+
+                if (!window.db) {
+                    const msg = "Firebase Firestore not initialized. Check your internet connection.";
+                    console.error(msg);
+                    setMigrationError(msg);
+                    return;
+                }
+
+                if (!currentUser) {
+                    const msg = 'You must be logged in to migrate data.';
+                    setMigrationError(msg);
+                    console.error(msg);
+                    return;
+                }
+
+                console.log("Current user:", currentUser);
+                setShowConfirmModal(true);
             };
 
             const PRESET_COLORS = [
@@ -16553,6 +16574,71 @@
 
             return (
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {/* Confirmation Modal */}
+                    {showConfirmModal && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 10000
+                        }}>
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                padding: '2rem',
+                                borderRadius: '12px',
+                                maxWidth: '500px',
+                                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                            }}>
+                                <h3 style={{ marginTop: 0, color: '#38bdf8' }}>Confirm Cloud Migration</h3>
+                                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                                    This will upload your local data (Roster, Plays, Settings) to the cloud database.
+                                    Any existing cloud data will be overwritten.
+                                </p>
+                                <p style={{ color: '#fbbf24', fontSize: '0.9rem', marginTop: '1rem' }}>
+                                    ⚠️ This action will replace your cloud backup with your current local data.
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                                    <button
+                                        onClick={performMigration}
+                                        style={{
+                                            flex: 1,
+                                            background: '#0ea5e9',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '0.75rem',
+                                            borderRadius: '6px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Yes, Migrate Now
+                                    </button>
+                                    <button
+                                        onClick={() => setShowConfirmModal(false)}
+                                        style={{
+                                            flex: 1,
+                                            background: 'var(--surface)',
+                                            color: 'var(--text)',
+                                            border: '1px solid var(--border)',
+                                            padding: '0.75rem',
+                                            borderRadius: '6px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <h2>Settings</h2>
 
                     <div className="card">
@@ -16724,6 +16810,11 @@
                                 <Icon name={migrationStatus === 'loading' ? 'Loader2' : (migrationStatus === 'success' ? 'Check' : 'CloudUpload')} size={18} className={migrationStatus === 'loading' ? 'spin' : ''} />
                                 {migrationStatus === 'loading' ? 'Migrating...' : (migrationStatus === 'success' ? 'Migration Complete' : 'Migrate to Cloud')}
                             </button>
+                            {migrationError && (
+                                <div style={{ marginTop: '0.5rem', color: '#ef4444', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                    ⚠️ {migrationError}
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
