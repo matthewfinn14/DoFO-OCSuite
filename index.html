@@ -12,6 +12,7 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         .wristband-print-container {
@@ -919,6 +920,16 @@
                 case "Plus": return <svg {...commonProps}><path d="M5 12h14" /><path d="M12 5v14" /></svg>;
                 case "Minus": return <svg {...commonProps}><path d="M5 12h14" /></svg>;
 
+                // -- Missing Icons Added --
+                case "MousePointer": return <svg {...commonProps}><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" /><path d="M13 13l6 6" /></svg>;
+                case "Edit3": return <svg {...commonProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>;
+                case "Trash": // Fallthrough to Trash2
+                case "Trash2": return <svg {...commonProps}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>;
+                case "Save": return <svg {...commonProps}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>;
+                case "RotateCcw": return <svg {...commonProps}><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>;
+                case "RotateCw": return <svg {...commonProps}><path d="M23 4v6h-6" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>;
+                case "CheckCircle": return <svg {...commonProps}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>;
+
                 default:
                     // Fallback to text if it's an emoji, otherwise question mark
                     if (/^[\u{1F000}-\u{1F9FF}]/u.test(name)) {
@@ -1493,22 +1504,40 @@
                 // QB Shotgun at 5 yds = +100px.
 
                 if (mode === 'rooski-oline') {
-                    // O-Line Rooski Default (T-G-C-G-T)
-                    // Spacing: 60px between linemen
+                    // O-Line Rooski Default (T-G-C-G-T) - Large Text, Arched
+                    // Los is 340. C at LOS. G at +15, T at +30.
+                    const initialSize = 170;
                     return [
-                        { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cOL, label: 'C', shape: 'square', variant: 'filled' },
-                        { id: Date.now() + 2, type: 'player', points: [{ x: center - 60, y: los + 18 }], color: cOL, label: 'G', shape: 'square', variant: 'filled' },
-                        { id: Date.now() + 3, type: 'player', points: [{ x: center + 60, y: los + 18 }], color: cOL, label: 'G', shape: 'square', variant: 'filled' },
-                        { id: Date.now() + 4, type: 'player', points: [{ x: center - 120, y: los + 18 }], color: cOL, label: 'T', shape: 'square', variant: 'filled' },
-                        { id: Date.now() + 5, type: 'player', points: [{ x: center + 120, y: los + 18 }], color: cOL, label: 'T', shape: 'square', variant: 'filled' },
+                        { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los }], color: cOL, label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 2, type: 'player', points: [{ x: center - 170, y: los + 15 }], color: cOL, label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 3, type: 'player', points: [{ x: center + 170, y: los + 15 }], color: cOL, label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 4, type: 'player', points: [{ x: center - 340, y: los + 30 }], color: cOL, label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 5, type: 'player', points: [{ x: center + 340, y: los + 30 }], color: cOL, label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
                     ];
                 }
 
                 if (mode === 'rooski-skill') {
-                    // Skill Rooski Default (Just QB, maybe empty?)
-                    // Let's start with just QB to give reference
+                    // Skill Rooski Default (11 Players)
+                    // OL is smaller text (approx 40px) and tighter spacing.
+                    // "Behind the LOS" -> Push Y down.
+                    const initialSize = 40;
+                    const spacing = 50;
+                    const olY = los + 25; // Push down 25px
+
                     return [
-                        { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 120 }], color: cQB, label: 'Q', shape: 'circle' },
+                        // OL
+                        { id: Date.now() + 1, type: 'player', points: [{ x: center, y: olY }], color: cOL, label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 2, type: 'player', points: [{ x: center - spacing, y: olY }], color: cOL, label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 3, type: 'player', points: [{ x: center + spacing, y: olY }], color: cOL, label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 4, type: 'player', points: [{ x: center - (spacing * 2), y: olY }], color: cOL, label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 5, type: 'player', points: [{ x: center + (spacing * 2), y: olY }], color: cOL, label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        // Skill Players (Custom Colors, Filled)
+                        { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 100 }], color: cQB, label: 'Q', shape: 'circle', variant: 'filled' },
+                        { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 140 }], color: '#3b82f6', label: 'B', shape: 'circle', variant: 'filled' }, // Blue
+                        { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: '#a855f7', label: 'X', shape: 'circle', variant: 'filled' }, // Purple
+                        { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: '#22c55e', label: 'Z', shape: 'circle', variant: 'filled' }, // Green
+                        { id: Date.now() + 10, type: 'player', points: [{ x: 200, y: los + 35 }], color: '#ef4444', label: 'A', shape: 'circle', variant: 'filled' }, // Red (A/Slot)
+                        { id: Date.now() + 11, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: '#eab308', label: 'Y', shape: 'circle', variant: 'filled' }, // Yellow
                     ];
                 }
 
@@ -1607,11 +1636,106 @@
                 return getDefaultFormation();
             });
 
-            const [selectedTool, setSelectedTool] = useState('line'); // free, line, player, delete
+            const [selectedTool, setSelectedTool] = useState('select'); // select, free, line, player, delete
             const [color, setColor] = useState('#000000');
             const [lineStyle, setLineStyle] = useState('solid'); // solid, dashed, zigzag
+            const [lineWidth, setLineWidth] = useState(4); // 2, 4, 6, 8
             const [endType, setEndType] = useState('arrow'); // arrow, t, none
+            const [showLineOptions, setShowLineOptions] = useState(false); // Dropdown for line options
             const [selectedPlayerIcon, setSelectedPlayerIcon] = useState({ label: 'Q', shape: 'circle' });
+
+            // Text Size State for Rooski OL
+            const [rooskiTextSize, setRooskiTextSize] = useState(170);
+            const [customLetterInput, setCustomLetterInput] = useState('');
+
+            // History State for Undo/Redo
+            const [history, setHistory] = useState([elements]);
+            const [historyIndex, setHistoryIndex] = useState(0);
+
+            // Selection State
+            const [selectedIds, setSelectedIds] = useState(new Set());
+            const [selectionBox, setSelectionBox] = useState(null);
+
+            // Rooski Library State
+            const [rooskiLibrary, setRooskiLibrary] = useState(() => {
+                const saved = localStorage.getItem('rooski_ol_library');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [showSaveModal, setShowSaveModal] = useState(false);
+            const [saveName, setSaveName] = useState('');
+
+            // Library Helpers
+            const initiateSave = () => {
+                setSaveName('');
+                setShowSaveModal(true);
+            };
+
+            const confirmSave = () => {
+                if (!saveName) return;
+
+                const newPreset = {
+                    id: Date.now(),
+                    name: saveName,
+                    elements: elements
+                };
+
+                const updatedLibrary = [...rooskiLibrary, newPreset];
+                setRooskiLibrary(updatedLibrary);
+                localStorage.setItem('rooski_ol_library', JSON.stringify(updatedLibrary));
+                setShowSaveModal(false);
+            };
+
+            const loadRooskiPreset = (presetId) => {
+                const preset = rooskiLibrary.find(p => p.id === parseInt(presetId));
+                if (preset) {
+                    if (elements.length > 0 && !window.confirm(`Load "${preset.name}"? This will replace current drawing.`)) return;
+                    // Ensure IDs are unique to avoid conflicts if re-saving?
+                    // For now, just load as is.
+                    const loadedElements = preset.elements.map(el => ({
+                        ...el,
+                        id: Date.now() + Math.random() // Regenerate IDs to avoid collision with history stacks
+                    }));
+                    updateElements(loadedElements);
+                }
+            };
+
+            const deleteRooskiPreset = (presetId) => {
+                if (!window.confirm("Delete this preset?")) return;
+                const updatedLibrary = rooskiLibrary.filter(p => p.id !== parseInt(presetId));
+                setRooskiLibrary(updatedLibrary);
+                localStorage.setItem('rooski_ol_library', JSON.stringify(updatedLibrary));
+            };
+
+            // Drag State
+            const [isDraggingElements, setIsDraggingElements] = useState(false);
+            const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+
+            // Helper to update elements with history
+            const updateElements = (newElements, addToHistory = true) => {
+                setElements(newElements);
+                if (addToHistory) {
+                    const newHistory = history.slice(0, historyIndex + 1);
+                    newHistory.push(newElements);
+                    setHistory(newHistory);
+                    setHistoryIndex(newHistory.length - 1);
+                }
+            };
+
+            const undo = () => {
+                if (historyIndex > 0) {
+                    const newIndex = historyIndex - 1;
+                    setHistoryIndex(newIndex);
+                    setElements(history[newIndex]);
+                }
+            };
+
+            const redo = () => {
+                if (historyIndex < history.length - 1) {
+                    const newIndex = historyIndex + 1;
+                    setHistoryIndex(newIndex);
+                    setElements(history[newIndex]);
+                }
+            };
 
             const [isDrawing, setIsDrawing] = useState(false);
             const [currentPath, setCurrentPath] = useState(null);
@@ -1624,6 +1748,7 @@
 
             // Tools configuration
             const TOOLS = [
+                { id: 'select', icon: 'MousePointer', label: 'Select / Move' },
                 { id: 'free', icon: 'Edit3', label: 'Freehand' },
                 { id: 'line', icon: 'Minus', label: 'Polyline / Straight' },
                 // Arrow tool removed, now an option on line
@@ -1660,10 +1785,17 @@
             };
 
             const handleMouseDown = (e) => {
-                if (draggedId) return; // Already dragging?
+                if (isDraggingElements) return; // Already dragging?
                 if (selectedTool === 'delete') return;
 
                 const point = getPoint(e);
+
+                // Selection Box Logic (if Select tool)
+                if (selectedTool === 'select') {
+                    if (!e.shiftKey) setSelectedIds(new Set()); // Deselect unless shift
+                    setSelectionBox({ start: point, current: point });
+                    return;
+                }
 
                 // If clicking empty space...
                 if (selectedTool === 'player') {
@@ -1675,7 +1807,8 @@
                         label: selectedPlayerIcon.label,
                         shape: selectedPlayerIcon.shape
                     };
-                    setElements(prev => [...prev, newElement]);
+                    updateElements([...elements, newElement]);
+                    setSelectedIds(new Set([newElement.id])); // Select new element
                     return;
                 }
 
@@ -1683,13 +1816,30 @@
                 if (selectedTool === 'line') {
                     if (!isDrawing) {
                         setIsDrawing(true);
+
+                        // Smart Color Logic: Check if we clicked on a player
+                        let drawColor = color;
+                        const hitPlayer = elements.find(el => {
+                            if (el.type !== 'player') return false;
+                            const p = el.points[0];
+                            // Rough hit test (circle radius ~30, text ~40)
+                            const dist = Math.hypot(p.x - point.x, p.y - point.y);
+                            return dist < 40; // generous hit radius
+                        });
+
+                        if (hitPlayer) {
+                            drawColor = hitPlayer.color;
+                            setColor(drawColor); // Update tool color for feedback
+                        }
+
                         setCurrentPath({
                             id: Date.now(),
                             type: 'poly', // Generic polyline
-                            points: [point, point], // Start with 2 points (second is mouse follower)
-                            color,
+                            color: drawColor,
                             style: lineStyle,
-                            endType
+                            endType,
+                            strokeWidth: lineWidth, // Save width
+                            points: [point, { x: point.x + 1, y: point.y + 1 }] // Follower point
                         });
                     } else {
                         // Add segment anchor
@@ -1700,13 +1850,27 @@
                     }
                 } else if (selectedTool === 'free') {
                     setIsDrawing(true);
+
+                    // Smart Color Logic
+                    let drawColor = color;
+                    const hitPlayer = elements.find(el => {
+                        if (el.type !== 'player') return false;
+                        const p = el.points[0];
+                        const dist = Math.hypot(p.x - point.x, p.y - point.y);
+                        return dist < 40;
+                    });
+
+                    if (hitPlayer) {
+                        drawColor = hitPlayer.color;
+                        setColor(drawColor);
+                    }
+
                     setCurrentPath({
                         id: Date.now(),
                         type: 'free',
-                        points: [point],
-                        color,
-                        style: lineStyle,
-                        endType: 'none' // Freehand usually lines
+                        color: drawColor,
+                        strokeWidth: lineWidth,
+                        points: [point]
                     });
                 }
             };
@@ -1715,21 +1879,50 @@
                 e.stopPropagation();
                 if (selectedTool === 'delete') return; // Let click handle delete
 
+                // Selection Logic
+                const newSelected = new Set(selectedIds);
+                if (e.shiftKey) {
+                    if (newSelected.has(elId)) newSelected.delete(elId);
+                    else newSelected.add(elId);
+                } else {
+                    if (!newSelected.has(elId)) {
+                        newSelected.clear();
+                        newSelected.add(elId);
+                    }
+                }
+                setSelectedIds(newSelected);
+
                 // Start Drag
-                setDraggedId(elId);
+                setIsDraggingElements(true);
+                setLastMousePos(getPoint(e));
+                setDraggedId(elId); // Keep for legacy check or visual ref if needed
             };
 
             const handleMouseMove = (e) => {
                 const point = getPoint(e);
 
-                // Dragging Logic
-                if (draggedId) {
+                // Selection Box Update
+                if (selectionBox) {
+                    setSelectionBox(prev => ({ ...prev, current: point }));
+                    return;
+                }
+
+                // Bulk Dragging Logic
+                if (isDraggingElements) {
+                    const dx = point.x - lastMousePos.x;
+                    const dy = point.y - lastMousePos.y;
+
                     setElements(prev => prev.map(el => {
-                        if (el.id === draggedId) {
-                            return { ...el, points: [point] };
+                        if (selectedIds.has(el.id)) {
+                            // Move all points
+                            return {
+                                ...el,
+                                points: el.points.map(p => ({ x: p.x + dx, y: p.y + dy }))
+                            };
                         }
                         return el;
                     }));
+                    setLastMousePos(point);
                     return;
                 }
 
@@ -1777,16 +1970,43 @@
                     setIsDrawing(false);
                     // Must have at least 2 points to be a line
                     if (finalPath.points.length > 1) {
-                        setElements(prev => [...prev, finalPath]);
+                        updateElements([...elements, finalPath]);
+                        setSelectedIds(new Set([finalPath.id]));
                     }
                     setCurrentPath(null);
                 }
             };
 
             const handleMouseUp = () => {
-                // Stop Dragging
-                if (draggedId) {
+                // Finish Selection Box
+                if (selectionBox) {
+                    // Calc bounds
+                    const x1 = Math.min(selectionBox.start.x, selectionBox.current.x);
+                    const y1 = Math.min(selectionBox.start.y, selectionBox.current.y);
+                    const x2 = Math.max(selectionBox.start.x, selectionBox.current.x);
+                    const y2 = Math.max(selectionBox.start.y, selectionBox.current.y);
+
+                    const newSelected = new Set(selectedIds);
+                    if (!selectionBox.start.shiftKey) { // Assuming we track shift? Actually handled in MouseDown clearing
+                        // We already cleared in MouseDown if no shift.
+                    }
+
+                    elements.forEach(el => {
+                        // Check if ANY point is in box
+                        const isInside = el.points.some(p => p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2);
+                        if (isInside) newSelected.add(el.id);
+                    });
+
+                    setSelectedIds(newSelected);
+                    setSelectionBox(null);
+                    return;
+                }
+
+                // Finish Dragging
+                if (isDraggingElements) {
+                    setIsDraggingElements(false);
                     setDraggedId(null);
+                    updateElements(elements); // Commit history
                     return;
                 }
 
@@ -1794,15 +2014,17 @@
                 if (selectedTool === 'free') {
                     setIsDrawing(false);
                     if (currentPath && currentPath.points.length > 1) {
-                        setElements(prev => [...prev, currentPath]);
+                        updateElements([...elements, currentPath]);
+                        setSelectedIds(new Set([currentPath.id]));
                     }
                     setCurrentPath(null);
                 }
                 // Line tool does NOT finish on mouse up, waits for double click
+                // (Drag Logic moved up)
             };
 
             // Rooski Skill Formation (Custom Colors/Labels)
-            const getRooskiFormation = () => {
+            const getRooskiFormation = (forcedSize) => {
                 const center = 400;
                 const los = 340; // Same geometry as default
 
@@ -1817,12 +2039,12 @@
                 const cB = '#3b82f6'; // Blue (RB)
 
                 return [
-                    // OL - Black Filled Circles
-                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cOL, label: 'C', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 40, y: los + 18 }], color: cOL, label: 'G', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 40, y: los + 18 }], color: cOL, label: 'G', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 80, y: los + 18 }], color: cOL, label: 'T', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 80, y: los + 18 }], color: cOL, label: 'T', shape: 'circle', variant: 'filled' },
+                    // OL - Text Only (Respects rooskiTextSize)
+                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cOL, label: 'C', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
+                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 170, y: los + 18 + 15 }], color: cOL, label: 'G', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
+                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 170, y: los + 18 + 15 }], color: cOL, label: 'G', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
+                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 340, y: los + 18 + 30 }], color: cOL, label: 'T', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
+                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 340, y: los + 18 + 30 }], color: cOL, label: 'T', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
                     // QB - Red
                     { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 100 }], color: cQB, label: 'Q', shape: 'circle' },
                     // B (was RB) - Blue
@@ -1840,23 +2062,56 @@
 
             const handleQuickOffense = () => {
                 if (elements.length > 0 && !window.confirm('Clear current diagram?')) return;
-                setElements(getDefaultFormation());
+                updateElements(getDefaultFormation());
             };
 
             const handleRooskiOffense = () => {
                 if (elements.length > 0 && !window.confirm('Clear current diagram?')) return;
-                setElements(getRooskiFormation());
+                setRooskiTextSize(170); // Ensure state is updated for controls
+                updateElements(getRooskiFormation(170)); // Pass explicit size
             };
 
             const handleClickElement = (elId) => {
                 if (selectedTool === 'delete') {
-                    setElements(prev => prev.filter(el => el.id !== elId));
+                    updateElements(elements.filter(el => el.id !== elId));
+                } else {
+                    // Logic handled in MouseDown now
                 }
             };
+
+            // Keyboard Shortcuts
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                    // Delete / Backspace
+                    if (e.key === 'Delete' || e.key === 'Backspace') {
+                        if (selectedIds.size > 0) {
+                            updateElements(elements.filter(el => !selectedIds.has(el.id)));
+                            setSelectedIds(new Set());
+                        }
+                    }
+
+                    // Undo / Redo
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            redo();
+                        } else {
+                            undo();
+                        }
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [selectedIds, elements, history, historyIndex]);
 
             // Render SVG contents
             const renderElement = (el, isPreview = false) => {
                 if (el.type === 'player') {
+                    // ... (existing player render code) ...
+                    // Update: Pass strokeWidth if needed, but usually players have fixed stroke?
+                    // Let's keep players standard for now unless requested.
                     const { x, y } = el.points[0];
                     const size = 30; // Icon size
                     const isRect = el.shape === 'square';
@@ -1865,6 +2120,13 @@
                     const strokeColor = el.color; // Stroke matches color
                     const textColor = isFilled ? 'white' : el.color;
 
+
+                    const isSelected = selectedIds.has(el.id);
+                    // Critical Fix: If we are drawing (line/free) or placing players, ignore existing elements logic.
+                    // Only allow interaction if tool is Select/Move or Delete.
+                    const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
+                    const pointerEvents = isInteractionTool ? 'all' : 'none';
+
                     return (
                         <g
                             key={el.id}
@@ -1872,9 +2134,19 @@
                             onClick={(e) => { e.stopPropagation(); !isPreview && handleClickElement(el.id); }}
                             style={{
                                 cursor: selectedTool === 'delete' ? 'pointer' : (isPreview ? 'default' : 'move'),
-                                opacity: isPreview ? 0.8 : 1
+                                opacity: isPreview ? 0.8 : 1,
+                                pointerEvents: pointerEvents
                             }}
                         >
+                            {/* Selection Highlight */}
+                            {isSelected && !isPreview && (
+                                isRect ? (
+                                    <rect x={x - size / 2 - 4} y={y - size / 2 - 4} width={size + 8} height={size + 8} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="4,2" />
+                                ) : (
+                                    <circle cx={x} cy={y} r={size / 2 + 4} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="4,2" />
+                                )
+                            )}
+
                             {isRect ? (
                                 <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill={fillColor} stroke={strokeColor} strokeWidth="2" />
                             ) : el.shape === 'star' ? (
@@ -1889,10 +2161,52 @@
                                     <line x1={x - size / 2} y1={y} x2={x + size / 2} y2={y} stroke={strokeColor} strokeWidth="1" />
                                     <line x1={x} y1={y - size / 2} x2={x} y2={y + size / 2} stroke={strokeColor} strokeWidth="1" />
                                 </g>
+                            ) : el.shape === 'text-only' ? (
+                                // No shape, just big text
+                                // We need a transparent hit box so dragging works
+                                (() => {
+                                    // Calculate size once - prioritize element's saved size
+                                    const tSize = el.fontSize || 170;
+                                    return (
+                                        <React.Fragment>
+                                            <rect
+                                                x={x - (tSize * 0.6) / 2}
+                                                y={y - (tSize * 0.8) / 2}
+                                                width={tSize * 0.6}
+                                                height={tSize * 0.8}
+                                                fill="transparent"
+                                                stroke="none"
+                                            />
+                                            {isSelected && !isPreview && (
+                                                <rect
+                                                    x={x - (tSize * 0.6) / 2 - 4}
+                                                    y={y - (tSize * 0.8) / 2 - 4}
+                                                    width={(tSize * 0.6) + 8}
+                                                    height={(tSize * 0.8) + 8}
+                                                    fill="none"
+                                                    stroke="#2563eb"
+                                                    strokeWidth="2"
+                                                    strokeDasharray="4,2"
+                                                />
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })()
                             ) : (
                                 <circle cx={x} cy={y} r={size / 2} fill={fillColor} stroke={strokeColor} strokeWidth="2" />
                             )}
-                            <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={textColor} style={{ pointerEvents: 'none', userSelect: 'none' }}>{el.label}</text>
+                            <text
+                                x={x}
+                                y={y}
+                                dy={el.shape === 'text-only' ? "0.35em" : "0.35em"}
+                                textAnchor="middle"
+                                fontSize={el.shape === 'text-only' ? (el.fontSize || 170) : "16"}
+                                fontWeight="bold"
+                                fill={el.shape === 'text-only' ? (el.color || 'black') : textColor}
+                                style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'Arial, sans-serif' }}
+                            >
+                                {el.label}
+                            </text>
                         </g>
                     );
                 }
@@ -1920,7 +2234,11 @@
                     const dx = end.x - prev.x;
                     const dy = end.y - prev.y;
                     const len = Math.hypot(dx, dy) || 1;
-                    const perpX = (-dy / len) * 15; // 15px width T
+                    const sWidth = parseInt(el.strokeWidth || 2);
+                    // Scale T-width slightly with stroke, but mostly fixed length. 
+                    // Length of T-bar: 30px total (15 scale).
+                    // Thickness: match line width.
+                    const perpX = (-dy / len) * 15;
                     const perpY = (dx / len) * 15;
 
                     tBlock = (
@@ -1928,7 +2246,8 @@
                             x1={end.x - perpX} y1={end.y - perpY}
                             x2={end.x + perpX} y2={end.y + perpY}
                             stroke={el.color}
-                            strokeWidth="4"
+                            strokeWidth={sWidth}
+                            strokeLinecap="round"
                         />
                     );
                 } else if (el.endType === 'dot') {
@@ -1938,15 +2257,20 @@
                     );
                 }
 
+                const isSelected = selectedIds.has(el.id);
+                const strokeWidth = el.strokeWidth || 4;
+                const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
+
                 return (
-                    <g key={el.id || 'current'} onClick={() => !isPreview && handleClickElement(el.id)} style={{ cursor: selectedTool === 'delete' ? 'pointer' : 'default', opacity: isPreview ? 0.6 : 1 }}>
+                    <g key={el.id || 'current'} onClick={() => !isPreview && handleClickElement(el.id)} style={{ cursor: selectedTool === 'delete' ? 'pointer' : 'default', opacity: isPreview ? 0.6 : 1, pointerEvents: isInteractionTool ? 'all' : 'none' }}>
                         <path
                             d={d}
-                            stroke={el.color}
-                            strokeWidth="4"
+                            stroke={isSelected ? '#2563eb' : el.color}
+                            strokeWidth={isSelected ? strokeWidth + 2 : strokeWidth}
                             fill="none"
                             strokeDasharray={el.style === 'dashed' ? "10,5" : "none"}
                             markerEnd={markerEnd}
+                            filter={isSelected ? "drop-shadow(0 0 2px #2563eb)" : "none"}
                         />
                         {tBlock}
                     </g>
@@ -1954,33 +2278,41 @@
             };
 
             // Toggle Rooski Node (Y or F)
+            // Toggle Rooski Node (Generic)
             const toggleRooskiNode = (label) => {
                 setElements(prev => {
                     const exists = prev.find(e => e.label === label && e.type === 'player');
                     if (exists) {
                         return prev.filter(e => e.id !== exists.id);
                     } else {
-                        // Add it
                         const center = 400;
-                        const los = 340 + 18; // Match OL depth
-                        let newPoint = { x: center, y: los };
+                        const los = 340 + 18;
+                        let newPoint = { x: center + 60, y: los + 60 };
+                        let shape = 'square';
+                        let color = '#3b82f6'; // Skill blue default
 
-                        if (label === 'Y') {
-                            // Place Y near RT usually (right side)
-                            newPoint = { x: center + 180, y: los };
-                        } else if (label === 'F') {
-                            // Place F in backfield
-                            newPoint = { x: center + 60, y: los + 60 }; // Offset back and right
+                        if (mode === 'rooski-oline') {
+                            shape = 'text-only';
+                            color = '#000000';
+                            // Place below the main line so user can drag into place
+                            newPoint = { x: center, y: los + 150 };
+                        } else {
+                            if (label === 'Y') {
+                                newPoint = { x: center + 180, y: los };
+                            } else if (label === 'F') {
+                                newPoint = { x: center + 60, y: los + 60 };
+                            }
                         }
 
                         return [...prev, {
                             id: Date.now(),
                             type: 'player',
                             points: [newPoint],
-                            color: '#3b82f6', // Skill color
+                            color: color,
                             label: label,
-                            shape: 'square', // Match Rooski style
-                            variant: 'filled'
+                            shape: shape,
+                            variant: 'filled',
+                            fontSize: mode === 'rooski-oline' ? rooskiTextSize : undefined
                         }];
                     }
                 });
@@ -1993,25 +2325,134 @@
                         <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', background: '#f8fafc', gap: '0.5rem', flexWrap: 'wrap' }}>
                             <h3 style={{ margin: 0, marginRight: '0.5rem', fontSize: '1rem' }}>Diagrammer</h3>
 
-                            {/* Tools */}
+                            {/* Undo / Redo */}
+                            <div className="btn-group" style={{ display: 'flex', gap: '0.25rem', marginRight: '0.5rem' }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={undo}
+                                    disabled={historyIndex === 0}
+                                    title="Undo (Ctrl+Z)"
+                                    style={{ padding: '0.4rem' }}
+                                >
+                                    <Icon name="RotateCcw" size={16} />
+                                </button>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={redo}
+                                    disabled={historyIndex === history.length - 1}
+                                    title="Redo (Ctrl+Shift+Z)"
+                                    style={{ padding: '0.4rem' }}
+                                >
+                                    <Icon name="RotateCw" size={16} />
+                                </button>
+                            </div>
+
+                            {/* Tools - With Text Labels */}
                             <div className="btn-group" style={{ display: 'flex', gap: '0.25rem' }}>
-                                {TOOLS.map(tool => (
-                                    <button
-                                        key={tool.id}
-                                        className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`}
-                                        onClick={() => setSelectedTool(tool.id)}
-                                        title={tool.label}
-                                        style={{ padding: '0.4rem' }}
-                                    >
-                                        <Icon name={tool.icon} size={18} />
-                                    </button>
-                                ))}
+                                {TOOLS.filter(t => t.id !== 'delete').map(tool => {
+                                    if (tool.id === 'line') {
+                                        // SMART LINE TOOL
+                                        return (
+                                            <div key={tool.id} style={{ position: 'relative' }}>
+                                                <button
+                                                    className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => {
+                                                        if (selectedTool === 'line') {
+                                                            // Provide options if already selected
+                                                            setShowLineOptions(!showLineOptions);
+                                                        } else {
+                                                            // Activate and default to Arrow
+                                                            setSelectedTool('line');
+                                                            setEndType('arrow');
+                                                            setShowLineOptions(false);
+                                                        }
+                                                    }}
+                                                    title="Line Tool (Click again for options)"
+                                                    style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center' }}
+                                                >
+                                                    <Icon name={tool.icon} size={16} />
+                                                    <span style={{ fontSize: '0.8rem' }}>Line</span>
+                                                    {selectedTool === 'line' && <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>▼</span>}
+                                                </button>
+
+                                                {/* Line Options Dropdown */}
+                                                {showLineOptions && selectedTool === 'line' && (
+                                                    <div style={{
+                                                        position: 'absolute', top: '100%', left: 0, marginTop: '4px',
+                                                        background: 'white', border: '1px solid #ccc', borderRadius: '4px',
+                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50,
+                                                        display: 'flex', flexDirection: 'column', minWidth: '120px'
+                                                    }}>
+                                                        {[
+                                                            { id: 'arrow', label: 'Start → End' },
+                                                            { id: 't', label: '—| Block' },
+                                                            { id: 'dot', label: '• Dot' },
+                                                            { id: 'none', label: 'Straight Line' }
+                                                        ].map(opt => (
+                                                            <button
+                                                                key={opt.id}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEndType(opt.id);
+                                                                    setShowLineOptions(false);
+                                                                }}
+                                                                style={{
+                                                                    padding: '0.5rem', textAlign: 'left', background: endType === opt.id ? '#f0f9ff' : 'white',
+                                                                    border: 'none', borderBottom: '1px solid #eee', cursor: 'pointer', fontSize: '0.8rem',
+                                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                                                }}
+                                                            >
+                                                                {opt.label}
+                                                                {endType === opt.id && <Icon name="CheckCircle" size={12} color="#0284c7" />}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+                                    return (
+                                        <button
+                                            key={tool.id}
+                                            className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => {
+                                                setSelectedTool(tool.id);
+                                                if (tool.id !== 'line') setShowLineOptions(false);
+                                            }}
+                                            title={tool.label}
+                                            style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center' }}
+                                        >
+                                            <Icon name={tool.icon} size={16} />
+                                            <span style={{ fontSize: '0.8rem' }}>{tool.label}</span>
+                                        </button>
+                                    );
+                                })}
+
+                                {/* Separate Delete Button */}
+                                <button
+                                    className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`}
+                                    onClick={() => {
+                                        if (selectedIds.size > 0) {
+                                            // If something selected, delete it immediately
+                                            updateElements(elements.filter(el => !selectedIds.has(el.id)));
+                                            setSelectedIds(new Set());
+                                        } else {
+                                            // Toggle delete tool mode
+                                            setSelectedTool('delete');
+                                        }
+                                    }}
+                                    title="Delete Selected or Toggle Delete Mode"
+                                    style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444' }}
+                                >
+                                    <Icon name="Trash" size={16} />
+                                    <span style={{ fontSize: '0.8rem' }}>Delete</span>
+                                </button>
                             </div>
 
                             <div style={{ width: '1px', height: '20px', background: '#cbd5e1', margin: '0 0.25rem' }}></div>
 
-                            {/* Line Options (If Line Tool selected) */}
-                            {selectedTool === 'line' && (
+                            {/* Line Options (If Line/Free Tool selected OR Line(s) Selected) */}
+                            {(selectedTool === 'line' || selectedTool === 'free') && (
                                 <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', background: '#e2e8f0', padding: '0.25rem', borderRadius: '4px' }}>
                                     {/* Style */}
                                     <select value={lineStyle} onChange={(e) => setLineStyle(e.target.value)} className="form-input" style={{ padding: '2px', fontSize: '0.8rem', width: 'auto' }}>
@@ -2020,34 +2461,171 @@
                                         <option value="zigzag">Zigzag</option>
                                     </select>
 
-                                    {/* End Type */}
-                                    <div style={{ display: 'flex', gap: '2px' }}>
-                                        <button className={`btn ${endType === 'arrow' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEndType('arrow')} title="Arrow End" style={{ padding: '0.25rem 0.5rem' }}>Start → End</button>
-                                        <button className={`btn ${endType === 't' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEndType('t')} title="Block T" style={{ padding: '0.25rem 0.5rem' }}>—| Block</button>
-                                        <button className={`btn ${endType === 'dot' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEndType('dot')} title="Dot End" style={{ padding: '0.25rem 0.5rem' }}>• Dot</button>
-                                        <button className={`btn ${endType === 'none' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEndType('none')} title="No End" style={{ padding: '0.25rem 0.5rem' }}>Line</button>
-                                    </div>
+                                    {/* Width */}
+                                    <select
+                                        value={lineWidth}
+                                        onChange={(e) => {
+                                            const w = parseInt(e.target.value);
+                                            setLineWidth(w);
+                                            // Bulk Update Selected Lines
+                                            if (selectedIds.size > 0) {
+                                                updateElements(elements.map(el =>
+                                                    (selectedIds.has(el.id) && (el.type === 'line' || el.type === 'free' || el.type === 'poly')) ? { ...el, strokeWidth: w } : el
+                                                ));
+                                            }
+                                        }}
+                                        className="form-input"
+                                        style={{ padding: '2px', fontSize: '0.8rem', width: 'auto' }}
+                                        title="Line Width"
+                                    >
+                                        <option value={2}>Thin</option>
+                                        <option value={4}>Medium</option>
+                                        <option value={6}>Thick</option>
+                                        <option value={8}>X-Thick</option>
+                                    </select>
+
+                                    {/* Consolidated End Type - Display badge of current type */}
+                                    {selectedTool === 'line' && (
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '4px', textTransform: 'capitalize' }}>
+                                            {endType === 'none' ? 'Line' : endType}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* ROOSKI MODE TOGGLES */}
+                            {/* ROOSKI MODE TOGGLES */}
                             {(mode === 'rooski-oline' || mode === 'rooski-skill') && (
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: '0.5rem', background: '#e0f2fe', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
                                     <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#0369a1' }}>Personnel:</span>
-                                    <button
-                                        className={`btn ${elements.some(e => e.label === 'Y') ? 'btn-primary' : 'btn-secondary'}`}
-                                        onClick={() => toggleRooskiNode('Y')}
-                                        style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem' }}
-                                    >
-                                        + Y (TE)
-                                    </button>
-                                    <button
-                                        className={`btn ${elements.some(e => e.label === 'F') ? 'btn-primary' : 'btn-secondary'}`}
-                                        onClick={() => toggleRooskiNode('F')}
-                                        style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem' }}
-                                    >
-                                        + F (Back)
-                                    </button>
+                                    {mode === 'rooski-skill' && (
+                                        <>
+                                            <button className={`btn ${elements.some(e => e.label === 'Y') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRooskiNode('Y')} style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem' }}>+ Y</button>
+                                            <button className={`btn ${elements.some(e => e.label === 'F') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRooskiNode('F')} style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem' }}>+ F</button>
+                                        </>
+                                    )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                        <input
+                                            type="text"
+                                            value={customLetterInput}
+                                            onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
+                                            placeholder="A"
+                                            maxLength={2}
+                                            className="form-input"
+                                            style={{ width: '30px', padding: '2px', textAlign: 'center', fontSize: '0.85rem' }}
+                                        />
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => {
+                                                if (customLetterInput) {
+                                                    toggleRooskiNode(customLetterInput);
+                                                    setCustomLetterInput(''); // Reset
+                                                }
+                                            }}
+                                            disabled={!customLetterInput}
+                                            style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem' }}
+                                        >
+                                            + Add
+                                        </button>
+                                    </div>
+
+
+                                    {/* Text Size Controls for Rooski OL */}
+                                    {mode === 'rooski-oline' && (
+                                        <React.Fragment>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.5rem', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Size:</span>
+                                                <button
+                                                    className="btn btn-secondary"
+                                                    onClick={() => {
+                                                        const newSize = Math.max(12, rooskiTextSize - 4);
+                                                        setRooskiTextSize(newSize);
+                                                        // Bulk Resize Selected
+                                                        if (selectedIds.size > 0) {
+                                                            updateElements(elements.map(el =>
+                                                                (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: newSize } : el
+                                                            ));
+                                                        }
+                                                    }}
+                                                    style={{ padding: '0 0.4rem', fontSize: '1rem' }}
+                                                >-</button>
+                                                <span style={{ fontSize: '0.85rem', minWidth: '24px', textAlign: 'center' }}>{rooskiTextSize}</span>
+                                                <button
+                                                    className="btn btn-secondary"
+                                                    onClick={() => {
+                                                        const newSize = Math.min(200, rooskiTextSize + 4);
+                                                        setRooskiTextSize(newSize);
+                                                        if (selectedIds.size > 0) {
+                                                            updateElements(elements.map(el =>
+                                                                (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: newSize } : el
+                                                            ));
+                                                        }
+                                                    }}
+                                                    style={{ padding: '0 0.4rem', fontSize: '1rem' }}
+                                                >+</button>
+                                            </div>
+
+                                            {/* LIBRARY CONTROLS */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem', background: '#fffbeb', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid #fcd34d' }}>
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#b45309' }}>Library:</span>
+                                                <button
+                                                    className="btn btn-secondary"
+                                                    onClick={initiateSave}
+                                                    title="Save current diagram to library"
+                                                    style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem', display: 'flex', gap: '4px', alignItems: 'center' }}
+                                                >
+                                                    <Icon name="Save" size={14} /> Save
+                                                </button>
+
+                                                <select
+                                                    className="form-input"
+                                                    style={{ padding: '0.2rem', fontSize: '0.85rem', width: '140px' }}
+                                                    onChange={(e) => {
+                                                        if (e.target.value) {
+                                                            loadRooskiPreset(e.target.value);
+                                                            e.target.value = ""; // Reset
+                                                        }
+                                                    }}
+                                                    defaultValue=""
+                                                >
+                                                    <option value="" disabled>Load Saved Play...</option>
+                                                    {rooskiLibrary.map(preset => (
+                                                        <option key={preset.id} value={preset.id}>{preset.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </React.Fragment>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* SAVE MODAL */}
+                            {showSaveModal && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0, left: 0, right: 0, bottom: 0,
+                                    background: 'rgba(0,0,0,0.5)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 50
+                                }}>
+                                    <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '300px' }}>
+                                        <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Save to Library</h3>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="Enter play name..."
+                                            value={saveName}
+                                            onChange={e => setSaveName(e.target.value)}
+                                            style={{ width: '100%', marginBottom: '1rem' }}
+                                            autoFocus
+                                        />
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                            <button className="btn btn-secondary" onClick={() => setShowSaveModal(false)}>Cancel</button>
+                                            <button className="btn btn-primary" onClick={confirmSave} disabled={!saveName}>Save</button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
@@ -2074,7 +2652,19 @@
                             {/* Color Picker */}
                             <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
                                 {COLORS.map(c => (
-                                    <button key={c} onClick={() => setColor(c)} style={{ width: '20px', height: '20px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px var(--accent)' : 'none', transform: color === c ? 'scale(1.1)' : 'scale(1)' }}></button>
+                                    <button
+                                        key={c}
+                                        onClick={() => {
+                                            setColor(c);
+                                            // Bulk Color Change
+                                            if (selectedIds.size > 0) {
+                                                updateElements(elements.map(el =>
+                                                    selectedIds.has(el.id) ? { ...el, color: c } : el
+                                                ));
+                                            }
+                                        }}
+                                        style={{ width: '20px', height: '20px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px var(--accent)' : 'none', transform: color === c ? 'scale(1.1)' : 'scale(1)' }}
+                                    ></button>
                                 ))}
                             </div>
 
@@ -2156,6 +2746,11 @@
                                         <text x="20" y="345" fontSize="12" fontWeight="bold" fill="#000">LOS</text>
                                         <text x="780" y="345" fontSize="12" fontWeight="bold" fill="#000" textAnchor="end">LOS</text>
                                     </g>
+                                ) : mode === 'rooski-oline' ? (
+                                    <g>
+                                        <rect width="100%" height="100%" fill="white" />
+                                        {/* No grid lines or yard markers for Rooski OL */}
+                                    </g>
                                 ) : (
                                     <g>
                                         {/* Simple/Rooski Field */}
@@ -2196,9 +2791,25 @@
                                         ))}
                                     </g>
                                 )}
+                                {elements.map(el => renderElement(el))}
 
-                                {elements.map(el => renderElement(el))} // Render saved elements
-                                {currentPath && renderElement(currentPath, true)} // Render active drawing (preview)
+                                {/* Selection Box */}
+                                {selectionBox && (
+                                    <rect
+                                        x={Math.min(selectionBox.start.x, selectionBox.current.x)}
+                                        y={Math.min(selectionBox.start.y, selectionBox.current.y)}
+                                        width={Math.abs(selectionBox.current.x - selectionBox.start.x)}
+                                        height={Math.abs(selectionBox.current.y - selectionBox.start.y)}
+                                        fill="rgba(59, 130, 246, 0.1)"
+                                        stroke="#3b82f6"
+                                        strokeWidth="1"
+                                        strokeDasharray="4,2"
+                                        style={{ pointerEvents: 'none' }}
+                                    />
+                                )}
+
+                                {/* Drawing Path Preview */}
+                                {currentPath && renderElement(currentPath, true)}
                             </svg>
                         </div>
                     </div>
@@ -11074,7 +11685,7 @@
                         <div style={{ flex: 1, overflowY: 'auto' }}>
                             {(() => {
                                 const coaches = staff.filter(m => !m.type || m.type === 'Coach');
-                                const managers = staff.filter(m => m.type === 'Manager');
+                                const managers = staff.filter(m => m.type && m.type !== 'Coach');
 
                                 const renderStaffTable = (list, title) => (
                                     <div style={{ marginBottom: '2rem' }}>
@@ -11129,13 +11740,13 @@
                                                             {isEditing === member.id ? (
                                                                 <input
                                                                     className="form-input"
-                                                                    value={member.role || ''}
+                                                                    value={member.role || (member.roles ? member.roles.join(', ') : '')}
                                                                     onChange={e => updateMember(member.id, 'role', e.target.value)}
                                                                     placeholder="Role"
                                                                 />
                                                             ) : (
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                                    <div style={{ fontWeight: 500 }}>{member.role}</div>
+                                                                    <div style={{ fontWeight: 500 }}>{member.role || (member.roles ? member.roles.join(', ') : '')}</div>
                                                                     {member.level && (
                                                                         <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                                                                             {(Array.isArray(member.level) ? member.level : [member.level]).filter(Boolean).map((lvl, i) => (
@@ -12471,14 +13082,12 @@
             );
         };
 
-        const DumbCallSheet = ({ data = {}, onUpdateData, gamePlanLayouts }) => {
-            // Default grid size: 25 rows, 4 columns
-            // Using a simple array of col indices [0,1,2,3]
-            const COLS = 8;
-
+        const DumbCallSheet = ({ data = {}, onUpdateData, gamePlanLayouts, plays = [], gamePlan = {} }) => {
+            const COLS = 4;
             const ROWS = 25;
             const [showClearConfirm, setShowClearConfirm] = useState(false);
             const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+            const [printMode, setPrintMode] = useState('grid'); // 'grid', 'situations', 'matrix'
 
             const handleCellChange = (row, col, value) => {
                 const key = `${row}-${col}`;
@@ -12497,101 +13106,306 @@
 
             const syncHeaders = () => {
                 if (!gamePlanLayouts) return;
-
-                const sections = gamePlanLayouts.CALL_SHEET.sections;
-                // Try to grab headers from the second section (Situations) which typically map to columns
+                const sections = gamePlanLayouts.CALL_SHEET?.sections || [];
                 const sourceRows = sections[1] ? sections[1].rows : (sections[0] ? sections[0].rows : []);
-
                 const newData = { ...data };
-                // Map top 4 categories to 8 columns (LH / RH pairs)
                 sourceRows.slice(0, 4).forEach((cell, idx) => {
-                    newData[`header-${idx * 2}`] = `${cell.header} (LH)`;
-                    newData[`header-${idx * 2 + 1}`] = `${cell.header} (RH)`;
+                    newData[`header-${idx}`] = cell.header;
                 });
                 onUpdateData(newData);
                 setShowSyncConfirm(false);
             };
 
+            const getPlayName = (id) => {
+                if (!id) return '';
+                const p = plays.find(x => x.id === id);
+                return p ? `${p.name} (${p.formation})` : id;
+            };
+            const renderSituationsPrint = () => {
+                if (!gamePlanLayouts || !gamePlanLayouts.CALL_SHEET) return <div>No Game Plan Data</div>;
+                const sections = gamePlanLayouts.CALL_SHEET.sections;
 
-            return (
-                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
-                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h2>Basic Call Sheet</h2>
-                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            {gamePlanLayouts && (
-                                showSyncConfirm ? (
-                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#e5e7eb', padding: '4px', borderRadius: '4px' }}>
-                                        <span style={{ fontSize: '0.8rem' }}>Overwrite headers?</span>
-                                        <button className="btn btn-sm btn-primary" onClick={syncHeaders}>Yes</button>
-                                        <button className="btn btn-sm" onClick={() => setShowSyncConfirm(false)}>No</button>
-                                    </div>
-                                ) : (
-                                    <button className="btn btn-secondary" onClick={() => setShowSyncConfirm(true)} title="Sync headers from Game Plan">🔄 Sync Headers</button>
-                                )
-                            )}
+                // Helper to chunk array into rows of N columns
+                const chunk = (arr, size) => Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+                    arr.slice(i * size, i * size + size)
+                );
 
-                            {showClearConfirm ? (
-                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#fee2e2', padding: '4px', borderRadius: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem', color: '#991b1b' }}>Clear all?</span>
-                                    <button className="btn btn-sm" style={{ background: '#dc2626', color: 'white' }} onClick={clearSheet}>Yes</button>
-                                    <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>No</button>
-                                </div>
-                            ) : (
-                                <button className="btn btn-secondary" onClick={() => setShowClearConfirm(true)} title="Clear all entries">Clear Sheet</button>
-                            )}
-
-                            <button className="btn btn-primary" onClick={() => window.print()}>🖨️ Print Call Sheet</button>
+                return (
+                    <div className="print-situations-container" style={{ padding: '0.5rem' }}>
+                        <div className="no-print" style={{ marginBottom: '1rem', fontStyle: 'italic', color: '#666' }}>
+                            Printing Situations & Scripts. Use browser print (Cmd+P) to print.
                         </div>
-                    </div>
+                        {(sections || []).map((section, idx) => {
+                            if (section.hidden) return null;
 
-                    <div className="dumb-sheet-container" style={{
-                        flex: 1,
-                        overflow: 'auto',
-                        background: 'white',
-                        color: 'black',
-                        padding: '1rem',
-                        borderRadius: '8px'
-                    }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}>
+                            // Render Script Sections (Vertical List)
+                            if (section.type === 'script') {
+                                return (
+                                    <div key={idx} style={{ breakInside: 'avoid', border: '1px solid black', marginBottom: '1rem' }}>
+                                        <div style={{ background: '#eee', padding: '0.25rem 0.5rem', fontWeight: 'bold', borderBottom: '1px solid black', fontSize: '0.9rem' }}>{section.title || 'Script'}</div>
+                                        <div>
+                                            {(section.rows || []).map((row, rIdx) => (
+                                                <div key={rIdx} style={{ padding: '0.25rem 0.5rem', borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                                                    <span>{rIdx + 1}. {getPlayName(row.content)}</span>
+                                                    {section.tempos?.[rIdx] && <span style={{ fontWeight: 'bold', fontSize: '0.7rem' }}>[{section.tempos[rIdx]}]</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            // Render Grid / Situational as Table
+                            else if (section.type === 'grid' || !section.type) {
+                                const cols = section.cols || 4;
+                                const rows = chunk(section.rows || [], cols);
+
+                                return (
+                                    <div key={idx} style={{ breakInside: 'avoid', marginBottom: '1rem', border: '1px solid black' }}>
+                                        <div style={{ background: '#eee', padding: '0.25rem 0.5rem', fontWeight: 'bold', borderBottom: '1px solid black', fontSize: '0.9rem' }}>{section.title || 'Situational'}</div>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                            <tbody>
+                                                {rows.map((rowItems, rIdx) => (
+                                                    <tr key={rIdx}>
+                                                        {rowItems.map((box, cIdx) => (
+                                                            <td key={cIdx} style={{
+                                                                border: '1px solid black',
+                                                                padding: '0',
+                                                                verticalAlign: 'top',
+                                                                width: `${100 / cols}%`
+                                                            }}>
+                                                                {/* Box Header */}
+                                                                <div style={{
+                                                                    fontWeight: 'bold',
+                                                                    fontSize: '0.75rem',
+                                                                    padding: '2px 4px',
+                                                                    color: box.color || 'black',
+                                                                    borderBottom: '1px solid #eee' // subtle separator
+                                                                }}>{box.header}</div>
+
+                                                                {/* Plays List */}
+                                                                <div style={{ padding: '4px', fontSize: '0.7rem' }}>
+                                                                    {(box.plays || []).map((pid, pIdx) => (
+                                                                        <div key={pIdx} style={{ marginBottom: '2px' }}>
+                                                                            {getPlayName(pid)}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </td>
+                                                        ))}
+                                                        {/* Fill empty cells if row is incomplete */}
+                                                        {[...Array(cols - rowItems.length)].map((_, i) => (
+                                                            <td key={`empty-${i}`} style={{ border: '1px solid black' }}></td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            }
+                            // ... other types fallback or copy as needed
+                            else if (section.type === 'field_position') {
+                                return (
+                                    <div key={idx} style={{ breakInside: 'avoid', border: '1px solid black', marginBottom: '1rem' }}>
+                                        <div style={{ background: '#eee', padding: '0.5rem', fontWeight: 'bold', borderBottom: '1px solid black' }}>{section.title || 'Field Position'}</div>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th style={{ border: '1px solid black', padding: '4px' }}></th>
+                                                    {(section.colHeaders || []).map((h, i) => <th key={i} style={{ border: '1px solid black', padding: '4px', background: '#f5f5f5' }}>{h}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(section.rowLabels || []).map((l, rIdx) => (
+                                                    <tr key={rIdx}>
+                                                        <td style={{ border: '1px solid black', padding: '4px', fontWeight: 'bold', background: '#f5f5f5' }}>{l}</td>
+                                                        {(section.colHeaders || []).map((_, cIdx) => (
+                                                            <td key={cIdx} style={{ border: '1px solid black', padding: '4px' }}>
+                                                                {getPlayName(section.gridData?.[`${rIdx}-${cIdx}`])}
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })}
+                    </div>
+                );
+            };
+
+            const renderMatrixPrint = () => {
+                if (!gamePlanLayouts || !gamePlanLayouts.MATRIX) return <div>No Matrix Data</div>;
+                const layout = gamePlanLayouts.MATRIX;
+
+                // Group columns by pitch type (Same logic as main view)
+                const safeCols = layout.cols || [];
+                const columnGroups = [
+                    { id: 'FB', label: 'FASTBALL', cols: safeCols.slice(0, 2) },
+                    { id: 'CB', label: 'CURVEBALL', cols: safeCols.slice(2, 4) },
+                    { id: 'CU', label: 'CHANGE UP', cols: safeCols.slice(4, 6) },
+                    { id: 'SO', label: 'STRIKEOUT', cols: safeCols.slice(6, 8) }
+                ];
+
+                const getMatrixPlays = (setId) => {
+                    const set = gamePlan.sets?.find(s => s.id === setId);
+                    if (!set) return [];
+                    return set.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                };
+
+                return (
+                    <div className="print-matrix-container" style={{ padding: '0.5rem' }}>
+                        <div className="no-print" style={{ marginBottom: '1rem', fontStyle: 'italic', color: '#666' }}>
+                            Printing Strike 'Em Out (Matrix). Use Landscape mode for best results.
+                        </div>
+                        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem', borderBottom: '2px solid black' }}>Strike 'Em Out Matrix</h2>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.6rem', tableLayout: 'fixed' }}>
                             <thead>
                                 <tr>
-                                    {[...Array(COLS)].map((_, colIndex) => (
-                                        <th key={colIndex} style={{ border: '2px solid black', padding: '0', height: '40px', background: '#e5e5e5', minWidth: '80px', width: `${100 / COLS}%` }}>
-                                            <input
-                                                type="text"
-                                                value={data[`header-${colIndex}`] || ''}
-                                                onChange={(e) => handleHeaderChange(colIndex, e.target.value)}
-                                                style={{
-                                                    width: '100%', height: '100%', border: 'none', background: 'transparent',
-                                                    textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', padding: '0.5rem',
-                                                    color: 'black'
-                                                }}
-                                                placeholder={`Header ${colIndex + 1}`}
-                                            />
+                                    <th rowSpan={2} style={{ border: '1px solid black', padding: '2px', background: '#ccc', width: '80px' }}>Formation / Type</th>
+                                    {columnGroups.map(group => (
+                                        <th key={group.id} colSpan={group.cols.length} style={{ border: '1px solid black', padding: '2px', background: '#ddd' }}>
+                                            {group.label}
                                         </th>
+                                    ))}
+                                </tr>
+                                <tr>
+                                    {columnGroups.map((group) => (
+                                        <React.Fragment key={group.id + '_sub'}>
+                                            {group.cols.map((col, i) => (
+                                                <th key={col.id} style={{ border: '1px solid black', fontSize: '0.5rem', overflow: 'hidden', whiteSpace: 'nowrap' }}>{col.header}</th>
+                                            ))}
+                                        </React.Fragment>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody>
-                                {[...Array(ROWS)].map((_, rowIndex) => (
-                                    <tr key={rowIndex}>
-                                        {[...Array(COLS)].map((_, colIndex) => (
-                                            <td key={colIndex} style={{ border: '1px solid black', padding: '0', height: '32px' }}>
-                                                <input
-                                                    type="text"
-                                                    value={data[`${rowIndex}-${colIndex}`] || ''}
-                                                    onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                                                    style={{
-                                                        width: '100%', height: '100%', border: 'none', padding: '4px 8px', fontSize: '0.9rem',
-                                                        outline: 'none', background: rowIndex % 2 === 0 ? 'white' : '#f9f9f9', color: 'black'
-                                                    }}
-                                                />
-                                            </td>
+                                {(layout.formations || []).map(formation => (
+                                    <React.Fragment key={formation.id}>
+                                        <tr style={{ background: '#eee' }}>
+                                            <td colSpan={100} style={{ border: '1px solid black', fontWeight: 'bold', padding: '2px', textAlign: 'center' }}>{formation.name}</td>
+                                        </tr>
+                                        {(layout.playTypes || []).map((playType) => (
+                                            <tr key={playType.id}>
+                                                <td style={{ border: '1px solid black', padding: '2px', fontWeight: 'bold' }}>{playType.label}</td>
+                                                {columnGroups.map((group) => (
+                                                    <React.Fragment key={group.id + '_cells'}>
+                                                        {group.cols.map(c => {
+                                                            const setId = `matrix_${formation.id}_${playType.id}_${c.id}`;
+                                                            const plays = getMatrixPlays(setId);
+                                                            return (
+                                                                <td key={c.id} style={{ border: '1px solid black', verticalAlign: 'top', height: '40px', padding: '2px' }}>
+                                                                    {plays.map(p => (
+                                                                        <div key={p.id} style={{ marginBottom: '2px', lineHeight: '1.1' }}>
+                                                                            • {p.name}
+                                                                        </div>
+                                                                    ))}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </React.Fragment>
+                                                ))}
+                                            </tr>
                                         ))}
-                                    </tr>
+                                    </React.Fragment>
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                );
+            };
+
+            const renderManualGrid = () => (
+                <div className="dumb-sheet-container" style={{
+                    flex: 1, overflow: 'auto', background: 'white', color: 'black', padding: '1rem', borderRadius: '8px'
+                }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}>
+                        <thead>
+                            <tr>
+                                {[...Array(COLS)].map((_, colIndex) => (
+                                    <th key={colIndex} style={{ border: '2px solid black', padding: '0', height: '40px', background: '#e5e5e5', minWidth: '80px', width: `${100 / COLS}%` }}>
+                                        <input
+                                            type="text"
+                                            value={data[`header-${colIndex}`] || ''}
+                                            onChange={(e) => handleHeaderChange(colIndex, e.target.value)}
+                                            style={{
+                                                width: '100%', height: '100%', border: 'none', background: 'transparent',
+                                                textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', padding: '0.5rem', color: 'black'
+                                            }}
+                                            placeholder={`Header ${colIndex + 1}`}
+                                        />
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...Array(ROWS)].map((_, rowIndex) => (
+                                <tr key={rowIndex}>
+                                    {[...Array(COLS)].map((_, colIndex) => (
+                                        <td key={colIndex} style={{ border: '1px solid black', padding: '0', height: '32px' }}>
+                                            <input
+                                                type="text"
+                                                value={data[`${rowIndex}-${colIndex}`] || ''}
+                                                onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                                                style={{
+                                                    width: '100%', height: '100%', border: 'none', padding: '4px 8px', fontSize: '0.9rem',
+                                                    outline: 'none', background: rowIndex % 2 === 0 ? 'white' : '#f9f9f9', color: 'black'
+                                                }}
+                                            />
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            );
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <h2 style={{ margin: 0 }}>Printable Call Sheet</h2>
+                            <div style={{ display: 'flex', background: '#334155', borderRadius: '6px', padding: '4px' }}>
+                                <button className={`btn btn-sm ${printMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('grid')}>Basic Grid</button>
+                                <button className={`btn btn-sm ${printMode === 'situations' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('situations')}>Situations & Scripts</button>
+                                <button className={`btn btn-sm ${printMode === 'matrix' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('matrix')}>Strike 'Em Out</button>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            {printMode === 'grid' && gamePlanLayouts && (
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowSyncConfirm(true)} title="Sync headers from Game Plan">🔄 Sync Headers</button>
+                            )}
+                            {printMode === 'grid' && (
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowClearConfirm(true)}>Clear</button>
+                            )}
+                            {showSyncConfirm && printMode === 'grid' && (
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#e5e7eb', padding: '4px', borderRadius: '4px' }}>
+                                    <span style={{ fontSize: '0.8rem' }}>Overwrite?</span>
+                                    <button className="btn btn-sm btn-primary" onClick={syncHeaders}>Yes</button>
+                                    <button className="btn btn-sm" onClick={() => setShowSyncConfirm(false)}>No</button>
+                                </div>
+                            )}
+                            {showClearConfirm && printMode === 'grid' && (
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#fee2e2', padding: '4px', borderRadius: '4px' }}>
+                                    <span style={{ fontSize: '0.8rem', color: '#991b1b' }}>Clear?</span>
+                                    <button className="btn btn-sm" style={{ background: '#dc2626', color: 'white' }} onClick={clearSheet}>Yes</button>
+                                    <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>No</button>
+                                </div>
+                            )}
+
+                            <button className="btn btn-primary" onClick={() => window.print()}>🖨️ Print View</button>
+                        </div>
+                    </div>
+
+                    <div style={{ flex: 1, overflow: 'auto', background: 'white', color: 'black', borderRadius: '8px' }}>
+                        {printMode === 'grid' && renderManualGrid()}
+                        {printMode === 'situations' && renderSituationsPrint()}
+                        {printMode === 'matrix' && renderMatrixPrint()}
                     </div>
                 </div>
             );
@@ -15526,7 +16340,7 @@
             );
         };
 
-        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures }) => {
+        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures }) => {
             const [expandedCategories, setExpandedCategories] = useState({
                 gameWeek: true,
                 scheme: true,
@@ -15642,6 +16456,41 @@
                                         title={`Customize ${pos.description} label`}
                                     />
                                 </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <h3>Interface Theme</h3>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Select the overall look and feel of the application.</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                            {[
+                                { id: 'navy', name: 'Navy Night', color: '#0f172a', textColor: '#f8fafc' },
+                                { id: 'light', name: 'Clean Light', color: '#f1f5f9', textColor: '#0f172a' },
+                                { id: 'contrast', name: 'High Contrast', color: '#000000', textColor: '#ffffff' }
+                            ].map(t => (
+                                <button
+                                    key={t.id}
+                                    className="btn"
+                                    onClick={() => onUpdateTheme(t.id)}
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '1.5rem',
+                                        background: t.color,
+                                        border: (theme || 'navy') === t.id ? `2px solid var(--accent)` : '1px solid var(--border)',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        boxShadow: (theme || 'navy') === t.id ? '0 0 0 2px var(--accent)' : 'none'
+                                    }}
+                                >
+                                    <span style={{ color: t.textColor, fontWeight: 'bold' }}>{t.name}</span>
+                                    {(theme || 'navy') === t.id && (
+                                        <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--accent)' }}>Active</div>
+                                    )}
+                                </button>
                             ))}
                         </div>
                     </div>
@@ -22657,7 +23506,7 @@
                     {
                         title: 'SCRIPTS',
                         type: 'grid',
-                        cols: 6,
+                        cols: 4,
                         rows: [
                             { header: 'OPENING SCRIPT', setId: 'opening_script', colSpan: 1, color: '#10b981' },
                             { header: '2ND HALF OPENER', setId: 'second_half_openers', colSpan: 1, color: '#f97316' },
@@ -22669,7 +23518,7 @@
                     {
                         title: 'DOWN AND DISTANCE',
                         type: 'grid',
-                        cols: 5,
+                        cols: 4,
                         rows: [
                             // Formations / Motion / Tag / Strikeout
                             { header: '1 WORD', setId: 'one_word', colSpan: 1, color: '#f59e0b' },
@@ -24497,7 +25346,7 @@
                                             onBlur={() => setIsCreatingScript(false)}
                                         />
                                     ) : (
-                                        <button onClick={() => setIsCreatingScript(true)} className="btn-sm btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                                        <button onClick={() => setIsCreatingScript(true)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--primary)' }}>
                                             + Add Script
                                         </button>
                                     )}
@@ -24671,28 +25520,26 @@
                                                         className="btn-sm"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setTimeout(() => {
-                                                                if (window.confirm('Delete this section? All boxes will move to the section above.')) {
-                                                                    const newLayouts = { ...gamePlanLayouts };
-                                                                    const sheet = { ...newLayouts.CALL_SHEET };
-                                                                    sheet.sections = [...sheet.sections];
+                                                            if (window.confirm('Delete this section? All boxes will move to the section above.')) {
+                                                                const newLayouts = { ...gamePlanLayouts };
+                                                                const sheet = { ...newLayouts.CALL_SHEET };
+                                                                sheet.sections = [...sheet.sections];
 
-                                                                    // Move all boxes from this section to the previous section
-                                                                    const currentSectionRows = [...sheet.sections[idx].rows];
-                                                                    const previousSectionRows = [...sheet.sections[idx - 1].rows];
-                                                                    sheet.sections[idx - 1] = {
-                                                                        ...sheet.sections[idx - 1],
-                                                                        rows: [...previousSectionRows, ...currentSectionRows]
-                                                                    };
+                                                                // Move all boxes from this section to the previous section
+                                                                const currentSectionRows = [...sheet.sections[idx].rows];
+                                                                const previousSectionRows = [...sheet.sections[idx - 1].rows];
+                                                                sheet.sections[idx - 1] = {
+                                                                    ...sheet.sections[idx - 1],
+                                                                    rows: [...previousSectionRows, ...currentSectionRows]
+                                                                };
 
-                                                                    // Remove this section
-                                                                    sheet.sections.splice(idx, 1);
+                                                                // Remove this section
+                                                                sheet.sections.splice(idx, 1);
 
-                                                                    newLayouts.CALL_SHEET = sheet;
-                                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                                }
-                                                                setEditingHeader(null);
-                                                            }, 0);
+                                                                newLayouts.CALL_SHEET = sheet;
+                                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                            }
+                                                            setEditingHeader(null);
                                                         }}
                                                         style={{
                                                             background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5',
@@ -25775,14 +26622,14 @@
 
                     {/* Toolbar */}
                     <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                        <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
+                            Strike 'Em Out
+                        </button>
                         <button className={`btn ${viewMode === 'call-sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('call-sheet')}>
                             SITUATIONS & SCRIPTS
                         </button>
                         <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
                             Player Touches
-                        </button>
-                        <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
-                            Strike 'Em Out
                         </button>
                     </div>
 
@@ -28412,6 +29259,17 @@
             const [accentColor, setAccentColor] = useState(() => {
                 return localStorage.getItem('oc-dashboard-accent') || '#38bdf8';
             });
+
+            // UI Theme State
+            const [theme, setTheme] = useState(() => {
+                return localStorage.getItem('oc-dashboard-theme') || 'navy';
+            });
+
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-theme', theme);
+                document.body.className = `theme-${theme}`;
+            }, [theme]);
+
             const [positionNames, setPositionNames] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-position-names');
                 return saved ? JSON.parse(saved) : {
@@ -28426,6 +29284,32 @@
             // Layout Persistence
             const [dumbCallSheetData, setDumbCallSheetData] = useLocalStorage('dumbCallSheetData', {});
             const [gamePlanLayouts, setGamePlanLayouts] = useLocalStorage('gamePlanLayouts', GAME_PLAN_LAYOUTS);
+
+            // Force update layout cols if they don't match constant (Migration for 4-col change)
+            useEffect(() => {
+                if (gamePlanLayouts?.CALL_SHEET) {
+                    let changed = false;
+                    const sections = gamePlanLayouts.CALL_SHEET.sections;
+                    // Check Scripts (index 0)
+                    if (sections[0] && sections[0].cols !== 4) {
+                        const newSections = [...sections];
+                        newSections[0] = { ...newSections[0], cols: 4 };
+                        // Also check D&D (index 1) which should be 4
+                        if (newSections[1] && newSections[1].cols !== 4) {
+                            newSections[1] = { ...newSections[1], cols: 4 };
+                        }
+                        setGamePlanLayouts({ ...gamePlanLayouts, CALL_SHEET: { ...gamePlanLayouts.CALL_SHEET, sections: newSections } });
+                        changed = true;
+                    }
+                    else if (sections[1] && sections[1].cols !== 4) {
+                        // Just D&D needs update
+                        const newSections = [...sections];
+                        newSections[1] = { ...newSections[1], cols: 4 };
+                        setGamePlanLayouts({ ...gamePlanLayouts, CALL_SHEET: { ...gamePlanLayouts.CALL_SHEET, sections: newSections } });
+                        changed = true;
+                    }
+                }
+            }, []);
             const [formationLayouts, setFormationLayouts] = useLocalStorage('formationLayouts', {});
 
             const updateFormationLayout = (chartType, posId, x, y) => {
@@ -29047,7 +29931,7 @@
                             {visibleFeatures.gameWeek?.enabled && (
                                 <CollapsibleCategory title="GAME WEEK" icon="CalendarClock" defaultOpen={false}>
                                     <button className={`nav-item ${view === 'game-week-overview' ? 'active' : ''}`} onClick={() => setView('game-week-overview')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Eye" size={16} style={{ marginRight: '8px' }} /> Overview
+                                        <Icon name="Eye" size={16} style={{ marginRight: '8px' }} /> Week Overview
                                     </button>
 
                                     {/* Moved Depth Charts */}
@@ -29921,7 +30805,7 @@
                         {view === 'coach-app' && <PracticeCoachApp staff={staff} roster={roster} plans={currentWeek.practicePlans || []} plays={plays} drills={DRILL_DATA} />}
                         {view === 'self-assessment' && <AthleteSelfAssessment roster={roster} staff={staff} currentUser={currentUser} />}
                         {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} gamePlanLayouts={gamePlanLayouts} />}
-                        {view === 'dumb-callsheet' && <DumbCallSheet data={dumbCallSheetData} onUpdateData={setDumbCallSheetData} gamePlanLayouts={gamePlanLayouts} />}
+                        {view === 'dumb-callsheet' && <DumbCallSheet data={dumbCallSheetData} onUpdateData={setDumbCallSheetData} gamePlanLayouts={gamePlanLayouts} plays={plays} gamePlan={currentWeek.offensiveGamePlan || {}} />}
                         {view === 'simulator' && <PlayCallSimulator plays={plays} roster={roster} gamePlan={currentWeek.offensiveGamePlan || {}} onUpdateGamePlan={setGamePlan} />}
                         {view === 'special-teams' && (
                             <SpecialTeamsDashboard
@@ -29961,7 +30845,7 @@
                                 onUpdateLottery={setLotteryData}
                             />
                         )}
-                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} />}
+                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} />}
                         {view === 'help' && <UserGuide />}
                     </main>
                 </div >
