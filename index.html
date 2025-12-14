@@ -12,7 +12,37 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- Lucide Icons -->
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Firebase SDKs (Compat Version for Standalone Usage) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+    <!-- Firebase Initialization -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyChvjfVMQ_jrAt7C08pLTreckUIizKFKis",
+            authDomain: "dofo-c3fbe.firebaseapp.com",
+            projectId: "dofo-c3fbe",
+            storageBucket: "dofo-c3fbe.firebasestorage.app",
+            messagingSenderId: "953198874702",
+            appId: "1:953198874702:web:025100b11c243f73f9731f",
+            measurementId: "G-LCFEPZ57EJ"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Expose services globally
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+        window.storage = firebase.storage();
+
+        console.log("Firebase Initialized:", firebase.app().name);
+    </script>
 
     <style>
         .wristband-print-container {
@@ -551,7 +581,109 @@
 
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo, useRef, useContext, createContext } = React;
+
+        // --- AUTHENTICATION ---
+        const AuthContext = createContext();
+
+        const AuthProvider = ({ children }) => {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubscribe = window.auth.onAuthStateChanged(user => {
+                    setCurrentUser(user);
+                    setLoading(false);
+                });
+                return unsubscribe;
+            }, []);
+
+            const login = (email, password) => window.auth.signInWithEmailAndPassword(email, password);
+            const register = (email, password) => window.auth.createUserWithEmailAndPassword(email, password);
+            const logout = () => window.auth.signOut();
+
+            if (loading) {
+                return (
+                    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>
+                        Loading Dashboard...
+                    </div>
+                );
+            }
+
+            return (
+                <AuthContext.Provider value={{ currentUser, login, register, logout }}>
+                    {children}
+                </AuthContext.Provider>
+            );
+        };
+
+        const useAuth = () => useContext(AuthContext);
+
+        const LoginScreen = () => {
+            const { login } = useAuth();
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+                try {
+                    await login(email, password);
+                } catch (err) {
+                    setError('Failed to log in: ' + err.message);
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div style={{
+                    height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
+                }}>
+                    <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', textAlign: 'center', color: '#38bdf8' }}>Coach Login</h1>
+                        {error && <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>Email</label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #475569', background: '#0f172a', color: 'white' }}
+                                    placeholder="coach@team.com"
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>Password</label>
+                                <input
+                                    type="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #475569', background: '#0f172a', color: 'white' }}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                style={{
+                                    marginTop: '1rem', padding: '0.75rem', borderRadius: '6px', border: 'none',
+                                    background: loading ? '#475569' : '#0ea5e9', color: 'white', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {loading ? 'Logging in...' : 'Sign In'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
 
         // --- Data & Constants ---
         // ... (rest of the file)
@@ -16364,6 +16496,45 @@
                 }
             };
 
+            const [migrationStatus, setMigrationStatus] = useState(null); // null, 'loading', 'success', 'error'
+
+            const handleMigrateToCloud = async () => {
+                const { currentUser } = window.auth;
+                if (!currentUser) {
+                    alert('You must be logged in to migrate data.');
+                    return;
+                }
+
+                if (!confirm('This will upload your local data (Roster, Plays, Settings) to the cloud. Continue?')) return;
+
+                setMigrationStatus('loading');
+                try {
+                    const dataToMigrate = {
+                        roster: JSON.parse(localStorage.getItem('roster_data') || '[]'),
+                        plays: JSON.parse(localStorage.getItem('play_library') || '[]'),
+                        settings: {
+                            teamLogo: localStorage.getItem('oc-dashboard-logo'),
+                            accentColor: localStorage.getItem('user_accent_color'),
+                            theme: localStorage.getItem('user_theme'), // if exists
+                            activeYear: localStorage.getItem('hc-active-year'),
+                            visibleFeatures: JSON.parse(localStorage.getItem('hc-visible-features') || '{}')
+                        },
+                        timestamp: new Date().toISOString()
+                    };
+
+                    // Save to Firestore under user's ID
+                    await window.db.collection('users').doc(currentUser.uid).set(dataToMigrate, { merge: true });
+
+                    setMigrationStatus('success');
+                    setTimeout(() => setMigrationStatus(null), 3000);
+                    alert('Migration Successful! Your data is now in the cloud.');
+                } catch (err) {
+                    console.error("Migration failed:", err);
+                    setMigrationStatus('error');
+                    alert('Migration Failed: ' + err.message);
+                }
+            };
+
             const PRESET_COLORS = [
                 '#1e3a8a', // Navy
                 '#1d4ed8', // Royal Blue
@@ -16535,6 +16706,25 @@
                     <div className="card">
                         <h3>Data Management</h3>
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Backup your data or move it to another device.</p>
+
+                        {/* CLOUD MIGRATION SECTION */}
+                        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px' }}>
+                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#38bdf8', fontSize: '1.1rem' }}>Cloud Migration</h3>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                Move your local data (Roster, Plays, Settings) to the secure cloud database. This creates a backup and makes your data accessible from any device.
+                            </p>
+                            <button
+                                onClick={handleMigrateToCloud}
+                                disabled={migrationStatus === 'loading'}
+                                style={{
+                                    background: migrationStatus === 'success' ? '#10b981' : (migrationStatus === 'error' ? '#ef4444' : '#0ea5e9'),
+                                    color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                }}
+                            >
+                                <Icon name={migrationStatus === 'loading' ? 'Loader2' : (migrationStatus === 'success' ? 'Check' : 'CloudUpload')} size={18} className={migrationStatus === 'loading' ? 'spin' : ''} />
+                                {migrationStatus === 'loading' ? 'Migrating...' : (migrationStatus === 'success' ? 'Migration Complete' : 'Migrate to Cloud')}
+                            </button>
+                        </div>
 
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                             <button className="btn btn-secondary" onClick={() => window.print()}>
@@ -28619,6 +28809,9 @@
         };
 
         const App = () => {
+            const { currentUser: authUser } = useAuth();
+            if (!authUser) return <LoginScreen />;
+
             const [view, setView] = useState('landing'); // Default to My Tasks
             const [editingPlay, setEditingPlay] = useState(null);
 
@@ -30888,7 +31081,9 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(
             <ErrorBoundary>
-                <App />
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
             </ErrorBoundary>
         );
     </script>
