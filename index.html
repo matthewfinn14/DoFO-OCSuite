@@ -6942,7 +6942,7 @@
 
                 // Sort segments by their current start time to maintain order
                 const sortedSegments = [...plan.segments].sort((a, b) =>
-                    a.startTime.localeCompare(b.startTime)
+                    (a?.startTime || '').localeCompare(b?.startTime || '')
                 );
 
                 // Calculate times starting from the first segment
@@ -7035,7 +7035,7 @@
                             </thead>
                             <tbody>
                                 {((plan.segments || [])).filter(segment => selectedCoachFilter === 'ALL' || segment.staffId === selectedCoachFilter)
-                                    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                    .sort((a, b) => (a?.startTime || '').localeCompare(b?.startTime || ''))
                                     .map(segment => (
                                         <tr key={segment.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                             <td style={{ padding: '0.5rem' }}>
@@ -7125,7 +7125,7 @@
                                 </thead>
                                 <tbody>
                                     {(plan.segments || [])
-                                        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                        .sort((a, b) => (a?.startTime || '').localeCompare(b?.startTime || ''))
                                         .map(seg => (
                                             <tr key={seg.id}>
                                                 <td>{seg.startTime}</td>
@@ -9562,7 +9562,7 @@
             const STAFF_ROLES = ['Head Coach', 'OC', 'DC', 'STC', 'Position Coach'];
             // Simplify staff names to avoid mapping issues if staff is empty or structured differently
             const STAFF_NAMES = Array.isArray(staff) ? staff.map(s => s.name || s) : [];
-            const PLAYERS = Array.isArray(roster) ? roster : [];
+            const PLAYERS = Array.isArray(roster) ? roster.filter(Boolean) : [];
 
             // Reorder calendar based on view
             let renderIndices = [];
@@ -9888,7 +9888,7 @@
                                                     {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
                                                 </optgroup>
                                                 <optgroup label="Players">
-                                                    {PLAYERS.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                                                    {PLAYERS.sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
                                                         <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
                                                     ))}
                                                 </optgroup>
@@ -10859,7 +10859,7 @@
                 // Available players
                 const draftPool = roster.filter(p => !assignedPlayerIds.has(p.id))
                     .filter(p => p.name.toLowerCase().includes(draftPoolSearch.toLowerCase()))
-                    .sort((a, b) => a.name.localeCompare(b.name));
+                    .filter(Boolean).sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
 
                 const assignPlayer = (playerId, teamId, isCaptain = false) => {
                     const newTeams = data.teams.map(t => {
@@ -11238,7 +11238,7 @@
                         // Sort by Last Name
                         const nameA = a.lastName || a.name.split(' ').slice(-1)[0] || a.name;
                         const nameB = b.lastName || b.name.split(' ').slice(-1)[0] || b.name;
-                        return nameA.localeCompare(nameB);
+                        return (nameA || '').localeCompare(nameB || '');
                     }
                     if (sortBy === 'NUMBER') return (parseInt(a.number || a.jersey || 0) || 999) - (parseInt(b.number || b.jersey || 0) || 999);
                     return 0;
@@ -12644,7 +12644,7 @@
                                             player.number.toString().includes(searchQuery) ||
                                             player.position.toLowerCase().includes(searchQuery.toLowerCase())
                                         )
-                                        .sort((a, b) => a.name.localeCompare(b.name))
+                                        .filter(Boolean).sort((a, b) => (a?.name || '').localeCompare(b?.name || ''))
                                         .map(player => {
                                             const status = (opponentData.playerAvailability || {})[player.id]?.status || 'available';
                                             return (
@@ -14844,7 +14844,7 @@
                                             onChange={e => setPenalty({ ...penalty, playerId: e.target.value })}
                                         >
                                             <option value="">-- Who Committed Penalty? --</option>
-                                            {roster.sort((a, b) => a.name.localeCompare(b.name)).map(p => (
+                                            {roster.filter(Boolean).sort((a, b) => (a?.name || '').localeCompare(b?.name || '')).map(p => (
                                                 <option key={p.id} value={p.id}>#{p.number} {p.name}</option>
                                             ))}
                                         </select>
@@ -14880,7 +14880,7 @@
                                 style={{ background: 'white', borderColor: '#fca5a5' }}
                             >
                                 <option value="">-- Start Typing or Select Player --</option>
-                                {roster.sort((a, b) => a.name.localeCompare(b.name)).map(p => (
+                                {roster.filter(Boolean).sort((a, b) => (a?.name || '').localeCompare(b?.name || '')).map(p => (
                                     <option key={p.id} value={p.id}>{p.name} #{p.number}</option>
                                 ))}
                             </select>
@@ -16624,7 +16624,7 @@
                                                 onChange={(e) => setActivePlayerId(e.target.value)}
                                             >
                                                 <option value="">-- Select Player --</option>
-                                                {roster && roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                                                {roster && roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
                                                     <option key={p.id} value={p.id}>{p.firstName} {p.lastName} (#{p.jersey})</option>
                                                 ))}
                                             </select>
@@ -21140,7 +21140,7 @@
                                 <div className="card">
                                     <h3 style={{ marginBottom: '1rem' }}>Mark Attendance</h3>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.5rem' }}>
-                                        {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(player => {
+                                        {roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(player => {
                                             const status = getAttendanceStatus(player.id);
                                             return (
                                                 <div
@@ -21391,7 +21391,7 @@
                                                 onChange={e => setInjuryForm({ ...injuryForm, playerId: e.target.value })}
                                             >
                                                 <option value="">Select Player...</option>
-                                                {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                                                {roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
                                                     <option key={p.id} value={p.id}>{p.lastName}, {p.firstName} (#{p.jersey})</option>
                                                 ))}
                                             </select>
@@ -21920,7 +21920,7 @@
                             <div>
                                 <label className="form-label">Select Player</label>
                                 <select className="form-input" value={selectedPlayerId} onChange={e => setSelectedPlayerId(e.target.value)} style={{ width: '100%' }}>
-                                    {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                                    {roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
                                         <option key={p.id} value={p.id}>
                                             {p.firstName} {p.lastName} (#{p.jersey}) - {p.position}
                                         </option>
@@ -22303,7 +22303,7 @@
                                                 onChange={e => setSelectedPlayerId(e.target.value)}
                                                 style={{ fontSize: '1.1rem', fontWeight: 'bold' }}
                                             >
-                                                {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                                                {roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
                                                     <option key={p.id} value={p.id}>
                                                         {p.firstName} {p.lastName} (#{p.jersey})
                                                     </option>
@@ -27988,7 +27988,7 @@
                                 <label className="form-label">Select Player</label>
                                 <select className="form-select" value={selectedBidderId} onChange={e => setSelectedBidderId(e.target.value)}>
                                     <option value="">-- Choose Athlete --</option>
-                                    {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                                    {roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
                                         <option key={p.id} value={p.id}>{p.lastName}, {p.firstName} (Tokens: {getRemainingTokens(p.id)})</option>
                                     ))}
                                 </select>
@@ -28486,7 +28486,7 @@
                                 <option value="">-- Choose Athlete --</option>
                                 {roster
                                     .filter(p => !playerSearchTerm || p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
-                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .filter(Boolean).sort((a, b) => (a?.name || '').localeCompare(b?.name || ''))
                                     .map(p => (
                                         <option key={p.id} value={p.id}>{p.name} #{p.number}</option>
                                     ))}
@@ -29516,8 +29516,8 @@
                     return true;
                 }).sort((a, b) => {
                     // Sort by Position then Name
-                    if (a.position !== b.position) return a.position.localeCompare(b.position);
-                    return a.name.localeCompare(b.name);
+                    if (a?.position !== b?.position) return (a?.position || '').localeCompare(b?.position || '');
+                    return (a?.name || '').localeCompare(b?.name || '');
                 });
             }, [roster, filterSide]);
 
