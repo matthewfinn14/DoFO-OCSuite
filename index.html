@@ -583,12 +583,69 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef, useContext, createContext } = React;
 
+        // --- FIRESTORE SYNC UTILITIES ---
+        const loadUserDataFromFirestore = async (userId) => {
+            try {
+                console.log("Loading user data from Firestore for user:", userId);
+                const docRef = window.db.collection('users').doc(userId);
+                const doc = await docRef.get();
+
+                if (doc.exists) {
+                    const data = doc.data();
+                    console.log("Loaded data from Firestore:", data);
+
+                    // Apply data to localStorage
+                    if (data.roster) {
+                        localStorage.setItem('roster_data', JSON.stringify(data.roster));
+                    }
+                    if (data.plays) {
+                        localStorage.setItem('play_library', JSON.stringify(data.plays));
+                    }
+                    if (data.settings) {
+                        if (data.settings.teamLogo) localStorage.setItem('oc-dashboard-logo', data.settings.teamLogo);
+                        if (data.settings.accentColor) localStorage.setItem('user_accent_color', data.settings.accentColor);
+                        if (data.settings.theme) localStorage.setItem('user_theme', data.settings.theme);
+                        if (data.settings.activeYear) localStorage.setItem('hc-active-year', data.settings.activeYear);
+                        if (data.settings.visibleFeatures) localStorage.setItem('hc-visible-features', JSON.stringify(data.settings.visibleFeatures));
+                    }
+
+                    return { success: true, data };
+                } else {
+                    console.log("No cloud data found for user");
+                    return { success: true, data: null };
+                }
+            } catch (error) {
+                console.error("Error loading data from Firestore:", error);
+                return { success: false, error };
+            }
+        };
+
+        const syncToFirestore = async (userId, dataType, data) => {
+            try {
+                console.log(`Syncing ${dataType} to Firestore...`);
+                const docRef = window.db.collection('users').doc(userId);
+
+                const updateData = {
+                    [dataType]: data,
+                    [`${dataType}LastModified`]: new Date().toISOString()
+                };
+
+                await docRef.set(updateData, { merge: true });
+                console.log(`${dataType} synced successfully`);
+                return { success: true };
+            } catch (error) {
+                console.error(`Error syncing ${dataType}:`, error);
+                return { success: false, error };
+            }
+        };
+
         // --- AUTHENTICATION ---
         const AuthContext = createContext();
 
         const AuthProvider = ({ children }) => {
             const [currentUser, setCurrentUser] = useState(null);
             const [loading, setLoading] = useState(true);
+            const [loadingData, setLoadingData] = useState(false);
 
             useEffect(() => {
                 const unsubscribe = window.auth.onAuthStateChanged(user => {
@@ -598,14 +655,53 @@
                 return unsubscribe;
             }, []);
 
+            // Auto-load data from Firestore when user logs in
+            useEffect(() => {
+                if (currentUser && window.db) {
+                    // Check if we've already loaded data this session
+                    const dataLoaded = sessionStorage.getItem('firestore_data_loaded');
+
+                    if (!dataLoaded) {
+                        setLoadingData(true);
+                        loadUserDataFromFirestore(currentUser.uid)
+                            .then(result => {
+                                if (result.success) {
+                                    console.log("User data loaded successfully");
+                                    // Mark as loaded for this session
+                                    sessionStorage.setItem('firestore_data_loaded', 'true');
+                                    // Trigger a page reload to apply the loaded data
+                                    window.location.reload();
+                                } else {
+                                    console.error("Failed to load user data:", result.error);
+                                    setLoadingData(false);
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Error loading data:", error);
+                                setLoadingData(false);
+                            });
+                    }
+                }
+            }, [currentUser]);
+
             const login = (email, password) => window.auth.signInWithEmailAndPassword(email, password);
             const register = (email, password) => window.auth.createUserWithEmailAndPassword(email, password);
-            const logout = () => window.auth.signOut();
+            const logout = () => {
+                sessionStorage.removeItem('firestore_data_loaded');
+                return window.auth.signOut();
+            };
 
-            if (loading) {
+            if (loading || loadingData) {
                 return (
-                    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>
-                        Loading Dashboard...
+                    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', gap: '1rem' }}>
+                        <div style={{ fontSize: '1.2rem' }}>
+                            {loading ? 'Loading Dashboard...' : 'Loading your data from cloud...'}
+                        </div>
+                        {loadingData && (
+                            <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                                Syncing roster, plays, and settings...
+                            </div>
+                        )}
                     </div>
                 );
             }
@@ -29074,6 +29170,15 @@
 
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
+
+                // Auto-sync to Firestore (debounced)
+                if (authUser && window.db) {
+                    const timeoutId = setTimeout(() => {
+                        syncToFirestore(authUser.uid, 'plays', plays);
+                    }, 1000); // 1 second debounce
+
+                    return () => clearTimeout(timeoutId);
+                }
             }, [plays]);
 
             // Formation Database
@@ -29838,6 +29943,15 @@
             // Save roster to localStorage whenever it changes
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-roster', JSON.stringify(roster));
+
+                // Auto-sync to Firestore (debounced)
+                if (authUser && window.db) {
+                    const timeoutId = setTimeout(() => {
+                        syncToFirestore(authUser.uid, 'roster', roster);
+                    }, 1000); // 1 second debounce
+
+                    return () => clearTimeout(timeoutId);
+                }
             }, [roster]);
 
             // Save depth chart to localStorage whenever it changes
@@ -30097,20 +30211,51 @@
 
             const filteredPlaybook = getFilteredPlaybook();
 
-            // Unique values for dropdowns
-            const uniqueFormations = [...new Set(plays.map(p => p.formation).filter(Boolean))].sort();
-            const uniqueConcepts = [...new Set(plays.map(p => p.concept).filter(Boolean))].sort();
-            const allTags = [...new Set(plays.flatMap(p => [...p.tags, p.tag1, p.tag2]).filter(Boolean))].sort();
+            // Sync status state
+            const [syncStatus, setSyncStatus] = useState('synced'); // 'syncing', 'synced', 'offline', 'error'
+            const [lastSyncTime, setLastSyncTime] = useState(null);
 
-            // Situation tags (Field Position, D&D, Situation)
-            const situationTags = [
-                ...(TAG_CATEGORIES["Field Position"] || []),
-                ...(TAG_CATEGORIES["Down & Distance"] || []),
-                ...(TAG_CATEGORIES["Situation"] || [])
-            ].sort();
+            // Update sync status when data changes
+            useEffect(() => {
+                if (authUser && window.db) {
+                    setSyncStatus('syncing');
+                    const timer = setTimeout(() => {
+                        setSyncStatus('synced');
+                        setLastSyncTime(new Date());
+                    }, 2000); // Show "syncing" for 2 seconds after last change
+
+                    return () => clearTimeout(timer);
+                }
+            }, [roster, plays]);
 
             return (
                 <div className="app-container">
+                    {/* Sync Status Indicator */}
+                    {authUser && (
+                        <div style={{
+                            position: 'fixed',
+                            bottom: '20px',
+                            right: '20px',
+                            background: syncStatus === 'synced' ? '#10b981' : syncStatus === 'syncing' ? '#3b82f6' : '#6b7280',
+                            color: 'white',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.3s ease'
+                        }}>
+                            {syncStatus === 'syncing' && '⏳ Syncing...'}
+                            {syncStatus === 'synced' && '✓ Synced to Cloud'}
+                            {syncStatus === 'offline' && '📡 Offline'}
+                            {syncStatus === 'error' && '⚠️ Sync Error'}
+                        </div>
+                    )}
+
                     <div className="sidebar">
                         <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem' }}>
                             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>DoFO</h1>
