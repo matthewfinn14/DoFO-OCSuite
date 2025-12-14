@@ -608,6 +608,46 @@
                         if (data.settings.activeYear) localStorage.setItem('hc-active-year', data.settings.activeYear);
                         if (data.settings.visibleFeatures) localStorage.setItem('hc-visible-features', JSON.stringify(data.settings.visibleFeatures));
                     }
+                    // --- NEW SYNC ITEMS ---
+                    if (data.weeks) {
+                        localStorage.setItem('oc-dashboard-weeks', JSON.stringify(data.weeks));
+                    }
+                    if (data.attendance) {
+                        localStorage.setItem('attendance_log', JSON.stringify(data.attendance));
+                    }
+                    if (data.valhalla) {
+                        localStorage.setItem('oc-dashboard-valhalla', JSON.stringify(data.valhalla));
+                    }
+                    if (data.inventory) {
+                        localStorage.setItem('oc-dashboard-equipment-inventory', JSON.stringify(data.inventory));
+                    }
+                    if (data.checkouts) {
+                        localStorage.setItem('oc-dashboard-equipment-checkouts', JSON.stringify(data.checkouts));
+                    }
+                    if (data.formationLayouts) {
+                        localStorage.setItem('formationLayouts', JSON.stringify(data.formationLayouts));
+                    }
+                    if (data.ratings) {
+                        localStorage.setItem('oc-dashboard-ratings', JSON.stringify(data.ratings)); // Sync Ratings
+                    }
+                    if (data.gameGrades) {
+                        localStorage.setItem('oc-dashboard-game-grades', JSON.stringify(data.gameGrades)); // Sync Grades
+                    }
+                    if (data.summerComp) {
+                        localStorage.setItem('oc-dashboard-summer-comp', JSON.stringify(data.summerComp)); // Sync Summer Comp
+                    }
+                    if (data.opponentScouting) {
+                        localStorage.setItem('oc-dashboard-scouting', JSON.stringify(data.opponentScouting)); // Sync Opponent Scout
+                    }
+                    if (data.issuance) {
+                        localStorage.setItem('oc-dashboard-equipment-issuance', JSON.stringify(data.issuance)); // Sync Issuance
+                    }
+                    if (data.wishlist) {
+                        localStorage.setItem('oc-dashboard-equipment-wishlist', JSON.stringify(data.wishlist)); // Sync Wishlist
+                    }
+                    if (data.athleteAssessments) {
+                        localStorage.setItem('athlete_assessments', JSON.stringify(data.athleteAssessments)); // Sync Self Assessments
+                    }
 
                     return { success: true, data };
                 } else {
@@ -1716,7 +1756,7 @@
         };
 
         // --- PLAY DIAGRAM EDITOR ---
-        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard' }) => {
+        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [] }) => {
 
             // Helper for default formation (Red QB, Blue Skill, Black OL)
             const getDefaultFormation = () => {
@@ -1875,6 +1915,65 @@
             // Text Size State for Rooski OL
             const [rooskiTextSize, setRooskiTextSize] = useState(170);
             const [customLetterInput, setCustomLetterInput] = useState('');
+
+            // Field Position State (for dynamic yard lines)
+            const [fieldPosition, setFieldPosition] = useState(50); // Starting yard line (0-100)
+
+            // Formation Selector State (for Rooski Skill)
+            const [selectedFormationId, setSelectedFormationId] = useState('');
+
+            // Load Formation from Library
+            const loadFormation = (formationId) => {
+                const formation = formations.find(f => f.id === formationId);
+                if (!formation || !formation.positions) return;
+
+                const center = 400;
+                const los = 340;
+                const newElements = [];
+
+                // Position label to color/shape mapping
+                const positionConfig = {
+                    'C': { color: '#000000', shape: 'text-only', fontSize: 40 },
+                    'G': { color: '#000000', shape: 'text-only', fontSize: 40 },
+                    'T': { color: '#000000', shape: 'text-only', fontSize: 40 },
+                    'LT': { color: '#000000', shape: 'text-only', fontSize: 40 },
+                    'LG': { color: '#000000', shape: 'text-only', fontSize: 40 },
+                    'RG': { color: '#000000', shape: 'text-only', fontSize: 40 },
+                    'RT': { color: '#000000', shape: 'text-only', fontSize: 40 },
+                    'QB': { color: '#ef4444', shape: 'circle', variant: 'filled', label: 'Q' },
+                    'Q': { color: '#ef4444', shape: 'circle', variant: 'filled' },
+                    'RB': { color: '#3b82f6', shape: 'circle', variant: 'filled', label: 'B' },
+                    'B': { color: '#3b82f6', shape: 'circle', variant: 'filled' },
+                    'X': { color: '#a855f7', shape: 'circle', variant: 'filled' },
+                    'Z': { color: '#22c55e', shape: 'circle', variant: 'filled' },
+                    'Y': { color: '#eab308', shape: 'circle', variant: 'filled' },
+                    'A': { color: '#ef4444', shape: 'circle', variant: 'filled' },
+                    'F': { color: '#f97316', shape: 'circle', variant: 'filled' },
+                    'H': { color: '#06b6d4', shape: 'circle', variant: 'filled' }
+                };
+
+                formation.positions.forEach((pos, idx) => {
+                    // Convert percentage (0-100) to pixel coordinates (0-800 width, 0-500 height)
+                    const x = (pos.x / 100) * 800;
+                    const y = (pos.y / 100) * 500;
+
+                    const config = positionConfig[pos.label] || { color: '#3b82f6', shape: 'circle', variant: 'filled' };
+
+                    newElements.push({
+                        id: Date.now() + idx,
+                        type: 'player',
+                        points: [{ x, y }],
+                        color: config.color,
+                        label: config.label || pos.label,
+                        shape: config.shape || 'circle',
+                        variant: config.variant || 'filled',
+                        fontSize: config.fontSize
+                    });
+                });
+
+                setElements(newElements);
+                updateHistory(newElements);
+            };
 
             // History State for Undo/Redo
             const [history, setHistory] = useState([elements]);
@@ -2553,6 +2652,58 @@
                         <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', background: '#f8fafc', gap: '0.5rem', flexWrap: 'wrap' }}>
                             <h3 style={{ margin: 0, marginRight: '0.5rem', fontSize: '1rem' }}>Diagrammer</h3>
 
+                            {/* Field Position Selector */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginRight: '0.5rem' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#666' }}>Field:</label>
+                                <select
+                                    value={fieldPosition}
+                                    onChange={(e) => setFieldPosition(parseInt(e.target.value))}
+                                    style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                                >
+                                    <option value={5}>Own 5</option>
+                                    <option value={10}>Own 10</option>
+                                    <option value={15}>Own 15</option>
+                                    <option value={20}>Own 20</option>
+                                    <option value={25}>Own 25</option>
+                                    <option value={30}>Own 30</option>
+                                    <option value={35}>Own 35</option>
+                                    <option value={40}>Own 40</option>
+                                    <option value={45}>Own 45</option>
+                                    <option value={50}>Midfield</option>
+                                    <option value={55}>Opp 45</option>
+                                    <option value={60}>Opp 40</option>
+                                    <option value={65}>Opp 35</option>
+                                    <option value={70}>Opp 30</option>
+                                    <option value={75}>Opp 25</option>
+                                    <option value={80}>Opp 20</option>
+                                    <option value={85}>Opp 15</option>
+                                    <option value={90}>Opp 10</option>
+                                    <option value={95}>Opp 5</option>
+                                </select>
+                            </div>
+
+                            {/* Formation Selector (Rooski Skill Only) */}
+                            {mode === 'rooski-skill' && formations.length > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginRight: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', color: '#666' }}>Formation:</label>
+                                    <select
+                                        value={selectedFormationId}
+                                        onChange={(e) => {
+                                            setSelectedFormationId(e.target.value);
+                                            if (e.target.value) {
+                                                loadFormation(e.target.value);
+                                            }
+                                        }}
+                                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                                    >
+                                        <option value="">-- Load Formation --</option>
+                                        {formations.map(f => (
+                                            <option key={f.id} value={f.id}>{f.name} {f.description && `- ${f.description}`}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             {/* Undo / Redo */}
                             <div className="btn-group" style={{ display: 'flex', gap: '0.25rem', marginRight: '0.5rem' }}>
                                 <button
@@ -2985,38 +3136,161 @@
                                         <rect width="100%" height="100%" fill="white" />
                                         <rect width="100%" height="100%" fill="url(#grid)" />
 
-                                        {/* Yard Lines - Adjusted for 340 LOS (~8 yards back) */}
-                                        <line x1="0" y1="340" x2="100%" y2="340" stroke="#000" strokeWidth="3" />
-                                        <text x="20" y="335" fontSize="12" fill="#666">LOS</text>
-                                        <text x="780" y="335" fontSize="12" fill="#666" textAnchor="end">LOS</text>
+                                        {/* Yard Lines - Dynamic based on field position */}
+                                        {(() => {
+                                            // fieldPosition is 0-100 (yards from own goal line)
+                                            // LOS is at y=340 (center of 25-yard window)
+                                            // Each 100px = 5 yards
+                                            // Show 25 yards total (12.5 yards back, 12.5 yards forward from LOS)
 
-                                        {/* -5 Yards (340 + 100 = 440) */}
-                                        <line x1="0" y1="440" x2="100%" y2="440" stroke="#ccc" strokeWidth="1" strokeDasharray="5,5" />
-                                        <text x="20" y="435" fontSize="12" fill="#999">-5</text>
-                                        <text x="780" y="435" fontSize="12" fill="#999" textAnchor="end">-5</text>
+                                            const yardLines = [];
+                                            const startYard = Math.max(0, fieldPosition - 10); // 10 yards back from LOS
+                                            const endYard = Math.min(100, fieldPosition + 15); // 15 yards forward from LOS
 
-                                        {/* +5 Yards (340 - 100 = 240) */}
-                                        <line x1="0" y1="240" x2="100%" y2="240" stroke="#ccc" strokeWidth="1" strokeDasharray="5,5" />
-                                        <text x="20" y="235" fontSize="12" fill="#999">+5</text>
-                                        <text x="780" y="235" fontSize="12" fill="#999" textAnchor="end">+5</text>
+                                            // Generate yard lines every 5 yards
+                                            for (let yard = Math.ceil(startYard / 5) * 5; yard <= endYard; yard += 5) {
+                                                const yardsFromLOS = yard - fieldPosition;
+                                                const yPos = 340 - (yardsFromLOS * 20); // 20px per yard (100px = 5 yards)
 
-                                        {/* +10 Yards (240 - 100 = 140) */}
-                                        <line x1="0" y1="140" x2="100%" y2="140" stroke="#000" strokeWidth="1" />
-                                        <text x="20" y="135" fontSize="12" fill="#666">+10</text>
-                                        <text x="780" y="135" fontSize="12" fill="#666" textAnchor="end">+10</text>
+                                                if (yPos < 0 || yPos > 480) continue; // Skip if outside canvas
 
-                                        {/* +15 Yards (140 - 100 = 40) */}
-                                        <line x1="0" y1="40" x2="100%" y2="40" stroke="#ccc" strokeWidth="1" strokeDasharray="5,5" />
-                                        <text x="20" y="35" fontSize="12" fill="#999">+15</text>
-                                        <text x="780" y="35" fontSize="12" fill="#999" textAnchor="end">+15</text>
+                                                // Determine yard label
+                                                let label;
+                                                if (yard === 0) label = 'GL'; // Own goal line
+                                                else if (yard === 100) label = 'GL'; // Opponent goal line
+                                                else if (yard === 50) label = '50';
+                                                else if (yard < 50) label = `${yard}`;
+                                                else label = `${100 - yard}`;
 
-                                        {/* Hash Marks Concept (just small ticks) */}
-                                        {[140, 240, 340, 440].map(y => (
-                                            <g key={y}>
-                                                <line x1="360" y1={y - 5} x2="360" y2={y + 5} stroke="#ccc" strokeWidth="1" />
-                                                <line x1="440" y1={y - 5} x2="440" y2={y + 5} stroke="#ccc" strokeWidth="1" />
-                                            </g>
-                                        ))}
+                                                const isLOS = yard === fieldPosition;
+                                                const isMajor = yard % 10 === 0;
+                                                const isGoalLine = yard === 0 || yard === 100;
+
+                                                yardLines.push(
+                                                    <g key={yard}>
+                                                        <line
+                                                            x1="0"
+                                                            y1={yPos}
+                                                            x2="100%"
+                                                            y2={yPos}
+                                                            stroke={isGoalLine ? '#dc2626' : isLOS ? '#000' : isMajor ? '#000' : '#ccc'}
+                                                            strokeWidth={isLOS ? 3 : isGoalLine ? 2 : 1}
+                                                            strokeDasharray={isMajor || isGoalLine || isLOS ? 'none' : '5,5'}
+                                                        />
+                                                        <text x="20" y={yPos - 5} fontSize="12" fill={isGoalLine ? '#dc2626' : '#666'}>
+                                                            {isLOS ? `LOS (${label})` : label}
+                                                        </text>
+                                                        <text x="780" y={yPos - 5} fontSize="12" fill={isGoalLine ? '#dc2626' : '#666'} textAnchor="end">
+                                                            {isLOS ? `LOS (${label})` : label}
+                                                        </text>
+                                                    </g>
+                                                );
+                                            }
+
+                                            // Add end zone shading if in red zone
+                                            if (fieldPosition >= 80) {
+                                                const goalLineYard = 100;
+                                                const yardsFromLOS = goalLineYard - fieldPosition;
+                                                const goalLineY = 340 - (yardsFromLOS * 20);
+
+                                                if (goalLineY >= 0 && goalLineY <= 480) {
+                                                    yardLines.push(
+                                                        <rect
+                                                            key="endzone"
+                                                            x="0"
+                                                            y="0"
+                                                            width="100%"
+                                                            height={goalLineY}
+                                                            fill="#dc2626"
+                                                            opacity="0.1"
+                                                        />
+                                                    );
+                                                }
+                                            }
+
+                                            return yardLines;
+                                        })()}
+
+                                        {/* Hash Marks - High School Field (53.3 yards wide, hash marks at thirds = 17.77 yards from sideline) */}
+                                        {/* Canvas width is 800px, so: */}
+                                        {/* Left hash: 800 * (17.77/53.3) = 267px */}
+                                        {/* Right hash: 800 * (35.53/53.3) = 533px */}
+                                        {(() => {
+                                            const hashMarks = [];
+                                            const startYard = Math.max(0, fieldPosition - 10);
+                                            const endYard = Math.min(100, fieldPosition + 15);
+
+                                            // Generate hash marks every 5 yards
+                                            for (let yard = Math.ceil(startYard / 5) * 5; yard <= endYard; yard += 5) {
+                                                const yardsFromLOS = yard - fieldPosition;
+                                                const yPos = 340 - (yardsFromLOS * 20);
+
+                                                if (yPos < 0 || yPos > 480) continue;
+
+                                                hashMarks.push(
+                                                    <g key={`hash-${yard}`}>
+                                                        <line x1="267" y1={yPos - 8} x2="267" y2={yPos + 8} stroke="#000" strokeWidth="2" />
+                                                        <line x1="533" y1={yPos - 8} x2="533" y2={yPos + 8} stroke="#000" strokeWidth="2" />
+                                                    </g>
+                                                );
+                                            }
+                                            return hashMarks;
+                                        })()}
+
+                                        {/* Field Numbers - 9 yards from sideline, facing outward */}
+                                        {/* Left numbers: 800 * (9/53.3) = 135px */}
+                                        {/* Right numbers: 800 * (44.3/53.3) = 665px */}
+                                        {(() => {
+                                            const fieldNumbers = [];
+                                            const startYard = Math.max(0, fieldPosition - 10);
+                                            const endYard = Math.min(100, fieldPosition + 15);
+
+                                            // Generate field numbers every 10 yards
+                                            for (let yard = Math.ceil(startYard / 10) * 10; yard <= endYard; yard += 10) {
+                                                if (yard === 0 || yard === 100) continue; // Skip goal lines
+
+                                                const yardsFromLOS = yard - fieldPosition;
+                                                const yPos = 340 - (yardsFromLOS * 20);
+
+                                                if (yPos < 20 || yPos > 460) continue; // Keep numbers away from edges
+
+                                                // Determine label
+                                                let label;
+                                                if (yard === 50) label = '50';
+                                                else if (yard < 50) label = `${yard}`;
+                                                else label = `${100 - yard}`;
+
+                                                fieldNumbers.push(
+                                                    <g key={`num-${yard}`}>
+                                                        {/* Left side number (rotated 90° to face left sideline) */}
+                                                        <text
+                                                            x="135"
+                                                            y={yPos}
+                                                            fontSize="24"
+                                                            fontWeight="bold"
+                                                            fill="#999"
+                                                            textAnchor="middle"
+                                                            transform={`rotate(90, 135, ${yPos})`}
+                                                        >
+                                                            {label}
+                                                        </text>
+                                                        {/* Right side number (rotated 270° to face right sideline) */}
+                                                        <text
+                                                            x="665"
+                                                            y={yPos}
+                                                            fontSize="24"
+                                                            fontWeight="bold"
+                                                            fill="#999"
+                                                            textAnchor="middle"
+                                                            transform={`rotate(270, 665, ${yPos})`}
+                                                        >
+                                                            {label}
+                                                        </text>
+                                                    </g>
+                                                );
+                                            }
+                                            return fieldNumbers;
+                                        })()}
                                     </g>
                                 )}
                                 {elements.map(el => renderElement(el))}
@@ -3241,6 +3515,7 @@
                         <PlayDiagramEditor
                             initialData={formData.rooskiSkillData ? { elements: formData.rooskiSkillData } : null}
                             mode="rooski-skill"
+                            formations={formations}
                             onSave={(data) => {
                                 setFormData({ ...formData, rooskiSkillData: data.elements });
                                 setActiveDiagramMode(null);
@@ -3438,6 +3713,28 @@
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Player Assignment Notes */}
+                                <div className="form-group">
+                                    <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Player Assignment Notes</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        {['QB', 'RB', 'X', 'Z', 'Y', 'F', 'OL'].map(pos => (
+                                            <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ width: '30px', fontWeight: 'bold', fontSize: '0.85rem', color: '#475569' }}>{pos}</span>
+                                                <input
+                                                    className="form-input"
+                                                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                                    placeholder={`Notes for ${pos}...`}
+                                                    value={formData.playerNotes?.[pos] || ''}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        playerNotes: { ...prev.playerNotes, [pos]: e.target.value }
+                                                    }))}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
 
 
@@ -3650,146 +3947,6 @@
                                             </button>
                                         </div>
                                     )}
-                                </div>
-
-                                {/* Detailed Install & Variations Section */}
-                                <div style={{ padding: '1.5rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Detailed Install & Variations</h3>
-                                        <button type="button" className="btn btn-secondary" onClick={handleAddScenario} style={{ fontSize: '0.8rem' }}>
-                                            <Icon name="PlusCircle" size={14} style={{ marginRight: '4px' }} /> Add Look
-                                        </button>
-                                    </div>
-
-                                    {/* Scenarios Tabs */}
-                                    {formData.scenarios && formData.scenarios.length > 0 ? (
-                                        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0' }}>
-                                            {formData.scenarios.map(s => (
-                                                <button
-                                                    key={s.id}
-                                                    type="button"
-                                                    onClick={() => setActiveScenarioId(s.id)}
-                                                    style={{
-                                                        padding: '0.5rem 1rem',
-                                                        borderRadius: '6px 6px 0 0',
-                                                        background: activeScenarioId === s.id ? 'white' : 'transparent',
-                                                        border: activeScenarioId === s.id ? '1px solid #e2e8f0' : 'none',
-                                                        borderBottom: activeScenarioId === s.id ? '2px solid var(--accent)' : 'none',
-                                                        fontWeight: activeScenarioId === s.id ? 'bold' : 'normal',
-                                                        color: activeScenarioId === s.id ? 'var(--accent)' : '#64748b',
-                                                        cursor: 'pointer',
-                                                        whiteSpace: 'nowrap'
-                                                    }}
-                                                >
-                                                    {s.front} / {s.coverage}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div style={{ textAlign: 'center', padding: '1rem', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.9rem' }}>
-                                            No detailed variations added yet. Click "Add Look" to start.
-                                        </div>
-                                    )}
-
-                                    {/* Active Scenario Editor */}
-                                    {activeScenarioId && formData.scenarios.find(s => s.id === activeScenarioId) && (() => {
-                                        const scenario = formData.scenarios.find(s => s.id === activeScenarioId);
-                                        return (
-                                            <div className="animate-fade-in">
-                                                {/* Meta Data */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', marginBottom: '1rem' }}>
-                                                    <div className="form-group">
-                                                        <label className="form-label">Defensive Front</label>
-                                                        <select
-                                                            className="form-input"
-                                                            value={scenario.front}
-                                                            onChange={(e) => handleUpdateScenario(scenario.id, 'front', e.target.value)}
-                                                        >
-                                                            <option value="Over">Over</option>
-                                                            <option value="Under">Under</option>
-                                                            <option value="Tite">Tite</option>
-                                                            <option value="Bear">Bear</option>
-                                                            <option value="Mint">Mint</option>
-                                                            <option value="Odd">Odd</option>
-                                                        </select>
-                                                    </div>
-                                                    <div className="form-group">
-                                                        <label className="form-label">Coverage</label>
-                                                        <select
-                                                            className="form-input"
-                                                            value={scenario.coverage}
-                                                            onChange={(e) => handleUpdateScenario(scenario.id, 'coverage', e.target.value)}
-                                                        >
-                                                            <option value="Cover 3">Cover 3</option>
-                                                            <option value="Cover 1">Cover 1</option>
-                                                            <option value="Cover 2">Cover 2</option>
-                                                            <option value="Cover 4">Cover 4</option>
-                                                            <option value="Cover 0">Cover 0</option>
-                                                            <option value="Tampa 2">Tampa 2</option>
-                                                        </select>
-                                                    </div>
-                                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                                        <button type="button" className="btn btn-secondary" onClick={() => handleDeleteScenario(scenario.id)} title="Delete Scenario" style={{ color: '#ef4444' }}>
-                                                            <Icon name="Trash" size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Diagram and Notes Split */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                                    {/* Diagram Preview */}
-                                                    <div>
-                                                        <div style={{ width: '100%', height: '220px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', position: 'relative', overflow: 'hidden', marginBottom: '0.5rem' }}>
-                                                            {scenario.diagramData ? (
-                                                                <svg viewBox="0 0 800 500" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-                                                                    {/* Mini Detailed Field Background (HS Specs) */}
-                                                                    <rect width="100%" height="100%" fill="white" />
-                                                                    {[0, 1, 2, 3].map(i => {
-                                                                        const y = 50 + i * 100;
-                                                                        return (
-                                                                            <g key={i}>
-                                                                                <line x1="0" y1={y} x2="800" y2={y} stroke="#e5e7eb" strokeWidth="2" />
-                                                                                {/* Hashes 266/533 */}
-                                                                                <line x1="266" y1={y - 5} x2="266" y2={y + 5} stroke="#cbd5e1" strokeWidth="2" />
-                                                                                <line x1="534" y1={y - 5} x2="534" y2={y + 5} stroke="#cbd5e1" strokeWidth="2" />
-                                                                            </g>
-                                                                        );
-                                                                    })}
-                                                                    {scenario.diagramData.map(el => (
-                                                                        <circle key={el.id} cx={el.points[0].x} cy={el.points[0].y} r="5" fill={el.color} />
-                                                                    ))}
-                                                                </svg>
-                                                            ) : (
-                                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
-                                                                    No diagram yet
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setActiveDiagramMode('detailed')}>
-                                                            <Icon name="Edit3" size={14} style={{ marginRight: '6px' }} /> Edit Field Diagram
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Player Notes */}
-                                                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Player Assignment Notes</h4>
-                                                        {['QB', 'RB', 'X', 'Z', 'Y', 'F', 'OL'].map(pos => (
-                                                            <div key={pos} style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
-                                                                <span style={{ width: '30px', fontWeight: 'bold', fontSize: '0.8rem' }}>{pos}</span>
-                                                                <input
-                                                                    className="form-input"
-                                                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', color: '#1e293b', background: '#ffffff', border: '1px solid #cbd5e1' }}
-                                                                    placeholder={`Notes for ${pos}...`}
-                                                                    value={scenario.notes?.[pos] || ''}
-                                                                    onChange={(e) => handleUpdateScenarioNote(scenario.id, pos, e.target.value)}
-                                                                />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
                                 </div>
                             </div>
 
@@ -4960,6 +5117,7 @@
             const [isFullScreen, setIsFullScreen] = useState(false);
             const [scoutCardUrls, setScoutCardUrls] = useState({}); // Session-only storage for blob URLs { [segmentId]: string }
             const [includePlayCards, setIncludePlayCards] = useState(false);
+            const [customInputState, setCustomInputState] = useState(null); // { id: string, field: string }
 
             const focusItems = ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', ...(customFocusItems || [])];
 
@@ -5513,29 +5671,50 @@
                                         </td>
                                         <td style={{ padding: '0.5rem', fontStyle: 'italic' }}>Warmup</td>
                                         <td style={{ padding: '0.5rem' }}>
-                                            <select
-                                                className="form-select"
-                                                style={{ padding: '0.25rem' }}
-                                                value={plan.warmupSituation || ''}
-                                                onChange={e => {
-                                                    if (e.target.value === '__ADD_CUSTOM__') {
-                                                        const customItem = prompt('Enter custom focus item:');
-                                                        if (customItem && customItem.trim()) {
-                                                            addCustomFocusItem(customItem.trim());
-                                                            updateCurrentPlan({ ...plan, warmupSituation: customItem.trim() });
-                                                        }
-                                                    } else {
-                                                        updateCurrentPlan({ ...plan, warmupSituation: e.target.value });
-                                                    }
-                                                }}
-                                                onClick={e => e.stopPropagation()}
-                                            >
-                                                <option value="">-- Select Focus --</option>
-                                                {['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', ...customFocusItems].map(f => (
-                                                    <option key={f} value={f}>{f}</option>
-                                                ))}
-                                                <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
-                                            </select>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                {customInputState?.id === 'WARMUP' ? (
+                                                    <input
+                                                        autoFocus
+                                                        className="form-input"
+                                                        style={{ padding: '0.25rem', width: '100%' }}
+                                                        defaultValue=""
+                                                        placeholder="Custom focus..."
+                                                        onBlur={(e) => {
+                                                            const val = e.target.value.trim();
+                                                            if (val) {
+                                                                addCustomFocusItem(val);
+                                                                updateCurrentPlan({ ...plan, warmupSituation: val });
+                                                            }
+                                                            setCustomInputState(null);
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') e.target.blur();
+                                                            if (e.key === 'Escape') setCustomInputState(null);
+                                                        }}
+                                                        onClick={e => e.stopPropagation()}
+                                                    />
+                                                ) : (
+                                                    <select
+                                                        className="form-select"
+                                                        style={{ padding: '0.25rem' }}
+                                                        value={plan.warmupSituation || ''}
+                                                        onChange={e => {
+                                                            if (e.target.value === '__ADD_CUSTOM__') {
+                                                                setCustomInputState({ id: 'WARMUP' });
+                                                            } else {
+                                                                updateCurrentPlan({ ...plan, warmupSituation: e.target.value });
+                                                            }
+                                                        }}
+                                                        onClick={e => e.stopPropagation()}
+                                                    >
+                                                        <option value="">-- Select Focus --</option>
+                                                        {['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', ...customFocusItems].map(f => (
+                                                            <option key={f} value={f}>{f}</option>
+                                                        ))}
+                                                        <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
+                                                    </select>
+                                                )}
+                                            </td>
                                         </td>
                                         <td style={{ padding: '0.5rem' }}>
                                             <select
@@ -5743,30 +5922,51 @@
                                                     </select>
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
-                                                    <span className="print-only-text screen-hidden">{seg.situation}</span>
-                                                    <select
-                                                        className="form-select no-print"
-                                                        style={{ padding: '0.25rem' }}
-                                                        value={seg.situation || ''}
-                                                        onChange={e => {
-                                                            if (e.target.value === '__ADD_CUSTOM__') {
-                                                                const customItem = prompt('Enter custom focus item:');
-                                                                if (customItem && customItem.trim()) {
-                                                                    addCustomFocusItem(customItem.trim());
-                                                                    updateSegment(seg.id, 'situation', customItem.trim());
-                                                                }
-                                                            } else {
-                                                                updateSegment(seg.id, 'situation', e.target.value);
-                                                            }
-                                                        }}
-                                                        onClick={e => e.stopPropagation()}
-                                                    >
-                                                        <option value="">-- Focus --</option>
-                                                        {focusItems.map(item => (
-                                                            <option key={item} value={item}>{item}</option>
-                                                        ))}
-                                                        <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
-                                                    </select>
+                                                    <td style={{ padding: '0.5rem' }}>
+                                                        <span className="print-only-text screen-hidden">{seg.situation}</span>
+                                                        {customInputState?.id === seg.id ? (
+                                                            <input
+                                                                autoFocus
+                                                                className="form-input no-print"
+                                                                style={{ padding: '0.25rem', width: '100%' }}
+                                                                defaultValue=""
+                                                                placeholder="Custom focus..."
+                                                                onBlur={(e) => {
+                                                                    const val = e.target.value.trim();
+                                                                    if (val) {
+                                                                        addCustomFocusItem(val);
+                                                                        updateSegment(seg.id, 'situation', val);
+                                                                    }
+                                                                    setCustomInputState(null);
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') e.target.blur();
+                                                                    if (e.key === 'Escape') setCustomInputState(null);
+                                                                }}
+                                                                onClick={e => e.stopPropagation()}
+                                                            />
+                                                        ) : (
+                                                            <select
+                                                                className="form-select no-print"
+                                                                style={{ padding: '0.25rem' }}
+                                                                value={seg.situation || ''}
+                                                                onChange={e => {
+                                                                    if (e.target.value === '__ADD_CUSTOM__') {
+                                                                        setCustomInputState({ id: seg.id });
+                                                                    } else {
+                                                                        updateSegment(seg.id, 'situation', e.target.value);
+                                                                    }
+                                                                }}
+                                                                onClick={e => e.stopPropagation()}
+                                                            >
+                                                                <option value="">-- Focus --</option>
+                                                                {focusItems.map(item => (
+                                                                    <option key={item} value={item}>{item}</option>
+                                                                ))}
+                                                                <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
+                                                            </select>
+                                                        )}
+                                                    </td>
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
                                                     <span className="print-only-text screen-hidden">{seg.contactLevel}</span>
@@ -6907,6 +7107,8 @@
             if (!metrics.testHistory) metrics.testHistory = []; // New: Historic Testing
             if (!metrics.weightLog) metrics.weightLog = []; // New: Weight Log
             const goals = profile.goals || {};
+            const favorites = profile.favorites || {};
+
 
             // Ensure sizes object exists (migration from root fields if needed)
             const sizes = player.sizes || {
@@ -6957,7 +7159,7 @@
                     display: 'flex', justifyContent: 'center', alignItems: 'center'
                 }} onClick={onClose}>
                     <div style={{
-                        width: '90%', height: '90%', backgroundColor: 'var(--card-bg)', color: 'var(--text)', borderRadius: '16px',
+                        width: '90%', height: '90%', backgroundColor: 'var(--bg-panel)', color: 'var(--text-primary)', borderRadius: '16px',
                         display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
                     }} onClick={e => e.stopPropagation()}>
 
@@ -14647,6 +14849,12 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                {/* This section seems to be part of a different component or context,
+                                    as 'seg', 'coachFilter', 'currentTime', and 'roster.staff' are not defined here.
+                                    Assuming it's intended for a different table or view.
+                                    Inserting it as a comment block to maintain syntactical correctness.
+                                */}
+
                                 {gameLog.map(entry => (
                                     <tr key={entry.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                         <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)' }}>#{entry.situation.driveNumber}</td>
@@ -14730,11 +14938,9 @@
 
             const handleDelete = () => {
                 if (!selectedFormationId) return;
-                if (confirm(`Delete formation "${editingFormation.name}"?`)) {
-                    onDeleteFormation(selectedFormationId);
-                    setSelectedFormationId(null);
-                    setEditingFormation(null);
-                }
+                onDeleteFormation(selectedFormationId);
+                setSelectedFormationId(null);
+                setEditingFormation(null);
             };
 
             return (
@@ -14776,17 +14982,142 @@
                                 </div>
                                 <div style={{ flex: 1, minHeight: '400px' }}>
                                     <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Player Positions (Drag to Adjust)</label>
-                                    <div ref={fieldRef} style={{ width: '100%', height: '100%', background: 'linear-gradient(180deg, #2d5016 0%, #1a3d0a 100%)', borderRadius: '8px', border: '3px solid #fff', position: 'relative', cursor: draggingPlayer !== null ? 'grabbing' : 'default' }} onMouseMove={(e) => { if (draggingPlayer === null || !fieldRef.current || !editingFormation) return; const rect = fieldRef.current.getBoundingClientRect(); const x = ((e.clientX - rect.left) / rect.width) * 100; const y = ((e.clientY - rect.top) / rect.height) * 100; setEditingFormation(prev => ({ ...prev, positions: prev.positions.map((p, idx) => idx === draggingPlayer ? { ...p, x: Math.max(2, Math.min(98, x)), y: Math.max(2, Math.min(98, y)) } : p) })); }} onMouseUp={() => setDraggingPlayer(null)} onMouseLeave={() => setDraggingPlayer(null)}>
-                                        <div style={{ position: 'absolute', left: '30%', top: 0, bottom: 0, width: '2px', borderLeft: '2px dashed rgba(255,255,255,0.3)' }} />
-                                        <div style={{ position: 'absolute', left: '70%', top: 0, bottom: 0, width: '2px', borderLeft: '2px dashed rgba(255,255,255,0.3)' }} />
-                                        <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: '3px', background: '#fff', opacity: 0.8 }} />
-                                        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', color: '#fff', fontSize: '0.7rem', fontWeight: 'bold', background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>LOS</div>
-                                        {[0, 25, 50, 75, 100].map(pct => <div key={pct} style={{ position: 'absolute', left: 0, right: 0, top: `${pct}%`, height: '1px', background: 'rgba(255,255,255,0.15)' }} />)}
-                                        {editingFormation.positions.map((pos, idx) => (
-                                            <div key={idx} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: '32px', height: '32px', borderRadius: '50%', background: draggingPlayer === idx ? '#60a5fa' : '#3b82f6', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 'bold', color: '#fff', cursor: 'grab', userSelect: 'none', boxShadow: draggingPlayer === idx ? '0 4px 12px rgba(0,0,0,0.4)' : '0 2px 4px rgba(0,0,0,0.2)', transition: draggingPlayer === idx ? 'none' : 'all 0.1s ease', zIndex: draggingPlayer === idx ? 1000 : 10 }} onMouseDown={(e) => { e.preventDefault(); setDraggingPlayer(idx); }}>{pos.label}</div>
-                                        ))}
-                                        <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.7)', borderRadius: '6px', padding: '6px 10px', fontSize: '0.7rem', color: '#fff' }}>💡 Drag players to position</div>
-                                    </div>
+                                    <svg
+                                        ref={fieldRef}
+                                        width="100%"
+                                        height="100%"
+                                        viewBox="0 0 800 500"
+                                        preserveAspectRatio="none"
+                                        style={{ border: '2px solid #cbd5e1', borderRadius: '8px', cursor: draggingPlayer !== null ? 'grabbing' : 'default' }}
+                                        onMouseMove={(e) => {
+                                            if (draggingPlayer === null || !fieldRef.current || !editingFormation) return;
+                                            const rect = fieldRef.current.getBoundingClientRect();
+                                            const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                            const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                            setEditingFormation(prev => ({
+                                                ...prev,
+                                                positions: prev.positions.map((p, idx) =>
+                                                    idx === draggingPlayer ? { ...p, x: Math.max(2, Math.min(98, x)), y: Math.max(2, Math.min(98, y)) } : p
+                                                )
+                                            }));
+                                        }}
+                                        onMouseUp={() => setDraggingPlayer(null)}
+                                        onMouseLeave={() => setDraggingPlayer(null)}
+                                    >
+                                        <defs>
+                                            {/* Grid Pattern */}
+                                            <pattern id="formation-grid" width="100" height="100" patternUnits="userSpaceOnUse">
+                                                <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#f0f0f0" strokeWidth="1" />
+                                            </pattern>
+                                        </defs>
+
+                                        {/* White Background */}
+                                        <rect width="100%" height="100%" fill="white" />
+                                        <rect width="100%" height="100%" fill="url(#formation-grid)" />
+
+                                        {/* Yard Lines - Dynamic based on field position (default 50 = midfield) */}
+                                        {(() => {
+                                            const fieldPosition = 50; // Midfield for formation editor
+                                            const yardLines = [];
+                                            const startYard = Math.max(0, fieldPosition - 10);
+                                            const endYard = Math.min(100, fieldPosition + 15);
+
+                                            for (let yard = Math.ceil(startYard / 5) * 5; yard <= endYard; yard += 5) {
+                                                const yardsFromLOS = yard - fieldPosition;
+                                                const yPos = 340 - (yardsFromLOS * 20); // 20px per yard
+
+                                                if (yPos < 0 || yPos > 480) continue;
+
+                                                let label;
+                                                if (yard === 0) label = 'GL';
+                                                else if (yard === 100) label = 'GL';
+                                                else if (yard === 50) label = `${yard}`;
+                                                else if (yard < 50) label = `${yard}`;
+                                                else label = `${100 - yard}`;
+
+                                                const isLOS = yard === fieldPosition;
+                                                const isMajor = yard % 10 === 0;
+                                                const isGoalLine = yard === 0 || yard === 100;
+
+                                                yardLines.push(
+                                                    <g key={yard}>
+                                                        <line
+                                                            x1="0"
+                                                            y1={yPos}
+                                                            x2="100%"
+                                                            y2={yPos}
+                                                            stroke={isGoalLine ? '#dc2626' : isLOS ? '#000' : isMajor ? '#000' : '#ccc'}
+                                                            strokeWidth={isLOS ? 3 : isGoalLine ? 2 : 1}
+                                                            strokeDasharray={isMajor || isGoalLine || isLOS ? 'none' : '5,5'}
+                                                        />
+                                                        <text x="20" y={yPos - 5} fontSize="12" fill={isGoalLine ? '#dc2626' : '#666'}>
+                                                            {isLOS ? `LOS (${label})` : label}
+                                                        </text>
+                                                        <text x="780" y={yPos - 5} fontSize="12" fill={isGoalLine ? '#dc2626' : '#666'} textAnchor="end">
+                                                            {isLOS ? `LOS (${label})` : label}
+                                                        </text>
+                                                    </g>
+                                                );
+                                            }
+                                            return yardLines;
+                                        })()}
+
+                                        {/* Hash Marks - High School Field (at thirds = 267px and 533px) */}
+                                        {(() => {
+                                            const fieldPosition = 50;
+                                            const hashMarks = [];
+                                            const startYard = Math.max(0, fieldPosition - 10);
+                                            const endYard = Math.min(100, fieldPosition + 15);
+
+                                            for (let yard = startYard; yard <= endYard; yard++) {
+                                                const yardsFromLOS = yard - fieldPosition;
+                                                const yPos = 340 - (yardsFromLOS * 20);
+
+                                                if (yPos < 0 || yPos > 480) continue;
+
+                                                hashMarks.push(
+                                                    <g key={`hash-${yard}`}>
+                                                        <line x1="267" y1={yPos - 5} x2="267" y2={yPos + 5} stroke="#000" strokeWidth="2" />
+                                                        <line x1="533" y1={yPos - 5} x2="533" y2={yPos + 5} stroke="#000" strokeWidth="2" />
+                                                    </g>
+                                                );
+                                            }
+                                            return hashMarks;
+                                        })()}
+
+                                        {/* Player Markers */}
+                                        {editingFormation.positions.map((pos, idx) => {
+                                            const x = (pos.x / 100) * 800;
+                                            const y = (pos.y / 100) * 500;
+                                            return (
+                                                <g key={idx} onMouseDown={(e) => { e.preventDefault(); setDraggingPlayer(idx); }} style={{ cursor: 'grab' }}>
+                                                    <circle
+                                                        cx={x}
+                                                        cy={y}
+                                                        r="16"
+                                                        fill={draggingPlayer === idx ? '#60a5fa' : '#3b82f6'}
+                                                        stroke="#fff"
+                                                        strokeWidth="3"
+                                                        style={{ filter: draggingPlayer === idx ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+                                                    />
+                                                    <text
+                                                        x={x}
+                                                        y={y + 5}
+                                                        fill="#fff"
+                                                        fontSize="12"
+                                                        fontWeight="bold"
+                                                        textAnchor="middle"
+                                                        style={{ pointerEvents: 'none', userSelect: 'none' }}
+                                                    >
+                                                        {pos.label}
+                                                    </text>
+                                                </g>
+                                            );
+                                        })}
+
+                                        {/* Help Text */}
+                                        <text x="10" y="490" fontSize="11" fill="#666">💡 Drag players to position</text>
+                                    </svg>
                                 </div>
                             </>
                         ) : (
@@ -16614,6 +16945,20 @@
                             activeYear: localStorage.getItem('hc-active-year'),
                             visibleFeatures: JSON.parse(localStorage.getItem('hc-visible-features') || '{}')
                         },
+                        // Missing Sync Items
+                        weeks: JSON.parse(localStorage.getItem('oc-dashboard-weeks') || '[]'),
+                        attendance: JSON.parse(localStorage.getItem('attendance_log') || '[]'),
+                        valhalla: JSON.parse(localStorage.getItem('oc-dashboard-valhalla') || '{}'),
+                        inventory: JSON.parse(localStorage.getItem('oc-dashboard-equipment-inventory') || '[]'),
+                        checkouts: JSON.parse(localStorage.getItem('oc-dashboard-equipment-checkouts') || '[]'),
+                        formationLayouts: JSON.parse(localStorage.getItem('formationLayouts') || '{}'),
+                        ratings: JSON.parse(localStorage.getItem('oc-dashboard-ratings') || '{}'),
+                        gameGrades: JSON.parse(localStorage.getItem('oc-dashboard-game-grades') || '{}'),
+                        summerComp: JSON.parse(localStorage.getItem('oc-dashboard-summer-comp') || 'null'),
+                        opponentScouting: JSON.parse(localStorage.getItem('oc-dashboard-scouting') || '{}'),
+                        issuance: JSON.parse(localStorage.getItem('oc-dashboard-equipment-issuance') || '{}'),
+                        wishlist: JSON.parse(localStorage.getItem('oc-dashboard-equipment-wishlist') || '[]'),
+                        athleteAssessments: JSON.parse(localStorage.getItem('athlete_assessments') || '{}'),
                         timestamp: new Date().toISOString()
                     };
                     console.log("Data prepared for migration:", dataToMigrate);
@@ -19332,6 +19677,433 @@
             );
         };
 
+        const PracticePlanPrintView = ({ plan, onBack, teamLogo = '🦅', isBatchMode = false, coachFilter = 'ALL', roster, staff }) => {
+            if (!plan) return <div className="p-4">No plan data available <button onClick={onBack} className="btn btn-secondary">Back</button></div>;
+
+            const totalDuration = plan.segments.reduce((acc, seg) => acc + parseInt(seg.duration || 0), 0);
+
+            // Filter segments if needed (though usually all segments are shown, just notes filtered)
+            // But user might want to see ONLY segments they are involved in? 
+            // Usually "Coach Print" means "Show me all segments but highlight/show MY notes"
+            // Let's implement Note Filtering primarily.
+
+            // Helper to calculation start time for each period
+            let currentTime = new Date(`2000-01-01T${plan.startTime}`);
+            const formatTime = (date) => date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(' ', '');
+
+            return (
+                <div className="print-container" style={{ padding: '2rem', background: 'white', minHeight: '100vh', color: 'black' }}>
+
+                    {/* Print-only styles for this specific view */}
+                    <style>{`
+                        @media print {
+                            @page { margin: 0.5cm; size: landscape; }
+                            body { -webkit-print-color-adjust: exact; }
+                            .no-print { display: none !important; }
+                            .print-container { padding: 0 !important; width: 100% !important; max-width: none !important; }
+                        }
+                    `}</style>
+
+                    {/* Navigation Header (Hidden in Print or Batch Mode) */}
+                    {!isBatchMode && (
+                        <div className="no-print" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <button onClick={onBack} className="btn btn-secondary">
+                                <Icon name="ArrowLeft" size={16} /> Back to Print Center
+                            </button>
+                            <button onClick={() => window.print()} className="btn btn-primary" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <Icon name="Printer" size={16} /> Print Plan
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Plan Header */}
+                    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid black', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{ fontSize: '2.5rem' }}>{teamLogo}</div>
+                            <div>
+                                <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: 0, textTransform: 'uppercase' }}>Daily Practice Plan</h1>
+                                <div style={{ fontSize: '1.2rem', fontWeight: '500' }}>
+                                    {new Date(plan.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Start: {new Date(`2000-01-01T${plan.startTime}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div>
+                            <div style={{ fontSize: '1.1rem' }}>Duration: {Math.floor(totalDuration / 60)}h {totalDuration % 60}m</div>
+                        </div>
+                    </header>
+
+                    {/* Plan Details / Notes */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                        {plan.emphasis && <div style={{ border: '1px solid #ccc', padding: '0.5rem' }}><strong>Emphasis:</strong> {plan.emphasis}</div>}
+                        {plan.announcements && <div style={{ border: '1px solid #ccc', padding: '0.5rem' }}><strong>Notes:</strong> {plan.announcements}</div>}
+                    </div>
+
+                    {/* Schedule Table */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                        <thead>
+                            <tr style={{ background: '#e5e7eb', borderBottom: '2px solid black' }}>
+                                <th style={{ padding: '6px', border: '1px solid #000', width: '30px' }}>#</th>
+                                <th style={{ padding: '6px', border: '1px solid #000', width: '60px' }}>Time</th>
+                                <th style={{ padding: '6px', border: '1px solid #000', width: '40px' }}>Dur</th>
+                                <th style={{ padding: '6px', border: '1px solid #000', width: '120px' }}>Period</th>
+                                <th style={{ padding: '6px', border: '1px solid #000', width: '100px' }}>Type</th>
+                                <th style={{ padding: '6px', border: '1px solid #000', width: '100px' }}>Focus</th>
+                                <th style={{ padding: '6px', border: '1px solid #000', width: '60px' }}>Contact</th>
+                                <th style={{ padding: '6px', border: '1px solid #000' }}>Notes</th>
+                                <th style={{ padding: '6px', border: '1px solid #000', width: '80px' }}>Staff</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {plan.segments.map((seg, idx) => {
+                                const startTimeStr = formatTime(currentTime);
+                                currentTime.setMinutes(currentTime.getMinutes() + parseInt(seg.duration));
+
+                                return (
+                                    <tr key={idx} style={{ pageBreakInside: 'avoid', borderBottom: '1px solid #ccc' }}>
+                                        <td style={{ padding: '6px', border: '1px solid #000', textAlign: 'center', fontWeight: 'bold' }}>{idx + 1}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #000', textAlign: 'center' }}>{startTimeStr}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #000', textAlign: 'center' }}>{seg.duration}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #000', fontWeight: 'bold' }}>{seg.name}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #000', textAlign: 'center', fontSize: '0.85rem' }}>{seg.type || '-'}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #000', textAlign: 'center', fontSize: '0.85rem' }}>{seg.focus || '-'}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #000', textAlign: 'center', fontSize: '0.85rem' }}>{seg.contactLevel || '-'}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #000' }}>
+                                            <div style={{ fontWeight: '600' }}>{seg.activity || ''}</div>
+                                            {/* Note Filtering Logic */}
+                                            {seg.notes ? (
+                                                typeof seg.notes === 'string' ? (
+                                                    <div style={{ fontSize: '0.85rem' }}>{seg.notes}</div>
+                                                ) : (
+                                                    Object.entries(seg.notes)
+                                                        .filter(([coachId, note]) => {
+                                                            const isGeneral = coachId === 'ALL_COACHES' || coachId === 'ALL';
+                                                            if (coachFilter === 'ALL') return isGeneral; // All Coaches View: Show ONLY general notes
+                                                            return isGeneral || coachId === coachFilter; // Specific View: Show General + Specific
+                                                        })
+                                                        .map(([coachId, note]) => (
+                                                            <div key={coachId} style={{ marginTop: '4px', fontSize: '0.85rem' }}>
+                                                                {/* Only show label if it's a specific note, or if we want to label 'Staff' notes */}
+                                                                <strong style={{ color: '#666', marginRight: '4px' }}>
+                                                                    {coachId === 'ALL_COACHES' || coachId === 'ALL' ? 'Staff' : (staff?.find(s => s.id === coachId)?.name || coachId)}:
+                                                                </strong>
+                                                                {note}
+                                                            </div>
+                                                        ))
+                                                )
+                                            ) : ''}
+                                        </td>
+                                        <td style={{ padding: '6px', border: '1px solid #000', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                                            {/* Staff / Coach */}
+                                            {seg.staffId ? (staff?.find(s => s.id === seg.staffId)?.name || '') : ''}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div >
+            );
+        };
+
+        const ScriptPrintView = ({ plan, onBack, teamLogo = '🦅', isBatchMode = false }) => {
+            return (
+                <div className="print-container" style={{ padding: '2rem', background: 'white', minHeight: '100vh', color: 'black' }}>
+                    {!isBatchMode && (
+                        <div className="no-print" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <button onClick={onBack} className="btn btn-secondary">
+                                <Icon name="ArrowLeft" size={16} /> Back
+                            </button>
+                            <button onClick={() => window.print()} className="btn btn-primary">
+                                <Icon name="Printer" size={16} /> Print Script
+                            </button>
+                        </div>
+                    )}
+                    <h1 style={{ textAlign: 'center', fontSize: '2rem', textTransform: 'uppercase' }}>{teamLogo} {plan?.date ? new Date(plan.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }) : 'Day'} Practice Script</h1>
+                    <div style={{ padding: '2rem', border: '1px solid black', textAlign: 'center', marginTop: '2rem', fontStyle: 'italic' }}>
+                        Script content placeholder for {plan?.date || 'selected date'}...
+                    </div>
+                </div>
+            );
+        };
+
+        const ScoutCardPrintView = ({ plan, onBack, teamLogo = '🦅', isBatchMode = false }) => {
+            return (
+                <div className="print-container" style={{ padding: '2rem', background: 'white', minHeight: '100vh', color: 'black' }}>
+                    {!isBatchMode && (
+                        <div className="no-print" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <button onClick={onBack} className="btn btn-secondary">
+                                <Icon name="ArrowLeft" size={16} /> Back
+                            </button>
+                            <button onClick={() => window.print()} className="btn btn-primary">
+                                <Icon name="Printer" size={16} /> Print Cards
+                            </button>
+                        </div>
+                    )}
+                    <h1 style={{ textAlign: 'center', fontSize: '2rem', textTransform: 'uppercase' }}>{teamLogo} Scout Cards</h1>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '2rem' }}>
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} style={{ border: '2px dashed black', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                CARD {i}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const BatchPrintContainer = ({ components, onBack }) => {
+            return (
+                <div style={{ width: '100%' }}>
+                    <style>{`
+                        @media print {
+                            @page { margin: 0; }
+                            body { -webkit-print-color-adjust: exact; }
+                            .no-print { display: none !important; }
+                        }
+                    `}</style>
+                    <div className="no-print" style={{ padding: '1rem', background: '#333', color: 'white', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <strong>Batch Print Preview</strong> - {components.length} pages ready.
+                        </div>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button onClick={onBack} className="btn btn-secondary"><Icon name="ArrowLeft" /> Back</button>
+                            <button onClick={() => window.print()} className="btn btn-primary"><Icon name="Printer" /> Print Batch</button>
+                        </div>
+                    </div>
+                    {components.map((Comp, idx) => (
+                        <div key={idx} style={{ pageBreakAfter: 'always', display: 'block' }}>
+                            {Comp}
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const PrintHubView = ({ roster, staff, gamePlans, depthChart, practicePlans, attendance }) => {
+            const [selectedCategory, setSelectedCategory] = useState('practice');
+            const [selectedOption, setSelectedOption] = useState(null); // 'daily_plan', 'weekly_plan', etc.
+            const [selectedDay, setSelectedDay] = useState(null); // For daily plan selection
+            const [scheduledEvents] = useLocalStorage('oc-dashboard-scheduled-events', []);
+
+            const categories = [
+                { id: 'practice', label: 'Practice', icon: 'Clipboard' },
+                { id: 'game', label: 'Game Day', icon: 'Trophy' },
+                { id: 'personnel', label: 'Personnel', icon: 'Users' }
+            ];
+
+            const printOptions = {
+                practice: [
+                    { id: 'daily_plan', label: 'Daily Practice Plan', desc: 'Print schedule and periods for a specific day', icon: 'Calendar' },
+                    { id: 'weekly_plan', label: 'Weekly Practice Plan', desc: 'Print overview of the week\'s schedule', icon: 'Layout' },
+                    { id: 'scripts', label: 'Practice Scripts', desc: 'Print scripts with optional scout cards', icon: 'FileText' },
+                ],
+                game: [
+                    { id: 'call_sheet', label: 'Call Sheet', desc: 'Simplified, high-contrast call sheet', icon: 'Grid' },
+                    { id: 'wristbands', label: 'Wristbands', desc: '3x5" Wristband Inserts', icon: 'Columns' },
+                    { id: 'pregame', label: 'Pre-game Timeline', desc: 'Print game day itinerary', icon: 'Clock' },
+                    { id: 'game_report', label: 'Game Report', desc: 'Post-game summary and stats', icon: 'BarChart' }
+                ],
+                personnel: [
+                    { id: 'depth_chart', label: 'Depth Chart', desc: 'Offense, Defense, and Special Teams', icon: 'Layers' },
+                    { id: 'attendance', label: 'Attendance Report', desc: 'Print attendance history', icon: 'CheckSquare' },
+                    { id: 'profiles', label: 'Player Profiles', desc: 'Print player details and measurables', icon: 'User' }
+                ]
+            };
+
+            const handlePrint = (optionId) => {
+                if (optionId === 'daily_plan') {
+                    setSelectedOption('daily_plan');
+                    // Auto-select 'Monday' or current day if available, else require selection
+                    setSelectedDay(null);
+                } else {
+                    alert(`Print functionality for ${optionId} coming next!`);
+                }
+            };
+
+            // Batch State
+            const [batchSelection, setBatchSelection] = useState({
+                Monday: { plan: false, script: false, cards: false },
+                Tuesday: { plan: false, script: false, cards: false },
+                Wednesday: { plan: false, script: false, cards: false },
+                Thursday: { plan: false, script: false, cards: false },
+                Friday: { plan: false, script: false, cards: false },
+            });
+            const [selectedPrintCoach, setSelectedPrintCoach] = useState('ALL');
+            const [batchComponents, setBatchComponents] = useState(null);
+
+            const handleToggleBatch = (day, type) => {
+                setBatchSelection(prev => ({
+                    ...prev,
+                    [day]: { ...prev[day], [type]: !prev[day][type] }
+                }));
+            };
+
+            const handleGenerateBatch = () => {
+                const components = [];
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+                days.forEach(day => {
+                    const sel = batchSelection[day];
+                    const plan = practicePlans[day];
+
+                    // Order: Plan -> Script -> Cards (Ideal for Plan Front / Script Back if duplexing)
+                    if (sel.plan) components.push(<PracticePlanPrintView key={`${day}-plan`} plan={plan} isBatchMode={true} coachFilter={selectedPrintCoach} roster={roster} staff={staff} />);
+                    if (sel.script) components.push(<ScriptPrintView key={`${day}-script`} plan={plan} isBatchMode={true} />);
+                    if (sel.cards) components.push(<ScoutCardPrintView key={`${day}-cards`} plan={plan} isBatchMode={true} />);
+                });
+
+                if (components.length === 0) {
+                    alert('Please select at least one item to print.');
+                    return;
+                }
+                setBatchComponents(components);
+            };
+
+            const handleBack = () => {
+                setBatchComponents(null);
+                setSelectedOption(null);
+                setSelectedDay(null);
+            };
+
+            // Render Sub-Views
+            if (batchComponents) {
+                return <BatchPrintContainer components={batchComponents} onBack={() => setBatchComponents(null)} />;
+            }
+
+            if (selectedOption === 'daily_plan') {
+                // Modified to show the Batch Matrix instead of just Day Buttons
+                return (
+                    <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
+                        <button onClick={handleBack} className="btn btn-secondary" style={{ marginBottom: '1rem' }}>
+                            <Icon name="ArrowLeft" size={16} /> Back
+                        </button>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h2>Practice Print Batcher</h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <label style={{ fontWeight: 'bold' }}>Filter by Coach:</label>
+                                <select
+                                    className="form-select"
+                                    value={selectedPrintCoach}
+                                    onChange={(e) => setSelectedPrintCoach(e.target.value)}
+                                    style={{ width: '200px' }}
+                                >
+                                    <option value="ALL">All Coaches</option>
+                                    {staff && staff.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                    <tr>
+                                        <th style={{ padding: '1rem', textAlign: 'left' }}>Day</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Daily Plan</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Practice Script</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Scout Cards</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {Object.keys(batchSelection).map(day => (
+                                        <tr key={day} style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <td style={{ padding: '1rem', fontWeight: 'bold' }}>{day}</td>
+                                            <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={batchSelection[day].plan}
+                                                    onChange={() => handleToggleBatch(day, 'plan')}
+                                                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={batchSelection[day].script}
+                                                    onChange={() => handleToggleBatch(day, 'script')}
+                                                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={batchSelection[day].cards}
+                                                    onChange={() => handleToggleBatch(day, 'cards')}
+                                                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <div style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                <button className="btn btn-secondary" onClick={() => setBatchSelection({
+                                    Monday: { plan: false, script: false, cards: false },
+                                    Tuesday: { plan: false, script: false, cards: false },
+                                    Wednesday: { plan: false, script: false, cards: false },
+                                    Thursday: { plan: false, script: false, cards: false },
+                                    Friday: { plan: false, script: false, cards: false },
+                                })}>Clear All</button>
+                                <button className="btn btn-primary" onClick={handleGenerateBatch} style={{ padding: '0.75rem 2rem' }}>
+                                    <Icon name="Printer" size={18} style={{ marginRight: '8px' }} />
+                                    Generate Print Packet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+                    <div style={{ marginBottom: '2rem' }}>
+                        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Print Center</h1>
+                        <p style={{ color: 'var(--text-secondary)' }}>Central hub for printing all coaching documents.</p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+                        {categories.map(cat => (
+                            <button
+                                key={cat.id}
+                                onClick={() => setSelectedCategory(cat.id)}
+                                className={`btn ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
+                                style={{ padding: '1rem 2rem', fontSize: '1.1rem' }}
+                            >
+                                <Icon name={cat.icon} size={20} />
+                                {cat.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                        {printOptions[selectedCategory].map(option => (
+                            <div key={option.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'pointer' }}
+                                onClick={() => handlePrint(option.id)}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                    <Icon name={option.icon} size={24} />
+                                </div>
+                                <div>
+                                    <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{option.label}</h3>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>{option.desc}</p>
+                                </div>
+                                <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+                                    <button className="btn btn-secondary" style={{ width: '100%' }}>
+                                        <Icon name="Printer" size={16} /> Print
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
         const ReportsView = ({ roster, attendance, setAttendance, permissions = { view: true, edit: true } }) => {
             const [injuries, setInjuries] = useLocalStorage('oc-dashboard-injuries', []);
             const [scheduledEvents, setScheduledEvents] = useLocalStorage('oc-dashboard-scheduled-events', []);
@@ -20844,6 +21616,16 @@
                 const saved = localStorage.getItem('athlete_assessments');
                 return saved ? JSON.parse(saved) : {};
             });
+
+            // Sync Assessments to Firestore
+            useEffect(() => {
+                localStorage.setItem('athlete_assessments', JSON.stringify(assessments));
+
+                const timer = setTimeout(() => {
+                    if (currentUser) syncToFirestore(currentUser.uid, 'athleteAssessments', assessments);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [assessments, currentUser]);
 
             const ASSESSMENT_CATEGORIES = [
                 {
@@ -29172,14 +29954,110 @@
                 localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
 
                 // Auto-sync to Firestore (debounced)
-                if (authUser && window.db) {
-                    const timeoutId = setTimeout(() => {
-                        syncToFirestore(authUser.uid, 'plays', plays);
-                    }, 1000); // 1 second debounce
+                const timer = setTimeout(() => {
+                    if (authUser && window.db) { // Check for authUser and db here
+                        if (authUser) syncToFirestore(authUser.uid, 'plays', plays);
+                    }
+                }, 2000); // Debounce playbook sync
+                return () => clearTimeout(timer);
+            }, [plays, authUser]); // Changed currentUser to authUser to match existing context
 
-                    return () => clearTimeout(timeoutId);
-                }
-            }, [plays]);
+            // Sync Weeks (Practice Plans) to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'weeks', weeks); // Changed currentUser to authUser
+                }, 3000); // 3s debounce for large plan objects
+                return () => clearTimeout(timer);
+            }, [weeks, authUser]); // Changed currentUser to authUser
+
+            // Sync Attendance to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'attendance', attendance); // Changed currentUser to authUser
+                }, 1500);
+                return () => clearTimeout(timer);
+            }, [attendance, authUser]); // Changed currentUser to authUser
+
+            // Sync Valhalla (XP) to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'valhalla', valhallaData); // Changed currentUser to authUser
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [valhallaData, authUser]); // Changed currentUser to authUser
+
+            // Sync Inventory to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'inventory', inventory); // Changed currentUser to authUser
+                }, 1500);
+                return () => clearTimeout(timer);
+            }, [inventory, authUser]); // Changed currentUser to authUser
+
+            // Sync Checkouts to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'checkouts', checkouts); // Changed currentUser to authUser
+                }, 1500);
+                return () => clearTimeout(timer);
+            }, [checkouts, authUser]); // Changed currentUser to authUser
+
+            // Sync Formation Layouts
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'formationLayouts', formationLayouts); // Changed currentUser to authUser
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [formationLayouts, authUser]);
+
+            // Sync Ratings to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'ratings', ratings);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [ratings, authUser]);
+
+            // Sync Game Grades to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'gameGrades', gameGrades);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [gameGrades, authUser]);
+
+            // Sync Summer Comp to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'summerComp', summerCompData);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [summerCompData, authUser]);
+
+            // Sync Opponent Scouting to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'opponentScouting', opponentScoutData);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [opponentScoutData, authUser]);
+
+            // Sync Equipment Issuance to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'issuance', issuance);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [issuance, authUser]);
+
+            // Sync Wishlist to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'wishlist', wishlist);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [wishlist, authUser]);
+
 
             // Formation Database
             const [formations, setFormations] = useState(() => {
@@ -30211,6 +31089,13 @@
 
             const filteredPlaybook = getFilteredPlaybook();
 
+            // Extract unique values for Playbook filters
+            const uniqueFormations = [...new Set(plays.map(p => p.formation).filter(Boolean))].sort();
+            const uniqueConcepts = [...new Set(plays.map(p => p.concept).filter(Boolean))].sort();
+            const allTags = [...new Set(plays.flatMap(p => [p.tag1, p.tag2, ...(p.tags || [])]))].filter(Boolean).sort();
+            const situationTags = [...(TAG_CATEGORIES["Field Position"] || []), ...(TAG_CATEGORIES["Down & Distance"] || [])];
+
+
             // Sync status state
             const [syncStatus, setSyncStatus] = useState('synced'); // 'syncing', 'synced', 'offline', 'error'
             const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -30334,14 +31219,22 @@
                             )}
 
                             {currentPermissions.dashboard.view && (
-                                <button
-                                    className={`nav-item ${view === 'reports' ? 'active' : ''}`}
-                                    onClick={() => setView('reports')}
-                                    style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}
-                                >
-                                    <Icon name="FileBarChart" size={24} />
-                                    <span style={{ fontWeight: '600' }}>REPORTS</span>
-                                </button>
+                                <CollapsibleCategory title="Reports" icon="FileBarChart" defaultOpen={view === 'reports' || view === 'print-hub'}>
+                                    <button
+                                        className={`nav-item ${view === 'reports' ? 'active' : ''}`}
+                                        onClick={() => setView('reports')}
+                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                    >
+                                        <Icon name="Activity" size={16} style={{ marginRight: '8px' }} /> Dashboard
+                                    </button>
+                                    <button
+                                        className={`nav-item ${view === 'print-hub' ? 'active' : ''}`}
+                                        onClick={() => setView('print-hub')}
+                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                    >
+                                        <Icon name="Printer" size={16} style={{ marginRight: '8px' }} /> Print Center
+                                    </button>
+                                </CollapsibleCategory>
                             )}
                             {/* PERSONNEL CATEGORY */}
                             {currentPermissions.staff.view && (
@@ -30627,6 +31520,7 @@
                             setMasterTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
                         }} />}
                         {view === 'reports' && <ReportsView roster={roster} attendance={attendance} setAttendance={setAttendance} permissions={currentPermissions.dashboard} />}
+                        {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} gamePlans={currentWeek.offensiveGamePlan} depthChart={depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} />}
                         {view === 'drill-library' && <DrillLibraryView />}
                         {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
