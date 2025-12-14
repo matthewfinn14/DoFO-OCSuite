@@ -595,20 +595,39 @@
                     console.log("Loaded data from Firestore:", data);
 
                     // Apply data to localStorage
+                    // CRITICAL FIX: Ensure keys match what the App component uses for initialization
                     if (data.roster) {
-                        localStorage.setItem('roster_data', JSON.stringify(data.roster));
+                        localStorage.setItem('oc-dashboard-roster', JSON.stringify(data.roster)); // WAS: roster_data
                     }
                     if (data.plays) {
-                        localStorage.setItem('play_library', JSON.stringify(data.plays));
+                        localStorage.setItem('oc-dashboard-plays', JSON.stringify(data.plays)); // WAS: play_library
+                    }
+                    if (data.staff) {
+                        localStorage.setItem('oc-dashboard-staff', JSON.stringify(data.staff)); // NEW
+                    }
+                    if (data.depthChart) {
+                        localStorage.setItem('oc-dashboard-depthchart', JSON.stringify(data.depthChart)); // NEW
+                    }
+                    if (data.masterTasks) {
+                        localStorage.setItem('oc-dashboard-master-tasks', JSON.stringify(data.masterTasks)); // NEW
                     }
                     if (data.settings) {
                         if (data.settings.teamLogo) localStorage.setItem('oc-dashboard-logo', data.settings.teamLogo);
-                        if (data.settings.accentColor) localStorage.setItem('user_accent_color', data.settings.accentColor);
-                        if (data.settings.theme) localStorage.setItem('user_theme', data.settings.theme);
+                        // Fix Accent Color Key
+                        if (data.settings.accentColor) {
+                            localStorage.setItem('oc-dashboard-accent', data.settings.accentColor); // Match App Init
+                            localStorage.setItem('user_accent_color', data.settings.accentColor); // Legacy/Backup
+                        }
+                        // Fix Theme Key
+                        if (data.settings.theme) {
+                            localStorage.setItem('oc-dashboard-theme', data.settings.theme); // Match App Init
+                            localStorage.setItem('user_theme', data.settings.theme); // Legacy/Backup
+                        }
                         if (data.settings.activeYear) localStorage.setItem('hc-active-year', data.settings.activeYear);
                         if (data.settings.visibleFeatures) localStorage.setItem('hc-visible-features', JSON.stringify(data.settings.visibleFeatures));
                     }
-                    // --- NEW SYNC ITEMS ---
+
+                    // --- NEW SYNC ITEMS (Complete Coverage) ---
                     if (data.weeks) {
                         localStorage.setItem('oc-dashboard-weeks', JSON.stringify(data.weeks));
                     }
@@ -628,25 +647,79 @@
                         localStorage.setItem('formationLayouts', JSON.stringify(data.formationLayouts));
                     }
                     if (data.ratings) {
-                        localStorage.setItem('oc-dashboard-ratings', JSON.stringify(data.ratings)); // Sync Ratings
+                        localStorage.setItem('oc-dashboard-ratings', JSON.stringify(data.ratings));
                     }
                     if (data.gameGrades) {
-                        localStorage.setItem('oc-dashboard-game-grades', JSON.stringify(data.gameGrades)); // Sync Grades
+                        localStorage.setItem('oc-dashboard-game-grades', JSON.stringify(data.gameGrades));
                     }
                     if (data.summerComp) {
-                        localStorage.setItem('oc-dashboard-summer-comp', JSON.stringify(data.summerComp)); // Sync Summer Comp
+                        localStorage.setItem('oc-dashboard-summer-comp', JSON.stringify(data.summerComp));
                     }
                     if (data.opponentScouting) {
-                        localStorage.setItem('oc-dashboard-scouting', JSON.stringify(data.opponentScouting)); // Sync Opponent Scout
+                        localStorage.setItem('oc-dashboard-scouting', JSON.stringify(data.opponentScouting));
                     }
                     if (data.issuance) {
-                        localStorage.setItem('oc-dashboard-equipment-issuance', JSON.stringify(data.issuance)); // Sync Issuance
+                        localStorage.setItem('oc-dashboard-equipment-issuance', JSON.stringify(data.issuance));
                     }
                     if (data.wishlist) {
-                        localStorage.setItem('oc-dashboard-equipment-wishlist', JSON.stringify(data.wishlist)); // Sync Wishlist
+                        localStorage.setItem('oc-dashboard-equipment-wishlist', JSON.stringify(data.wishlist));
                     }
                     if (data.athleteAssessments) {
-                        localStorage.setItem('athlete_assessments', JSON.stringify(data.athleteAssessments)); // Sync Self Assessments
+                        localStorage.setItem('athlete_assessments', JSON.stringify(data.athleteAssessments));
+                    }
+
+                    // --- ADDITIONAL MISSING ITEMS ---
+                    if (data.formations) {
+                        localStorage.setItem('oc-dashboard-formations', JSON.stringify(data.formations));
+                    }
+                    if (data.zonePhilosophies) {
+                        localStorage.setItem('oc-dashboard-zone-philosophies', JSON.stringify(data.zonePhilosophies));
+                    }
+                    if (data.customFocus) {
+                        localStorage.setItem('oc-dashboard-custom-focus', JSON.stringify(data.customFocus));
+                    }
+                    if (data.duties) {
+                        localStorage.setItem('oc-dashboard-duties', JSON.stringify(data.duties));
+                    }
+                    if (data.metrics) {
+                        localStorage.setItem('oc-dashboard-metrics', JSON.stringify(data.metrics));
+                    }
+                    if (data.fatigueThresholds) {
+                        localStorage.setItem('fatigue-thresholds', JSON.stringify(data.fatigueThresholds));
+                    }
+                    if (data.positionFatigue) {
+                        localStorage.setItem('position-fatigue-values', JSON.stringify(data.positionFatigue));
+                    }
+
+                    // --- FINAL AUDIT ITEMS (Budget, Onboarding, Wristband, Apps) ---
+                    if (data.budget) {
+                        localStorage.setItem('program_budget_data', JSON.stringify(data.budget));
+                    }
+                    if (data.onboarding) {
+                        localStorage.setItem('program_onboarding_data', JSON.stringify(data.onboarding));
+                    }
+                    if (data.positionNames) {
+                        localStorage.setItem('oc-dashboard-position-names', JSON.stringify(data.positionNames));
+                    }
+                    if (data.dailyConnections) {
+                        localStorage.setItem('player_daily_connections', JSON.stringify(data.dailyConnections));
+                    }
+                    if (data.weightLogs) {
+                        localStorage.setItem('player_weight_logs', JSON.stringify(data.weightLogs));
+                    }
+                    if (data.roleTasks) {
+                        localStorage.setItem('staff_role_tasks', JSON.stringify(data.roleTasks));
+                    }
+                    if (data.rooskiLib) {
+                        localStorage.setItem('rooski_ol_library', JSON.stringify(data.rooskiLib));
+                    }
+                    // Wristband Settings
+                    if (data.wbSettings) {
+                        if (data.wbSettings.wb1Opp) localStorage.setItem('hc_wb1_opponent', data.wbSettings.wb1Opp);
+                        if (data.wbSettings.wb1Iter) localStorage.setItem('hc_wb1_iteration', data.wbSettings.wb1Iter);
+                        if (data.wbSettings.wb2Opp) localStorage.setItem('hc_wb2_opponent', data.wbSettings.wb2Opp);
+                        if (data.wbSettings.wb2Iter) localStorage.setItem('hc_wb2_iteration', data.wbSettings.wb2Iter);
+                        if (data.wbSettings.sheetUrl) localStorage.setItem('hc_wristband_sheet_url', data.wbSettings.sheetUrl);
                     }
 
                     return { success: true, data };
@@ -1756,7 +1829,7 @@
         };
 
         // --- PLAY DIAGRAM EDITOR ---
-        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [] }) => {
+        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], rooskiLibrary = [], setRooskiLibrary = () => { } }) => {
 
             // Helper for default formation (Red QB, Blue Skill, Black OL)
             const getDefaultFormation = () => {
@@ -1983,11 +2056,8 @@
             const [selectedIds, setSelectedIds] = useState(new Set());
             const [selectionBox, setSelectionBox] = useState(null);
 
-            // Rooski Library State
-            const [rooskiLibrary, setRooskiLibrary] = useState(() => {
-                const saved = localStorage.getItem('rooski_ol_library');
-                return saved ? JSON.parse(saved) : [];
-            });
+            // Rooski Library State (Lifted to App)
+            // rooskiLibrary passed as prop
             const [showSaveModal, setShowSaveModal] = useState(false);
             const [saveName, setSaveName] = useState('');
 
@@ -3319,7 +3389,7 @@
             );
         };
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [] }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], rooskiLibrary, setRooskiLibrary }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
             const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'rooski-oline', 'rooski-skill', 'detailed'
@@ -3494,6 +3564,8 @@
                             initialData={formData.diagramData}
                             onSave={handleSaveDiagram}
                             onCancel={() => setIsDiagramming(false)}
+                            rooskiLibrary={rooskiLibrary}
+                            setRooskiLibrary={setRooskiLibrary}
                         />
                     )}
 
@@ -3507,6 +3579,8 @@
                                 setActiveDiagramMode(null);
                             }}
                             onCancel={() => setActiveDiagramMode(null)}
+                            rooskiLibrary={rooskiLibrary}
+                            setRooskiLibrary={setRooskiLibrary}
                         />
                     )}
 
@@ -3521,6 +3595,8 @@
                                 setActiveDiagramMode(null);
                             }}
                             onCancel={() => setActiveDiagramMode(null)}
+                            rooskiLibrary={rooskiLibrary}
+                            setRooskiLibrary={setRooskiLibrary}
                         />
                     )}
 
@@ -3534,6 +3610,8 @@
                                 setActiveDiagramMode(null);
                             }}
                             onCancel={() => setActiveDiagramMode(null)}
+                            rooskiLibrary={rooskiLibrary}
+                            setRooskiLibrary={setRooskiLibrary}
                         />
                     )}
 
@@ -4376,32 +4454,25 @@
             );
         };
 
-        const WristbandBuilder = ({ plays, onUpdatePlay }) => {
+        const WristbandBuilder = ({ plays, onUpdatePlay, wbSettings, setWbSettings }) => {
+            const { currentUser } = useAuth();
             const [mode, setMode] = useState('text'); // 'text' (100-299) or 'rooski' (300+)
             const [selectedPlayId, setSelectedPlayId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
             const [confirmModal, setConfirmModal] = useState(null); // { action: 'wb1'|'wb2'|'both', message: string }
 
-            // Header customization state
-            const [wb1Opponent, setWb1Opponent] = useState(() => localStorage.getItem('hc_wb1_opponent') || '');
-            const [wb1Iteration, setWb1Iteration] = useState(() => localStorage.getItem('hc_wb1_iteration') || '');
-            const [wb2Opponent, setWb2Opponent] = useState(() => localStorage.getItem('hc_wb2_opponent') || '');
-            const [wb2Iteration, setWb2Iteration] = useState(() => localStorage.getItem('hc_wb2_iteration') || '');
+            // Header customization state - Accessed via wbSettings prop
+            const wb1Opponent = wbSettings.wb1Opp;
+            const wb1Iteration = wbSettings.wb1Iter;
+            const wb2Opponent = wbSettings.wb2Opp;
+            const wb2Iteration = wbSettings.wb2Iter;
+
+            const setWb1Opponent = (val) => setWbSettings(prev => ({ ...prev, wb1Opp: val }));
+            const setWb1Iteration = (val) => setWbSettings(prev => ({ ...prev, wb1Iter: val }));
+            const setWb2Opponent = (val) => setWbSettings(prev => ({ ...prev, wb2Opp: val }));
+            const setWb2Iteration = (val) => setWbSettings(prev => ({ ...prev, wb2Iter: val }));
 
             // Quick add state
-            const [quickAddSlot, setQuickAddSlot] = useState(null);
-            const [quickAddValue, setQuickAddValue] = useState('');
-            const [quickAddSuggestions, setQuickAddSuggestions] = useState([]);
-
-            // Fixed proportions: 5:3 aspect ratio, 25 rows in 3"
-            const rowHeight = 11; // 3" ÷ 25 rows = 0.12" = 11.52px @ 96 DPI
-            const fontSize = 0.45; // Reduced to fit within 11px without expanding row
-
-            // Persist header values to localStorage
-            useEffect(() => { localStorage.setItem('hc_wb1_opponent', wb1Opponent); }, [wb1Opponent]);
-            useEffect(() => { localStorage.setItem('hc_wb1_iteration', wb1Iteration); }, [wb1Iteration]);
-            useEffect(() => { localStorage.setItem('hc_wb2_opponent', wb2Opponent); }, [wb2Opponent]);
-            useEffect(() => { localStorage.setItem('hc_wb2_iteration', wb2Iteration); }, [wb2Iteration]);
 
             // Filter plays for the sidebar list
             const filteredPlays = useMemo(() => {
@@ -4587,6 +4658,13 @@
                         const url = prompt('Data copied to clipboard!\n\nTo skip this step next time, enter your Google Sheet URL here to auto-open it:', '');
                         if (url && url.startsWith('http')) {
                             localStorage.setItem('hc_wristband_sheet_url', url);
+                            if (currentUser) syncToFirestore(currentUser.uid, 'wbSettings', {
+                                wb1Opp: localStorage.getItem('hc_wb1_opponent'),
+                                wb1Iter: localStorage.getItem('hc_wb1_iteration'),
+                                wb2Opp: localStorage.getItem('hc_wb2_opponent'),
+                                wb2Iter: localStorage.getItem('hc_wb2_iteration'),
+                                sheetUrl: url
+                            });
                             window.open(url, '_blank');
                         } else {
                             alert('Data copied! Paste it into your spreadsheet.');
@@ -13296,25 +13374,7 @@
                 high: 8,
                 veryHigh: 12
             });
-            const [positionFatigueValues, setPositionFatigueValues] = useLocalStorage('position-fatigue-values', {
-                // Offense
-                'QB': 2, 'RB': 3, 'WR': 2, 'TE': 2,
-                'LT': 2, 'LG': 2, 'C': 2, 'RG': 2, 'RT': 2,
-                'X': 2, 'Y': 2, 'Z': 2, 'A': 2,
-                // Defense
-                'DE': 3, 'DT': 3, 'NT': 3, 'LDE': 3, 'RDE': 3, 'LDT': 3, 'RDT': 3,
-                'Will': 3, 'Mike': 3, 'WLB': 3, 'MLB': 3, 'SLB': 3,
-                'CB': 2, 'LCB': 2, 'RCB': 2, 'FS': 2, 'SS': 2, 'Nickel': 2, 'Nick': 2,
-                // Special Teams
-                'K': 1, 'P': 1, 'LS': 1, 'PP': 1,
-                'KR': 3, 'Ret': 3, 'R': 3, 'R1': 3, 'R2': 3,
-                'Gunner': 3, 'G1': 3, 'G2': 3,
-                'L1': 2, 'L2': 2, 'L3': 2, 'L4': 2, 'L5': 2,
-                'R1': 2, 'R2': 2, 'R3': 2, 'R4': 2, 'R5': 2,
-                'Rush': 2, 'Jam': 2, 'Front': 2, 'Mid': 2, 'Back': 2, 'Deep': 2,
-                'Wing': 2, 'Off': 1,
-                'DEFAULT': 1
-            });
+            // positionFatigueValues is now passed as prop
             const [showFatigueConfig, setShowFatigueConfig] = useState(false);
 
             const handleSaveFatigueConfig = (newThresholds, newPositionValues) => {
@@ -16900,7 +16960,7 @@
         };
 
         const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures }) => {
-            const { currentUser } = useAuth(); // Get current user from auth context
+            const { currentUser, logout } = useAuth(); // Get current user from auth context
 
             const [expandedCategories, setExpandedCategories] = useState({
                 gameWeek: true,
@@ -16936,12 +16996,15 @@
 
                 try {
                     const dataToMigrate = {
-                        roster: JSON.parse(localStorage.getItem('roster_data') || '[]'),
-                        plays: JSON.parse(localStorage.getItem('play_library') || '[]'),
+                        roster: JSON.parse(localStorage.getItem('oc-dashboard-roster') || '[]'),
+                        plays: JSON.parse(localStorage.getItem('oc-dashboard-plays') || '[]'),
+                        staff: JSON.parse(localStorage.getItem('oc-dashboard-staff') || '[]'), // NEW
+                        depthChart: JSON.parse(localStorage.getItem('oc-dashboard-depthchart') || '{}'), // NEW
+                        masterTasks: JSON.parse(localStorage.getItem('oc-dashboard-master-tasks') || '[]'), // NEW
                         settings: {
                             teamLogo: localStorage.getItem('oc-dashboard-logo'),
-                            accentColor: localStorage.getItem('user_accent_color'),
-                            theme: localStorage.getItem('user_theme'),
+                            accentColor: localStorage.getItem('oc-dashboard-accent') || localStorage.getItem('user_accent_color'),
+                            theme: localStorage.getItem('oc-dashboard-theme') || localStorage.getItem('user_theme'), // Fix Theme
                             activeYear: localStorage.getItem('hc-active-year'),
                             visibleFeatures: JSON.parse(localStorage.getItem('hc-visible-features') || '{}')
                         },
@@ -16959,6 +17022,32 @@
                         issuance: JSON.parse(localStorage.getItem('oc-dashboard-equipment-issuance') || '{}'),
                         wishlist: JSON.parse(localStorage.getItem('oc-dashboard-equipment-wishlist') || '[]'),
                         athleteAssessments: JSON.parse(localStorage.getItem('athlete_assessments') || '{}'),
+
+                        // --- ADDITIONAL MISSING ITEMS ---
+                        formations: JSON.parse(localStorage.getItem('oc-dashboard-formations') || '{}'),
+                        zonePhilosophies: JSON.parse(localStorage.getItem('oc-dashboard-zone-philosophies') || '{}'),
+                        customFocus: JSON.parse(localStorage.getItem('oc-dashboard-custom-focus') || '{}'),
+                        duties: JSON.parse(localStorage.getItem('oc-dashboard-duties') || '[]'),
+                        metrics: JSON.parse(localStorage.getItem('oc-dashboard-metrics') || '[]'),
+                        fatigueThresholds: JSON.parse(localStorage.getItem('fatigue-thresholds') || '{}'),
+                        positionFatigue: JSON.parse(localStorage.getItem('position-fatigue-values') || '{}'),
+
+                        // --- FINAL AUDIT ITEMS (Budget, Onboarding, Wristband, Apps) ---
+                        budget: JSON.parse(localStorage.getItem('program_budget_data') || '{}'),
+                        onboarding: JSON.parse(localStorage.getItem('program_onboarding_data') || '[]'),
+                        positionNames: JSON.parse(localStorage.getItem('oc-dashboard-position-names') || '{}'),
+                        dailyConnections: JSON.parse(localStorage.getItem('player_daily_connections') || '[]'),
+                        weightLogs: JSON.parse(localStorage.getItem('player_weight_logs') || '[]'),
+                        roleTasks: JSON.parse(localStorage.getItem('staff_role_tasks') || '[]'),
+                        rooskiLib: JSON.parse(localStorage.getItem('rooski_ol_library') || '{}'),
+                        wbSettings: {
+                            wb1Opp: localStorage.getItem('hc_wb1_opponent'),
+                            wb1Iter: localStorage.getItem('hc_wb1_iteration'),
+                            wb2Opp: localStorage.getItem('hc_wb2_opponent'),
+                            wb2Iter: localStorage.getItem('hc_wb2_iteration'),
+                            sheetUrl: localStorage.getItem('hc_wristband_sheet_url')
+                        },
+
                         timestamp: new Date().toISOString()
                     };
                     console.log("Data prepared for migration:", dataToMigrate);
@@ -17276,6 +17365,9 @@
                             </label>
                             <button className="btn" style={{ background: '#059669', color: 'white' }} onClick={onImportDefaultData}>
                                 🔄 Load 2025 Roster/Staff
+                            </button>
+                            <button className="btn" style={{ background: '#ef4444', color: 'white' }} onClick={logout}>
+                                <Icon name="LogOut" size={16} /> Log Out
                             </button>
                         </div>
                     </div>
@@ -21963,7 +22055,7 @@
             );
         };
 
-        const PlayerApp = ({ roster, attendance, setRoster, setAttendance, getPlayerWeightLogs, addWeightLog }) => {
+        const PlayerApp = ({ roster, attendance, setRoster, setAttendance, getPlayerWeightLogs, addWeightLog, tasks, onUpdateTasks, dailyConnections, setDailyConnections }) => {
             const [selectedPlayerId, setSelectedPlayerId] = useState(roster.length > 0 ? roster[0].id : '');
             const [activeTab, setActiveTab] = useState('wellness'); // wellness, profile, attendance, achievements
             const [showCoachAlert, setShowCoachAlert] = useState(false);
@@ -21983,11 +22075,8 @@
                 notes: ''
             });
 
-            // Daily Connections State
-            const [dailyConnections, setDailyConnections] = useState(() => {
-                const saved = localStorage.getItem('player_daily_connections');
-                return saved ? JSON.parse(saved) : {};
-            });
+            // Daily Connections State (Lifted to App)
+            // dailyConnections passed as prop
 
             // Weight Logging State
             const [weightInput, setWeightInput] = useState('');
@@ -29945,10 +30034,105 @@
             useEffect(() => {
                 localStorage.setItem('hc-visible-features', JSON.stringify(visibleFeatures));
             }, [visibleFeatures]);
+
+            // --- LIFTED STATE FOR FULL SYNC COMPATIBILITY ---
+            const [positionFatigue, setPositionFatigue] = useState(() => {
+                const saved = localStorage.getItem('position-fatigue-values');
+                if (saved) return JSON.parse(saved);
+                return {
+                    // Offense
+                    'QB': 2, 'RB': 3, 'WR': 2, 'TE': 2,
+                    'LT': 2, 'LG': 2, 'C': 2, 'RG': 2, 'RT': 2,
+                    'X': 2, 'Y': 2, 'Z': 2, 'A': 2,
+                    // Defense
+                    'DE': 3, 'DT': 3, 'NT': 3, 'LDE': 3, 'RDE': 3, 'LDT': 3, 'RDT': 3,
+                    'Will': 3, 'Mike': 3, 'WLB': 3, 'MLB': 3, 'SLB': 3,
+                    'CB': 2, 'LCB': 2, 'RCB': 2, 'FS': 2, 'SS': 2, 'Nickel': 2, 'Nick': 2,
+                    // Special Teams
+                    'K': 1, 'P': 1, 'LS': 1, 'PP': 1,
+                    'KR': 3, 'Ret': 3, 'R': 3, 'R1': 3, 'R2': 3,
+                    'Gunner': 3, 'G1': 3, 'G2': 3,
+                    'L1': 2, 'L2': 2, 'L3': 2, 'L4': 2, 'L5': 2,
+                    'R1': 2, 'R2': 2, 'R3': 2, 'R4': 2, 'R5': 2,
+                    'Rush': 2, 'Jam': 2, 'Front': 2, 'Mid': 2, 'Back': 2, 'Deep': 2,
+                    'Wing': 2, 'Off': 1,
+                    'DEFAULT': 1
+                };
+            });
+
+            const [dailyConnections, setDailyConnections] = useState(() => {
+                const saved = localStorage.getItem('player_daily_connections');
+                return saved ? JSON.parse(saved) : {};
+            });
+
+            const [rooskiLibrary, setRooskiLibrary] = useState(() => {
+                const saved = localStorage.getItem('rooski_ol_library');
+                return saved ? JSON.parse(saved) : [];
+            });
+
+            // Flattened WB Settings for easier passing
+            const [wbSettings, setWbSettings] = useState(() => ({
+                wb1Opp: localStorage.getItem('hc_wb1_opponent') || '',
+                wb1Iter: localStorage.getItem('hc_wb1_iteration') || '',
+                wb2Opp: localStorage.getItem('hc_wb2_opponent') || '',
+                wb2Iter: localStorage.getItem('hc_wb2_iteration') || ''
+            }));
+
+            // Sync WB Settings changes to individual LS keys (to maintain compatibility with other reads)
+            useEffect(() => {
+                localStorage.setItem('hc_wb1_opponent', wbSettings.wb1Opp);
+                localStorage.setItem('hc_wb1_iteration', wbSettings.wb1Iter);
+                localStorage.setItem('hc_wb2_opponent', wbSettings.wb2Opp);
+                localStorage.setItem('hc_wb2_iteration', wbSettings.wb2Iter);
+
+                if (authUser) {
+                    syncToFirestore(authUser.uid, 'wbSettings', {
+                        ...wbSettings,
+                        sheetUrl: localStorage.getItem('hc_wristband_sheet_url')
+                    });
+                }
+            }, [wbSettings, authUser]);
             const [plays, setPlays] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-plays');
                 return saved ? JSON.parse(saved) : INITIAL_PLAYS;
             });
+
+            useEffect(() => {
+                localStorage.setItem('position-fatigue-values', JSON.stringify(positionFatigue));
+                if (authUser) syncToFirestore(authUser.uid, 'positionFatigue', positionFatigue);
+            }, [positionFatigue]);
+
+            // --- CRITICAL DATA SYNC (FINAL AUDIT) ---
+            useEffect(() => {
+                localStorage.setItem('program_budget_data', JSON.stringify(budgetData));
+                if (authUser) syncToFirestore(authUser.uid, 'budget', budgetData);
+            }, [budgetData]);
+
+            useEffect(() => {
+                localStorage.setItem('program_onboarding_data', JSON.stringify(onboardingData));
+                if (authUser) syncToFirestore(authUser.uid, 'onboarding', onboardingData);
+            }, [onboardingData]);
+
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-position-names', JSON.stringify(positionNames));
+                if (authUser) syncToFirestore(authUser.uid, 'positionNames', positionNames);
+            }, [positionNames]);
+
+            useEffect(() => {
+                localStorage.setItem('player_daily_connections', JSON.stringify(dailyConnections));
+                if (authUser) syncToFirestore(authUser.uid, 'dailyConnections', dailyConnections);
+            }, [dailyConnections]);
+
+            useEffect(() => {
+                localStorage.setItem('player_weight_logs', JSON.stringify(weightLogs));
+                if (authUser) syncToFirestore(authUser.uid, 'weightLogs', weightLogs);
+            }, [weightLogs]);
+
+            useEffect(() => {
+                localStorage.setItem('rooski_ol_library', JSON.stringify(rooskiLibrary));
+                if (authUser) syncToFirestore(authUser.uid, 'rooskiLib', rooskiLibrary);
+            }, [rooskiLibrary]);
+
 
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
@@ -31515,7 +31699,7 @@
                     </div>
 
                     <main className="main-content">
-                        {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} currentUser={currentUser} />}
+                        {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} currentUser={currentUser} positionFatigue={positionFatigue} setPositionFatigue={setPositionFatigue} />}
                         {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} roster={roster} inventory={inventory} attendance={attendance} checkouts={checkouts} equipmentDueDate={equipmentDueDate} userRole={(currentUser?.roles && currentUser.roles[0]) || 'Head Coach'} permissions={currentPermissions.dashboard} masterTasks={masterTasks} depthChart={depthChart} onUpdateTask={(updatedTask) => {
                             setMasterTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
                         }} />}
@@ -31852,6 +32036,8 @@
                                 onCancel={() => { setEditingPlay(null); setView('playbook'); }}
                                 onDelete={handleDeletePlay}
                                 initialData={editingPlay}
+                                rooskiLibrary={rooskiLibrary}
+                                setRooskiLibrary={setRooskiLibrary}
                             />
                         )}
 
@@ -31978,7 +32164,7 @@
 
                         {view === 'formations' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} />}
 
-                        {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} />}
 
                         {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
@@ -32124,7 +32310,7 @@
                         {view === 'ratings' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
                         {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={handleUpdateGameLog} roster={roster} depthChart={currentWeek.depthChart || {}} situation={situation} onUpdateSituation={setSituation} formations={formations} activePlay={activePlay} setActivePlay={setActivePlay} />}
                         {view === 'grading' && <GameGradingView gameLog={currentWeek.gameLog} roster={roster} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} valhallaData={valhallaData} onUpdateValhalla={setValhallaData} />}
-                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} />}
+                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} />}
                         {view === 'coach-app' && <PracticeCoachApp staff={staff} roster={roster} plans={currentWeek.practicePlans || []} plays={plays} drills={DRILL_DATA} />}
                         {view === 'self-assessment' && <AthleteSelfAssessment roster={roster} staff={staff} currentUser={currentUser} />}
                         {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} gamePlanLayouts={gamePlanLayouts} />}
