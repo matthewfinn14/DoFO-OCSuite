@@ -1271,6 +1271,36 @@
                 case "RotateCw": return <svg {...commonProps}><path d="M23 4v6h-6" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>;
                 case "CheckCircle": return <svg {...commonProps}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>;
 
+                // -- Newly Added Icons --
+                case "Activity": return <svg {...commonProps}><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>;
+                case "Calendar": return <svg {...commonProps}><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
+                case "CheckSquare": return <svg {...commonProps}><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>;
+                case "Clipboard": return <svg {...commonProps}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /></svg>;
+                case "ClipboardCheck": return <svg {...commonProps}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /><path d="m9 14 2 2 4-4" /></svg>;
+                case "Compass": return <svg {...commonProps}><circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></svg>;
+                case "Download": return <svg {...commonProps}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>;
+                case "Dumbbell": return <svg {...commonProps}><path d="m6.5 6.5 11 11" /><path d="m21 21-1-1a4.5 4.5 0 0 0-6.364 0l-1.072 1.071a4.5 4.5 0 0 0-6.364 0l-1 .99" /><path d="m3 3 1 1a4.5 4.5 0 0 0 6.364 0l1.071 1.071a4.5 4.5 0 0 0 6.364 0l1.001-.993" /><path d="m11.5 6.5-6.002 5.996" /><path d="m25.5 12.5-6.002 5.996" transform="translate(-8)" /></svg>;
+                case "Edit": return <svg {...commonProps}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
+                case "Image": return <svg {...commonProps}><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>;
+                case "Info": return <svg {...commonProps}><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="16" y2="12" /><line x1="12" x2="12.01" y1="8" y2="8" /></svg>;
+                case "Link": return <svg {...commonProps}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>;
+                case "List": return <svg {...commonProps}><line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" /><line x1="3" x2="3.01" y1="6" y2="6" /><line x1="3" x2="3.01" y1="12" y2="12" /><line x1="3" x2="3.01" y1="18" y2="18" /></svg>;
+                case "LogOut": return <svg {...commonProps}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>;
+                case "Printer": return <svg {...commonProps}><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>;
+                case "Scale": return <svg {...commonProps}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg>;
+                case "Shield": return <svg {...commonProps}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
+                case "Star": return <svg {...commonProps}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>;
+                case "Swords": return <svg {...commonProps}><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" /><line x1="13" x2="19" y1="19" y2="13" /><line x1="16" x2="20" y1="16" y2="20" /><line x1="19" x2="21" y1="21" y2="19" /><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" /><line x1="5" x2="9" y1="14" y2="18" /><line x1="7" x2="4" y1="17" y2="20" /><line x1="3" x2="5" y1="19" y2="21" /></svg>;
+                case "Target": return <svg {...commonProps}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>;
+                case "Trophy": return <svg {...commonProps}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M9 3v8c0 .248.016.492.046.732.186 1.488 1.134 2.766 2.454 3.518.35.2.7.4 1 1" /><path d="M15 3v8c0 .248-.016.492-.046.732-.186 1.488-1.134 2.766-2.454 3.518-.35.2-.7.4-1 1" /><path d="M12 16v6" /></svg>;
+                case "Users": return <svg {...commonProps}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+
+                // -- Additional Missing Icons --
+                case "Award": return <svg {...commonProps}><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></svg>;
+                case "Clock": return <svg {...commonProps}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>;
+                case "HardHat": return <svg {...commonProps}><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z" /><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5" /><path d="M4 15v-3a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v3" /><path d="M14 10a2 2 0 0 0-2 2v2a2 2 0 0 0 4 0v-2a2 2 0 0 0-2-2z" /></svg>;
+                case "Key": return <svg {...commonProps}><circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6" /><path d="m15.5 7.5 3 3L22 7l-3-3" /></svg>;
+
                 default:
                     // Fallback to text if it's an emoji, otherwise question mark
                     if (/^[\u{1F000}-\u{1F9FF}]/u.test(name)) {
@@ -4901,10 +4931,11 @@
                                         opacity: play.wristbandSlot ? 0.5 : 1
                                     }}
                                 >
-                                    <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>{play.name}</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                                        {play.name} {play.wristbandSlot ? `(${play.wristbandSlot})` : ''}
+                                    </div>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                                         {play.formation}
-                                        {play.wristbandSlot && <span style={{ marginLeft: '0.5rem', color: 'var(--accent)' }}>#{play.wristbandSlot}</span>}
                                     </div>
                                 </div>
                             ))}
@@ -5100,47 +5131,49 @@
                     </div>
 
                     {/* Confirmation Modal */}
-                    {confirmModal && (
-                        <div style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 9999
-                        }}>
+                    {
+                        confirmModal && (
                             <div style={{
-                                backgroundColor: 'var(--bg-panel)',
-                                padding: '2rem',
-                                borderRadius: 'var(--radius)',
-                                border: '1px solid var(--border)',
-                                maxWidth: '400px',
-                                width: '90%'
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 9999
                             }}>
-                                <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Confirm Action</h3>
-                                <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>{confirmModal.message}</p>
-                                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                    <button
-                                        className="btn btn-secondary"
-                                        onClick={cancelClear}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="btn btn-danger"
-                                        onClick={confirmClear}
-                                    >
-                                        Clear
-                                    </button>
+                                <div style={{
+                                    backgroundColor: 'var(--bg-panel)',
+                                    padding: '2rem',
+                                    borderRadius: 'var(--radius)',
+                                    border: '1px solid var(--border)',
+                                    maxWidth: '400px',
+                                    width: '90%'
+                                }}>
+                                    <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Confirm Action</h3>
+                                    <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>{confirmModal.message}</p>
+                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={cancelClear}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="btn btn-danger"
+                                            onClick={confirmClear}
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )
+                    }
+                </div >
             );
         };
 
@@ -5188,7 +5221,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -5556,6 +5589,7 @@
                                                 <th style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc', width: '30px' }}>H</th>
                                                 {seg.type === 'Take-Off' && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>YARD</th>}
                                                 {seg.type !== 'Take-Off' && seg.type !== 'Ghost Script' && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>SIT.</th>}
+                                                <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', width: '30px' }}>T</th>
                                                 <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>PLAY / CALL</th>
                                                 {isOffenseSegment(seg.type) && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>DEFENSE</th>}
                                                 <th style={{ textAlign: 'left', padding: '4px' }}>NOTES</th>
@@ -5569,7 +5603,18 @@
                                                     <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.hash}</td>
                                                     {seg.type === 'Take-Off' && <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.yardLine}</td>}
                                                     {seg.type !== 'Take-Off' && seg.type !== 'Ghost Script' && <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', whiteSpace: 'nowrap' }}>{slot.situation}</td>}
-                                                    <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>{slot.playName}</td>
+                                                    <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                                        {slot.tempo === 'No Huddle' && <span style={{ color: '#d97706' }}>NH</span>}
+                                                        {slot.tempo === 'Tempo' && <span style={{ color: '#dc2626' }}>T</span>}
+                                                        {slot.tempo === 'Sugar' && <span style={{ color: '#7c3aed' }}>S</span>}
+                                                        {slot.tempo === 'Huddle' && <span style={{ color: '#64748b' }}>H</span>}
+                                                    </td>
+                                                    <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>
+                                                        {(() => {
+                                                            const play = plays.find(p => p.id === slot.playId) || plays.find(p => p.name === slot.playName);
+                                                            return play ? `${play.name}${play.wristbandSlot ? ` (${play.wristbandSlot})` : ''}` : slot.playName;
+                                                        })()}
+                                                    </td>
                                                     {isOffenseSegment(seg.type) && <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.defense}</td>}
                                                     <td style={{ textAlign: 'left', padding: '4px' }}>{slot.notes}</td>
                                                 </tr>
@@ -5939,6 +5984,31 @@
                                             >
                                                 <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
                                                     {index + 1}
+                                                    {/* Insert Segment Button */}
+                                                    <button
+                                                        className="btn btn-secondary no-print"
+                                                        style={{ marginLeft: '4px', padding: '0 4px', fontSize: '0.7rem', height: '20px', lineHeight: '20px' }}
+                                                        title="Insert new segment below"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newSegment = {
+                                                                id: Date.now().toString(),
+                                                                type: 'Competition',
+                                                                duration: 5,
+                                                                startTime: '',
+                                                                hasScript: false,
+                                                                script: [],
+                                                                notes: user?.role === 'HC' ? { 'ALL_COACHES': '' } : {}
+                                                            };
+
+                                                            const newSegments = [...plan.segments];
+                                                            newSegments.splice(index + 1, 0, newSegment);
+
+                                                            updateCurrentPlan({ ...plan, segments: newSegments });
+                                                        }}
+                                                    >
+                                                        +
+                                                    </button>
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>{seg.startTime}</td>
                                                 <td style={{ padding: '0.5rem' }}>
@@ -6413,6 +6483,7 @@
                                                     ) : (
                                                         <th style={{ padding: '0.5rem', width: '150px' }}>Situation</th>
                                                     )}
+                                                    <th style={{ padding: '0.5rem', width: '90px' }}>Tempo</th>
                                                     <th style={{ padding: '0.5rem' }}>Play Call</th>
                                                     {isOffenseSegment(activeSegment.type) && <th style={{ padding: '0.5rem' }}>Defense</th>}
                                                     <th style={{ padding: '0.5rem', width: '60px' }}>Insert</th>
@@ -6525,6 +6596,23 @@
                                                                 })()}
                                                             </td>
                                                         )}
+                                                        <td style={{ padding: '0.5rem' }}>
+                                                            <select
+                                                                className="form-input"
+                                                                style={{ padding: '0.25rem' }}
+                                                                value={item.tempo || ''}
+                                                                onChange={e => {
+                                                                    const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, tempo: e.target.value } : s);
+                                                                    updateSegment(selectedSegmentId, 'script', newScript);
+                                                                }}
+                                                            >
+                                                                <option value="">-</option>
+                                                                <option value="Huddle">Huddle</option>
+                                                                <option value="No Huddle">No Huddle</option>
+                                                                <option value="Tempo">Tempo</option>
+                                                                <option value="Sugar">Sugar</option>
+                                                            </select>
+                                                        </td>
                                                         <td style={{ padding: '0.5rem' }}>
                                                             <input
                                                                 className="form-input"
@@ -6874,7 +6962,7 @@
         };
 
 
-        const PregameTimeline = ({ plan = {}, onUpdatePlan, teamLogo, staff }) => {
+        const PregameTimeline = ({ plan = {}, onUpdatePlan, teamLogo, staff, user }) => {
             const [kickoffTime, setKickoffTime] = useState(plan?.kickoffTime || '19:00');
             const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
             const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
@@ -7090,6 +7178,40 @@
                                             <td style={{ padding: '0.5rem', textAlign: 'right' }}>
                                                 <button className="btn" style={{ color: '#ef4444' }} onClick={() => deleteSegment(segment.id)}>
                                                     <Icon name="PlusCircle" style={{ transform: 'rotate(45deg)' }} />
+                                                </button>
+
+                                                <button
+                                                    className="btn btn-secondary no-print"
+                                                    style={{ marginLeft: '4px', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                                                    title="Insert new item below"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+
+                                                        let nextTime = '';
+                                                        if (segment.startTime) {
+                                                            const [hours, minutes] = segment.startTime.split(':').map(Number);
+                                                            const date = new Date();
+                                                            date.setHours(hours);
+                                                            date.setMinutes(minutes + (segment.duration || 15));
+                                                            nextTime = date.toTimeString().slice(0, 5);
+                                                        }
+
+                                                        const newSegment = {
+                                                            id: Date.now().toString(),
+                                                            type: 'Pregame',
+                                                            duration: 15,
+                                                            startTime: nextTime,
+                                                            activity: '',
+                                                            location: '',
+                                                            staffId: user?.id,
+                                                            notes: user?.role === 'HC' ? { 'ALL_COACHES': '' } : {}
+                                                        };
+
+                                                        const newSegments = [...(plan.segments || []), newSegment];
+                                                        updateCurrentPlan({ ...plan, segments: newSegments });
+                                                    }}
+                                                >
+                                                    + Below
                                                 </button>
                                             </td>
                                         </tr>
@@ -19009,7 +19131,16 @@
                                                 {['base', 'convert', 'explosive'].map(category => {
                                                     const setId = `${selectedSection}_${down}_${category} `;
                                                     const cellPlays = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
-                                                    const cellPlayObjects = cellPlays.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                                                    const cellPlayObjects = cellPlays.map(item => {
+                                                        if (typeof item === 'string') {
+                                                            const play = plays.find(p => p.id === item);
+                                                            return play ? { ...play, type: 'play' } : null;
+                                                        } else if (typeof item === 'object' && item.id) {
+                                                            const play = plays.find(p => p.id === item.id);
+                                                            return play ? { ...play, ...item, type: 'play' } : null;
+                                                        }
+                                                        return null;
+                                                    }).filter(Boolean);
 
                                                     return (
                                                         <td key={category} style={{
@@ -19047,8 +19178,22 @@
                                                                             }}
                                                                         >
                                                                             <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>
-                                                                                {play.wristbandSlot && <span style={{ color: currentSection.color, marginRight: '0.5rem' }}>{play.wristbandSlot}</span>}
-                                                                                {play.name}
+                                                                                {play.name} {play.wristbandSlot ? <span style={{ fontWeight: 'normal' }}>({play.wristbandSlot})</span> : ''}
+                                                                                {play.tempo && (
+                                                                                    <span style={{
+                                                                                        marginLeft: '6px',
+                                                                                        fontSize: '0.65rem',
+                                                                                        padding: '1px 3px',
+                                                                                        borderRadius: '3px',
+                                                                                        background: play.tempo === 'No Huddle' ? '#d97706' : play.tempo === 'Tempo' ? '#dc2626' : play.tempo === 'Sugar' ? '#7c3aed' : '#64748b',
+                                                                                        color: 'white',
+                                                                                        fontWeight: 'normal',
+                                                                                        display: 'inline-block',
+                                                                                        verticalAlign: 'middle'
+                                                                                    }}>
+                                                                                        {play.tempo === 'No Huddle' ? 'NH' : play.tempo === 'Tempo' ? 'T' : play.tempo === 'Sugar' ? 'S' : 'H'}
+                                                                                    </span>
+                                                                                )}
                                                                             </div>
                                                                             {play.formation && (
                                                                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -21701,6 +21846,219 @@
         // ============================================
         // PLAYER-FACING APP PREVIEW
         // ============================================
+        // MULTI-SPORT TRACKING VIEW
+        // ============================================
+        const MultiSportTrackingView = ({ roster, onUpdateRoster }) => {
+            const [selectedSeason, setSelectedSeason] = useState('winter'); // fall, winter, spring, summer
+            const [filterClass, setFilterClass] = useState('All');
+            const [searchTerm, setSearchTerm] = useState('');
+
+            const YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior'];
+            const SEASONS = ['Fall', 'Winter', 'Spring', 'Summer'];
+
+            // Update player sport participation
+            const handleSportChange = (playerId, schoolYear, season, value) => {
+                const updatedRoster = roster.map(p => {
+                    if (p.id === playerId) {
+                        const currentSports = p.sportsParticipation || {};
+                        const currentYear = currentSports[schoolYear.toLowerCase()] || {};
+                        return {
+                            ...p,
+                            sportsParticipation: {
+                                ...currentSports,
+                                [schoolYear.toLowerCase()]: {
+                                    ...currentYear,
+                                    [season.toLowerCase()]: value
+                                }
+                            }
+                        };
+                    }
+                    return p;
+                });
+                onUpdateRoster(updatedRoster);
+            };
+
+            // Helper to get stats
+            const getMultiSportStats = () => {
+                let multiSportCount = 0;
+                let totalActive = roster.length;
+
+                roster.forEach(p => {
+                    const sports = p.sportsParticipation || {};
+                    let sportCount = 0;
+                    // Check all years and seasons
+                    Object.values(sports).forEach(yearData => {
+                        Object.values(yearData).forEach(sport => {
+                            if (sport && sport.trim().length > 0) sportCount++;
+                        });
+                    });
+                    // Rough heuristic: if they have > 0 non-football entries (assuming football is their fall sport or main sport)
+                    // Actually, simpler: just count players with checking any box for now? 
+                    // Better: Count players with entries in the CURRENT selected season across any year?
+                    // Let's just count players with ANY entry in the generated table view for simplicity of "Active in Season"
+                });
+
+                // Simple accurate stat: How many athletes are playing a sport in the SELECTED season (across any year appropriate to them)?
+                // For 'Winter', count how many have a winter sport entry for their CURRENT year.
+                const activeInSeason = roster.filter(p => {
+                    const y = (p.year || 'Freshman').toLowerCase();
+                    return p.sportsParticipation?.[y]?.[selectedSeason.toLowerCase()];
+                }).length;
+
+                return { activeInSeason, totalActive };
+            };
+
+            const stats = getMultiSportStats();
+
+            // Filtering
+            const filteredRoster = roster.filter(p => {
+                const matchesClass = filterClass === 'All' || p.year === filterClass;
+                const matchesSearch = searchTerm === '' ||
+                    `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+                return matchesClass && matchesSearch;
+            }).sort((a, b) => a.lastName.localeCompare(b.lastName));
+
+            const getHighlightColor = (playerYear, columnYear) => {
+                if (playerYear === columnYear) return 'rgba(34, 197, 94, 0.1)'; // Green tint for current year
+                return 'transparent';
+            };
+
+            return (
+                <div className="p-6 h-full flex flex-col overflow-hidden">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h1 className="text-3xl font-bold flex items-center gap-3">
+                                <Icon name="Activity" size={32} />
+                                Multi-Sport Tracking
+                            </h1>
+                            <p className="text-gray-400 mt-1">Track athlete participation in other sports across their high school career.</p>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <div className="bg-gray-800 rounded-lg p-3 px-6 text-center border border-gray-700">
+                                <div className="text-sm text-gray-400 uppercase tracking-wider">Active in {selectedSeason} (Current Year)</div>
+                                <div className="text-2xl font-bold text-green-400">{stats.activeInSeason} <span className="text-sm text-gray-500">/ {stats.totalActive}</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Controls */}
+                    <div className="card p-4 mb-6 flex gap-4 items-end bg-gray-900 border border-gray-800">
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Search Player</label>
+                            <div className="relative">
+                                <Icon name="Search" size={16} className="absolute left-3 top-3 text-gray-500" />
+                                <input
+                                    type="text"
+                                    className="form-input pl-10 w-full"
+                                    placeholder="Search by name..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="w-48">
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Target Season</label>
+                            <div className="relative">
+                                <select
+                                    className="form-input w-full appearance-none pr-8"
+                                    value={selectedSeason}
+                                    onChange={(e) => setSelectedSeason(e.target.value)}
+                                >
+                                    {SEASONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                                </select>
+                                <div className="absolute right-3 top-3 pointer-events-none text-gray-500">
+                                    <Icon name="ChevronDown" size={16} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="w-48">
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Filter Class</label>
+                            <div className="relative">
+                                <select
+                                    className="form-input w-full appearance-none pr-8"
+                                    value={filterClass}
+                                    onChange={(e) => setFilterClass(e.target.value)}
+                                >
+                                    <option value="All">All Classes</option>
+                                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                                </select>
+                                <div className="absolute right-3 top-3 pointer-events-none text-gray-500">
+                                    <Icon name="ChevronDown" size={16} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="flex-1 overflow-auto bg-gray-900 rounded-lg border border-gray-800">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-800 sticky top-0 z-10">
+                                <tr>
+                                    <th className="p-4 border-b border-gray-700 font-semibold text-gray-300 w-64">Athlete</th>
+                                    <th className="p-4 border-b border-gray-700 font-semibold text-gray-300 w-32 text-center">Class</th>
+                                    {YEARS.map(year => (
+                                        <th key={year} className="p-4 border-b border-gray-700 font-semibold text-gray-300 min-w-[150px]">
+                                            {year} <span className="text-gray-500 font-normal ml-1">({selectedSeason})</span>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredRoster.map((player, idx) => (
+                                    <tr key={player.id} className={`border-b border-gray-800 hover:bg-gray-800/50 transition-colors ${idx % 2 === 0 ? 'bg-gray-900' : 'bg-[#151515]'}`}>
+                                        <td className="p-3 border-r border-gray-800">
+                                            <div className="font-bold flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs text-white font-bold">
+                                                    {player.jersey}
+                                                </div>
+                                                <div>
+                                                    {player.firstName} {player.lastName}
+                                                    <div className="text-xs text-gray-500 font-normal">{player.position}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-center border-r border-gray-800">
+                                            <span className="px-2 py-1 rounded text-xs font-bold bg-gray-800 text-gray-400 border border-gray-700">
+                                                {player.year ? player.year.substring(0, 2).toUpperCase() : 'N/A'}
+                                            </span>
+                                        </td>
+                                        {YEARS.map(year => {
+                                            const isCurrentYear = player.year === year;
+                                            const participation = player.sportsParticipation?.[year.toLowerCase()]?.[selectedSeason.toLowerCase()] || '';
+                                            return (
+                                                <td key={year} className="p-3 border-r border-gray-800 relative" style={{ backgroundColor: getHighlightColor(player.year, year) }}>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full bg-transparent border-none text-white focus:ring-0 placeholder-gray-700 text-sm"
+                                                        placeholder={isCurrentYear ? "Add sport..." : "-"}
+                                                        value={participation}
+                                                        onChange={(e) => handleSportChange(player.id, year, selectedSeason, e.target.value)}
+                                                    />
+                                                    {isCurrentYear && participation === '' && (
+                                                        <div className="absolute top-1/2 right-3 transform -translate-y-1/2 pointer-events-none opacity-0 group-hover:opacity-100">
+                                                            <Icon name="Edit2" size={12} className="text-gray-600" />
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="mt-4 text-xs text-gray-500 text-center">
+                        Autosaving enabled. Changes are synced immediately.
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // MAIN APP COMPONENT
         // ============================================
         // ATHLETE SELF-ASSESSMENT COMPONENT
         // ============================================
@@ -25600,7 +25958,7 @@
             const [playSelectorFilters, setPlaySelectorFilters] = useState({ formation: '', concept: '', tag: '', situation: '' });
 
             // For Wristband Autocomplete
-            const [showWristband, setShowWristband] = useState(false);
+            const [showWristband, setShowWristband] = useState(true);
             const [wristbandFocus, setWristbandFocus] = useState(null);
 
             // For Matrix/Grid Cell Editing
@@ -25654,15 +26012,27 @@
                     set = gamePlan.miniScripts?.find(s => s.id === setId);
                 }
                 if (!set) return [];
-                return set.playIds.map(id => {
-                    if (id === 'GAP') return null; // Filter gaps for display
-                    if (typeof id === 'string' && id.startsWith('NOTE:')) {
-                        return { id: id, name: id.replace('NOTE:', ''), type: 'note' };
+                return set.playIds.map((item, idx) => {
+                    if (item === 'GAP') return null;
+
+                    // Handle String ID (Legacy)
+                    if (typeof item === 'string') {
+                        if (item.startsWith('NOTE:')) {
+                            return { id: item, name: item.replace('NOTE:', ''), type: 'note', _index: idx, _raw: item };
+                        }
+                        const play = plays.find(p => p.id === item);
+                        return play ? { ...play, type: 'play', _index: idx, _raw: item } : null;
                     }
-                    else {
-                        const play = plays.find(p => p.id === id);
-                        return play ? { ...play, type: 'play' } : null;
+
+                    // Handle Object ID (New: { id, tempo, ... })
+                    else if (typeof item === 'object' && item.id) {
+                        if (item.id.startsWith('NOTE:')) {
+                            return { ...item, name: item.id.replace('NOTE:', ''), type: 'note', _index: idx, _raw: item };
+                        }
+                        const play = plays.find(p => p.id === item.id);
+                        return play ? { ...play, ...item, type: 'play', _index: idx, _raw: item } : null;
                     }
+                    return null;
                 }).filter(Boolean);
             };
 
@@ -25679,13 +26049,24 @@
                 }
                 // If more than 20, keep them? User asked for 10 rows. Let's just show 20 for now.
                 // We map rawIds to objects or 'GAP'
-                return rawIds.slice(0, 20).map(id => {
-                    if (id === 'GAP') return { type: 'GAP' };
-                    if (typeof id === 'string' && id.startsWith('NOTE:')) {
-                        return { id: id, name: id.replace('NOTE:', ''), type: 'note' };
+                return rawIds.slice(0, 20).map((item, idx) => {
+                    if (item === 'GAP') return { type: 'GAP', _index: idx, _raw: item };
+
+                    if (typeof item === 'string') {
+                        if (item.startsWith('NOTE:')) {
+                            return { id: item, name: item.replace('NOTE:', ''), type: 'note', _index: idx, _raw: item };
+                        }
+                        const play = plays.find(p => p.id === item);
+                        return play ? { ...play, type: 'play', _index: idx, _raw: item } : { type: 'GAP', _index: idx, _raw: item };
                     }
-                    const play = plays.find(p => p.id === id);
-                    return play ? { ...play, type: 'play' } : { type: 'GAP' }; // Fallback if play missing
+                    else if (typeof item === 'object' && item.id) {
+                        if (item.id.startsWith('NOTE:')) {
+                            return { ...item, name: item.id.replace('NOTE:', ''), type: 'note', _index: idx, _raw: item };
+                        }
+                        const play = plays.find(p => p.id === item.id);
+                        return play ? { ...play, ...item, type: 'play', _index: idx, _raw: item } : { type: 'GAP', _index: idx, _raw: item };
+                    }
+                    return { type: 'GAP', _index: idx, _raw: item };
                 });
             };
 
@@ -25896,12 +26277,61 @@
 
             const renderPlayListSimple = (setId) => {
                 const playsInSet = getPlaysForSet(setId);
+
+                const handleToggleTempo = (playIndex, currentTempo) => {
+                    // Cycle: undefined/'' -> 'Huddle' -> 'No Huddle' -> 'Tempo' -> 'Sugar' -> ''
+                    const tempos = ['', 'Huddle', 'No Huddle', 'Tempo', 'Sugar'];
+                    const nextIdx = (tempos.indexOf(currentTempo || '') + 1) % tempos.length;
+                    const nextTempo = tempos[nextIdx];
+
+                    // Update logic using index
+                    const set = getSet(setId);
+                    if (!set) return;
+
+                    const newPlayIds = [...set.playIds];
+                    const item = newPlayIds[playIndex];
+
+                    if (typeof item === 'string') {
+                        // Convert to object
+                        newPlayIds[playIndex] = { id: item, tempo: nextTempo };
+                    } else if (typeof item === 'object') {
+                        newPlayIds[playIndex] = { ...item, tempo: nextTempo };
+                    }
+
+                    if (setId.startsWith('ms_')) {
+                        const newMiniScripts = gamePlan.miniScripts.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                        onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
+                    } else {
+                        const newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                        onUpdateGamePlan({ ...gamePlan, sets: newSets });
+                    }
+                };
+
+                // Helper for Tempo Badge
+                const renderTempoBadge = (tempo) => {
+                    if (!tempo) return <span style={{ width: '20px', display: 'inline-block', textAlign: 'center', color: '#cbd5e1', cursor: 'pointer', fontSize: '0.65rem' }}>-</span>;
+                    let color = '#64748b';
+                    let code = 'H';
+                    if (tempo === 'No Huddle') { color = '#d97706'; code = 'NH'; }
+                    if (tempo === 'Tempo') { color = '#dc2626'; code = 'T'; }
+                    if (tempo === 'Sugar') { color = '#7c3aed'; code = 'S'; }
+
+                    return (
+                        <span style={{
+                            background: color, color: 'white', fontSize: '0.6rem', padding: '1px 3px', borderRadius: '3px',
+                            cursor: 'pointer', minWidth: '18px', display: 'inline-block', textAlign: 'center', fontWeight: 'bold'
+                        }} title={tempo}>
+                            {code}
+                        </span>
+                    );
+                };
+
                 return (
                     <div style={{ padding: '0.25rem' }}>
                         {playsInSet.map(p => {
                             if (p.type === 'note') {
                                 return (
-                                    <div key={p.id} style={{
+                                    <div key={`${p.id}_${p._index}`} style={{
                                         fontSize: '0.75rem',
                                         marginTop: '6px',
                                         marginBottom: '6px',
@@ -25919,7 +26349,7 @@
                                         group: 'note-row'
                                     }}>
                                         {p.name}
-                                        {/* Delete Note Button (only visible on hover ideally, but simple click to delete works too) */}
+                                        {/* Delete Note Button */}
                                         <div
                                             style={{
                                                 position: 'absolute',
@@ -25931,7 +26361,9 @@
                                                 e.stopPropagation();
                                                 const set = getSet(setId);
                                                 if (set) {
-                                                    const newPlayIds = set.playIds.filter(id => id !== p.id);
+                                                    const newPlayIds = [...set.playIds];
+                                                    newPlayIds.splice(p._index, 1); // Remove by index
+
                                                     if (setId.startsWith('ms_')) {
                                                         const newMiniScripts = gamePlan.miniScripts.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                                                         onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
@@ -25949,25 +26381,38 @@
                             }
 
                             return (
-                                <div key={p.id} style={{ fontSize: '0.75rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                    {/* Wristband Badge */}
-                                    {p.wristbandSlot && (
-                                        <div style={{
-                                            background: '#0ea5e9',
-                                            color: 'white',
-                                            padding: '2px 8px',
-                                            borderRadius: '4px',
-                                            fontSize: '0.7rem',
-                                            fontWeight: 'bold',
-                                            minWidth: '35px',
-                                            textAlign: 'center'
-                                        }}>
-                                            {p.wristbandSlot}
-                                        </div>
-                                    )}
+                                <div key={`${p.id}_${p._index}`} style={{ fontSize: '0.75rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+
+                                    {/* Tempo Toggle */}
+                                    <div onClick={(e) => { e.stopPropagation(); handleToggleTempo(p._index, p.tempo); }}>
+                                        {renderTempoBadge(p.tempo)}
+                                    </div>
+
                                     {/* Play Name */}
                                     <div style={{ flex: 1, fontWeight: '500', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {p.name}
+                                        {p.name} {p.wristbandSlot ? `(${p.wristbandSlot})` : ''}
+                                    </div>
+
+                                    {/* Delete Play Button (re-impl for index based removal) */}
+                                    <div
+                                        style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '12px', padding: '0 4px' }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const set = getSet(setId);
+                                            if (set) {
+                                                const newPlayIds = [...set.playIds];
+                                                newPlayIds.splice(p._index, 1);
+                                                if (setId.startsWith('ms_')) {
+                                                    const newMiniScripts = gamePlan.miniScripts.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                                                    onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
+                                                } else {
+                                                    const newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                                                    onUpdateGamePlan({ ...gamePlan, sets: newSets });
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        ×
                                     </div>
                                 </div>
                             );
@@ -27431,7 +27876,7 @@
                                                                                     if (e.key === 'Enter' && e.target.value.trim()) {
                                                                                         handleQuickAddToSet(setId, e.target.value);
                                                                                         e.target.value = '';
-                                                                                        e.preventDefault(); // Prevent modal opening if it somehow bubbles
+                                                                                        e.preventDefault();
                                                                                     }
                                                                                 }}
                                                                             />
@@ -27698,14 +28143,7 @@
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
                                 <h2>Select Plays</h2>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={showWristband}
-                                            onChange={() => setShowWristband(!showWristband)}
-                                        />
-                                        Show Wristband Slots
-                                    </label>
+
                                     <button className="btn" onClick={() => setShowPlaySelector(false)}>Close</button>
                                 </div>
                             </div>
@@ -30246,6 +30684,32 @@
                 return () => clearTimeout(timer);
             }, [wishlist, authUser]);
 
+            // --- NEW AUTO-SYNC ADDITIONS ---
+
+            // Sync Roster to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'roster', roster);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [roster, authUser]);
+
+            // Sync Weeks (Practice Plans) to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'weeks', weeks);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [weeks, authUser]);
+
+            // Sync Plays (Playbook) to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'plays', plays);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [plays, authUser]);
+
 
             // Formation Database
             const [formations, setFormations] = useState(() => {
@@ -31332,27 +31796,7 @@
                     <div className="sidebar">
                         <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem' }}>
                             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>DoFO</h1>
-                            <button
-                                onClick={() => setShowLogoutConfirm(true)}
-                                style={{
-                                    marginTop: '1rem',
-                                    width: '100%',
-                                    padding: '0.5rem',
-                                    background: 'rgba(239, 68, 68, 0.2)',
-                                    color: '#fca5a5',
-                                    border: '1px solid #ef4444',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '0.85rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '0.5rem',
-                                    fontWeight: 'bold'
-                                }}
-                            >
-                                <Icon name="LogOut" size={14} /> Log Out
-                            </button>
+
                         </div>
                         <nav style={{ flex: 1, overflowY: 'auto' }}>
                             {/* SEASON CATEGORY */}
@@ -31699,6 +32143,9 @@
                                     <button className={`nav-item ${view === 'self-assessment' ? 'active' : ''}`} onClick={() => setView('self-assessment')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Self-Assessment
                                     </button>
+                                    <button className={`nav-item ${view === 'multi-sport' ? 'active' : ''}`} onClick={() => setView('multi-sport')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Activity" size={16} style={{ marginRight: '8px' }} /> Multi-Sport Tracking
+                                    </button>
                                 </CollapsibleCategory>
                             )}
 
@@ -31719,6 +32166,23 @@
                                 <button className={`nav-item ${view === 'help' ? 'active' : ''}`} onClick={() => setView('help')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', marginTop: '0.5rem' }}>
                                     <Icon name="HelpCircle" size={16} style={{ marginRight: '8px' }} /> How to Use
                                 </button>
+                                <button
+                                    className="nav-item"
+                                    onClick={() => setShowLogoutConfirm(true)}
+                                    style={{
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        border: 'none',
+                                        background: 'none',
+                                        marginTop: '0.5rem',
+                                        color: 'var(--danger)',
+                                        opacity: 0.8
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.8'}
+                                >
+                                    <Icon name="LogOut" size={16} style={{ marginRight: '8px' }} /> Log Out
+                                </button>
                             </div>
                         </nav>
                     </div>
@@ -31735,6 +32199,7 @@
 
                         {view === 'scouting' && <ScoutingView data={opponentScoutData} onUpdate={setOpponentScoutData} roster={roster} />}
                         {/* {view === 'football-101' && <Football101 data={football101Data} onUpdateData={setFootball101Data} />} */}
+                        {view === 'multi-sport' && <MultiSportTrackingView roster={roster} onUpdateRoster={setRoster} />}
                         {view === 'dashboard' && <GamedayDashboard plays={plays} />}
                         {view === 'calendar' && <StaffCalendar data={calendarData} onUpdate={setCalendarData} staff={staff} roster={roster} tasks={masterTasks} onUpdateTasks={setMasterTasks} />}
                         {view === 'budget' && (
@@ -32192,10 +32657,10 @@
                         {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} />}
 
-                        {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
-                        {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} />}
+                        {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} />}
+                        {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} />}
                         {view === 'game-week-overview' && <GameWeekOverview week={currentWeek} onUpdateWeek={handleUpdateWeek} teamLogo={teamLogo} />}
-                        {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} />}
+                        {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} user={authUser} />}
                         {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} depthChart={depthChart} />}
                         {view === 'player-profiles' && <PlayerProfileGallery
                             roster={roster}
@@ -32337,7 +32802,7 @@
                         {view === 'grading' && <GameGradingView gameLog={currentWeek.gameLog} roster={roster} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} valhallaData={valhallaData} onUpdateValhalla={setValhallaData} />}
                         {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} />}
                         {view === 'coach-app' && <PracticeCoachApp staff={staff} roster={roster} plans={currentWeek.practicePlans || []} plays={plays} drills={DRILL_DATA} />}
-                        {view === 'self-assessment' && <AthleteSelfAssessment roster={roster} staff={staff} currentUser={currentUser} />}
+                        {view === 'self-assessment' && <AthleteSelfAssessment roster={roster} staff={staff} currentUser={currentUser} onSync={(data) => syncToFirestore(currentUser?.uid, 'athleteAssessments', data)} />}
                         {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} gamePlanLayouts={gamePlanLayouts} />}
                         {view === 'dumb-callsheet' && <DumbCallSheet data={dumbCallSheetData} onUpdateData={setDumbCallSheetData} gamePlanLayouts={gamePlanLayouts} plays={plays} gamePlan={currentWeek.offensiveGamePlan || {}} />}
                         {view === 'simulator' && <PlayCallSimulator plays={plays} roster={roster} gamePlan={currentWeek.offensiveGamePlan || {}} onUpdateGamePlan={setGamePlan} />}

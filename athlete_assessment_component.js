@@ -1,13 +1,23 @@
 // ============================================
 // ATHLETE SELF-ASSESSMENT COMPONENT
 // ============================================
-const AthleteSelfAssessment = ({ roster, staff, currentUser }) => {
+const AthleteSelfAssessment = ({ roster, staff, currentUser, onSync }) => {
     const [selectedPlayerId, setSelectedPlayerId] = useState(roster.length > 0 ? roster[0].id : '');
     const [assessmentPeriod, setAssessmentPeriod] = useState('preseason'); // preseason or postseason
     const [assessments, setAssessments] = useState(() => {
         const saved = localStorage.getItem('athlete_assessments');
         return saved ? JSON.parse(saved) : {};
     });
+
+    // Auto-sync effect
+    useEffect(() => {
+        if (onSync) {
+            const timer = setTimeout(() => {
+                onSync(assessments);
+            }, 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [assessments, onSync]);
 
     const ASSESSMENT_CATEGORIES = [
         {
