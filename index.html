@@ -644,6 +644,7 @@
                     }
                     if (data.settings) {
                         if (data.settings.teamLogo) localStorage.setItem('oc-dashboard-logo', data.settings.teamLogo);
+                        if (data.settings.schoolName) localStorage.setItem('hc_school_name', data.settings.schoolName);
                         // Fix Accent Color Key
                         if (data.settings.accentColor) {
                             localStorage.setItem('oc-dashboard-accent', data.settings.accentColor); // Match App Init
@@ -17719,6 +17720,17 @@
                 updateAccessConfig({ ...accessConfig, allowedEmails: current.filter(e => e !== emailToRemove) });
             };
 
+            const handleTogglePayingAdmin = (email) => {
+                const currentPaying = accessConfig.payingAdmins || [];
+                let newPaying;
+                if (currentPaying.includes(email)) {
+                    newPaying = currentPaying.filter(e => e !== email);
+                } else {
+                    newPaying = [...currentPaying, email];
+                }
+                updateAccessConfig({ ...accessConfig, payingAdmins: newPaying });
+            };
+
             // ... (existing code)
 
             return (
@@ -17844,7 +17856,17 @@
                                             padding: '0.75rem', background: 'var(--surface)', borderRadius: '8px',
                                             borderLeft: '4px solid #3b82f6'
                                         }}>
-                                            <span style={{ fontWeight: 500 }}>{email}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <span style={{ fontWeight: 500 }}>{email}</span>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none' }} title="Toggle Paying Admin Rights (Create School)">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={accessConfig.payingAdmins && accessConfig.payingAdmins.includes(email)}
+                                                        onChange={() => handleTogglePayingAdmin(email)}
+                                                    />
+                                                    👑 Admin
+                                                </label>
+                                            </div>
                                             <button
                                                 onClick={() => handleRemoveEmail(email)}
                                                 style={{
@@ -31370,6 +31392,89 @@
 
         };
 
+        // --- SCHOOL SETUP WIZARD ---
+        const SchoolSetup = ({ onComplete }) => {
+            const [localSchoolName, setLocalSchoolName] = useState('');
+            const [localMascot, setLocalMascot] = useState('🦅');
+            const [step, setStep] = useState(1);
+
+            const handleSubmit = () => {
+                if (!localSchoolName) return;
+                onComplete({ schoolName: localSchoolName, teamLogo: localMascot });
+            };
+
+            return (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'var(--bg-body)', zIndex: 9999,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexDirection: 'column', padding: '2rem'
+                }}>
+                    <div className="card" style={{ maxWidth: '500px', width: '100%', animation: 'slideUp 0.5s ease' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Welcome Coach! 🏈</h1>
+                            <p style={{ color: 'var(--text-secondary)' }}>Let's get your new program set up.</p>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div>
+                                <label className="form-label">What is your School's Name?</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="e.g. West High School"
+                                    value={localSchoolName}
+                                    onChange={(e) => setLocalSchoolName(e.target.value)}
+                                    autoFocus
+                                    style={{ fontSize: '1.1rem', padding: '0.75rem' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="form-label">Choose a Mascot / Logo</label>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                                    {['🦅', '🐯', '🦁', '🐻', '🐺', '🐗', '🐍', '🐝', '⚔️', '⚡', '🌪️', '🌲', '⚓'].map(emoji => (
+                                        <button
+                                            key={emoji}
+                                            onClick={() => setLocalMascot(emoji)}
+                                            style={{
+                                                fontSize: '1.5rem', width: '45px', height: '45px',
+                                                border: localMascot === emoji ? '2px solid var(--accent)' : '1px solid var(--border)',
+                                                borderRadius: '8px', background: localMascot === emoji ? 'var(--accent-transparent)' : 'var(--surface)',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Or type custom emoji/text..."
+                                    value={localMascot}
+                                    onChange={(e) => setLocalMascot(e.target.value)}
+                                    maxLength="5"
+                                />
+                            </div>
+
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSubmit}
+                                disabled={!localSchoolName}
+                                style={{
+                                    marginTop: '1rem', padding: '1rem',
+                                    fontSize: '1.1rem', justifyContent: 'center'
+                                }}
+                            >
+                                Create School & Start Season
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
             const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
@@ -32205,8 +32310,26 @@
             const [lotteryData, setLotteryData] = useLocalStorage('oc-dashboard-equipment-lottery', { bids: {}, winners: {}, available: null });
 
             const [teamLogo, setTeamLogo] = useState(() => {
-                return localStorage.getItem('oc-dashboard-logo') || null;
+                return localStorage.getItem('oc-dashboard-logo') || null; // Default null for new users
             });
+            const [schoolName, setSchoolName] = useState(() => {
+                return localStorage.getItem('hc_school_name') || '';
+            });
+
+            // Access Config for Permissions (Paying Admin Check)
+            const [appAccessConfig, setAppAccessConfig] = useState({});
+            useEffect(() => {
+                const fetchAccess = async () => {
+                    try {
+                        if (!window.db) return;
+                        const doc = await window.db.collection('config').doc('access').get();
+                        if (doc.exists) {
+                            setAppAccessConfig(doc.data());
+                        }
+                    } catch (e) { console.error("Error fetching access config", e); }
+                };
+                fetchAccess();
+            }, []); // Run once on mount
             const [accentColor, setAccentColor] = useState(() => {
                 return localStorage.getItem('oc-dashboard-accent') || '#38bdf8';
             });
@@ -32985,7 +33108,14 @@
 
                     <div className="sidebar">
                         <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem' }}>
-                            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>DoFO</h1>
+                            {schoolName ? (
+                                <div>
+                                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{teamLogo}</div>
+                                    <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', lineHeight: '1.2' }}>{schoolName}</h1>
+                                </div>
+                            ) : (
+                                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>DoFO</h1>
+                            )}
 
                         </div>
                         <nav style={{ flex: 1, overflowY: 'auto' }}>
