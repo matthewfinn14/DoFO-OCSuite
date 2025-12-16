@@ -31714,6 +31714,9 @@
                 setIsInitializing(true);
 
                 try {
+                    const userId = window.auth.currentUser.uid;
+                    const userRef = window.db.collection('users').doc(userId);
+
                     // 1. WIPE LOCAL DATA (Clean Slate)
                     const keysToWipe = [
                         'oc-dashboard-roster',
@@ -31723,27 +31726,52 @@
                         'oc-dashboard-master-tasks',
                         'oc-dashboard-game-plans',
                         'oc-dashboard-scripts',
-                        'oc-dashboard-logo', // Clear old logo
-                        'oc-dashboard-theme', // Clear old theme
-                        'oc-dashboard-accent' // Clear old accent
+                        'oc-dashboard-logo',
+                        'oc-dashboard-theme',
+                        'oc-dashboard-accent',
+                        'hc_school_id' // Ensure no stale binding
                     ];
 
                     keysToWipe.forEach(key => localStorage.removeItem(key));
 
                     // 2. SET DEFAULTS
                     localStorage.setItem('oc-dashboard-accent', primaryColor);
+                    localStorage.setItem('hc_school_id', schoolId); // Bind immediately
 
-                    // 3. UPDATE FIRESTORE
+                    // 3. UPDATE FIRESTORE (School Doc)
                     await window.db.collection('schools').doc(schoolId).set({
                         name: localSchoolName,
                         mascot: localMascot,
                         primaryColor: primaryColor,
                         initialized: true,
                         createdAt: new Date().toISOString(),
-                        createdBy: window.auth.currentUser.email
+                        createdBy: window.auth.currentUser.email,
+                        roster: [], // Explicit empty
+                        staff: [], // Explicit empty
+                        plays: [] // Explicit empty
                     });
 
-                    // 4. COMPLETE
+                    // 4. CRITICAL: UPDATE USER PROFILE & WIPE PERSONAL DATA
+                    // This ensures loadUserDataFromFirestore switches to School Mode
+                    // and doesn't fall back to old personal data.
+                    await userRef.set({
+                        schoolId: schoolId, // LINK USER TO SCHOOL
+                        // Wipe potential leaky fields from personal doc
+                        roster: firebase.firestore.FieldValue.delete(),
+                        plays: firebase.firestore.FieldValue.delete(),
+                        staff: firebase.firestore.FieldValue.delete(),
+                        weeks: firebase.firestore.FieldValue.delete(),
+                        inventory: firebase.firestore.FieldValue.delete(),
+                        attendance: firebase.firestore.FieldValue.delete(),
+                        valhalla: firebase.firestore.FieldValue.delete(),
+                        settings: {
+                            activeYear: '2025',
+                            theme: 'dark', // Reset theme
+                            accentColor: primaryColor
+                        }
+                    }, { merge: true });
+
+                    // 5. COMPLETE
                     alert(`Welcome to ${localSchoolName}! Your workspace is ready.`);
                     onComplete();
 
