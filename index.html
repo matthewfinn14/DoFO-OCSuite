@@ -31905,8 +31905,8 @@
                     if (!authUser) return;
 
                     try {
-                        // 1. Check Access Config
-                        const accessDoc = await window.db.collection('config').doc('access').get();
+                        // 1. Check Access Config (Force Server to ensure latest mapping)
+                        const accessDoc = await window.db.collection('config').doc('access').get({ source: 'server' });
                         if (!accessDoc.exists) return;
 
                         const accessData = accessDoc.data();
@@ -31920,8 +31920,11 @@
                         const schoolId = accessData.userSchools ? accessData.userSchools[email] : null;
 
                         if (schoolId) {
-                            // 4. Check if School is Initialized
-                            const schoolDoc = await window.db.collection('schools').doc(schoolId).get();
+                            // 4. Check if School is Initialized (Force Server)
+                            const schoolDoc = await window.db.collection('schools').doc(schoolId).get({ source: 'server' });
+
+                            // Debugging log
+                            console.log(`Checking init status for school: ${schoolId}`, schoolDoc.exists ? schoolDoc.data() : 'Doc missing');
 
                             if (!schoolDoc.exists || !schoolDoc.data().initialized) {
                                 console.log("School not initialized. Showing Setup Wizard.");
@@ -31930,6 +31933,8 @@
                         }
                     } catch (err) {
                         console.error("Error checking school init:", err);
+                        // Fallback: If server fetch fails (e.g. offline), try cache? 
+                        // For now, failure means we don't show the wizard, preventing a blocking loop if offline.
                     }
                 };
 
