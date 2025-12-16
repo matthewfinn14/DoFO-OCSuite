@@ -31698,6 +31698,148 @@
             );
         };
 
+        const SchoolSetupWizard = ({ schoolId, onComplete }) => {
+            const [localSchoolName, setLocalSchoolName] = useState('');
+            const [localMascot, setLocalMascot] = useState('🦅');
+            const [primaryColor, setPrimaryColor] = useState('#0ea5e9'); // Default Blue
+            const [isInitializing, setIsInitializing] = useState(false);
+
+            const handleInitialize = async () => {
+                if (!localSchoolName) return;
+
+                if (!confirm(`Are you sure you want to initialize "${localSchoolName}"?\n\nWARNING: This will perform a "Clean Slate" reset. All existing local data (Roster, Plays, Staff, etc.) on this device will be cleared to start fresh for the new school.`)) {
+                    return;
+                }
+
+                setIsInitializing(true);
+
+                try {
+                    // 1. WIPE LOCAL DATA (Clean Slate)
+                    const keysToWipe = [
+                        'oc-dashboard-roster',
+                        'oc-dashboard-plays',
+                        'oc-dashboard-staff',
+                        'oc-dashboard-weeks',
+                        'oc-dashboard-master-tasks',
+                        'oc-dashboard-game-plans',
+                        'oc-dashboard-scripts',
+                        'oc-dashboard-logo', // Clear old logo
+                        'oc-dashboard-theme', // Clear old theme
+                        'oc-dashboard-accent' // Clear old accent
+                    ];
+
+                    keysToWipe.forEach(key => localStorage.removeItem(key));
+
+                    // 2. SET DEFAULTS
+                    localStorage.setItem('oc-dashboard-accent', primaryColor);
+
+                    // 3. UPDATE FIRESTORE
+                    await window.db.collection('schools').doc(schoolId).set({
+                        name: localSchoolName,
+                        mascot: localMascot,
+                        primaryColor: primaryColor,
+                        initialized: true,
+                        createdAt: new Date().toISOString(),
+                        createdBy: window.auth.currentUser.email
+                    });
+
+                    // 4. COMPLETE
+                    alert(`Welcome to ${localSchoolName}! Your workspace is ready.`);
+                    onComplete();
+
+                } catch (err) {
+                    console.error("Error initializing school:", err);
+                    alert("Failed to initialize school: " + err.message);
+                    setIsInitializing(false);
+                }
+            };
+
+            return (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: '#0f172a', color: 'white', zIndex: 9999,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <div style={{
+                        background: '#1e293b', padding: '2rem', borderRadius: '12px',
+                        maxWidth: '500px', width: '90%', border: '1px solid #334155',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    }}>
+                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
+                            <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Welcome, Coach!</h2>
+                            <p style={{ color: '#94a3b8' }}>Let's set up your new school workspace.</p>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>School Name</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="e.g. Central High School"
+                                    value={localSchoolName}
+                                    onChange={(e) => setLocalSchoolName(e.target.value)}
+                                    style={{ width: '100%', padding: '0.75rem', fontSize: '1.1rem' }}
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>Primary Color</label>
+                                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                    {[
+                                        '#0ea5e9', // Sky Blue
+                                        '#ef4444', // Red
+                                        '#22c55e', // Green
+                                        '#eab308', // Yellow
+                                        '#f97316', // Orange
+                                        '#a855f7', // Purple
+                                        '#ec4899', // Pink
+                                        '#64748b', // Slate
+                                        '#000000', // Black
+                                        '#1e1b4b'  // Navy
+                                    ].map(color => (
+                                        <button
+                                            key={color}
+                                            onClick={() => setPrimaryColor(color)}
+                                            style={{
+                                                width: '32px', height: '32px', borderRadius: '50%',
+                                                background: color,
+                                                border: primaryColor === color ? '3px solid white' : '1px solid rgba(255,255,255,0.2)',
+                                                cursor: 'pointer',
+                                                transform: primaryColor === color ? 'scale(1.1)' : 'scale(1)',
+                                                transition: 'all 0.2s',
+                                                boxShadow: primaryColor === color ? `0 0 10px ${color}` : 'none'
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleInitialize}
+                                disabled={!localSchoolName || isInitializing}
+                                style={{
+                                    marginTop: '1rem', padding: '1rem',
+                                    fontSize: '1.1rem', justifyContent: 'center',
+                                    background: primaryColor,
+                                    opacity: (!localSchoolName || isInitializing) ? 0.5 : 1
+                                }}
+                            >
+                                {isInitializing ? 'Setting up...' : 'Initialize School & Clean Slate'}
+                            </button>
+
+                            <p style={{ fontSize: '0.8rem', color: '#64748b', textAlign: 'center', marginTop: '0.5rem' }}>
+                                ⚠️ This will clear any existing data on this device to start fresh.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
             const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
@@ -31726,6 +31868,57 @@
             const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
             const [view, setView] = useState('landing'); // Default to My Tasks
             const [editingPlay, setEditingPlay] = useState(null);
+
+            // -- SCHOOL INITIALIZATION CHECK --
+            const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
+
+            useEffect(() => {
+                const checkSchoolInit = async () => {
+                    if (!authUser) return;
+
+                    try {
+                        // 1. Check Access Config
+                        const accessDoc = await window.db.collection('config').doc('access').get();
+                        if (!accessDoc.exists) return;
+
+                        const accessData = accessDoc.data();
+                        const email = authUser.email.toLowerCase();
+
+                        // 2. Is School Admin?
+                        const isPaying = accessData.payingAdmins && accessData.payingAdmins.includes(email);
+                        if (!isPaying) return;
+
+                        // 3. Get School ID
+                        const schoolId = accessData.userSchools ? accessData.userSchools[email] : null;
+
+                        if (schoolId) {
+                            // 4. Check if School is Initialized
+                            const schoolDoc = await window.db.collection('schools').doc(schoolId).get();
+
+                            if (!schoolDoc.exists || !schoolDoc.data().initialized) {
+                                console.log("School not initialized. Showing Setup Wizard.");
+                                setSchoolSetupData({ showWizard: true, schoolId });
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Error checking school init:", err);
+                    }
+                };
+
+                checkSchoolInit();
+            }, [authUser]);
+
+            if (schoolSetupData.showWizard) {
+                return (
+                    <SchoolSetupWizard
+                        schoolId={schoolSetupData.schoolId}
+                        onComplete={() => {
+                            setSchoolSetupData({ showWizard: false, schoolId: null });
+                            window.location.reload(); // Reload to apply changes (e.g. empty roster)
+                        }}
+                    />
+                );
+            }
 
             // Settings State
             const [activeYear, setActiveYear] = useState(() => {
