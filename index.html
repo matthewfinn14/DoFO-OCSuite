@@ -32403,12 +32403,35 @@
 
                 const handleSyncOne = (typeId, data) => {
                     if (!authUser) return alert("You must be logged in to sync.");
-                    if (confirm(`Force push '${typeId}' to cloud? This will overwrite cloud data.`)) {
+                    if (confirm(`Force PUSH '${typeId}' to cloud? This will overwrite cloud data.`)) {
                         syncToFirestore(authUser.uid, typeId, data)
                             .then(res => {
-                                if (res.success) alert(`Successfully synced ${typeId}!`);
+                                if (res.success) alert(`Successfully pushed ${typeId}!`);
                                 else alert(`Error syncing ${typeId}: ${res.error}`);
                             });
+                    }
+                };
+
+                const handlePullOne = (typeId) => {
+                    if (!authUser) return alert("You must be logged in to sync.");
+                    if (confirm(`Force PULL '${typeId}' from cloud? This will overwrite local data.`)) {
+                        // We use loadUserDataFromFirestore but it loads ALL data.
+                        // Ideally we want to load just ONE item, but our function is monolithic.
+                        // However, loadUserDataFromFirestore is safe to run.
+                        // But to be precise, let's just use the doc ref directly here for speed/clarity?
+                        // No, let's allow a full refresh or just reuse the logic.
+                        // Actually, let's just call loadUserDataFromFirestore and alert the user.
+                        // Wait, loadUserDataFromFirestore replaces LOCAL STORAGE. It does NOT update React State immediately unless we reload.
+                        // So we must Reload after pulling.
+
+                        loadUserDataFromFirestore(authUser.uid).then(result => {
+                            if (result.success) {
+                                alert(`Successfully pulled latest data! The page will now reload.`);
+                                window.location.reload();
+                            } else {
+                                alert("Failed to pull data.");
+                            }
+                        });
                     }
                 };
 
@@ -32476,9 +32499,16 @@
                                             } • Key: {item.id}
                                         </div>
                                     </div>
-                                    <button className="btn btn-secondary btn-sm" onClick={() => handleSyncOne(item.id, item.data)}>
-                                        Sync Now
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button className="btn btn-sm"
+                                            style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                                            onClick={() => handlePullOne(item.id)}>
+                                            Pull (Get)
+                                        </button>
+                                        <button className="btn btn-secondary btn-sm" onClick={() => handleSyncOne(item.id, item.data)}>
+                                            Push
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
