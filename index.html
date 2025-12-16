@@ -17738,6 +17738,23 @@
                 }
             };
 
+
+
+            // Expanded Categories State for Access Control/Features
+            const [expandedCategories, setExpandedCategories] = useState({
+                gameWeek: true,
+                programManagement: true,
+                football101: true,
+                playerDevelopment: true
+            });
+
+            const toggleCategory = (key) => {
+                setExpandedCategories(prev => ({
+                    ...prev,
+                    [key]: !prev[key]
+                }));
+            };
+
             // Load Access Config when tab is opened
             useEffect(() => {
                 if (activeTab === 'access') {
