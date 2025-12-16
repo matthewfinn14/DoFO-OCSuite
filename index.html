@@ -33027,7 +33027,7 @@
                                 </select>
 
                                 {/* RBAC View As Selector - NOW STAFF CENTRIC - ADMIN ONLY */}
-                                {currentUser?.isAdmin && (
+                                {(currentUser?.isAdmin || (currentUser && currentUser.email === 'matthewfinn14@gmail.com')) && (
                                     <select
                                         className="form-select"
                                         value={currentUserId}
@@ -33346,7 +33346,7 @@
 
 
                             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                                {currentPermissions.settings.view && currentUser?.isAdmin && (
+                                {(currentPermissions.settings.view || (currentUser && currentUser.email === 'matthewfinn14@gmail.com')) && (
                                     <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Settings
                                     </button>
