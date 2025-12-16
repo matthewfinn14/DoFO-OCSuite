@@ -13,7 +13,8 @@
   --radius: 8px;
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
   --surface: rgba(255, 255, 255, 0.05);
-  /* Added surface var for consistency */
+  /* Default Theme (Navy Night) */
+  --btn-primary-text: #0f172a;
 }
 
 /* Light Theme */
@@ -29,6 +30,7 @@ body.theme-light {
   --accent-hover: #0369a1;
   --border: #cbd5e1;
   --surface: #f8fafc;
+  --btn-primary-text: #ffffff;
 }
 
 /* High Contrast Theme */
@@ -43,6 +45,7 @@ body.theme-contrast {
   --accent-hover: #eab308;
   --border: #ffffff;
   --surface: #111111;
+  --btn-primary-text: #000000;
 }
 
 /* Ensure surface usage in code matches variable if possible, currently hardcoded in places. 
@@ -171,7 +174,7 @@ button {
 
 .btn-primary {
   background-color: var(--accent);
-  color: #0f172a;
+  color: var(--btn-primary-text);
 }
 
 .btn-primary:hover {

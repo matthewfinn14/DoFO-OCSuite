@@ -13835,7 +13835,7 @@
                 high: 8,
                 veryHigh: 12
             });
-            // positionFatigueValues is now passed as prop
+            const [positionFatigueValues, setPositionFatigueValues] = useLocalStorage('position-fatigue-values', {});
             const [showFatigueConfig, setShowFatigueConfig] = useState(false);
 
             const handleSaveFatigueConfig = (newThresholds, newPositionValues) => {
