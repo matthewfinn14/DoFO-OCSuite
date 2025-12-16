@@ -32448,11 +32448,26 @@
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
                             <div>
                                 <h1>Master Cloud Sync</h1>
-                                <p style={{ color: 'var(--text-secondary)' }}>Force push your local data to Firebase. Use this to unify data across devices.</p>
+                                <p style={{ opacity: 0.7 }}>Push local data to cloud or reset local data from cloud.</p>
                             </div>
-                            <button className="btn btn-primary" onClick={handleSyncAll} style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
-                                <Icon name="UploadCloud" size={20} style={{ marginRight: '0.5rem' }} /> Push ALL to Cloud
-                            </button>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button
+                                    className="btn btn-danger"
+                                    onClick={() => {
+                                        if (window.confirm("NUCLEAR OPTION: This will DELETE all data on THIS computer and force a re-download from the Cloud.\n\nKey Safety Rules:\n1. Only do this if the Cloud data is GOOD.\n2. Do not do this if you have unsaved work on this computer.\n\nAre you sure?")) {
+                                            localStorage.clear();
+                                            window.location.reload();
+                                        }
+                                    }}
+                                    style={{ border: '2px solid #ef4444', backgroundColor: '#7f1d1d' }}
+                                >
+                                    ⚠️ Hard Reset
+                                </button>
+                                <button className="btn btn-primary" onClick={handleSyncAll}>
+                                    Push ALL to Cloud
+                                </button>
+                            </div>
+
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
@@ -32476,7 +32491,7 @@
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </div >
                 );
             };
 
