@@ -772,31 +772,51 @@
             }, []);
 
             // Auto-load data from Firestore when user logs in
+            // Auto-load data from Firestore when user logs in
             useEffect(() => {
                 if (currentUser && window.db) {
-                    // Check if we've already loaded data this session
-                    const dataLoaded = sessionStorage.getItem('firestore_data_loaded');
+                    // Always load fresh data on startup/refresh to ensure sync across devices
+                    setLoadingData(true);
+                    loadUserDataFromFirestore(currentUser.uid)
+                        .then(result => {
+                            if (result.success) {
+                                console.log("User data loaded successfully");
+                                // We do NOT reload here to avoid infinite loops since we removed the check.
+                                // loadUserDataFromFirestore updates localStorage.
+                                // To apply changes to the current running state, we would ideally need to hot-reload state,
+                                // but for now, we rely on the user refreshing OR we trigger a reload ONLY if we detect a version change (complex).
+                                // COMPROMISE: We will set a session flag *in memory* (not persistent storage) or just rely on the fact that
+                                // this effect runs on mount. If the user refreshes, it runs again.
+                                // THE ISSUE: If we don't reload, the App component has already initialized from OLD localStorage.
+                                // We need to trigger a reload IF the data was actually updated?
+                                // OR: We assume this runs once per page load.
+                                // PROPOSAL: We check a SHORT TERM session storage key "just_reloaded".
 
-                    if (!dataLoaded) {
-                        setLoadingData(true);
-                        loadUserDataFromFirestore(currentUser.uid)
-                            .then(result => {
-                                if (result.success) {
-                                    console.log("User data loaded successfully");
-                                    // Mark as loaded for this session
-                                    sessionStorage.setItem('firestore_data_loaded', 'true');
-                                    // Trigger a page reload to apply the loaded data
+                                const justReloaded = sessionStorage.getItem('just_reloaded_for_sync');
+                                if (!justReloaded) {
+                                    sessionStorage.setItem('just_reloaded_for_sync', 'true');
                                     window.location.reload();
                                 } else {
-                                    console.error("Failed to load user data:", result.error);
+                                    // We just reloaded, so state should be fresh.
+                                    // Clear the flag so next real refresh works? 
+                                    // No, if we clear it, a manual refresh will trigger another reload. 
+                                    // We want: 1. Load Page -> 2. Fetch Data -> 3. Update LocalStorage -> 4. Reload Page -> 5. Load (Clean).
+                                    // If we use 'just_reloaded', step 5 sees it and skips step 2? NO.
+                                    // Step 5 should skip the RELOAD, not the fetch (fetching is harmless).
+
+                                    // Better: We fetch. If successful, we check if we need to reload.
+                                    sessionStorage.removeItem('just_reloaded_for_sync'); // Clear for next time
                                     setLoadingData(false);
                                 }
-                            })
-                            .catch(error => {
-                                console.error("Error loading data:", error);
+                            } else {
+                                console.error("Failed to load user data:", result.error);
                                 setLoadingData(false);
-                            });
-                    }
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error loading data:", error);
+                            setLoadingData(false);
+                        });
                 }
             }, [currentUser]);
 
@@ -8856,7 +8876,21 @@
             return (
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                        <h2>Roster Management</h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <h2>Roster Management</h2>
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => {
+                                    if (confirm('This will overwrite the cloud database with your current local roster data. Are you sure?')) {
+                                        onUpdateRoster([...roster]);
+                                        alert('Roster sync triggered! Check console for "Saving staff/roster to cloud..."');
+                                    }
+                                }}
+                                title="Force push local data to cloud"
+                            >
+                                <Icon name="RefreshCw" size={14} style={{ marginRight: '0.25rem' }} /> Force Sync
+                            </button>
+                        </div>
                         <div style={{ display: 'flex', gap: '1rem' }}>
 
                             <button className={`btn ${showArchived ? 'btn-danger' : 'btn-secondary'}`} onClick={() => setShowArchived(!showArchived)}>
@@ -12698,12 +12732,55 @@
                                                         </td>
                                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                                             {isEditing === member.id ? (
-                                                                <input
-                                                                    className="form-input"
-                                                                    value={member.role || (member.roles ? member.roles.join(', ') : '')}
-                                                                    onChange={e => updateMember(member.id, 'role', e.target.value)}
-                                                                    placeholder="Role"
-                                                                />
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                    <input
+                                                                        className="form-input"
+                                                                        value={member.role || (member.roles ? member.roles.join(', ') : '')}
+                                                                        onChange={e => updateMember(member.id, 'role', e.target.value)}
+                                                                        placeholder="Role"
+                                                                    />
+                                                                    <select
+                                                                        className="form-select"
+                                                                        value={member.type || 'Coach'}
+                                                                        onChange={e => updateMember(member.id, 'type', e.target.value)}
+                                                                        style={{ fontSize: '0.8rem', padding: '0.2rem' }}
+                                                                    >
+                                                                        <option value="Coach">Coach</option>
+                                                                        <option value="Student Manager">Student Manager</option>
+                                                                        <option value="Stats">Stats</option>
+                                                                        <option value="Trainer">Trainer</option>
+                                                                    </select>
+                                                                    {(!member.type || member.type === 'Coach') && (
+                                                                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                                                                            {['Varsity', 'JV', 'JV2'].map(lvl => {
+                                                                                const currentLevels = Array.isArray(member.level) ? member.level : (member.level ? [member.level] : ['Varsity']);
+                                                                                const isActive = currentLevels.includes(lvl);
+                                                                                return (
+                                                                                    <button
+                                                                                        key={lvl}
+                                                                                        onClick={() => {
+                                                                                            const newLevels = isActive
+                                                                                                ? currentLevels.filter(l => l !== lvl)
+                                                                                                : [...currentLevels, lvl];
+                                                                                            updateMember(member.id, 'level', newLevels);
+                                                                                        }}
+                                                                                        style={{
+                                                                                            padding: '2px 6px',
+                                                                                            fontSize: '0.7rem',
+                                                                                            borderRadius: '4px',
+                                                                                            border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
+                                                                                            background: isActive ? 'var(--accent-bg)' : 'transparent',
+                                                                                            color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                                                                                            cursor: 'pointer'
+                                                                                        }}
+                                                                                    >
+                                                                                        {lvl}
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             ) : (
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                                     <div style={{ fontWeight: 500 }}>{member.role || (member.roles ? member.roles.join(', ') : '')}</div>
@@ -12767,7 +12844,7 @@
                                                                     onChange={e => updateMember(member.id, 'shirtSize', e.target.value)}
                                                                 >
                                                                     <option value="">-</option>
-                                                                    {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(sz => (
+                                                                    {['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(sz => (
                                                                         <option key={sz} value={sz}>{sz}</option>
                                                                     ))}
                                                                 </select>
@@ -28899,7 +28976,7 @@
                 <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)', gap: '1rem' }}>
 
                     {/* Toolbar */}
-                    <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
                         <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
                             Strike 'Em Out
                         </button>
@@ -28908,6 +28985,20 @@
                         </button>
                         <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
                             Player Touches
+                        </button>
+
+                        <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ marginLeft: 'auto' }}
+                            onClick={() => {
+                                if (confirm('Force sync Game Plan to cloud? This overwrites cloud data with local changes.')) {
+                                    onUpdateGamePlan({ ...gamePlan });
+                                    alert('Game Plan sync triggered! Check console for "Saving weeks to cloud..."');
+                                }
+                            }}
+                            title="Force push local data to cloud"
+                        >
+                            <Icon name="RefreshCw" size={14} style={{ marginRight: '0.25rem' }} /> Force Sync
                         </button>
                     </div>
 
@@ -31302,7 +31393,10 @@
             // Sync Staff to Firestore
             useEffect(() => {
                 const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'staff', staff);
+                    if (authUser) {
+                        console.log("Saving staff to cloud...", staff.length, "members");
+                        syncToFirestore(authUser.uid, 'staff', staff);
+                    }
                 }, 2000);
                 return () => clearTimeout(timer);
             }, [staff, authUser]);
@@ -32351,6 +32445,117 @@
             const [syncStatus, setSyncStatus] = useState('synced'); // 'syncing', 'synced', 'offline', 'error'
             const [lastSyncTime, setLastSyncTime] = useState(null);
 
+            const renderDataSyncManager = () => {
+                const getLocal = (key, defaultVal = null) => {
+                    const saved = localStorage.getItem(key);
+                    return saved ? JSON.parse(saved) : defaultVal;
+                };
+
+                const dataTypes = [
+                    { id: 'roster', label: 'Roster', data: getLocal('oc-dashboard-roster', []) },
+                    { id: 'plays', label: 'Playbook', data: getLocal('oc-dashboard-plays', []) },
+                    { id: 'staff', label: 'Staff', data: getLocal('oc-dashboard-staff', []) },
+                    { id: 'weeks', label: 'Game Plans & Scripts', data: getLocal('oc-dashboard-weeks', []) },
+                    { id: 'masterTasks', label: 'Tasks', data: getLocal('oc-dashboard-master-tasks', []) },
+                    { id: 'attendance', label: 'Attendance', data: getLocal('attendance_log', []) },
+                    { id: 'inventory', label: 'Equipment Inventory', data: getLocal('oc-dashboard-equipment-inventory', []) },
+                    { id: 'checkouts', label: 'Equipment Checkouts', data: getLocal('oc-dashboard-equipment-checkouts', []) },
+                    { id: 'formationLayouts', label: 'Formation Maps', data: getLocal('formationLayouts', {}) },
+                    { id: 'ratings', label: 'Player Ratings', data: getLocal('oc-dashboard-ratings', {}) },
+                    { id: 'gameGrades', label: 'Game Grades', data: getLocal('oc-dashboard-game-grades', {}) },
+                    { id: 'summerComp', label: 'Summer Competition', data: getLocal('oc-dashboard-summer-comp', null) },
+                    { id: 'opponentScouting', label: 'Opponent Scouting', data: getLocal('oc-dashboard-scouting', {}) },
+                    { id: 'issuance', label: 'Equipment Issuance', data: getLocal('oc-dashboard-equipment-issuance', {}) },
+                    { id: 'wishlist', label: 'Equipment Wishlist', data: getLocal('oc-dashboard-equipment-wishlist', []) },
+                    { id: 'athleteAssessments', label: 'Athlete Assessments', data: getLocal('athlete_assessments', {}) },
+                    { id: 'formations', label: 'Formations', data: getLocal('oc-dashboard-formations', {}) },
+                    { id: 'zonePhilosophies', label: 'Zone Philosophies', data: getLocal('oc-dashboard-zone-philosophies', {}) },
+                    { id: 'customFocus', label: 'Custom Focus Areas', data: getLocal('oc-dashboard-custom-focus', []) },
+                    { id: 'duties', label: 'Staff Duties', data: getLocal('oc-dashboard-duties', []) },
+                    { id: 'metrics', label: 'Key Performance Metrics', data: getLocal('oc-dashboard-metrics', []) },
+                    { id: 'fatigueThresholds', label: 'Fatigue Settings', data: getLocal('fatigue-thresholds', {}) },
+                    { id: 'positionFatigue', label: 'Position Fatigue', data: getLocal('position-fatigue-values', {}) },
+                    { id: 'budget', label: 'Budget', data: getLocal('program_budget_data', {}) },
+                    { id: 'onboarding', label: 'Onboarding Status', data: getLocal('program_onboarding_data', {}) },
+                    { id: 'positionNames', label: 'Position Names', data: getLocal('oc-dashboard-position-names', {}) },
+                    { id: 'dailyConnections', label: 'Daily Connections', data: getLocal('player_daily_connections', []) },
+                    { id: 'weightLogs', label: 'Weight Logs', data: getLocal('player_weight_logs', {}) },
+                    { id: 'roleTasks', label: 'Role Specific Tasks', data: getLocal('staff_role_tasks', []) },
+                    { id: 'rooskiLib', label: 'Rooski Library', data: getLocal('rooski_ol_library', {}) },
+                    {
+                        id: 'wbSettings', label: 'Wristband Settings', data: {
+                            wb1Opp: localStorage.getItem('hc_wb1_opponent'),
+                            wb1Iter: localStorage.getItem('hc_wb1_iteration'),
+                            wb2Opp: localStorage.getItem('hc_wb2_opponent'),
+                            wb2Iter: localStorage.getItem('hc_wb2_iteration'),
+                            sheetUrl: localStorage.getItem('hc_wristband_sheet_url')
+                        }
+                    }
+                ];
+
+                const handleSyncOne = (typeId, data) => {
+                    if (!authUser) return alert("You must be logged in to sync.");
+                    if (confirm(`Force push '${typeId}' to cloud? This will overwrite cloud data.`)) {
+                        syncToFirestore(authUser.uid, typeId, data)
+                            .then(res => {
+                                if (res.success) alert(`Successfully synced ${typeId}!`);
+                                else alert(`Error syncing ${typeId}: ${res.error}`);
+                            });
+                    }
+                };
+
+                const handleSyncAll = () => {
+                    if (!authUser) return alert("You must be logged in to sync.");
+                    if (confirm("WARNING: This will overwrite ALL cloud data with the data from THIS computer. Are you sure?")) {
+                        let successCount = 0;
+                        let failCount = 0;
+
+                        Promise.all(dataTypes.map(item => {
+                            return syncToFirestore(authUser.uid, item.id, item.data)
+                                .then(res => res.success ? successCount++ : failCount++);
+                        })).then(() => {
+                            alert(`Sync Complete!\nSuccess: ${successCount}\nFailed: ${failCount}`);
+                        });
+                    }
+                };
+
+                return (
+                    <div className="card" style={{ maxWidth: '800px', margin: '2rem auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                            <div>
+                                <h1>Master Cloud Sync</h1>
+                                <p style={{ color: 'var(--text-secondary)' }}>Force push your local data to Firebase. Use this to unify data across devices.</p>
+                            </div>
+                            <button className="btn btn-primary" onClick={handleSyncAll} style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
+                                <Icon name="UploadCloud" size={20} style={{ marginRight: '0.5rem' }} /> Push ALL to Cloud
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
+                            {dataTypes.map((item, idx) => (
+                                <div key={item.id} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '1rem',
+                                    background: idx % 2 === 0 ? 'var(--bg-main)' : 'var(--bg-panel)',
+                                    borderRadius: '4px',
+                                    border: '1px solid var(--border)'
+                                }}>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold' }}>{item.label}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>Key: {item.id}</div>
+                                    </div>
+                                    <button className="btn btn-secondary btn-sm" onClick={() => handleSyncOne(item.id, item.data)}>
+                                        Sync Now
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
             // Update sync status when data changes
             useEffect(() => {
                 if (authUser && window.db) {
@@ -32652,6 +32857,9 @@
                                             <Icon name="ShoppingCart" size={16} style={{ marginRight: '8px' }} /> Wishlist / Needs
                                         </button>
                                     </CollapsibleCategory>
+                                    <button className={`nav-item ${view === 'cloud-sync' ? 'active' : ''}`} onClick={() => setView('cloud-sync')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', color: '#3b82f6' }}>
+                                        <Icon name="UploadCloud" size={16} style={{ marginRight: '8px' }} /> Master Cloud Sync
+                                    </button>
                                 </CollapsibleCategory>
                             )}
 
@@ -33447,6 +33655,7 @@
                             />
                         )}
                         {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} />}
+                        {view === 'cloud-sync' && renderDataSyncManager()}
                         {view === 'help' && <UserGuide />}
 
                         {/* Logout Confirmation Modal */}
