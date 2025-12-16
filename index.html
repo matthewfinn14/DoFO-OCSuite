@@ -30238,49 +30238,7 @@
         };
 
         // DEFAULT 2025 DATA
-        const DEFAULT_ROSTER_2025 = [
-            {
-                id: 'p1', jersey: '1', firstName: 'Trevor', lastName: 'Britten', name: 'Trevor Britten', year: 'SR', position: 'WR/LB', height: "6'2\"", weight: '185', telephone: '', email: '',
-                profile: { favorites: {}, goals: {}, sportsHistory: {} }, metrics: { attendanceStreak: 5, longestStreak: 12, awards: [], warriorDialLogs: [], testHistory: [], weightLog: [] }
-            },
-            { id: 'p2', jersey: '2', firstName: 'Fiston', lastName: 'Carlson', name: 'Fiston Carlson', year: 'JR', position: 'RB/DL', height: "5'11\"", weight: '180', telephone: '', email: '' },
-            { id: 'p3', jersey: '3', firstName: 'Hayden', lastName: 'Janssen', name: 'Hayden Janssen', year: 'SR', position: 'QB/DB', height: "6'3\"", weight: '181', telephone: '', email: '' },
-            { id: 'p4', jersey: '4', firstName: 'Cooper', lastName: 'Triggs', name: 'Cooper Triggs', year: 'JR', position: 'RB/DB', height: "5'10\"", weight: '190', telephone: '', email: '' },
-            { id: 'p5', jersey: '5', firstName: 'Tucker', lastName: 'Hawkins', name: 'Tucker Hawkins', year: 'JR', position: 'QB/LB', height: "6'3\"", weight: '192', telephone: '', email: '' },
-            { id: 'p6', jersey: '6', firstName: 'Logan', lastName: 'Smith', name: 'Logan Smith', year: 'JR', position: 'WR/DB', height: "5'8\"", weight: '155', telephone: '', email: '' },
-            { id: 'p7', jersey: '7', firstName: 'Luke', lastName: 'Thoreson', name: 'Luke Thoreson', year: 'JR', position: 'WR/DB', height: "6'3\"", weight: '183', telephone: '', email: '' },
-            { id: 'p9', jersey: '9', firstName: 'Noah', lastName: 'Healy', name: 'Noah Healy', year: 'SO', position: 'WR/DB', height: "5'5\"", weight: '127', telephone: '', email: '' },
-            { id: 'p11', jersey: '11', firstName: 'Blake', lastName: 'Larson (C)', name: 'Blake Larson (C)', year: 'SR', position: 'WR/DB', height: "5'10\"", weight: '163', telephone: '', email: '', captain: true },
-            { id: 'p12', jersey: '12', firstName: 'Jake', lastName: 'Knoll', name: 'Jake Knoll', year: 'JR', position: 'WR/DB', height: "5'10\"", weight: '138', telephone: '', email: '' },
-            { id: 'p13', jersey: '13', firstName: 'Colin', lastName: 'Willis', name: 'Colin Willis', year: 'SO', position: 'QB/DB', height: "6'3\"", weight: '165', telephone: '', email: '' },
-            { id: 'p16', jersey: '16', firstName: 'Makenna', lastName: 'Springer', name: 'Makenna Springer', year: 'JR', position: 'K', height: "5'4\"", weight: '120', telephone: '', email: '' },
-            { id: 'p18', jersey: '18', firstName: 'Wyatt', lastName: 'Ramus', name: 'Wyatt Ramus', year: 'JR', position: 'WR/LB', height: "6'1\"", weight: '181', telephone: '', email: '' },
-            { id: 'p21', jersey: '21', firstName: 'Brady', lastName: 'Long', name: 'Brady Long', year: 'SO', position: 'RB/DB', height: "5'7\"", weight: '135', telephone: '', email: '' },
-            { id: 'p22', jersey: '22', firstName: 'Cody', lastName: 'Long (C)', name: 'Cody Long (C)', year: 'SR', position: 'WR/DB', height: "5'9\"", weight: '154', telephone: '', email: '', captain: true },
-            { id: 'p23', jersey: '23', firstName: 'Myles', lastName: 'McIlrath', name: 'Myles McIlrath', year: 'FR', position: 'K', height: "5'11\"", weight: '140', telephone: '', email: '' },
-            { id: 'p24', jersey: '24', firstName: 'Cael', lastName: 'Faber', name: 'Cael Faber', year: 'SR', position: 'K', height: "6'2\"", weight: '180', telephone: '', email: '' },
-            { id: 'p25', jersey: '25', firstName: 'Ben', lastName: 'Mazyck', name: 'Ben Mazyck', year: 'JR', position: 'RB/DB', height: "5'9\"", weight: '170', telephone: '', email: '' },
-            { id: 'p27', jersey: '27', firstName: 'Brody', lastName: 'Kilstofte', name: 'Brody Kilstofte', year: 'SO', position: 'WR/DB', height: "5'9\"", weight: '140', telephone: '', email: '' },
-            { id: 'p28', jersey: '28', firstName: 'Carsyn', lastName: 'Hartmann', name: 'Carsyn Hartmann', year: 'SO', position: 'WR/DB', height: "5'8\"", weight: '140', telephone: '', email: '' },
-            { id: 'p30', jersey: '30', firstName: 'Alden', lastName: 'Frey', name: 'Alden Frey', year: 'JR', position: 'WR/DB', height: "5'10\"", weight: '165', telephone: '', email: '' },
-            { id: 'p31', jersey: '31', firstName: 'Kale', lastName: 'Kadolph', name: 'Kale Kadolph', year: 'JR', position: 'OL/DL', height: "6'0\"", weight: '165', telephone: '', email: '' },
-            { id: 'p34', jersey: '34', firstName: 'Tyler', lastName: 'Lambert', name: 'Tyler Lambert', year: 'JR', position: 'RB/LB', height: "6'0\"", weight: '173', telephone: '', email: '' },
-            { id: 'p44', jersey: '44', firstName: 'Cael', lastName: 'Paulson', name: 'Cael Paulson', year: 'SO', position: 'WR/LB', height: "6'0\"", weight: '165', telephone: '', email: '' },
-            { id: 'p50', jersey: '50', firstName: 'Jake', lastName: 'Rogers', name: 'Jake Rogers', year: 'SR', position: 'OL/DL', height: "5'9\"", weight: '227', telephone: '', email: '' },
-            { id: 'p52', jersey: '52', firstName: 'Cael', lastName: 'Vermeer', name: 'Cael Vermeer', year: 'SR', position: 'OL/LB', height: "6'1\"", weight: '205', telephone: '', email: '' },
-            { id: 'p54', jersey: '54', firstName: 'Benjamin', lastName: 'Eshelman', name: 'Benjamin Eshelman', year: 'SO', position: 'OL/LB', height: "5'10\"", weight: '169', telephone: '', email: '' },
-            { id: 'p55', jersey: '55', firstName: 'Carter', lastName: 'Barber', name: 'Carter Barber', year: 'JR', position: 'OL/LB', height: "6'2\"", weight: '210', telephone: '', email: '' },
-            { id: 'p56', jersey: '56', firstName: 'Jackson', lastName: 'Mohr', name: 'Jackson Mohr', year: 'SR', position: 'OL/DL', height: "6'0\"", weight: '270', telephone: '', email: '' },
-            { id: 'p58', jersey: '58', firstName: 'Chance', lastName: 'Georgius', name: 'Chance Georgius', year: 'JR', position: 'OL/DL', height: "5'10\"", weight: '212', telephone: '', email: '' },
-            { id: 'p59', jersey: '59', firstName: 'Blake', lastName: 'Nelsen', name: 'Blake Nelsen', year: 'SR', position: 'OL/DL', height: "6'2\"", weight: '230', telephone: '', email: '' },
-            { id: 'p62', jersey: '62', firstName: 'Blake', lastName: 'Winecoff', name: 'Blake Winecoff', year: 'FR', position: 'OL/DL', height: "5'11\"", weight: '200', telephone: '', email: '' },
-            { id: 'p72', jersey: '72', firstName: 'Kalen', lastName: 'Bauman', name: 'Kalen Bauman', year: 'SO', position: 'OL/DL', height: "6'5\"", weight: '168', telephone: '', email: '' },
-            { id: 'p74', jersey: '74', firstName: 'Roman', lastName: 'Stotts', name: 'Roman Stotts', year: 'JR', position: 'OL/DL', height: "6'0\"", weight: '219', telephone: '', email: '' },
-            { id: 'p75', jersey: '75', firstName: 'Gavin', lastName: 'Jeter (C)', name: 'Gavin Jeter (C)', year: 'JR', position: 'OL/DL', height: "6'2\"", weight: '210', telephone: '', email: '', captain: true },
-            { id: 'p76', jersey: '76', firstName: 'Aiden', lastName: 'Sweeney', name: 'Aiden Sweeney', year: 'SO', position: 'OL/LB', height: "5'11\"", weight: '165', telephone: '', email: '' },
-            { id: 'p8533', jersey: '85/33', firstName: 'Nolan', lastName: 'Jonas', name: 'Nolan Jonas', year: 'FR', position: 'WR/DB', height: "6'1\"", weight: '165', telephone: '', email: '' },
-            { id: 'p28061', jersey: '28/0/61', firstName: 'Samuel', lastName: 'Scarrow', name: 'Samuel Scarrow', year: 'FR', position: 'RB/LB', height: "6'0\"", weight: '160', telephone: '', email: '' }
-        ];
+        const DEFAULT_ROSTER_2025 = [];
 
         const DEFAULT_STAFF_2025 = [
             { id: 's1', name: 'Matt Finn', roles: ['Head Coach', 'Offensive Coordinator', 'Director of Ops', 'Recruiting Coordinator'], phone: '', email: '' },
@@ -30989,21 +30947,25 @@
 
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
-            const useAutoSync = (authUser, key, data, debounceMs = 2000) => {
-                const isFirstRun = React.useRef(true);
-                React.useEffect(() => {
+            const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
+                const isFirstRun = useRef(true);
+                useEffect(() => {
+                    // Always skip the very first run (mount)
                     if (isFirstRun.current) {
                         isFirstRun.current = false;
                         return;
                     }
-                    if (authUser && window.db) {
+
+                    // Only run if:
+                    // 1. User is logged in
+                    // 2. Global "isLoaded" flag is true (prevents overwriting cloud data with initial empty state)
+                    if (authUser && window.db && isEnabled) {
                         const timer = setTimeout(() => {
-                            // console.log(`Auto-syncing ${key}...`); 
                             syncToFirestore(authUser.uid, key, data);
                         }, debounceMs);
                         return () => clearTimeout(timer);
                     }
-                }, [data, authUser, key, debounceMs]);
+                }, [data, authUser, key, debounceMs, isEnabled]);
             };
             const { currentUser: authUser, logout } = useAuth();
             if (!authUser) return <LoginScreen />;
@@ -31317,22 +31279,44 @@
                 return () => clearTimeout(timer);
             }, [inventory, authUser]);
 
+            // --- LOADING STATE & SAFETY LOCK ---
+            // 'dataLoaded' prevents the app from auto-syncing "empty" initial state back to the cloud.
+            // It remains false until loadUserDataFromFirestore is finished or fails.
+            const [dataLoaded, setDataLoaded] = useState(false);
+
+            useEffect(() => {
+                const initUser = async () => {
+                    if (authUser) {
+                        try {
+                            await loadUserDataFromFirestore(authUser.uid);
+                        } catch (e) {
+                            console.error("Critical Load Error", e);
+                        } finally {
+                            // Unlock the sync mechanism now that we have attempted to load content
+                            setDataLoaded(true);
+                        }
+                    }
+                };
+                initUser();
+            }, [authUser]);
+
             // --- AUTO SYNC HOOK IMPLEMENTATION ---
             // Replaces individual useEffects to prevent "Race Condition" where stale local data overwrites cloud on boot.
-            useAutoSync(authUser, 'checkouts', checkouts, 1500);
-            useAutoSync(authUser, 'formationLayouts', formationLayouts);
-            useAutoSync(authUser, 'ratings', ratings);
-            useAutoSync(authUser, 'gameGrades', gameGrades);
-            useAutoSync(authUser, 'summerComp', summerCompData);
-            useAutoSync(authUser, 'opponentScouting', opponentScoutData);
-            useAutoSync(authUser, 'issuance', issuance);
-            useAutoSync(authUser, 'wishlist', wishlist);
-            useAutoSync(authUser, 'roster', roster);
-            useAutoSync(authUser, 'weeks', weeks);
-            useAutoSync(authUser, 'plays', plays);
-            useAutoSync(authUser, 'staff', staff);
-            useAutoSync(authUser, 'metrics', metrics);
-            useAutoSync(authUser, 'weightLogs', weightLogs);
+            // Now gated by 'dataLoaded' so we NEVER sync before we have loaded.
+            useAutoSync(authUser, 'checkouts', checkouts, 1500, dataLoaded);
+            useAutoSync(authUser, 'formationLayouts', formationLayouts, 2000, dataLoaded);
+            useAutoSync(authUser, 'ratings', ratings, 2000, dataLoaded);
+            useAutoSync(authUser, 'gameGrades', gameGrades, 2000, dataLoaded);
+            useAutoSync(authUser, 'summerComp', summerCompData, 2000, dataLoaded);
+            useAutoSync(authUser, 'opponentScouting', opponentScoutData, 2000, dataLoaded);
+            useAutoSync(authUser, 'issuance', issuance, 2000, dataLoaded);
+            useAutoSync(authUser, 'wishlist', wishlist, 2000, dataLoaded);
+            useAutoSync(authUser, 'roster', roster, 2000, dataLoaded);
+            useAutoSync(authUser, 'weeks', weeks, 3000, dataLoaded);
+            useAutoSync(authUser, 'plays', plays, 2000, dataLoaded);
+            useAutoSync(authUser, 'staff', staff, 2000, dataLoaded);
+            useAutoSync(authUser, 'metrics', metrics, 2000, dataLoaded);
+            useAutoSync(authUser, 'weightLogs', weightLogs, 2000, dataLoaded);
 
             // Formation Database
             const [formations, setFormations] = useState(() => {
