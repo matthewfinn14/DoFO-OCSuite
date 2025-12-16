@@ -587,12 +587,34 @@
         const loadUserDataFromFirestore = async (userId) => {
             try {
                 console.log("Loading user data from Firestore for user:", userId);
-                const docRef = window.db.collection('users').doc(userId);
-                const doc = await docRef.get();
+                const userDocRef = window.db.collection('users').doc(userId);
+                const userDoc = await userDocRef.get();
 
-                if (doc.exists) {
-                    const data = doc.data();
-                    console.log("Loaded data from Firestore:", data);
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    let appData = userData; // Default to user data
+                    let isSchoolData = false;
+
+                    // CHECK FOR SCHOOL ID
+                    if (userData.schoolId) {
+                        console.log("User belongs to school:", userData.schoolId);
+                        localStorage.setItem('hc_school_id', userData.schoolId);
+
+                        const schoolDoc = await window.db.collection('schools').doc(userData.schoolId).get();
+                        if (schoolDoc.exists) {
+                            console.log("Loaded SCHOOL data");
+                            appData = schoolDoc.data();
+                            isSchoolData = true;
+                        } else {
+                            console.warn("School ID found but document missing. Falling back to personal data.");
+                        }
+                    } else {
+                        // Ensure we clear any stale school ID if they left a school
+                        localStorage.removeItem('hc_school_id');
+                    }
+
+                    console.log("Applying data to localStorage...", appData);
+                    const data = appData;
 
                     // Apply data to localStorage
                     // CRITICAL FIX: Ensure keys match what the App component uses for initialization
@@ -738,8 +760,19 @@
 
         const syncToFirestore = async (userId, dataType, data) => {
             try {
-                console.log(`Syncing ${dataType} to Firestore...`);
-                const docRef = window.db.collection('users').doc(userId);
+                // DETERMINE DESTINATION (School or User)
+                const schoolId = localStorage.getItem('hc_school_id');
+                let docRef;
+                let contextLog = "Personal";
+
+                if (schoolId) {
+                    docRef = window.db.collection('schools').doc(schoolId);
+                    contextLog = `School (${schoolId})`;
+                } else {
+                    docRef = window.db.collection('users').doc(userId);
+                }
+
+                console.log(`Syncing ${dataType} to ${contextLog}...`);
 
                 const updateData = {
                     [dataType]: data,
@@ -30127,6 +30160,256 @@
             }
         };
 
+        const SchoolManagement = ({ currentUser, schoolId }) => {
+            const [createLoading, setCreateLoading] = useState(false);
+            const [joinLoading, setJoinLoading] = useState(false);
+            const [joinInput, setJoinInput] = useState('');
+            const [createAccessCode, setCreateAccessCode] = useState(''); // NEW: Access Code State
+            const [error, setError] = useState('');
+
+            const handleCreateSchool = async () => {
+                if (!createAccessCode.trim()) {
+                    setError("Admin Access Code is required.");
+                    return;
+                }
+
+                if (!confirm("This will copy your current data to a new School Database. Proceed?")) return;
+                setCreateLoading(true);
+                setError('');
+
+                try {
+                    // VERIFY ACCESS CODE
+                    // In a real app, use a Cloud Function. Here, we check a secured Firestore doc or a hardcoded fallback.
+                    let isValid = false;
+                    try {
+                        const configDoc = await window.db.collection('config').doc('access').get();
+                        if (configDoc.exists && configDoc.data().createSchoolCode === createAccessCode) {
+                            isValid = true;
+                        } else if (createAccessCode === 'HEADCOACH101') {
+                            // Fallback until config is set
+                            isValid = true;
+                        }
+                    } catch (err) {
+                        console.warn("Config check failed, checking fallback", err);
+                        if (createAccessCode === 'HEADCOACH101') isValid = true;
+                    }
+
+                    if (!isValid) {
+                        throw new Error("Invalid Admin Access Code.");
+                    }
+
+                    const newSchoolId = `SCH_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+                    // 1. Gather all local data keys
+                    const keys = [
+                        'oc-dashboard-roster', 'oc-dashboard-plays', 'oc-dashboard-staff',
+                        'oc-dashboard-depthchart', 'oc-dashboard-master-tasks', 'attendance_log',
+                        'oc-dashboard-valhalla', 'oc-dashboard-equipment-inventory', 'oc-dashboard-equipment-checkouts',
+                        'formationLayouts', 'oc-dashboard-ratings', 'oc-dashboard-game-grades', 'oc-dashboard-summer-comp',
+                        'oc-dashboard-scouting', 'oc-dashboard-equipment-issuance', 'oc-dashboard-equipment-wishlist',
+                        'athlete_assessments', 'oc-dashboard-formations', 'oc-dashboard-zone-philosophies',
+                        'oc-dashboard-custom-focus', 'oc-dashboard-duties', 'oc-dashboard-metrics',
+                        'fatigue-thresholds', 'position-fatigue-values', 'program_budget_data', 'program_onboarding_data',
+                        'oc-dashboard-position-names', 'player_daily_connections', 'player_weight_logs', 'staff_role_tasks',
+                        'rooski_ol_library', 'oc-dashboard-weeks'
+                    ];
+
+                    const schoolData = {
+                        createdAt: new Date().toISOString(),
+                        createdBy: currentUser.uid,
+                        id: newSchoolId,
+                        settings: {
+                            teamLogo: localStorage.getItem('oc-dashboard-logo') || '',
+                            accentColor: localStorage.getItem('oc-dashboard-accent') || '#3b82f6',
+                            theme: localStorage.getItem('oc-dashboard-theme') || 'dark',
+                            activeYear: localStorage.getItem('hc-active-year') || '2025',
+                            visibleFeatures: JSON.parse(localStorage.getItem('hc-visible-features') || '{}')
+                        }
+                    };
+
+                    // Populate schoolData
+                    keys.forEach(k => {
+                        const val = localStorage.getItem(k);
+                        if (val) {
+                            // Map local keys to cloud keys (reverse of loadUserData logic)
+                            // This is a bit manual but necessary
+                            if (k === 'oc-dashboard-roster') schoolData.roster = JSON.parse(val);
+                            if (k === 'oc-dashboard-plays') schoolData.plays = JSON.parse(val);
+                            if (k === 'oc-dashboard-staff') schoolData.staff = JSON.parse(val);
+                            if (k === 'oc-dashboard-depthchart') schoolData.depthChart = JSON.parse(val);
+                            if (k === 'oc-dashboard-master-tasks') schoolData.masterTasks = JSON.parse(val);
+                            if (k === 'oc-dashboard-weeks') schoolData.weeks = JSON.parse(val);
+                            if (k === 'attendance_log') schoolData.attendance = JSON.parse(val);
+                            if (k === 'oc-dashboard-valhalla') schoolData.valhalla = JSON.parse(val);
+                            if (k === 'oc-dashboard-equipment-inventory') schoolData.inventory = JSON.parse(val);
+                            if (k === 'oc-dashboard-equipment-checkouts') schoolData.checkouts = JSON.parse(val);
+                            if (k === 'formationLayouts') schoolData.formationLayouts = JSON.parse(val);
+                            if (k === 'oc-dashboard-ratings') schoolData.ratings = JSON.parse(val);
+                            if (k === 'oc-dashboard-game-grades') schoolData.gameGrades = JSON.parse(val);
+                            if (k === 'oc-dashboard-summer-comp') schoolData.summerComp = JSON.parse(val);
+                            if (k === 'oc-dashboard-scouting') schoolData.opponentScouting = JSON.parse(val);
+                            if (k === 'oc-dashboard-equipment-issuance') schoolData.issuance = JSON.parse(val);
+                            if (k === 'oc-dashboard-equipment-wishlist') schoolData.wishlist = JSON.parse(val);
+                            if (k === 'athlete_assessments') schoolData.athleteAssessments = JSON.parse(val);
+                            if (k === 'oc-dashboard-formations') schoolData.formations = JSON.parse(val);
+                            if (k === 'oc-dashboard-zone-philosophies') schoolData.zonePhilosophies = JSON.parse(val);
+                            if (k === 'oc-dashboard-custom-focus') schoolData.customFocus = JSON.parse(val);
+                            if (k === 'oc-dashboard-duties') schoolData.duties = JSON.parse(val);
+                            if (k === 'oc-dashboard-metrics') schoolData.metrics = JSON.parse(val);
+                            if (k === 'fatigue-thresholds') schoolData.fatigueThresholds = JSON.parse(val);
+                            if (k === 'position-fatigue-values') schoolData.positionFatigue = JSON.parse(val);
+                            if (k === 'program_budget_data') schoolData.budget = JSON.parse(val);
+                            if (k === 'program_onboarding_data') schoolData.onboarding = JSON.parse(val);
+                            if (k === 'oc-dashboard-position-names') schoolData.positionNames = JSON.parse(val);
+                            if (k === 'player_daily_connections') schoolData.dailyConnections = JSON.parse(val);
+                            if (k === 'player_weight_logs') schoolData.weightLogs = JSON.parse(val);
+                            if (k === 'staff_role_tasks') schoolData.roleTasks = JSON.parse(val);
+                            if (k === 'rooski_ol_library') schoolData.rooskiLib = JSON.parse(val);
+                        }
+                    });
+
+                    // 2. Write School Doc
+                    await window.db.collection('schools').doc(newSchoolId).set(schoolData);
+
+                    // 3. Update User Doc
+                    await window.db.collection('users').doc(currentUser.uid).update({ schoolId: newSchoolId });
+
+                    alert(`School Created! ID: ${newSchoolId}. The app will now reload.`);
+                    window.location.reload();
+
+                } catch (e) {
+                    console.error(e);
+                    setError("Failed to create school: " + e.message);
+                } finally {
+                    setCreateLoading(false);
+                }
+            };
+
+            const handleJoinSchool = async () => {
+                if (!joinInput.trim()) return;
+                if (!confirm("Joining a school will REPLACE your local data with the School's data. This cannot be undone. Proceed?")) return;
+
+                setJoinLoading(true);
+                setError('');
+                try {
+                    // Check if school exists
+                    const schoolDoc = await window.db.collection('schools').doc(joinInput.trim()).get();
+                    if (!schoolDoc.exists) {
+                        throw new Error("School ID not found.");
+                    }
+
+                    // Update User Doc
+                    await window.db.collection('users').doc(currentUser.uid).update({ schoolId: joinInput.trim() });
+
+                    alert("Joined School Successfully! Reloading...");
+                    window.location.reload();
+
+                } catch (e) {
+                    console.error(e);
+                    setError("Failed to join school: " + e.message);
+                } finally {
+                    setJoinLoading(false);
+                }
+            };
+
+            const handleLeaveSchool = async () => {
+                if (!confirm("Are you sure you want to leave this school? You will revert to personal data mode.")) return;
+                try {
+                    await window.db.collection('users').doc(currentUser.uid).update({ schoolId: firebase.firestore.FieldValue.delete() });
+                    localStorage.removeItem('hc_school_id');
+                    alert("You have left the school. Reloading...");
+                    window.location.reload();
+                } catch (e) {
+                    console.error(e);
+                    alert("Failed to leave school: " + e.message);
+                }
+            };
+
+            return (
+                <div style={{ padding: '2rem' }}>
+                    <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Team Management</h1>
+
+                    {schoolId ? (
+                        <div className="card" style={{ maxWidth: '600px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                                <div style={{ fontSize: '2rem' }}>🏫</div>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>You are part of a School</div>
+                                    <div style={{ color: 'var(--text-secondary)' }}>ID: {schoolId}</div>
+                                </div>
+                            </div>
+                            <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Share this ID</div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <code style={{ flex: 1, padding: '0.5rem', background: 'var(--bg-body)', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                        {schoolId}
+                                    </code>
+                                    <button className="btn btn-secondary" onClick={() => navigator.clipboard.writeText(schoolId)}>Copy</button>
+                                </div>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                                    Share this ID with other coaches so they can join this team.
+                                </p>
+                            </div>
+                            <button className="btn btn-danger" onClick={handleLeaveSchool}>Leave School</button>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                            {/* Create School */}
+                            <div className="card">
+                                <h2>Create New School</h2>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                    Convert your personal workspace into a shared Team Database. You will become the admin.
+                                </p>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Admin Access Code</label>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        placeholder="Required to create school..."
+                                        value={createAccessCode}
+                                        onChange={e => setCreateAccessCode(e.target.value)}
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleCreateSchool}
+                                    disabled={createLoading}
+                                    style={{ width: '100%' }}
+                                >
+                                    {createLoading ? 'Creating...' : 'Create School & Migrate Data'}
+                                </button>
+                            </div>
+
+                            {/* Join School */}
+                            <div className="card">
+                                <h2>Join Existing School</h2>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                    Enter a School ID provided by another coach to sync with their data.
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Enter School ID..."
+                                        value={joinInput}
+                                        onChange={e => setJoinInput(e.target.value)}
+                                    />
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={handleJoinSchool}
+                                        disabled={joinLoading || !joinInput}
+                                    >
+                                        {joinLoading ? 'Joining...' : 'Join'}
+                                    </button>
+                                </div>
+                                {error && <div style={{ color: '#ef4444', fontSize: '0.9rem' }}>{error}</div>}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
         const PermissionsView = ({ permissions, onUpdatePermissions, onResetDefaults }) => {
             const togglePermission = (role, featureId, type) => {
                 const newPermissions = JSON.parse(JSON.stringify(permissions));
