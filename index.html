@@ -667,6 +667,9 @@
                     if (data.athleteAssessments) {
                         localStorage.setItem('athlete_assessments', JSON.stringify(data.athleteAssessments));
                     }
+                    if (data.staff) {
+                        localStorage.setItem('oc-dashboard-staff', JSON.stringify(data.staff));
+                    }
 
                     // --- ADDITIONAL MISSING ITEMS ---
                     if (data.formations) {
@@ -797,7 +800,11 @@
                 }
             }, [currentUser]);
 
-            const login = (email, password) => window.auth.signInWithEmailAndPassword(email, password);
+            const login = (email, password, loginMode = 'coach') => {
+                // Store user type for routing
+                localStorage.setItem('user_type', loginMode);
+                return window.auth.signInWithEmailAndPassword(email, password);
+            };
             const register = (email, password) => window.auth.createUserWithEmailAndPassword(email, password);
             const logout = () => {
                 sessionStorage.removeItem('firestore_data_loaded');
@@ -834,13 +841,14 @@
             const [password, setPassword] = useState('');
             const [error, setError] = useState('');
             const [loading, setLoading] = useState(false);
+            const [loginMode, setLoginMode] = useState('coach'); // 'coach' or 'player'
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setError('');
                 setLoading(true);
                 try {
-                    await login(email, password);
+                    await login(email, password, loginMode);
                 } catch (err) {
                     setError('Failed to log in: ' + err.message);
                     setLoading(false);
@@ -853,18 +861,58 @@
                     background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
                 }}>
                     <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', textAlign: 'center', color: '#38bdf8' }}>Coach Login</h1>
+                        {/* Login Mode Toggle */}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: '#0f172a', padding: '0.25rem', borderRadius: '8px' }}>
+                            <button
+                                onClick={() => setLoginMode('coach')}
+                                style={{
+                                    flex: 1,
+                                    padding: '0.75rem',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: loginMode === 'coach' ? '#0ea5e9' : 'transparent',
+                                    color: 'white',
+                                    fontWeight: loginMode === 'coach' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                Coach
+                            </button>
+                            <button
+                                onClick={() => setLoginMode('player')}
+                                style={{
+                                    flex: 1,
+                                    padding: '0.75rem',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: loginMode === 'player' ? '#10b981' : 'transparent',
+                                    color: 'white',
+                                    fontWeight: loginMode === 'player' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                Player
+                            </button>
+                        </div>
+
+                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', textAlign: 'center', color: loginMode === 'coach' ? '#38bdf8' : '#34d399' }}>
+                            {loginMode === 'coach' ? 'Coach Login' : 'Player Login'}
+                        </h1>
                         {error && <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>Email</label>
+                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>
+                                    {loginMode === 'coach' ? 'Email' : 'Player Email'}
+                                </label>
                                 <input
                                     type="email"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #475569', background: '#0f172a', color: 'white' }}
-                                    placeholder="coach@team.com"
+                                    placeholder={loginMode === 'coach' ? 'coach@team.com' : 'player@team.com'}
                                 />
                             </div>
                             <div>
@@ -883,12 +931,19 @@
                                 disabled={loading}
                                 style={{
                                     marginTop: '1rem', padding: '0.75rem', borderRadius: '6px', border: 'none',
-                                    background: loading ? '#475569' : '#0ea5e9', color: 'white', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer'
+                                    background: loading ? '#475569' : (loginMode === 'coach' ? '#0ea5e9' : '#10b981'),
+                                    color: 'white', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
                             >
                                 {loading ? 'Logging in...' : 'Sign In'}
                             </button>
                         </form>
+                        {loginMode === 'player' && (
+                            <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px', fontSize: '0.85rem', color: '#6ee7b7', textAlign: 'center' }}>
+                                <Icon name="Info" size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
+                                Contact your coach if you need login credentials
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -7775,7 +7830,7 @@
                                                                     onChange={e => {
                                                                         const newVal = { ...(profile.sportsHistory || {}) };
                                                                         newVal[`${year}_${row.season}`] = e.target.value;
-                                                                        updateProfile('profile', 'sportsHistory', newVal);
+                                                                        updateProfile('root', 'sportsHistory', newVal);
                                                                     }}
                                                                     list={`sports-${row.season}`}
                                                                 />
@@ -12327,11 +12382,12 @@
                                             <thead>
                                                 <tr style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85rem', borderBottom: '1px solid var(--border)' }}>
                                                     <th style={{ padding: '0.5rem', width: '30px' }}></th>
-                                                    <th style={{ padding: '0.5rem', width: '25%' }}>Name</th>
-                                                    <th style={{ padding: '0.5rem', width: '15%' }}>Role</th>
-                                                    <th style={{ padding: '0.5rem', width: '20%' }}>Contact</th>
+                                                    <th style={{ padding: '0.5rem', width: '22%' }}>Name</th>
+                                                    <th style={{ padding: '0.5rem', width: '13%' }}>Role</th>
+                                                    <th style={{ padding: '0.5rem', width: '18%' }}>Contact</th>
                                                     <th style={{ padding: '0.5rem', width: '5%' }}>Size</th>
-                                                    <th style={{ padding: '0.5rem', width: '25%' }}>Assignments</th>
+                                                    <th style={{ padding: '0.5rem', width: '22%' }}>Assignments</th>
+                                                    <th style={{ padding: '0.5rem', width: '8%', textAlign: 'center' }} title="Admin can access Settings and View As menu">Admin</th>
                                                     <th style={{ padding: '0.5rem', width: '10%' }}></th>
                                                 </tr>
                                             </thead>
@@ -12488,6 +12544,15 @@
                                                                     )}
                                                                 </div>
                                                             )}
+                                                        </td>
+                                                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={member.isAdmin || false}
+                                                                onChange={e => updateMember(member.id, 'isAdmin', e.target.checked)}
+                                                                style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                                                                title="Grant admin access to Settings and View As menu"
+                                                            />
                                                         </td>
                                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
@@ -22577,11 +22642,98 @@
             return (
                 <div style={{
                     display: 'flex',
-                    justifyContent: 'center',
+                    gap: '2rem',
                     padding: '2rem',
-                    background: '#1a1a1a', // Dark background for contrast
-                    minHeight: '100vh'
+                    background: '#1a1a1a',
+                    minHeight: '100vh',
+                    alignItems: 'flex-start'
                 }}>
+                    {/* Left Sidebar - Player Selector */}
+                    <div style={{
+                        width: '300px',
+                        background: 'var(--card-bg)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        position: 'sticky',
+                        top: '2rem'
+                    }}>
+                        <h3 style={{
+                            marginBottom: '1rem',
+                            color: 'var(--text)',
+                            fontSize: '1.2rem',
+                            fontWeight: 'bold'
+                        }}>
+                            View As
+                        </h3>
+
+                        {/* Player Selector */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <div style={{
+                                    width: '60px',
+                                    height: '60px',
+                                    borderRadius: '50%',
+                                    background: 'var(--accent)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '1.5rem',
+                                    fontWeight: 'bold',
+                                    color: 'white',
+                                    flexShrink: 0
+                                }}>
+                                    {selectedPlayer.jersey}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                        fontSize: '0.85rem',
+                                        color: 'var(--text-secondary)',
+                                        marginBottom: '0.25rem',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                    }}>
+                                        Selected Player
+                                    </div>
+                                    <div style={{
+                                        fontSize: '1rem',
+                                        fontWeight: 'bold',
+                                        color: 'var(--text)',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
+                                    }}>
+                                        {selectedPlayer.firstName} {selectedPlayer.lastName}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                        {selectedPlayer.position} • {selectedPlayer.year}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <select
+                                className="form-input"
+                                value={selectedPlayerId}
+                                onChange={e => setSelectedPlayerId(e.target.value)}
+                                style={{
+                                    fontSize: '0.95rem',
+                                    padding: '0.75rem',
+                                    background: 'var(--surface)',
+                                    color: 'var(--text)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '8px'
+                                }}
+                            >
+                                {roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.firstName} {p.lastName} (#{p.jersey})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Phone Mockup */}
                     <div style={{
                         width: '375px',
                         height: '812px',
@@ -22590,7 +22742,8 @@
                         padding: '12px',
                         boxShadow: '0 0 0 10px #333, 0 20px 40px rgba(0,0,0,0.5)',
                         position: 'relative',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        flexShrink: 0
                     }}>
                         {/* iPhone Notch */}
                         <div style={{
@@ -22637,42 +22790,6 @@
                             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
                         }}>
                             <div style={{ padding: '1rem', paddingBottom: '3rem' }}>
-                                {/* Player Selector */}
-                                <div className="card" style={{ marginBottom: '1.5rem', padding: '1.5rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.2))' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                                        <div style={{
-                                            width: '60px',
-                                            height: '60px',
-                                            borderRadius: '50%',
-                                            background: 'var(--accent)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '1.5rem',
-                                            fontWeight: 'bold',
-                                            color: 'white'
-                                        }}>
-                                            {selectedPlayer.jersey}
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <select
-                                                className="form-input"
-                                                value={selectedPlayerId}
-                                                onChange={e => setSelectedPlayerId(e.target.value)}
-                                                style={{ fontSize: '1.1rem', fontWeight: 'bold' }}
-                                            >
-                                                {roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
-                                                    <option key={p.id} value={p.id}>
-                                                        {p.firstName} {p.lastName} (#{p.jersey})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                                                {selectedPlayer.position} • {selectedPlayer.year}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
 
                                 {/* Tab Navigation */}
                                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)', overflowX: 'auto' }}>
@@ -23002,53 +23119,254 @@
 
                                 {/* PROFILE TAB */}
                                 {
-                                    activeTab === 'profile' && (
-                                        <div className="card" style={{ padding: '1.5rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-                                                <div style={{
-                                                    width: '80px', height: '80px', borderRadius: '50%', background: 'var(--accent)',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', color: 'white'
-                                                }}>
-                                                    {selectedPlayer.jersey}
-                                                </div>
-                                                <div>
-                                                    <h2 style={{ margin: 0 }}>{selectedPlayer.firstName} {selectedPlayer.lastName}</h2>
-                                                    <div style={{ color: 'var(--text-secondary)' }}>
-                                                        {selectedPlayer.position} • {selectedPlayer.year}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                                                        Ht: {selectedPlayer.height || '-'} • Wt: {selectedPlayer.weight || '-'}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                    activeTab === 'profile' && (() => {
+                                        // Ensure nested profile structure exists
+                                        const profile = selectedPlayer.profile || { favorites: {}, goals: {} };
+                                        const sizes = selectedPlayer.sizes || {
+                                            helmet: selectedPlayer.helmetSize || '',
+                                            shoulderPad: selectedPlayer.shoulderPadSize || '',
+                                            pant: selectedPlayer.pantSize || '',
+                                            jersey: '',
+                                            shoe: '',
+                                            shirt: '',
+                                            short: ''
+                                        };
+                                        const favorites = profile.favorites || {};
+                                        const goals = profile.goals || {};
 
-                                            <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Equipment Info</h3>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>HELMET</div>
-                                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.helmetSize || '-'}</div>
-                                                </div>
-                                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PADS</div>
-                                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.shoulderPadSize || '-'}</div>
-                                                </div>
-                                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>PANTS</div>
-                                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{selectedPlayer.pantSize || '-'}</div>
-                                                </div>
-                                            </div>
+                                        // Update functions
+                                        const updateSizes = (field, value) => {
+                                            const newSizes = { ...sizes, [field]: value };
+                                            const updatedRoster = roster.map(p =>
+                                                p.id === selectedPlayerId
+                                                    ? { ...p, sizes: newSizes }
+                                                    : p
+                                            );
+                                            setRoster(updatedRoster);
+                                        };
 
-                                            <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,165,0,0.1)', borderRadius: '8px', border: '1px solid rgba(255,165,0,0.3)', display: 'flex', gap: '1rem', alignItems: 'start' }}>
-                                                <Icon name="AlertTriangle" color="orange" size={24} />
-                                                <div>
-                                                    <div style={{ fontWeight: 'bold', color: 'orange', marginBottom: '0.25rem' }}>Needs Update?</div>
-                                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                                        If your equipment sizes are incorrect, please see the Equipment Manager or your Position Coach.
+                                        const updateProfile = (section, field, value) => {
+                                            const newProfile = { ...profile };
+                                            if (section === 'root') {
+                                                newProfile[field] = value;
+                                            } else {
+                                                newProfile[section] = { ...newProfile[section], [field]: value };
+                                            }
+                                            newProfile.lastUpdated = new Date().toISOString();
+
+                                            const updatedRoster = roster.map(p =>
+                                                p.id === selectedPlayerId
+                                                    ? { ...p, profile: newProfile }
+                                                    : p
+                                            );
+                                            setRoster(updatedRoster);
+                                        };
+
+                                        return (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                                {/* Player Header */}
+                                                <div className="card" style={{ padding: '1.5rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                        <div style={{
+                                                            width: '80px', height: '80px', borderRadius: '50%', background: 'var(--accent)',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', color: 'white'
+                                                        }}>
+                                                            {selectedPlayer.jersey}
+                                                        </div>
+                                                        <div>
+                                                            <h2 style={{ margin: 0 }}>{selectedPlayer.firstName} {selectedPlayer.lastName}</h2>
+                                                            <div style={{ color: 'var(--text-secondary)' }}>
+                                                                {selectedPlayer.position} • {selectedPlayer.year}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                                                                Ht: {selectedPlayer.height || '-'} • Wt: {selectedPlayer.weight || '-'}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
+
+                                                {/* Equipment Sizes */}
+                                                <div className="card" style={{ padding: '1.5rem' }}>
+                                                    <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <Icon name="Shield" size={20} /> Equipment Sizes
+                                                    </h3>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                                        <div className="form-group">
+                                                            <label className="form-label" style={{ color: 'var(--text)' }}>Helmet</label>
+                                                            <select className="form-select" value={sizes.helmet} onChange={e => updateSizes('helmet', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                                <option value="">--</option>
+                                                                {['S', 'M', 'L', 'XL', '2XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label" style={{ color: 'var(--text)' }}>Shoulder Pads</label>
+                                                            <select className="form-select" value={sizes.shoulderPad} onChange={e => updateSizes('shoulderPad', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                                <option value="">--</option>
+                                                                {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label" style={{ color: 'var(--text)' }}>Game Pants</label>
+                                                            <select className="form-select" value={sizes.pant} onChange={e => updateSizes('pant', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                                <option value="">--</option>
+                                                                {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label" style={{ color: 'var(--text)' }}>Jersey</label>
+                                                            <select className="form-select" value={sizes.jersey} onChange={e => updateSizes('jersey', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                                <option value="">--</option>
+                                                                {['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                                        <div className="form-group">
+                                                            <label className="form-label" style={{ color: 'var(--text)' }}>T-Shirt</label>
+                                                            <select className="form-select" value={sizes.shirt} onChange={e => updateSizes('shirt', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                                <option value="">--</option>
+                                                                {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label" style={{ color: 'var(--text)' }}>Shorts</label>
+                                                            <select className="form-select" value={sizes.short} onChange={e => updateSizes('short', e.target.value)} style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                                                                <option value="">--</option>
+                                                                {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label" style={{ color: 'var(--text)' }}>Shoe Size</label>
+                                                            <input
+                                                                type="number" step="0.5"
+                                                                className="form-input"
+                                                                value={sizes.shoe}
+                                                                onChange={e => updateSizes('shoe', e.target.value)}
+                                                                placeholder="10.5"
+                                                                style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Player Favorites */}
+                                                <div className="card" style={{ padding: '1.5rem' }}>
+                                                    <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <Icon name="Star" size={20} /> My Favorites
+                                                    </h3>
+                                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                                        <label className="form-label" style={{ color: 'var(--text)' }}>Pump Up Song</label>
+                                                        <input
+                                                            className="form-input"
+                                                            value={favorites.pumpUpSong || ''}
+                                                            onChange={e => updateProfile('favorites', 'pumpUpSong', e.target.value)}
+                                                            placeholder="Enter your favorite pump up song..."
+                                                            style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                        {[
+                                                            { label: 'NFL Team', field: 'nflTeam' },
+                                                            { label: 'NBA Team', field: 'nbaTeam' },
+                                                            { label: 'MLB Team', field: 'mlbTeam' },
+                                                            { label: 'Musicians', field: 'musicians' },
+                                                            { label: 'Favorite Food', field: 'food' },
+                                                            { label: 'Favorite Movie', field: 'movie' },
+                                                            { label: 'Favorite Restaurant', field: 'restaurant' },
+                                                            { label: 'Favorite Class', field: 'favoriteClass' }
+                                                        ].map(item => (
+                                                            <div key={item.field} className="form-group">
+                                                                <label className="form-label" style={{ color: 'var(--text)' }}>{item.label}</label>
+                                                                <input
+                                                                    className="form-input"
+                                                                    value={favorites[item.field] || ''}
+                                                                    onChange={e => updateProfile('favorites', item.field, e.target.value)}
+                                                                    placeholder={`Enter ${item.label}...`}
+                                                                    style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="form-group" style={{ marginTop: '1rem' }}>
+                                                        <label className="form-label" style={{ color: 'var(--text)' }}>Other Hobbies</label>
+                                                        <textarea
+                                                            className="form-input"
+                                                            rows="2"
+                                                            value={favorites.otherHobbies || favorites.hobbies || ''}
+                                                            onChange={e => updateProfile('favorites', 'otherHobbies', e.target.value)}
+                                                            placeholder="What other hobbies or interests do you have?"
+                                                            style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', resize: 'vertical' }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Family */}
+                                                <div className="card" style={{ padding: '1.5rem' }}>
+                                                    <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <Icon name="Users" size={20} /> Family
+                                                    </h3>
+                                                    <div className="form-group">
+                                                        <label className="form-label" style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>Tell us about your family</label>
+                                                        <textarea
+                                                            className="form-input"
+                                                            rows="3"
+                                                            value={profile.family || ''}
+                                                            onChange={e => updateProfile('root', 'family', e.target.value)}
+                                                            placeholder="Parents, siblings, pets..."
+                                                            style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', resize: 'vertical' }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Goals */}
+                                                <div className="card" style={{ padding: '1.5rem' }}>
+                                                    <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <Icon name="Target" size={20} /> My Goals
+                                                    </h3>
+                                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                                        <label className="form-label" style={{ color: 'var(--text)' }}>Season Goals</label>
+                                                        <textarea
+                                                            className="form-input"
+                                                            rows="2"
+                                                            value={goals.season || ''}
+                                                            onChange={e => updateProfile('goals', 'season', e.target.value)}
+                                                            placeholder="What are your goals for this season?"
+                                                            style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', resize: 'vertical' }}
+                                                        />
+                                                    </div>
+                                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                                        <label className="form-label" style={{ color: 'var(--text)' }}>Career Aspirations</label>
+                                                        <textarea
+                                                            className="form-input"
+                                                            rows="2"
+                                                            value={goals.career || ''}
+                                                            onChange={e => updateProfile('goals', 'career', e.target.value)}
+                                                            placeholder="What are your long-term football and career goals?"
+                                                            style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', resize: 'vertical' }}
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label" style={{ color: 'var(--text)' }}>What I Love About Football</label>
+                                                        <textarea
+                                                            className="form-input"
+                                                            rows="2"
+                                                            value={goals.lovesAboutFootball || ''}
+                                                            onChange={e => updateProfile('goals', 'lovesAboutFootball', e.target.value)}
+                                                            placeholder="What do you love most about playing football?"
+                                                            style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', resize: 'vertical' }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Save Indicator */}
+                                                {profile.lastUpdated && (
+                                                    <div style={{ padding: '0.75rem', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '6px', fontSize: '0.85rem', color: '#22c55e', textAlign: 'center' }}>
+                                                        ✓ Profile saved • Last updated: {new Date(profile.lastUpdated).toLocaleString()}
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    )
+                                        );
+                                    })()
                                 }
 
                                 {/* ATTENDANCE TAB */}
@@ -30710,6 +31028,13 @@
                 return () => clearTimeout(timer);
             }, [plays, authUser]);
 
+            // Sync Staff to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'staff', staff);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }, [staff, authUser]);
 
             // Formation Database
             const [formations, setFormations] = useState(() => {
@@ -31836,28 +32161,30 @@
                                     <option value="NEW_WEEK">+ Create New Week</option>
                                 </select>
 
-                                {/* RBAC View As Selector - NOW STAFF CENTRIC */}
-                                <select
-                                    className="form-select"
-                                    value={currentUserId}
-                                    onChange={(e) => {
-                                        setCurrentUserId(e.target.value);
-                                        // Default to landing page on user switch for safety
-                                        setView('landing');
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        fontSize: '0.8rem',
-                                        padding: '0.4rem',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: 'var(--accent)'
-                                    }}
-                                >
-                                    {staff.map(s => (
-                                        <option key={s.id} value={s.id}>View as: {s.name}</option>
-                                    ))}
-                                </select>
+                                {/* RBAC View As Selector - NOW STAFF CENTRIC - ADMIN ONLY */}
+                                {currentUser?.isAdmin && (
+                                    <select
+                                        className="form-select"
+                                        value={currentUserId}
+                                        onChange={(e) => {
+                                            setCurrentUserId(e.target.value);
+                                            // Default to landing page on user switch for safety
+                                            setView('landing');
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            fontSize: '0.8rem',
+                                            padding: '0.4rem',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            color: 'var(--accent)'
+                                        }}
+                                    >
+                                        {staff.map(s => (
+                                            <option key={s.id} value={s.id}>View as: {s.name}</option>
+                                        ))}
+                                    </select>
+                                )}
                             </div>
 
                             {currentPermissions.dashboard.view && (
@@ -32153,7 +32480,7 @@
 
 
                             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                                {currentPermissions.settings.view && (
+                                {currentPermissions.settings.view && currentUser?.isAdmin && (
                                     <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Settings
                                     </button>

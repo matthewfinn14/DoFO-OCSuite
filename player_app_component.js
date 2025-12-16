@@ -162,11 +162,98 @@ const PlayerApp = ({ roster, attendance, setRoster, setAttendance, tasks = [], o
     return (
         <div style={{
             display: 'flex',
-            justifyContent: 'center',
+            gap: '2rem',
             padding: '2rem',
-            background: '#1a1a1a', // Dark background for contrast
-            minHeight: '100vh'
+            background: '#1a1a1a',
+            minHeight: '100vh',
+            alignItems: 'flex-start'
         }}>
+            {/* Left Sidebar - Player Selector */}
+            <div style={{
+                width: '300px',
+                background: 'var(--card-bg)',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                position: 'sticky',
+                top: '2rem'
+            }}>
+                <h3 style={{
+                    marginBottom: '1rem',
+                    color: 'var(--text)',
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold'
+                }}>
+                    View As
+                </h3>
+
+                {/* Player Selector */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '50%',
+                            background: 'var(--accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.5rem',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            flexShrink: 0
+                        }}>
+                            {selectedPlayer.jersey}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                                fontSize: '0.85rem',
+                                color: 'var(--text-secondary)',
+                                marginBottom: '0.25rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                            }}>
+                                Selected Player
+                            </div>
+                            <div style={{
+                                fontSize: '1rem',
+                                fontWeight: 'bold',
+                                color: 'var(--text)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {selectedPlayer.firstName} {selectedPlayer.lastName}
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                {selectedPlayer.position} • {selectedPlayer.year}
+                            </div>
+                        </div>
+                    </div>
+
+                    <select
+                        className="form-input"
+                        value={selectedPlayerId}
+                        onChange={e => setSelectedPlayerId(e.target.value)}
+                        style={{
+                            fontSize: '0.95rem',
+                            padding: '0.75rem',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px'
+                        }}
+                    >
+                        {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
+                            <option key={p.id} value={p.id}>
+                                {p.firstName} {p.lastName} (#{p.jersey})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Phone Mockup */}
             <div style={{
                 width: '375px',
                 height: '812px',
@@ -175,7 +262,8 @@ const PlayerApp = ({ roster, attendance, setRoster, setAttendance, tasks = [], o
                 padding: '12px',
                 boxShadow: '0 0 0 10px #333, 0 20px 40px rgba(0,0,0,0.5)',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                flexShrink: 0
             }}>
                 {/* iPhone Notch */}
                 <div style={{
@@ -222,42 +310,6 @@ const PlayerApp = ({ roster, attendance, setRoster, setAttendance, tasks = [], o
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
                 }}>
                     <div style={{ padding: '1rem', paddingBottom: '3rem' }}>
-                        {/* Player Selector */}
-                        <div className="card" style={{ marginBottom: '1.5rem', padding: '1.5rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.2))' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                                <div style={{
-                                    width: '60px',
-                                    height: '60px',
-                                    borderRadius: '50%',
-                                    background: 'var(--accent)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '1.5rem',
-                                    fontWeight: 'bold',
-                                    color: 'white'
-                                }}>
-                                    {selectedPlayer.jersey}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <select
-                                        className="form-input"
-                                        value={selectedPlayerId}
-                                        onChange={e => setSelectedPlayerId(e.target.value)}
-                                        style={{ fontSize: '1.1rem', fontWeight: 'bold' }}
-                                    >
-                                        {roster.sort((a, b) => a.lastName.localeCompare(b.lastName)).map(p => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.firstName} {p.lastName} (#{p.jersey})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                                        {selectedPlayer.position} • {selectedPlayer.year}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         {/* Tab Navigation */}
                         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)', overflowX: 'auto' }}>
