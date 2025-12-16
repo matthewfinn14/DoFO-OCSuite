@@ -584,6 +584,28 @@
         const { useState, useEffect, useMemo, useRef, useContext, createContext } = React;
 
         // --- FIRESTORE SYNC UTILITIES ---
+        // HELPER: Clear all local app data
+        const clearAllLocalData = () => {
+            const keys = [
+                'oc-dashboard-roster', 'oc-dashboard-plays', 'oc-dashboard-staff',
+                'oc-dashboard-depthchart', 'oc-dashboard-master-tasks', 'attendance_log',
+                'oc-dashboard-valhalla', 'oc-dashboard-equipment-inventory', 'oc-dashboard-equipment-checkouts',
+                'formationLayouts', 'oc-dashboard-ratings', 'oc-dashboard-game-grades', 'oc-dashboard-summer-comp',
+                'oc-dashboard-scouting', 'oc-dashboard-equipment-issuance', 'oc-dashboard-equipment-wishlist',
+                'athlete_assessments', 'oc-dashboard-formations', 'oc-dashboard-zone-philosophies',
+                'oc-dashboard-custom-focus', 'oc-dashboard-duties', 'oc-dashboard-metrics',
+                'fatigue-thresholds', 'position-fatigue-values', 'program_budget_data', 'program_onboarding_data',
+                'oc-dashboard-position-names', 'player_daily_connections', 'player_weight_logs', 'staff_role_tasks',
+                'rooski_ol_library', 'oc-dashboard-weeks',
+                'hc_school_id', 'hc-active-year', 'hc-visible-features',
+                'oc-dashboard-logo', 'oc-dashboard-accent', 'oc-dashboard-theme',
+                'hc_wb1_opponent', 'hc_wb1_iteration', 'hc_wb2_opponent', 'hc_wb2_iteration', 'hc_wristband_sheet_url'
+            ];
+            keys.forEach(k => localStorage.removeItem(k));
+            sessionStorage.clear();
+            console.log("Local data cleared.");
+        };
+
         const loadUserDataFromFirestore = async (userId) => {
             try {
                 console.log("Loading user data from Firestore for user:", userId);
@@ -749,7 +771,9 @@
 
                     return { success: true, data };
                 } else {
-                    console.log("No cloud data found for user");
+                    console.log("No cloud data found for user. Clearing local storage to ensure fresh start.");
+                    // CRITICAL: New User / No Logic User -> Clear everything to prevent seeing previous user's data
+                    clearAllLocalData();
                     return { success: true, data: null };
                 }
             } catch (error) {
@@ -872,8 +896,8 @@
             };
 
             const register = (email, password) => window.auth.createUserWithEmailAndPassword(email, password);
-            const logout = () => {
-                sessionStorage.removeItem('firestore_data_loaded');
+            const logout = async () => {
+                clearAllLocalData();
                 return window.auth.signOut();
             };
 
@@ -30313,15 +30337,30 @@
             };
 
             const handleLeaveSchool = async () => {
-                if (!confirm("Are you sure you want to leave this school? You will revert to personal data mode.")) return;
+                if (!confirm("Are you sure you want to leave this school? You will revert to your personal workspace.")) return;
                 try {
                     await window.db.collection('users').doc(currentUser.uid).update({ schoolId: firebase.firestore.FieldValue.delete() });
-                    localStorage.removeItem('hc_school_id');
-                    alert("You have left the school. Reloading...");
+
+                    // CLEAR LOCAL DATA to avoid ghost data
+                    const keys = [
+                        'oc-dashboard-roster', 'oc-dashboard-plays', 'oc-dashboard-staff',
+                        'oc-dashboard-depthchart', 'oc-dashboard-master-tasks', 'attendance_log',
+                        'oc-dashboard-valhalla', 'oc-dashboard-equipment-inventory', 'oc-dashboard-equipment-checkouts',
+                        'formationLayouts', 'oc-dashboard-ratings', 'oc-dashboard-game-grades', 'oc-dashboard-summer-comp',
+                        'oc-dashboard-scouting', 'oc-dashboard-equipment-issuance', 'oc-dashboard-equipment-wishlist',
+                        'athlete_assessments', 'oc-dashboard-formations', 'oc-dashboard-zone-philosophies',
+                        'oc-dashboard-custom-focus', 'oc-dashboard-duties', 'oc-dashboard-metrics',
+                        'fatigue-thresholds', 'position-fatigue-values', 'program_budget_data', 'program_onboarding_data',
+                        'oc-dashboard-position-names', 'player_daily_connections', 'player_weight_logs', 'staff_role_tasks',
+                        'rooski_ol_library', 'oc-dashboard-weeks',
+                        'hc_school_id'
+                    ];
+                    keys.forEach(k => localStorage.removeItem(k));
+
                     window.location.reload();
                 } catch (e) {
-                    console.error(e);
-                    alert("Failed to leave school: " + e.message);
+                    console.error("Error leaving school:", e);
+                    alert("Error leaving school: " + e.message);
                 }
             };
 
