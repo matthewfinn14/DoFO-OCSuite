@@ -32467,7 +32467,14 @@
                                 }}>
                                     <div>
                                         <div style={{ fontWeight: 'bold' }}>{item.label}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>Key: {item.id}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                                            {Array.isArray(item.data)
+                                                ? `${item.data.length} items`
+                                                : item.data && typeof item.data === 'object'
+                                                    ? `${Object.keys(item.data).length} keys`
+                                                    : 'Data Object'
+                                            } • Key: {item.id}
+                                        </div>
                                     </div>
                                     <button className="btn btn-secondary btn-sm" onClick={() => handleSyncOne(item.id, item.data)}>
                                         Sync Now
