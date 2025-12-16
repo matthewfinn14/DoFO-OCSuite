@@ -42,6 +42,11 @@
         window.storage = firebase.storage();
 
         console.log("Firebase Initialized:", firebase.app().name);
+
+        // Check for file:// protocol
+        if (window.location.protocol === 'file:') {
+            alert("⚠️ CRITICAL ERROR: Google Sign-In does NOT work when opening the file directly (file://). You MUST serve this file using a local web server (e.g., 'npx serve' or VS Code Live Server).");
+        }
     </script>
 
     <style>
@@ -812,6 +817,15 @@
                 const unsubscribe = window.auth.onAuthStateChanged(async (user) => {
                     if (user) {
                         try {
+                            // SUPER ADMIN BYPASS
+                            // Always allow the owner to log in, ignoring access control rules
+                            if (user.email.toLowerCase() === 'matthewfinn14@gmail.com') {
+                                console.log("Super Admin Login detected. Bypassing access control.");
+                                setCurrentUser(user);
+                                setLoading(false);
+                                return;
+                            }
+
                             // CHECK ACCESS CONTROL
                             const accessDoc = await window.db.collection('config').doc('access').get();
                             if (accessDoc.exists) {
@@ -968,6 +982,8 @@
                 try {
                     await loginWithGoogle(loginMode);
                 } catch (err) {
+                    console.error("Login Error:", err);
+                    alert("Login Error: " + err.message); // Direct User Feedback
                     setError('Failed to log in with Google: ' + err.message);
                     setLoading(false);
                 }
@@ -1090,6 +1106,20 @@
                                 Contact your coach if you need login credentials
                             </div>
                         )}
+                        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    localStorage.clear();
+                                    sessionStorage.clear();
+                                    alert("Local data cleared. Please refresh the page.");
+                                    window.location.reload();
+                                }}
+                                style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer' }}
+                            >
+                                Reset Application Data (Fix Stuck State)
+                            </button>
+                        </div>
                     </div>
                 </div>
             );
@@ -17659,7 +17689,7 @@
             );
         };
 
-        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager }) => {
+        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isSiteAdmin = false }) => {
 
 
             const handleImageUpload = (e) => {
@@ -17679,7 +17709,9 @@
             const ADMIN_EMAILS = [
                 'matthewfinn14@gmail.com'
             ];
-            const isAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email.toLowerCase());
+
+            // Use prop if available (from global sync), otherwise fallback to hardcoded
+            const isAdmin = isSiteAdmin || (currentUser && ADMIN_EMAILS.includes(currentUser.email.toLowerCase()));
 
 
             const [activeTab, setActiveTab] = useState('general'); // 'general' | 'cloud' | 'access'
@@ -17814,6 +17846,17 @@
                 updateAccessConfig({ ...accessConfig, payingAdmins: newPaying });
             };
 
+            const handleToggleSiteAdmin = (email) => {
+                const currentSiteAdmins = accessConfig.siteAdmins || [];
+                let newSiteAdmins;
+                if (currentSiteAdmins.includes(email)) {
+                    newSiteAdmins = currentSiteAdmins.filter(e => e !== email);
+                } else {
+                    newSiteAdmins = [...currentSiteAdmins, email];
+                }
+                updateAccessConfig({ ...accessConfig, siteAdmins: newSiteAdmins });
+            };
+
             // ... (existing code)
 
             return (
@@ -17941,14 +17984,29 @@
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                                 <span style={{ fontWeight: 500 }}>{email}</span>
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none' }} title="Toggle Paying Admin Rights (Create School)">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={accessConfig.payingAdmins && accessConfig.payingAdmins.includes(email)}
-                                                        onChange={() => handleTogglePayingAdmin(email)}
-                                                    />
-                                                    👑 Admin
-                                                </label>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    {/* SCHOOL/PAYING ADMIN */}
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none', background: 'rgba(234, 179, 8, 0.1)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(234, 179, 8, 0.3)' }} title="Toggle School Admin (Full Features)">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={accessConfig.payingAdmins && accessConfig.payingAdmins.includes(email)}
+                                                            onChange={() => handleTogglePayingAdmin(email)}
+                                                        />
+                                                        👑 School Admin
+                                                    </label>
+
+                                                    {/* SITE ADMIN (SUPER) */}
+                                                    {(isSiteAdmin) && (
+                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.3)' }} title="Toggle Site Admin (Can manage other admins)">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={accessConfig.siteAdmins && accessConfig.siteAdmins.includes(email)}
+                                                                onChange={() => handleToggleSiteAdmin(email)}
+                                                            />
+                                                            🛡️ Site Admin
+                                                        </label>
+                                                    )}
+                                                </div>
                                             </div>
                                             <button
                                                 onClick={() => handleRemoveEmail(email)}
@@ -31995,6 +32053,46 @@
             const [currentUserId, setCurrentUserId] = useState('s1');
             const [permissions, setPermissions] = useLocalStorage('oc-dashboard-permissions', DEFAULT_PERMISSIONS);
 
+
+
+            // --- SITE ADMIN LOGIC ---
+            // Hardcoded Safety Fallback
+            const SUPER_ADMIN_EMAIL = 'matthewfinn14@gmail.com';
+
+            const [siteAdmins, setSiteAdmins] = useState([]);
+            const [isSiteAdmin, setIsSiteAdmin] = useState(false);
+
+            // Fetch Site Admins from Firestore
+            useEffect(() => {
+                let unsubscribe = () => { };
+                if (window.db && authUser) {
+                    try {
+                        unsubscribe = window.db.collection('config').doc('access')
+                            .onSnapshot((doc) => {
+                                if (doc.exists) {
+                                    const data = doc.data();
+                                    const admins = data.siteAdmins || [];
+                                    setSiteAdmins(admins);
+
+                                    // Determine if current user is Site Admin
+                                    const email = authUser.email.toLowerCase();
+                                    const isSuper = email === SUPER_ADMIN_EMAIL.toLowerCase();
+                                    const isListed = admins.includes(email);
+                                    setIsSiteAdmin(isSuper || isListed);
+                                } else {
+                                    // Fallback if doc doesn't exist yet
+                                    setIsSiteAdmin(authUser.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
+                                }
+                            }, (error) => {
+                                console.error("Error fetching admin config:", error);
+                            });
+                    } catch (err) {
+                        console.error("Setup admin listener failed:", err);
+                    }
+                }
+                return () => unsubscribe();
+            }, [authUser]);
+
             // Ensure permissions structure integrity on load (if new roles added later)
             useEffect(() => {
                 const newPerms = { ...permissions };
@@ -33240,7 +33338,7 @@
                                 </select>
 
                                 {/* RBAC View As Selector - NOW STAFF CENTRIC - ADMIN ONLY */}
-                                {(currentUser?.isAdmin || (currentUser && currentUser.email === 'matthewfinn14@gmail.com')) && (
+                                {isSiteAdmin && (
                                     <select
                                         className="form-select"
                                         value={currentUserId}
@@ -34251,7 +34349,7 @@
                                 onUpdateLottery={setLotteryData}
                             />
                         )}
-                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} renderSyncManager={renderDataSyncManager} />}
+                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} renderSyncManager={renderDataSyncManager} isSiteAdmin={isSiteAdmin} siteAdmins={siteAdmins} />}
 
                         {view === 'help' && <UserGuide />}
 
