@@ -31908,17 +31908,7 @@
                 checkSchoolInit();
             }, [authUser]);
 
-            if (schoolSetupData.showWizard) {
-                return (
-                    <SchoolSetupWizard
-                        schoolId={schoolSetupData.schoolId}
-                        onComplete={() => {
-                            setSchoolSetupData({ showWizard: false, schoolId: null });
-                            window.location.reload(); // Reload to apply changes (e.g. empty roster)
-                        }}
-                    />
-                );
-            }
+
 
             // Settings State
             const [activeYear, setActiveYear] = useState(() => {
@@ -33536,6 +33526,15 @@
 
             return (
                 <div className="app-container">
+                    {schoolSetupData.showWizard && (
+                        <SchoolSetupWizard
+                            schoolId={schoolSetupData.schoolId}
+                            onComplete={() => {
+                                setSchoolSetupData({ showWizard: false, schoolId: null });
+                                window.location.reload(); // Reload to apply changes (e.g. empty roster)
+                            }}
+                        />
+                    )}
                     {/* Sync Status Indicator */}
                     {authUser && (
                         <div style={{
