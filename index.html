@@ -31298,108 +31298,26 @@
                     if (authUser) syncToFirestore(authUser.uid, 'inventory', inventory); // Changed currentUser to authUser
                 }, 1500);
                 return () => clearTimeout(timer);
-            }, [inventory, authUser]); // Changed currentUser to authUser
+            }, [inventory, authUser]);
 
-            // Sync Checkouts to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'checkouts', checkouts); // Changed currentUser to authUser
-                }, 1500);
-                return () => clearTimeout(timer);
-            }, [checkouts, authUser]); // Changed currentUser to authUser
-
-            // Sync Formation Layouts
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'formationLayouts', formationLayouts); // Changed currentUser to authUser
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [formationLayouts, authUser]);
-
-            // Sync Ratings to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'ratings', ratings);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [ratings, authUser]);
-
-            // Sync Game Grades to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'gameGrades', gameGrades);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [gameGrades, authUser]);
-
-            // Sync Summer Comp to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'summerComp', summerCompData);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [summerCompData, authUser]);
-
-            // Sync Opponent Scouting to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'opponentScouting', opponentScoutData);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [opponentScoutData, authUser]);
-
-            // Sync Equipment Issuance to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'issuance', issuance);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [issuance, authUser]);
-
-            // Sync Wishlist to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'wishlist', wishlist);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [wishlist, authUser]);
-
-            // --- NEW AUTO-SYNC ADDITIONS ---
-
-            // Sync Roster to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'roster', roster);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [roster, authUser]);
-
-            // Sync Weeks (Practice Plans) to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'weeks', weeks);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [weeks, authUser]);
-
-            // Sync Plays (Playbook) to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) syncToFirestore(authUser.uid, 'plays', plays);
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [plays, authUser]);
-
-            // Sync Staff to Firestore
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (authUser) {
-                        console.log("Saving staff to cloud...", staff.length, "members");
-                        syncToFirestore(authUser.uid, 'staff', staff);
-                    }
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, [staff, authUser]);
+            // --- AUTO SYNC HOOK IMPLEMENTATION ---
+            // Replaces individual useEffects to prevent "Race Condition" where stale local data overwrites cloud on boot.
+            useAutoSync(authUser, 'checkouts', checkouts, 1500);
+            useAutoSync(authUser, 'formationLayouts', formationLayouts);
+            useAutoSync(authUser, 'ratings', ratings);
+            useAutoSync(authUser, 'gameGrades', gameGrades);
+            useAutoSync(authUser, 'summerComp', summerCompData);
+            useAutoSync(authUser, 'opponentScouting', opponentScoutData);
+            useAutoSync(authUser, 'issuance', issuance);
+            useAutoSync(authUser, 'wishlist', wishlist);
+            useAutoSync(authUser, 'roster', roster);
+            useAutoSync(authUser, 'weeks', weeks);
+            useAutoSync(authUser, 'plays', plays);
+            useAutoSync(authUser, 'staff', staff);
+            useAutoSync(authUser, 'athleteAssessments', athleteAssessments); // Added missing sync
+            useAutoSync(authUser, 'metrics', metrics); // Added missing sync
+            useAutoSync(authUser, 'weightLogs', weightLogs); // Added missing sync
+            useAutoSync(authUser, 'dailyConnections', dailyConnections); // Added missing sync
 
             // Formation Database
             const [formations, setFormations] = useState(() => {
@@ -32163,15 +32081,6 @@
             // Save roster to localStorage whenever it changes
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-roster', JSON.stringify(roster));
-
-                // Auto-sync to Firestore (debounced)
-                if (authUser && window.db) {
-                    const timeoutId = setTimeout(() => {
-                        syncToFirestore(authUser.uid, 'roster', roster);
-                    }, 1000); // 1 second debounce
-
-                    return () => clearTimeout(timeoutId);
-                }
             }, [roster]);
 
             // Save depth chart to localStorage whenever it changes
