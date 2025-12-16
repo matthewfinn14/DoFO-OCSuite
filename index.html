@@ -17687,6 +17687,57 @@
             const [accessLoading, setAccessLoading] = useState(false);
             const [newEmail, setNewEmail] = useState('');
 
+            // Cloud Migration State
+            const [migrationStatus, setMigrationStatus] = useState('idle');
+            const [migrationError, setMigrationError] = useState(null);
+
+            const handleMigrateToCloud = async () => {
+                if (!currentUser) {
+                    alert('You must be logged in to migrate data.');
+                    return;
+                }
+                if (!window.confirm('Are you sure you want to migrate all local data to the cloud? This will overwrite any existing cloud data.')) {
+                    return;
+                }
+                setMigrationStatus('loading');
+                setMigrationError(null);
+                try {
+                    const getLocal = (key) => {
+                        const saved = localStorage.getItem(key);
+                        return saved ? JSON.parse(saved) : null;
+                    };
+
+                    // Core Data to Migrate
+                    const itemsToSync = [
+                        { id: 'roster', data: getLocal('oc-dashboard-roster') || [] },
+                        { id: 'plays', data: getLocal('oc-dashboard-plays') || [] },
+                        { id: 'staff', data: getLocal('oc-dashboard-staff') || [] },
+                        { id: 'weeks', data: getLocal('oc-dashboard-weeks') || [] },
+                        { id: 'masterTasks', data: getLocal('oc-dashboard-master-tasks') || [] },
+                        {
+                            id: 'settings', data: {
+                                teamLogo: localStorage.getItem('oc-dashboard-logo'),
+                                accentColor: localStorage.getItem('oc-dashboard-accent'),
+                                theme: localStorage.getItem('oc-dashboard-theme'),
+                                activeYear: localStorage.getItem('hc-active-year'),
+                                visibleFeatures: getLocal('hc-visible-features')
+                            }
+                        }
+                    ];
+
+                    await Promise.all(itemsToSync.map(item =>
+                        syncToFirestore(currentUser.uid, item.id, item.data)
+                    ));
+
+                    setMigrationStatus('success');
+                    setTimeout(() => setMigrationStatus('idle'), 3000);
+                } catch (err) {
+                    console.error('Migration Error:', err);
+                    setMigrationError(err.message);
+                    setMigrationStatus('error');
+                }
+            };
+
             // Load Access Config when tab is opened
             useEffect(() => {
                 if (activeTab === 'access') {
