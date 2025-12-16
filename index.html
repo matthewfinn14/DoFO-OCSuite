@@ -30988,6 +30988,23 @@
         };
 
         const App = () => {
+            // Custom Hook for Auto-Sync to prevent initial-load overwrites
+            const useAutoSync = (authUser, key, data, debounceMs = 2000) => {
+                const isFirstRun = React.useRef(true);
+                React.useEffect(() => {
+                    if (isFirstRun.current) {
+                        isFirstRun.current = false;
+                        return;
+                    }
+                    if (authUser && window.db) {
+                        const timer = setTimeout(() => {
+                            // console.log(`Auto-syncing ${key}...`); 
+                            syncToFirestore(authUser.uid, key, data);
+                        }, debounceMs);
+                        return () => clearTimeout(timer);
+                    }
+                }, [data, authUser, key, debounceMs]);
+            };
             const { currentUser: authUser, logout } = useAuth();
             if (!authUser) return <LoginScreen />;
 
@@ -31314,10 +31331,8 @@
             useAutoSync(authUser, 'weeks', weeks);
             useAutoSync(authUser, 'plays', plays);
             useAutoSync(authUser, 'staff', staff);
-            useAutoSync(authUser, 'athleteAssessments', athleteAssessments); // Added missing sync
-            useAutoSync(authUser, 'metrics', metrics); // Added missing sync
-            useAutoSync(authUser, 'weightLogs', weightLogs); // Added missing sync
-            useAutoSync(authUser, 'dailyConnections', dailyConnections); // Added missing sync
+            useAutoSync(authUser, 'metrics', metrics);
+            useAutoSync(authUser, 'weightLogs', weightLogs);
 
             // Formation Database
             const [formations, setFormations] = useState(() => {
