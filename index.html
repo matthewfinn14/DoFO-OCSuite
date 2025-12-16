@@ -17657,6 +17657,17 @@
         };
 
         const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager }) => {
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        onUpdateLogo(reader.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
             const { currentUser, logout } = useAuth(); // Get current user from auth context
 
             // --- ADMIN SECURITY ---
