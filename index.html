@@ -17658,6 +17658,15 @@
         const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager }) => {
             const { currentUser, logout } = useAuth(); // Get current user from auth context
 
+            // --- ADMIN SECURITY ---
+            // Only these emails can see the "Access Control" tab
+            const ADMIN_EMAILS = [
+                'mfinn@roland-story.k12.ia.us',
+                'matthewfinn14@gmail.com'
+            ];
+            const isAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email.toLowerCase());
+
+
             const [activeTab, setActiveTab] = useState('general'); // 'general' | 'cloud' | 'access'
             const [accessConfig, setAccessConfig] = useState({ inviteRequired: false, allowedEmails: [] });
             const [accessLoading, setAccessLoading] = useState(false);
@@ -17745,22 +17754,24 @@
                             >
                                 Cloud Data
                             </button>
-                            <button
-                                className="btn"
-                                style={{
-                                    backgroundColor: activeTab === 'access' ? 'var(--accent)' : 'transparent',
-                                    color: activeTab === 'access' ? 'white' : 'var(--text-secondary)',
-                                    border: 'none',
-                                    borderRadius: '6px'
-                                }}
-                                onClick={() => setActiveTab('access')}
-                            >
-                                Access Control
-                            </button>
+                            {isAdmin && (
+                                <button
+                                    className="btn"
+                                    style={{
+                                        backgroundColor: activeTab === 'access' ? 'var(--accent)' : 'transparent',
+                                        color: activeTab === 'access' ? 'white' : 'var(--text-secondary)',
+                                        border: 'none',
+                                        borderRadius: '6px'
+                                    }}
+                                    onClick={() => setActiveTab('access')}
+                                >
+                                    Access Control
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    {activeTab === 'access' ? (
+                    {activeTab === 'access' && isAdmin ? (
                         <div className="animation-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                             <div className="card">
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
