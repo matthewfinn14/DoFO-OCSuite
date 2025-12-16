@@ -825,6 +825,19 @@
                 localStorage.setItem('user_type', loginMode);
                 return window.auth.signInWithEmailAndPassword(email, password);
             };
+
+            const loginWithGoogle = async (loginMode = 'coach') => {
+                localStorage.setItem('user_type', loginMode);
+                const provider = new firebase.auth.GoogleAuthProvider();
+                try {
+                    const result = await window.auth.signInWithPopup(provider);
+                    return result.user;
+                } catch (error) {
+                    console.error("Google Sign-In Error:", error);
+                    throw error;
+                }
+            };
+
             const register = (email, password) => window.auth.createUserWithEmailAndPassword(email, password);
             const logout = () => {
                 sessionStorage.removeItem('firestore_data_loaded');
@@ -847,7 +860,7 @@
             }
 
             return (
-                <AuthContext.Provider value={{ currentUser, login, register, logout }}>
+                <AuthContext.Provider value={{ currentUser, login, loginWithGoogle, register, logout }}>
                     {children}
                 </AuthContext.Provider>
             );
@@ -856,7 +869,7 @@
         const useAuth = () => useContext(AuthContext);
 
         const LoginScreen = () => {
-            const { login } = useAuth();
+            const { login, loginWithGoogle } = useAuth();
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [error, setError] = useState('');
@@ -871,6 +884,17 @@
                     await login(email, password, loginMode);
                 } catch (err) {
                     setError('Failed to log in: ' + err.message);
+                    setLoading(false);
+                }
+            };
+
+            const handleGoogleLogin = async () => {
+                setError('');
+                setLoading(true);
+                try {
+                    await loginWithGoogle(loginMode);
+                } catch (err) {
+                    setError('Failed to log in with Google: ' + err.message);
                     setLoading(false);
                 }
             };
@@ -958,6 +982,34 @@
                                 {loading ? 'Logging in...' : 'Sign In'}
                             </button>
                         </form>
+
+                        <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
+                            <div style={{ flex: 1, height: '1px', background: '#475569' }}></div>
+                            <span style={{ padding: '0 0.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>OR</span>
+                            <div style={{ flex: 1, height: '1px', background: '#475569' }}></div>
+                        </div>
+
+                        <button
+                            onClick={handleGoogleLogin}
+                            disabled={loading}
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                borderRadius: '6px',
+                                border: '1px solid #475569',
+                                background: 'white',
+                                color: '#0f172a',
+                                fontWeight: 'bold',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
+                            }}
+                        >
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
+                            Sign in with Google
+                        </button>
                         {loginMode === 'player' && (
                             <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px', fontSize: '0.85rem', color: '#6ee7b7', textAlign: 'center' }}>
                                 <Icon name="Info" size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
