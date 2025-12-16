@@ -17843,7 +17843,40 @@
                 } else {
                     newPaying = [...currentPaying, email];
                 }
+
+                // If removing paying admin, also remove school association? Maybe keep it for history, 
+                // but let's just update the list for now.
                 updateAccessConfig({ ...accessConfig, payingAdmins: newPaying });
+            };
+
+            const handleTogglePersonalAccount = (email) => {
+                const currentPersonal = accessConfig.personalAccounts || [];
+                let newPersonal;
+                if (currentPersonal.includes(email)) {
+                    newPersonal = currentPersonal.filter(e => e !== email);
+                } else {
+                    newPersonal = [...currentPersonal, email];
+                }
+                // Determine mutual exclusivity? 
+                // If Personal, remove from Paying (School) Admin?
+                // Logic: A user could be both technically, but usually they are distinct.
+                // Let's enforce exclusivity for clarity.
+                let updates = { personalAccounts: newPersonal };
+                if (newPersonal.includes(email)) {
+                    // Remove from Paying Admins if added to Personal
+                    const currentPaying = accessConfig.payingAdmins || [];
+                    if (currentPaying.includes(email)) {
+                        updates.payingAdmins = currentPaying.filter(e => e !== email);
+                    }
+                }
+
+                updateAccessConfig({ ...accessConfig, ...updates });
+            };
+
+            const handleSchoolIdChange = (email, newSchoolId) => {
+                const currentUserSchools = accessConfig.userSchools || {};
+                const updatedSchools = { ...currentUserSchools, [email]: newSchoolId };
+                updateAccessConfig({ ...accessConfig, userSchools: updatedSchools });
             };
 
             const handleToggleSiteAdmin = (email) => {
@@ -17976,28 +18009,65 @@
                                             No allowed emails found. Be careful not to lock yourself out!
                                         </div>
                                     )}
-                                    {accessConfig.allowedEmails && accessConfig.allowedEmails.map((email, idx) => (
-                                        <div key={idx} style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '0.75rem', background: 'var(--surface)', borderRadius: '8px',
-                                            borderLeft: '4px solid #3b82f6'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <span style={{ fontWeight: 500 }}>{email}</span>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    {accessConfig.allowedEmails && accessConfig.allowedEmails.map((email, idx) => {
+                                        const isPaying = accessConfig.payingAdmins && accessConfig.payingAdmins.includes(email);
+                                        const isPersonal = accessConfig.personalAccounts && accessConfig.personalAccounts.includes(email);
+                                        const schoolId = (accessConfig.userSchools && accessConfig.userSchools[email]) || '';
+
+                                        return (
+                                            <div key={idx} style={{
+                                                display: 'flex', flexDirection: 'column',
+                                                padding: '0.75rem', background: 'var(--surface)', borderRadius: '8px',
+                                                borderLeft: '4px solid #3b82f6', gap: '0.5rem'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                        <span style={{ fontWeight: 500 }}>{email}</span>
+                                                        <button
+                                                            onClick={() => handleRemoveEmail(email)}
+                                                            style={{
+                                                                background: 'none', border: 'none', cursor: 'pointer',
+                                                                color: '#ef4444', fontSize: '1.2rem', padding: '0 0.5rem'
+                                                            }}
+                                                            title="Remove Access"
+                                                        >
+                                                            &times;
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
                                                     {/* SCHOOL/PAYING ADMIN */}
-                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none', background: 'rgba(234, 179, 8, 0.1)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(234, 179, 8, 0.3)' }} title="Toggle School Admin (Full Features)">
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none', background: isPaying ? 'rgba(234, 179, 8, 0.2)' : 'rgba(234, 179, 8, 0.05)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(234, 179, 8, 0.3)' }} title="Toggle School Admin (Full Features)">
                                                         <input
                                                             type="checkbox"
-                                                            checked={accessConfig.payingAdmins && accessConfig.payingAdmins.includes(email)}
-                                                            onChange={() => handleTogglePayingAdmin(email)}
+                                                            checked={isPaying || false}
+                                                            onChange={() => {
+                                                                handleTogglePayingAdmin(email);
+                                                                // If enabling paying, disable personal
+                                                                if (!isPaying && isPersonal) {
+                                                                    handleTogglePersonalAccount(email);
+                                                                }
+                                                            }}
                                                         />
                                                         👑 School Admin
                                                     </label>
 
+                                                    {/* PERSONAL ACCOUNT */}
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none', background: isPersonal ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.05)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(168, 85, 247, 0.3)' }} title="Toggle Personal Account (Individual)">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isPersonal || false}
+                                                            onChange={() => {
+                                                                handleTogglePersonalAccount(email);
+                                                            }}
+                                                        />
+                                                        👤 Personal
+                                                    </label>
+
                                                     {/* SITE ADMIN (SUPER) */}
                                                     {(isSiteAdmin) && (
-                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.3)' }} title="Toggle Site Admin (Can manage other admins)">
+                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', cursor: 'pointer', userSelect: 'none', background: 'rgba(59, 130, 246, 0.1)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.3)' }} title="Toggle Site Admin (Can manage other admins)">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={accessConfig.siteAdmins && accessConfig.siteAdmins.includes(email)}
@@ -18007,19 +18077,31 @@
                                                         </label>
                                                     )}
                                                 </div>
+
+                                                {/* SCHOOL ID INPUT - Only show if School Admin is checked */}
+                                                {isPaying && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>School ID:</span>
+                                                        <input
+                                                            type="text"
+                                                            value={schoolId}
+                                                            onChange={(e) => handleSchoolIdChange(email, e.target.value)}
+                                                            placeholder="e.g. central-high-2024"
+                                                            style={{
+                                                                background: 'rgba(0,0,0,0.2)',
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '4px',
+                                                                padding: '2px 6px',
+                                                                fontSize: '0.8rem',
+                                                                color: 'white',
+                                                                width: '200px'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
-                                            <button
-                                                onClick={() => handleRemoveEmail(email)}
-                                                style={{
-                                                    background: 'none', border: 'none', cursor: 'pointer',
-                                                    color: '#ef4444', fontSize: '1.2rem', padding: '0 0.5rem'
-                                                }}
-                                                title="Remove Access"
-                                            >
-                                                &times;
-                                            </button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
