@@ -821,7 +821,36 @@
             const [loadingData, setLoadingData] = useState(false);
 
             useEffect(() => {
-                const unsubscribe = window.auth.onAuthStateChanged(user => {
+                const unsubscribe = window.auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        try {
+                            // CHECK ACCESS CONTROL
+                            const accessDoc = await window.db.collection('config').doc('access').get();
+                            if (accessDoc.exists) {
+                                const accessData = accessDoc.data();
+                                if (accessData.inviteRequired) {
+                                    const allowed = accessData.allowedEmails || [];
+                                    const userEmail = user.email.toLowerCase();
+                                    // Check explicit allowance
+                                    // Also allow if the array is empty? No, implies strict.
+                                    const isAllowed = allowed.some(email => email.toLowerCase() === userEmail);
+
+                                    if (!isAllowed) {
+                                        console.warn("Access Denied: Email not in allowlist.");
+                                        alert("Access Denied: This application is currently invite-only. Please contact the administrator.");
+                                        await window.auth.signOut();
+                                        setCurrentUser(null);
+                                        setLoading(false);
+                                        return;
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Error checking access control:", err);
+                            // Fallback: Allow login if check fails? Or Block?
+                            // Default to ALLOW to avoid lockout during outages, but log heavily.
+                        }
+                    }
                     setCurrentUser(user);
                     setLoading(false);
                 });
