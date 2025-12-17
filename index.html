@@ -593,9 +593,16 @@
         // HELPER: Clear all local app data
         const clearAllLocalData = () => {
             // NUCLEAR OPTION: Wipe everything to guarantee a clean slate for new users/trials
+            // FIX: Preserve the reload flag to prevent infinite loops in AuthProvider
+            const reloadFlag = sessionStorage.getItem('just_reloaded_for_sync');
+
             localStorage.clear();
             sessionStorage.clear();
-            console.log("Local data COMPLETELY cleared.");
+
+            if (reloadFlag) {
+                sessionStorage.setItem('just_reloaded_for_sync', reloadFlag);
+            }
+            console.log("Local data COMPLETELY cleared (persisted sync flag).");
         };
 
         const loadUserDataFromFirestore = async (userId) => {
@@ -604,175 +611,233 @@
                 const userDocRef = window.db.collection('users').doc(userId);
                 const userDoc = await userDocRef.get();
 
+                let appData = {};
+                let isSchoolData = false;
+
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    let appData = userData; // Default to user data
-                    let isSchoolData = false;
+                    appData = userData; // Default to user data
 
-                    // CHECK FOR SCHOOL ID
-                    if (userData.schoolId) {
-                        console.log("User belongs to school:", userData.schoolId);
-                        localStorage.setItem('hc_school_id', userData.schoolId);
+                    // CHECK FOR MEMBERSHIPS (New Logic)
+                    const membershipsSnapshot = await userDocRef.collection('memberships').get();
+                    let activeSchoolId = null;
 
-                        const schoolDoc = await window.db.collection('schools').doc(userData.schoolId).get();
+                    if (!membershipsSnapshot.empty) {
+                        // Use first membership for now (TODO: Add "lastActiveSchool" to user profile)
+                        activeSchoolId = membershipsSnapshot.docs[0].id;
+                        console.log("Found membership for school:", activeSchoolId);
+                    } else if (userData.schoolId) {
+                        // MIGRATION: Auto-create membership
+                        console.log("Migrating legacy schoolId to membership...");
+                        activeSchoolId = userData.schoolId;
+                        try {
+                            await userDocRef.collection('memberships').doc(activeSchoolId).set({
+                                role: 'admin', // Default to admin for legacy upgrades
+                                joinedAt: new Date().toISOString(),
+                                status: 'active'
+                            });
+                        } catch (err) {
+                            console.error("Migration failed:", err);
+                        }
+                    }
+
+                    // LOAD DATA
+                    if (activeSchoolId) {
+                        console.log("Loading SCHOOL data for:", activeSchoolId);
+                        localStorage.setItem('hc_school_id', activeSchoolId);
+
+                        const schoolDoc = await window.db.collection('schools').doc(activeSchoolId).get();
                         if (schoolDoc.exists) {
                             console.log("Loaded SCHOOL data");
                             appData = schoolDoc.data();
                             isSchoolData = true;
+
+                            // SYNC MEMBER LIST (Ensure user is listed in school doc)
+                            try {
+                                const currentMembers = appData.memberList || [];
+                                const myEmail = window.auth.currentUser.email;
+                                const isListed = currentMembers.find(m => m.uid === userId);
+
+                                if (!isListed) {
+                                    console.log("Adding self to school memberList...");
+                                    const newMember = {
+                                        uid: userId,
+                                        email: myEmail,
+                                        role: 'admin', // Default for now, later derived from membership
+                                        joinedAt: new Date().toISOString()
+                                    };
+                                    await window.db.collection('schools').doc(activeSchoolId).update({
+                                        memberList: firebase.firestore.FieldValue.arrayUnion(newMember)
+                                    });
+                                }
+                            } catch (err) {
+                                console.warn("Failed to sync member list:", err);
+                            }
                         } else {
-                            console.warn("School ID found but document missing. Falling back to personal data.");
+                            console.warn("School ID found but document missing.");
                         }
                     } else {
-                        // Ensure we clear any stale school ID if they left a school
+                        // Ensure we clear any stale school ID if they are not in a school
                         localStorage.removeItem('hc_school_id');
                     }
-
-                    console.log("Applying data to localStorage...", appData);
-                    const data = appData;
-
-                    // Apply data to localStorage
-                    // CRITICAL FIX: Ensure keys match what the App component uses for initialization
-                    if (data.roster) {
-                        localStorage.setItem('oc-dashboard-roster', JSON.stringify(data.roster)); // WAS: roster_data
-                    }
-                    if (data.plays) {
-                        localStorage.setItem('oc-dashboard-plays', JSON.stringify(data.plays)); // WAS: play_library
-                    }
-                    if (data.staff) {
-                        localStorage.setItem('oc-dashboard-staff', JSON.stringify(data.staff)); // NEW
-                    }
-                    if (data.depthChart) {
-                        localStorage.setItem('oc-dashboard-depthchart', JSON.stringify(data.depthChart)); // NEW
-                    }
-                    if (data.masterTasks) {
-                        localStorage.setItem('oc-dashboard-master-tasks', JSON.stringify(data.masterTasks)); // NEW
-                    }
-                    if (data.settings) {
-                        if (data.settings.teamLogo) localStorage.setItem('oc-dashboard-logo', data.settings.teamLogo);
-                        if (data.settings.schoolName) localStorage.setItem('hc_school_name', data.settings.schoolName);
-                        // Fix Accent Color Key
-                        if (data.settings.accentColor) {
-                            localStorage.setItem('oc-dashboard-accent', data.settings.accentColor); // Match App Init
-                            localStorage.setItem('user_accent_color', data.settings.accentColor); // Legacy/Backup
-                        }
-                        // Fix Theme Key
-                        if (data.settings.theme) {
-                            localStorage.setItem('oc-dashboard-theme', data.settings.theme); // Match App Init
-                            localStorage.setItem('user_theme', data.settings.theme); // Legacy/Backup
-                        }
-                        if (data.settings.activeYear) localStorage.setItem('hc-active-year', data.settings.activeYear);
-                        if (data.settings.visibleFeatures) localStorage.setItem('hc-visible-features', JSON.stringify(data.settings.visibleFeatures));
-                    }
-
-                    // --- NEW SYNC ITEMS (Complete Coverage) ---
-                    if (data.weeks) {
-                        localStorage.setItem('oc-dashboard-weeks', JSON.stringify(data.weeks));
-                    }
-                    if (data.attendance) {
-                        localStorage.setItem('attendance_log', JSON.stringify(data.attendance));
-                    }
-                    if (data.valhalla) {
-                        localStorage.setItem('oc-dashboard-valhalla', JSON.stringify(data.valhalla));
-                    }
-                    if (data.inventory) {
-                        localStorage.setItem('oc-dashboard-equipment-inventory', JSON.stringify(data.inventory));
-                    }
-                    if (data.checkouts) {
-                        localStorage.setItem('oc-dashboard-equipment-checkouts', JSON.stringify(data.checkouts));
-                    }
-                    if (data.formationLayouts) {
-                        localStorage.setItem('formationLayouts', JSON.stringify(data.formationLayouts));
-                    }
-                    if (data.ratings) {
-                        localStorage.setItem('oc-dashboard-ratings', JSON.stringify(data.ratings));
-                    }
-                    if (data.gameGrades) {
-                        localStorage.setItem('oc-dashboard-game-grades', JSON.stringify(data.gameGrades));
-                    }
-                    if (data.summerComp) {
-                        localStorage.setItem('oc-dashboard-summer-comp', JSON.stringify(data.summerComp));
-                    }
-                    if (data.opponentScouting) {
-                        localStorage.setItem('oc-dashboard-scouting', JSON.stringify(data.opponentScouting));
-                    }
-                    if (data.issuance) {
-                        localStorage.setItem('oc-dashboard-equipment-issuance', JSON.stringify(data.issuance));
-                    }
-                    if (data.wishlist) {
-                        localStorage.setItem('oc-dashboard-equipment-wishlist', JSON.stringify(data.wishlist));
-                    }
-                    if (data.athleteAssessments) {
-                        localStorage.setItem('athlete_assessments', JSON.stringify(data.athleteAssessments));
-                    }
-                    if (data.staff) {
-                        localStorage.setItem('oc-dashboard-staff', JSON.stringify(data.staff));
-                    }
-
-                    // --- ADDITIONAL MISSING ITEMS ---
-                    if (data.formations) {
-                        localStorage.setItem('oc-dashboard-formations', JSON.stringify(data.formations));
-                    }
-                    if (data.zonePhilosophies) {
-                        localStorage.setItem('oc-dashboard-zone-philosophies', JSON.stringify(data.zonePhilosophies));
-                    }
-                    if (data.customFocus) {
-                        localStorage.setItem('oc-dashboard-custom-focus', JSON.stringify(data.customFocus));
-                    }
-                    if (data.duties) {
-                        localStorage.setItem('oc-dashboard-duties', JSON.stringify(data.duties));
-                    }
-                    if (data.metrics) {
-                        localStorage.setItem('oc-dashboard-metrics', JSON.stringify(data.metrics));
-                    }
-                    if (data.fatigueThresholds) {
-                        localStorage.setItem('fatigue-thresholds', JSON.stringify(data.fatigueThresholds));
-                    }
-                    if (data.positionFatigue) {
-                        localStorage.setItem('position-fatigue-values', JSON.stringify(data.positionFatigue));
-                    }
-
-                    // --- FINAL AUDIT ITEMS (Budget, Onboarding, Wristband, Apps) ---
-                    if (data.budget) {
-                        localStorage.setItem('program_budget_data', JSON.stringify(data.budget));
-                    }
-                    if (data.onboarding) {
-                        localStorage.setItem('program_onboarding_data', JSON.stringify(data.onboarding));
-                    }
-                    if (data.positionNames) {
-                        localStorage.setItem('oc-dashboard-position-names', JSON.stringify(data.positionNames));
-                    }
-                    if (data.dailyConnections) {
-                        localStorage.setItem('player_daily_connections', JSON.stringify(data.dailyConnections));
-                    }
-                    if (data.weightLogs) {
-                        localStorage.setItem('player_weight_logs', JSON.stringify(data.weightLogs));
-                    }
-                    if (data.roleTasks) {
-                        localStorage.setItem('staff_role_tasks', JSON.stringify(data.roleTasks));
-                    }
-                    if (data.rooskiLib) {
-                        localStorage.setItem('rooski_ol_library', JSON.stringify(data.rooskiLib));
-                    }
-                    // Wristband Settings
-                    if (data.wbSettings) {
-                        if (data.wbSettings.wb1Opp) localStorage.setItem('hc_wb1_opponent', data.wbSettings.wb1Opp);
-                        if (data.wbSettings.wb1Iter) localStorage.setItem('hc_wb1_iteration', data.wbSettings.wb1Iter);
-                        if (data.wbSettings.wb2Opp) localStorage.setItem('hc_wb2_opponent', data.wbSettings.wb2Opp);
-                        if (data.wbSettings.wb2Iter) localStorage.setItem('hc_wb2_iteration', data.wbSettings.wb2Iter);
-                        if (data.wbSettings.sheetUrl) localStorage.setItem('hc_wristband_sheet_url', data.wbSettings.sheetUrl);
-                    }
-
-                    return { success: true, data };
                 } else {
-                    console.log("No cloud data found for user. Clearing local storage to ensure fresh start.");
-                    // CRITICAL: New User / No Logic User -> Clear everything to prevent seeing previous user's data
+                    // NEW: User Doc does not exist (New User or Deleted Doc).
+                    // WIPE LOCAL STORAGE to prevent "ghost" sessions from previous users on this device.
                     clearAllLocalData();
-                    return { success: true, data: null };
+                    // Don't return, let execution continue so appData (empty) flows through to clear state
                 }
-            } catch (error) {
-                console.error("Error loading data from Firestore:", error);
-                return { success: false, error };
+
+                console.log("Applying data to localStorage...", appData);
+                const data = appData;
+
+                // Apply data to localStorage
+                // CRITICAL FIX: Ensure keys match what the App component uses for initialization
+                if (data.roster) {
+                    localStorage.setItem('oc-dashboard-roster', JSON.stringify(data.roster)); // WAS: roster_data
+                }
+                if (data.plays) {
+                    localStorage.setItem('oc-dashboard-plays', JSON.stringify(data.plays)); // WAS: play_library
+                }
+                if (data.staff) {
+                    localStorage.setItem('oc-dashboard-staff', JSON.stringify(data.staff)); // NEW
+                }
+                if (data.depthChart) {
+                    localStorage.setItem('oc-dashboard-depthchart', JSON.stringify(data.depthChart)); // NEW
+                }
+                if (data.masterTasks) {
+                    localStorage.setItem('oc-dashboard-master-tasks', JSON.stringify(data.masterTasks)); // NEW
+                }
+                if (data.settings) {
+                    if (data.settings.teamLogo) localStorage.setItem('oc-dashboard-logo', data.settings.teamLogo);
+                    // Fix: Check root name first (standard), then settings (legacy/alt)
+                    if (data.name) localStorage.setItem('hc_school_name', data.name);
+                    else if (data.settings.schoolName) localStorage.setItem('hc_school_name', data.settings.schoolName);
+                    // Fix Accent Color Key
+                    if (data.settings.accentColor) {
+                        localStorage.setItem('oc-dashboard-accent', data.settings.accentColor); // Match App Init
+                        localStorage.setItem('user_accent_color', data.settings.accentColor); // Legacy/Backup
+                    }
+                    // Fix Theme Key
+                    if (data.settings.theme) {
+                        localStorage.setItem('oc-dashboard-theme', data.settings.theme); // Match App Init
+                        localStorage.setItem('user_theme', data.settings.theme); // Legacy/Backup
+                    }
+                    if (data.settings.activeYear) localStorage.setItem('hc-active-year', data.settings.activeYear);
+                    if (data.settings.visibleFeatures) localStorage.setItem('hc-visible-features', JSON.stringify(data.settings.visibleFeatures));
+                }
+
+                // --- NEW SYNC ITEMS (Complete Coverage) ---
+                if (data.weeks) {
+                    localStorage.setItem('oc-dashboard-weeks', JSON.stringify(data.weeks));
+                }
+                if (data.billing) {
+                    localStorage.setItem('hc_school_billing', JSON.stringify(data.billing));
+                }
+                if (data.attendance) {
+                    localStorage.setItem('attendance_log', JSON.stringify(data.attendance));
+                }
+                if (data.valhalla) {
+                    localStorage.setItem('oc-dashboard-valhalla', JSON.stringify(data.valhalla));
+                }
+                if (data.inventory) {
+                    localStorage.setItem('oc-dashboard-equipment-inventory', JSON.stringify(data.inventory));
+                }
+                if (data.checkouts) {
+                    localStorage.setItem('oc-dashboard-equipment-checkouts', JSON.stringify(data.checkouts));
+                }
+                if (data.formationLayouts) {
+                    localStorage.setItem('formationLayouts', JSON.stringify(data.formationLayouts));
+                }
+                if (data.ratings) {
+                    localStorage.setItem('oc-dashboard-ratings', JSON.stringify(data.ratings));
+                }
+                if (data.gameGrades) {
+                    localStorage.setItem('oc-dashboard-game-grades', JSON.stringify(data.gameGrades));
+                }
+                if (data.summerComp) {
+                    localStorage.setItem('oc-dashboard-summer-comp', JSON.stringify(data.summerComp));
+                }
+                if (data.opponentScouting) {
+                    localStorage.setItem('oc-dashboard-scouting', JSON.stringify(data.opponentScouting));
+                }
+                if (data.issuance) {
+                    localStorage.setItem('oc-dashboard-equipment-issuance', JSON.stringify(data.issuance));
+                }
+                if (data.wishlist) {
+                    localStorage.setItem('oc-dashboard-equipment-wishlist', JSON.stringify(data.wishlist));
+                }
+                if (data.athleteAssessments) {
+                    localStorage.setItem('athlete_assessments', JSON.stringify(data.athleteAssessments));
+                }
+                if (data.staff) {
+                    localStorage.setItem('oc-dashboard-staff', JSON.stringify(data.staff));
+                }
+
+                // --- ADDITIONAL MISSING ITEMS ---
+                if (data.formations) {
+                    localStorage.setItem('oc-dashboard-formations', JSON.stringify(data.formations));
+                }
+                if (data.zonePhilosophies) {
+                    localStorage.setItem('oc-dashboard-zone-philosophies', JSON.stringify(data.zonePhilosophies));
+                }
+                if (data.customFocus) {
+                    localStorage.setItem('oc-dashboard-custom-focus', JSON.stringify(data.customFocus));
+                }
+                if (data.duties) {
+                    localStorage.setItem('oc-dashboard-duties', JSON.stringify(data.duties));
+                }
+                if (data.metrics) {
+                    localStorage.setItem('oc-dashboard-metrics', JSON.stringify(data.metrics));
+                }
+                if (data.fatigueThresholds) {
+                    localStorage.setItem('fatigue-thresholds', JSON.stringify(data.fatigueThresholds));
+                }
+                if (data.positionFatigue) {
+                    localStorage.setItem('position-fatigue-values', JSON.stringify(data.positionFatigue));
+                }
+
+                // --- FINAL AUDIT ITEMS (Budget, Onboarding, Wristband, Apps) ---
+                if (data.budget) {
+                    localStorage.setItem('program_budget_data', JSON.stringify(data.budget));
+                }
+                if (data.onboarding) {
+                    localStorage.setItem('program_onboarding_data', JSON.stringify(data.onboarding));
+                }
+                if (data.positionNames) {
+                    localStorage.setItem('oc-dashboard-position-names', JSON.stringify(data.positionNames));
+                }
+                if (data.dailyConnections) {
+                    localStorage.setItem('player_daily_connections', JSON.stringify(data.dailyConnections));
+                }
+                if (data.weightLogs) {
+                    localStorage.setItem('player_weight_logs', JSON.stringify(data.weightLogs));
+                }
+                if (data.roleTasks) {
+                    localStorage.setItem('staff_role_tasks', JSON.stringify(data.roleTasks));
+                }
+                if (data.rooskiLib) {
+                    localStorage.setItem('rooski_ol_library', JSON.stringify(data.rooskiLib));
+                }
+                // Wristband Settings
+                if (data.wbSettings) {
+                    if (data.wbSettings.wb1Opp) localStorage.setItem('hc_wb1_opponent', data.wbSettings.wb1Opp);
+                    if (data.wbSettings.wb1Iter) localStorage.setItem('hc_wb1_iteration', data.wbSettings.wb1Iter);
+                    if (data.wbSettings.wb2Opp) localStorage.setItem('hc_wb2_opponent', data.wbSettings.wb2Opp);
+                    if (data.wbSettings.wb2Iter) localStorage.setItem('hc_wb2_iteration', data.wbSettings.wb2Iter);
+                    if (data.wbSettings.sheetUrl) localStorage.setItem('hc_wristband_sheet_url', data.wbSettings.sheetUrl);
+                }
+
+                return { success: true, data };
+            } else {
+                console.log("No cloud data found for user. Clearing local storage to ensure fresh start.");
+                // CRITICAL: New User / No Logic User -> Clear everything to prevent seeing previous user's data
+                clearAllLocalData();
+                return { success: true, data: null, wiped: true };
             }
+        } catch (error) {
+            console.error("Error loading data from Firestore:", error);
+            return { success: false, error };
+        }
         };
 
         const syncToFirestore = async (userId, dataType, data) => {
@@ -833,12 +898,32 @@
                                 if (accessData.inviteRequired) {
                                     const allowed = accessData.allowedEmails || [];
                                     const userEmail = user.email.toLowerCase();
-                                    // Check explicit allowance
-                                    // Also allow if the array is empty? No, implies strict.
-                                    const isAllowed = allowed.some(email => email.toLowerCase() === userEmail);
+
+                                    // 1. Check explicit allowance
+                                    let isAllowed = allowed.some(email => email.toLowerCase() === userEmail);
+
+                                    // 2. If not allowed, check for pending invites
+                                    if (!isAllowed) {
+                                        const inviteCheck = await window.db.collection('invites')
+                                            .where('email', '==', userEmail)
+                                            .where('status', '==', 'pending')
+                                            .limit(1)
+                                            .get();
+                                        if (!inviteCheck.empty) isAllowed = true;
+                                    }
+
+                                    // 3. If not allowed, check for existing memberships
+                                    if (!isAllowed) {
+                                        const memCheck = await window.db.collection('users').doc(user.uid)
+                                            .collection('memberships')
+                                            .where('status', '==', 'active')
+                                            .limit(1)
+                                            .get();
+                                        if (!memCheck.empty) isAllowed = true;
+                                    }
 
                                     if (!isAllowed) {
-                                        console.warn("Access Denied: Email not in allowlist.");
+                                        console.warn("Access Denied: Email not in allowlist and no valid invites/memberships found.");
                                         alert("Access Denied: This application is currently invite-only. Please contact the administrator.");
                                         await window.auth.signOut();
                                         setCurrentUser(null);
@@ -928,6 +1013,39 @@
 
             const register = (email, password) => window.auth.createUserWithEmailAndPassword(email, password);
             const logout = async () => {
+                const isDemo = localStorage.getItem('is_demo_session') === 'true';
+                const currentSchoolId = localStorage.getItem('hc_school_id');
+                const userId = window.auth.currentUser ? window.auth.currentUser.uid : null;
+
+                if (isDemo && userId) {
+                    if (confirm("End Demo Session? All demo data (School & User) will be PERMANENTLY DELETED.")) {
+                        try {
+                            console.log("Cleaning up demo session...");
+
+                            // 1. Delete School (if exists)
+                            if (currentSchoolId) {
+                                await window.db.collection('schools').doc(currentSchoolId).delete();
+                            }
+
+                            // 2. Delete User Doc
+                            // (We skip deep subcollection deletion for speed, but main doc is key)
+                            await window.db.collection('users').doc(userId).delete();
+
+                            // 3. Delete Auth Account
+                            const user = window.auth.currentUser;
+                            if (user) {
+                                await user.delete().catch(err => console.warn("Could not delete auth user:", err));
+                            }
+
+                            console.log("Demo cleanup complete.");
+                        } catch (e) {
+                            console.error("Demo cleanup failed:", e);
+                        }
+                    } else {
+                        return; // Cancel logout
+                    }
+                }
+
                 clearAllLocalData();
                 return window.auth.signOut();
             };
@@ -956,22 +1074,78 @@
 
         const useAuth = () => useContext(AuthContext);
 
+        const useSchoolPlan = () => {
+            const { currentUser } = useAuth();
+            const [billingInfo, setBillingInfo] = useState(() => {
+                try {
+                    return JSON.parse(localStorage.getItem('hc_school_billing') || '{}');
+                } catch (e) { return {}; }
+            });
+
+            const planStatus = useMemo(() => {
+                const SITE_ADMINS = ['matthewfinn14@gmail.com'];
+                if (currentUser && SITE_ADMINS.includes(currentUser.email.toLowerCase())) return 'ALL_ACCESS';
+
+                const plan = billingInfo.plan || 'free';
+                const now = new Date();
+
+                if (plan === 'trial') {
+                    if (billingInfo.trialEndsAt && new Date(billingInfo.trialEndsAt) > now) return 'PREMIUM_TRIAL';
+                    return 'FREE';
+                }
+                if (plan === 'premium') {
+                    if (billingInfo.subscriptionEndsAt && new Date(billingInfo.subscriptionEndsAt) <= now) return 'FREE';
+                    return 'PREMIUM';
+                }
+                if (plan === 'all_access') return 'ALL_ACCESS';
+                return 'FREE';
+            }, [billingInfo, currentUser]);
+
+            const updateBilling = (newData) => {
+                setBillingInfo(newData);
+                localStorage.setItem('hc_school_billing', JSON.stringify(newData));
+            };
+
+            return {
+                planStatus,
+                isPremium: ['PREMIUM', 'PREMIUM_TRIAL', 'ALL_ACCESS'].includes(planStatus),
+                isFree: planStatus === 'FREE',
+                billingInfo,
+                updateBilling
+            };
+        };
+
+        const signup = (email, password, loginMode = 'coach') => {
+            localStorage.setItem('user_type', loginMode);
+            return window.auth.createUserWithEmailAndPassword(email, password);
+        };
+
         const LoginScreen = () => {
-            const { login, loginWithGoogle } = useAuth();
+            const { login, loginWithGoogle } = useAuth(); // We need to expose signup from context or define it here if context is limited
+            // NOTE: useAuth returns { login, loginWithGoogle, ... }. We need to extend it or just use window.auth directly in component for now.
+
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [error, setError] = useState('');
             const [loading, setLoading] = useState(false);
             const [loginMode, setLoginMode] = useState('coach'); // 'coach' or 'player'
+            const [isSignUp, setIsSignUp] = useState(false); // NEW: Toggle between Login and Signup
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setError('');
                 setLoading(true);
                 try {
-                    await login(email, password, loginMode);
+                    if (isSignUp) {
+                        // CREATE NEW ACCOUNT
+                        localStorage.setItem('user_type', loginMode);
+                        await window.auth.createUserWithEmailAndPassword(email, password);
+                    } else {
+                        // LOG IN EXISTING ACCOUNT
+                        await login(email, password, loginMode);
+                    }
                 } catch (err) {
-                    setError('Failed to log in: ' + err.message);
+                    setError('Failed to ' + (isSignUp ? 'sign up: ' : 'log in: ') + err.message);
                     setLoading(false);
                 }
             };
@@ -983,7 +1157,7 @@
                     await loginWithGoogle(loginMode);
                 } catch (err) {
                     console.error("Login Error:", err);
-                    alert("Login Error: " + err.message); // Direct User Feedback
+                    alert("Login Error: " + err.message);
                     setError('Failed to log in with Google: ' + err.message);
                     setLoading(false);
                 }
@@ -1069,9 +1243,18 @@
                                     color: 'white', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
                             >
-                                {loading ? 'Logging in...' : 'Sign In'}
+                                {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
                             </button>
                         </form>
+
+                        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                            <button
+                                onClick={() => setIsSignUp(!isSignUp)}
+                                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.9rem', cursor: 'pointer', textDecoration: 'underline' }}
+                            >
+                                {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+                            </button>
+                        </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
                             <div style={{ flex: 1, height: '1px', background: '#475569' }}></div>
@@ -1097,9 +1280,50 @@
                                 gap: '0.5rem'
                             }}
                         >
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
-                            Sign in with Google
+                            {isSignUp ? 'Sign up with Google' : 'Sign in with Google'}
                         </button>
+
+                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #334155' }}>
+                            <button
+                                onClick={async () => {
+                                    setError('');
+                                    setLoading(true);
+                                    try {
+                                        const timestamp = Date.now();
+                                        const demoEmail = `demo_${timestamp}@test.com`;
+                                        const demoPassword = `demo${timestamp}`;
+                                        await window.auth.createUserWithEmailAndPassword(demoEmail, demoPassword);
+                                        localStorage.setItem('is_demo_session', 'true');
+                                    } catch (err) {
+                                        console.error("Demo Error:", err);
+                                        setError('Demo failed: ' + err.message);
+                                        setLoading(false);
+                                    }
+                                }}
+                                disabled={loading}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    borderRadius: '6px',
+                                    border: '1px dashed #6366f1',
+                                    background: 'rgba(99, 102, 241, 0.1)',
+                                    color: '#818cf8',
+                                    fontWeight: 'bold',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.5rem'
+                                }}
+                            >
+                                <Icon name="Zap" size={16} />
+                                Test Drive (Demo Mode)
+                            </button>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', marginTop: '0.5rem' }}>
+                                Creates a temporary school that self-destructs on logout.
+                            </div>
+                        </div>
+
                         {loginMode === 'player' && (
                             <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px', fontSize: '0.85rem', color: '#6ee7b7', textAlign: 'center' }}>
                                 <Icon name="Info" size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
@@ -1175,232 +1399,12 @@
 
         const HASH_PREFERENCES = ["Left", "Right", "Middle", "Any"];
 
-        const INITIAL_MASTER_TASKS = [
-            // DAILY
-            { id: 'dt_1', category: 'Year-Round', task: 'Check Warrior Dials & Outreach (Trends)', recurrence: 'Daily', assignTo: ['All Position Coaches', 'Head Coach'] },
-            { id: 'dt_2', category: 'Year-Round', task: 'Study Player Profiles (Favorites/Preferences)', recurrence: 'Daily', assignTo: ['All Position Coaches'] },
-            { id: 'dt_hc_1', category: 'Year-Round', task: 'Staff Communication / Pulse Check', recurrence: 'Daily', assignTo: ['Head Coach'] },
-            { id: 'dt_hc_2', category: 'Year-Round', task: 'Review Practice Plan & Scripts (Global View)', recurrence: 'Daily', assignTo: ['Head Coach'] },
-            { id: 'dt_hc_3', category: 'Year-Round', task: 'Admin / Parent Communication Check', recurrence: 'Daily', assignTo: ['Head Coach'] },
+        const INITIAL_MASTER_TASKS = [];
 
-            // WEEKLY / SATURDAY
-            { id: 'wt_1', category: 'Saturday', task: 'Grade Position Groups', recurrence: 'Weekly: Saturday', assignTo: ['All Position Coaches'] },
-            { id: 'wt_dc', category: 'Saturday', task: 'Finalize Defensive Game Plan / Blitz Packages', recurrence: 'Weekly', assignTo: ['DC'] },
-            { id: 'wt_oc', category: 'Saturday', task: 'Finalize Offensive Script / Opening Drive', recurrence: 'Weekly', assignTo: ['OC'] },
-            { id: 'wt_st', category: 'Saturday', task: 'Scout Opponent Special Teams / Personnel', recurrence: 'Weekly', assignTo: ['STC'] },
-
-            // GAME WEEK
-            { id: 'gw_1', category: 'Game Week', task: 'Opponent Scouting (Assigned Area)', recurrence: 'Weekly: Monday', assignTo: ['All Position Coaches'] },
-            { id: 'gw_2', category: 'Game Week', task: 'Prepare Drills & Link to Practice Plan', recurrence: 'Weekly: Monday', assignTo: ['All Position Coaches'] },
-            { id: 'gw_3', category: 'Game Week', task: 'Populate Practice Equipment Needs', recurrence: 'Daily', assignTo: ['All Position Coaches'] },
-            { id: 'gw_4', category: 'Game Week', task: 'Review Practice Scripts', recurrence: 'Daily', assignTo: ['All Position Coaches'] },
-            { id: 'gw_qb', category: 'Game Week', task: 'Review QB Mechanics / Footwork Drills', recurrence: 'Weekly', assignTo: ['QB Coach'] },
-            { id: 'gw_mgr', category: 'Game Week', task: 'Practice Field Setup (Cones/Bags)', recurrence: 'Daily', assignTo: ['Managers'] },
-
-            // DAY BEFORE GAME
-            { id: 'dbg_1', category: 'Day Before Game', task: 'Pack Footballs & Extra Equipment', recurrence: 'Weekly: Thursday', assignTo: ['Managers', 'Equipment Mgr'] },
-            { id: 'dbg_2', category: 'Day Before Game', task: 'Charge Tablets, Cameras, Headsets', recurrence: 'Weekly: Thursday', assignTo: ['Tech Coodinator'] },
-            { id: 'dbg_3', category: 'Day Before Game', task: 'Clear iPad Storage', recurrence: 'Weekly: Thursday', assignTo: ['Tech Coodinator'] },
-
-            // TRAVEL
-            { id: 'tr_1', category: 'Travel', task: 'Trailer / Suburban Driver', recurrence: 'Weekly: Friday', assignTo: [] },
-            { id: 'tr_2', category: 'Travel', task: 'Bus Supervision', recurrence: 'Weekly: Friday', assignTo: ['All Staff'] },
-            { id: 'tr_3', category: 'Travel', task: 'Load Trailer', recurrence: 'Weekly: Friday', assignTo: ['Managers'] },
-
-            // ARRIVAL / SETUP
-            { id: 'arr_1', category: 'Arrival', task: 'Unload Trailer', recurrence: 'Weekly: Friday', assignTo: ['Managers'] },
-            { id: 'arr_2', category: 'Arrival', task: 'Setup Replay & Cameras', recurrence: 'Weekly: Friday', assignTo: ['Video Coordinator'] },
-            { id: 'arr_3', category: 'Arrival', task: 'Setup Pressbox & Headsets', recurrence: 'Weekly: Friday', assignTo: ['Tech Coodinator'] },
-            { id: 'arr_4', category: 'Arrival', task: 'Locker Room Supervision', recurrence: 'Weekly: Friday', assignTo: ['assigned'] },
-            { id: 'arr_5', category: 'Arrival', task: 'Keep Team on Schedule', recurrence: 'Weekly: Friday', assignTo: ['Get Back Coach'] },
-
-            // PRE-GAME
-            { id: 'pre_1', category: 'Pre-Game', task: 'Run Walkthroughs / Meetings', recurrence: 'Weekly: Friday', assignTo: ['Coordinators'] },
-            { id: 'pre_2', category: 'Pre-Game', task: 'Run Pre-game Stretches / Fundamentals', recurrence: 'Weekly: Friday', assignTo: ['Position Coaches'] },
-
-            // IN-GAME
-            { id: 'ig_1', category: 'In-Game', task: 'Equipment Help / Water', recurrence: 'Weekly: Friday', assignTo: ['Managers'] },
-            { id: 'ig_2', category: 'In-Game', task: 'Injury Communication', recurrence: 'Weekly: Friday', assignTo: ['Trainer'] },
-            { id: 'ig_3', category: 'In-Game', task: 'Pressbox Ops', recurrence: 'Weekly: Friday', assignTo: ['AC'] },
-            { id: 'ig_4', category: 'In-Game', task: 'Stats Logging', recurrence: 'Weekly: Friday', assignTo: ['Stats Crew'] },
-            { id: 'ig_5', category: 'In-Game', task: 'Substitutions', recurrence: 'Weekly: Friday', assignTo: ['Position Coaches'] },
-
-            // POST-GAME
-            { id: 'pg_1', category: 'Post-Game', task: 'Clean Up / Locker Room Check', recurrence: 'Weekly: Friday', assignTo: ['All Staff'] },
-            { id: 'pg_2', category: 'Post-Game', task: 'Upload Film', recurrence: 'Weekly: Friday', assignTo: ['Video Coordinator'] },
-            { id: 'pg_3', category: 'Post-Game', task: 'Upload / Check Stats', recurrence: 'Weekly: Friday', assignTo: ['Stats Crew'] },
-            { id: 'pg_4', category: 'Post-Game', task: 'Injury Forms', recurrence: 'Weekly: Friday', assignTo: ['Trainer'] },
-
-            // SUMMER
-            { id: 'sum_1', category: 'Summer', task: 'Lay out Football Field', recurrence: 'Seasonal', assignTo: ['Staff'] },
-            { id: 'sum_2', category: 'Summer', task: 'Prep for Installs', recurrence: 'Seasonal', assignTo: ['Coordinators'] },
-            { id: 'sum_3', category: 'Summer', task: 'Weight Room Supervision', recurrence: 'Seasonal', assignTo: ['Strength Coach'] },
-            { id: 'sum_4', category: 'Summer', task: 'Thud Camps Support', recurrence: 'Seasonal', assignTo: ['All Staff'] },
-            { id: 'sum_5', category: 'Summer', task: 'Youth Camp Support', recurrence: 'Seasonal', assignTo: ['All Staff'] },
-            { id: 'sum_6', category: 'Summer', task: 'Fundraisers', recurrence: 'Seasonal', assignTo: ['All Staff'] },
-
-            // OFFSEASON
-            { id: 'off_1', category: 'Offseason', task: 'Equipment Turn-in', recurrence: 'Annual', assignTo: ['Equipment Mgr'] },
-            { id: 'off_2', category: 'Offseason', task: 'Banquet Prep (Slides, Video, Speech, Awards)', recurrence: 'Annual', assignTo: ['Head Coach'] },
-            { id: 'off_2b', category: 'Offseason', task: 'Reserve Auditorium for Banquet', recurrence: 'Annual', assignTo: ['Head Coach'] },
-            { id: 'off_3', category: 'Offseason', task: 'Inventory & Order Equipment', recurrence: 'Annual', assignTo: ['Equipment Mgr'] },
-            { id: 'off_4', category: 'Offseason', task: 'Player Evaluations', recurrence: 'Annual', assignTo: ['All Staff'] },
-            { id: 'off_5', category: 'Offseason', task: 'Update Position Manuals / Drills', recurrence: 'Annual', assignTo: ['Position Coaches'] },
-            { id: 'off_6', category: 'Offseason', task: 'College Recruiting Visits (Spring)', recurrence: 'Seasonal', assignTo: ['Recruiting Coord'] },
-            { id: 'off_7', category: 'Offseason', task: 'Submit All-District / All-State Nominations', recurrence: 'Annual', assignTo: ['Head Coach'] },
-            { id: 'off_8', category: 'Offseason', task: 'Schedule Summer Gauntlet Draft & Notify Captains', recurrence: 'Annual', assignTo: ['Head Coach'] },
-            { id: 'off_9', category: 'Offseason', task: 'Send out Youth Camp Forms (Before May)', recurrence: 'Annual', assignTo: ['Head Coach'] },
-            { id: 'off_10', category: 'Offseason', task: 'Set up Team Clothing Store (Late April)', recurrence: 'Annual', assignTo: ['Head Coach', 'Equipment Mgr'] },
-            { id: 'off_11', category: 'Offseason', task: 'Book Hotels & Transport for Winter Clinics', recurrence: 'Annual', assignTo: ['Head Coach'] },
-            { id: 'sum_7', category: 'Summer', task: 'Reserve Auditorium for First Week Meetings', recurrence: 'Annual', assignTo: ['Head Coach'] },
-
-            // ADMIN / ONGOING
-            { id: 'adm_1', category: 'Daily', task: 'Update Valhalla Points', recurrence: 'Weekly', assignTo: ['Head Coach'] },
-            { id: 'adm_2', category: 'Daily', task: 'Player Academic / Recruiting Check-ins', recurrence: 'Weekly', assignTo: ['Head Coach', 'Recruiting Coord'] },
-            { id: 'adm_3', category: 'Administrative', task: 'Reserve Facilities (Pool, Fields)', recurrence: 'Seasonal', assignTo: ['Head Coach'] },
-            { id: 'adm_4', category: 'Administrative', task: 'Order Rentals (Port-a-potty, etc.)', recurrence: 'Seasonal', assignTo: ['Head Coach'] },
-        ];
-
-        const INITIAL_PLAYS = [
-            // 100s - WB1 Left Column
-            { id: '101', wristbandSlot: '101', name: 'DIAMOND RT GRN 3 GAMBLE', formation: 'Diamond Rt', tags: ['Gamble'] },
-            { id: '103', wristbandSlot: '103', name: 'BUNCH RT 2 GAMBLE', formation: 'Bunch Rt', tags: ['Gamble'] },
-            { id: '105', wristbandSlot: '105', name: 'BUNCH LT 3 RED 6 + GAMBLE*', formation: 'Bunch Lt', tags: ['Gamble', 'Red 6'] },
-            { id: '107', wristbandSlot: '107', name: 'GRN BOOMER 1', formation: 'Green', tags: ['Boomer'] },
-            { id: '109', wristbandSlot: '109', name: 'RED 39 MUSTANG', formation: 'Red', tags: ['Mustang'] },
-            { id: '111', wristbandSlot: '111', name: 'BRT 56D + KNIFE', formation: 'Bright', tags: ['Knife'] },
-            { id: '113', wristbandSlot: '113', name: 'GRN Fist Smoke', formation: 'Green', tags: ['Smoke'] },
-            { id: '115', wristbandSlot: '115', name: '983 BLUE 1', formation: 'Blue', tags: ['983'] },
-            { id: '117', wristbandSlot: '117', name: 'BRT RED "A THRU" + SALT', formation: 'Bright Red', tags: ['Salt'] },
-            { id: '119', wristbandSlot: '119', name: '941 BLUE 4+ Y Willy', formation: 'Blue', tags: ['Willy'] },
-            { id: '121', wristbandSlot: '121', name: '983 BLUE 2+ CAPONE', formation: 'Blue', tags: ['Capone'] },
-            { id: '123', wristbandSlot: '123', name: '934 BLUE 2 SUPER', formation: 'Blue', tags: ['Super'] },
-            { id: '125', wristbandSlot: '125', name: '980 BLUE 6+ Y RPO', formation: 'Blue', tags: ['RPO'] },
-            { id: '127', wristbandSlot: '127', name: '984 RED 2+ Y Willy', formation: 'Red', tags: ['Willy'] },
-            { id: '129', wristbandSlot: '129', name: '36A RED 4+Y Willy', formation: 'Red', tags: ['Willy'] },
-            { id: '131', wristbandSlot: '131', name: 'GRN RED "B THRU" + 3T', formation: 'Green Red', tags: [] },
-            { id: '133', wristbandSlot: '133', name: '463 BLUE 4A', formation: 'Blue', tags: [] },
-            { id: '135', wristbandSlot: '135', name: '488 LIZ GREEN STICK + TAG', formation: 'Green', tags: ['Stick'] },
-            { id: '137', wristbandSlot: '137', name: '468 RN "A JET"', formation: 'Rn', tags: ['Jet'] },
-            { id: '139', wristbandSlot: '139', name: '468 LIZ GRN RICE*', formation: 'Green', tags: ['Rice'] },
-            { id: '141', wristbandSlot: '141', name: '430 GRN RICE*', formation: 'Green', tags: ['Rice'] },
-            { id: '143', wristbandSlot: '143', name: '488 RED "A ACROSS" 3A+ KNIFE', formation: 'Red', tags: ['Knife'] },
-            { id: '145', wristbandSlot: '145', name: '987 BLUE 6G+ WILLY', formation: 'Blue', tags: ['Willy'] },
-            { id: '147', wristbandSlot: '147', name: '466 ORNG BOOMER 1 + A SHALLOW', formation: 'Orange', tags: ['Boomer', 'Shallow'] },
-
-            // 100s - WB1 Right Column
-            { id: '102', wristbandSlot: '102', name: 'DIAMOND LT GRN GAMBLE', formation: 'Diamond Lt', tags: ['Gamble'] },
-            { id: '104', wristbandSlot: '104', name: 'BUNCH LT 3 GAMBLE (BULLS)*', formation: 'Bunch Lt', tags: ['Gamble', 'Bulls'] },
-            { id: '106', wristbandSlot: '106', name: 'BUNCH RT RT RED 6 + GAMBLE*', formation: 'Bunch Rt', tags: ['Gamble', 'Red 6'] },
-            { id: '108', wristbandSlot: '108', name: 'GRN BOOMER 1 SPECIAL', formation: 'Green', tags: ['Boomer'] },
-            { id: '110', wristbandSlot: '110', name: 'RED 39 MUSTANG', formation: 'Red', tags: ['Mustang'] },
-            { id: '112', wristbandSlot: '112', name: '987 GRN 5G + KNIFE', formation: 'Green', tags: ['Knife'] },
-            { id: '114', wristbandSlot: '114', name: '988 GRN FIST LEAK', formation: 'Green', tags: ['Leak'] },
-            { id: '116', wristbandSlot: '116', name: '983 GRN 1 SMOKE*', formation: 'Green', tags: ['Smoke'] },
-            { id: '118', wristbandSlot: '118', name: '974 RED 5Y + GOT7!', formation: 'Red', tags: ['Got7'] },
-            { id: '120', wristbandSlot: '120', name: '974 RED 5Y+ GOT7!', formation: 'Red', tags: ['Got7'] },
-            { id: '122', wristbandSlot: '122', name: '974 RED 5Y + CAPONE', formation: 'Red', tags: ['Capone'] },
-            { id: '124', wristbandSlot: '124', name: '934 RED 1 (A ARC)', formation: 'Red', tags: ['Arc'] },
-            { id: '126', wristbandSlot: '126', name: '970 RED 6+ Y RPO', formation: 'Red', tags: ['RPO'] },
-            { id: '128', wristbandSlot: '128', name: '973 BLUE 4Y + WILLY', formation: 'Blue', tags: ['Willy'] },
-            { id: '130', wristbandSlot: '130', name: '473 BLUE 4A + WILLY', formation: 'Blue', tags: ['Willy'] },
-            { id: '132', wristbandSlot: '132', name: '974 RED "B THRU" + 4T', formation: 'Red', tags: [] },
-            { id: '134', wristbandSlot: '134', name: '374 RED 3A', formation: 'Red', tags: [] },
-            { id: '136', wristbandSlot: '136', name: '877 RIP GOLD STICK + TAG', formation: 'Gold', tags: ['Stick'] },
-            { id: '138', wristbandSlot: '138', name: '866 RIP "A JET"', formation: 'Rip', tags: ['Jet'] },
-            { id: '140', wristbandSlot: '140', name: '888 LIZ GRN BOOMER 1 + B SHAL*', formation: 'Green', tags: ['Boomer'] },
-            { id: '142', wristbandSlot: '142', name: '830 RIP Inverted Veer', formation: 'Rip', tags: ['Veer'] },
-            { id: '144', wristbandSlot: '144', name: '470 Rip Red "A ACROSS" 4A + Knife', formation: 'Red', tags: ['Knife'] },
-            { id: '146', wristbandSlot: '146', name: '987 RED 5G+ WILLY', formation: 'Red', tags: ['Willy'] },
-            { id: '148', wristbandSlot: '148', name: '466 ORNG STASH (X ST)', formation: 'Orange', tags: ['Stash'] },
-
-            // 200s - WB2 Left Column
-            { id: '201', wristbandSlot: '201', name: '987 BLUE 3', formation: 'Blue', tags: [] },
-            { id: '203', wristbandSlot: '203', name: '473 GRN B THRU + MICKEY (SIG)', formation: 'Green', tags: ['Mickey'] },
-            { id: '205', wristbandSlot: '205', name: '987 BRN CROSS*', formation: 'Brown', tags: ['Cross'] },
-            { id: '207', wristbandSlot: '207', name: '288 BRN SHARK (SIG)', formation: 'Brown', tags: ['Shark'] },
-            { id: '209', wristbandSlot: '209', name: '469 RED 2', formation: 'Red', tags: [] },
-            { id: '211', wristbandSlot: '211', name: '877 RED 3T', formation: 'Red', tags: [] },
-            { id: '213', wristbandSlot: '213', name: '479 OVER U RED 2*', formation: 'Red', tags: [] },
-            { id: '215', wristbandSlot: '215', name: '430 OVER O DITCH', formation: 'Over', tags: ['Ditch'] },
-            { id: '217', wristbandSlot: '217', name: '888 GRN BOOMER 1', formation: 'Green', tags: ['Boomer'] },
-            { id: '219', wristbandSlot: '219', name: 'TANK 48 OVER RED 2*', formation: 'Red', tags: [] },
-            { id: '221', wristbandSlot: '221', name: '830 METAL RED Z JUKE', formation: 'Red', tags: ['Juke'] },
-            { id: '223', wristbandSlot: '223', name: '677 RED 1 OPTION', formation: 'Red', tags: ['Option'] },
-            { id: '225', wristbandSlot: '225', name: '878 GRN WHEEL BUMP*', formation: 'Green', tags: ['Wheel'] },
-            { id: '227', wristbandSlot: '227', name: '889 BRN TAG+ WHEEL*', formation: 'Brown', tags: ['Wheel'] },
-            { id: '229', wristbandSlot: '229', name: '469 RED 2', formation: 'Red', tags: [] },
-            { id: '231', wristbandSlot: '231', name: '876 J RED 1', formation: 'Red', tags: [] },
-            { id: '233', wristbandSlot: '233', name: '984 RED 1 + SMOKE (SIG)', formation: 'Red', tags: ['Smoke'] },
-            { id: '235', wristbandSlot: '235', name: '697 BROWN SMASH + DEPOT', formation: 'Brown', tags: ['Smash'] },
-            { id: '237', wristbandSlot: '237', name: '369 RED WHEEL BUMP + Q SPK', formation: 'Red', tags: ['Wheel'] },
-            { id: '239', wristbandSlot: '239', name: '983 RED SWING NOLES', formation: 'Red', tags: ['Swing'] },
-            { id: '241', wristbandSlot: '241', name: '489 RED 2 (J ROG)', formation: 'Red', tags: [] },
-            { id: '243', wristbandSlot: '243', name: '676 BLUE 3Y*', formation: 'Blue', tags: [] },
-            { id: '245', wristbandSlot: '245', name: '888 RED BRN', formation: 'Red', tags: [] },
-            { id: '247', wristbandSlot: '247', name: '934 MAROON MOSS', formation: 'Maroon', tags: ['Moss'] },
-
-            // 200s - WB2 Right Column
-            { id: '202', wristbandSlot: '202', name: '987 BLUE 2', formation: 'Blue', tags: [] },
-            { id: '204', wristbandSlot: '204', name: '473 GRN B THRU + MICKEY (SIG)', formation: 'Green', tags: ['Mickey'] },
-            { id: '206', wristbandSlot: '206', name: '987 GRN CROSS*', formation: 'Green', tags: ['Cross'] },
-            { id: '208', wristbandSlot: '208', name: '288 GRN SHARK (SIG)', formation: 'Green', tags: ['Shark'] },
-            { id: '210', wristbandSlot: '210', name: '469 RED 1', formation: 'Red', tags: [] },
-            { id: '212', wristbandSlot: '212', name: '877 RED 3T', formation: 'Red', tags: [] },
-            { id: '214', wristbandSlot: '214', name: '479 OVER U RED 2*', formation: 'Red', tags: [] },
-            { id: '216', wristbandSlot: '216', name: '430 OVER O DITCH', formation: 'Over', tags: ['Ditch'] },
-            { id: '218', wristbandSlot: '218', name: '877 GOLD BOOMER 1', formation: 'Gold', tags: ['Boomer'] },
-            { id: '220', wristbandSlot: '220', name: 'TANK 471 OVER BLUE 2', formation: 'Blue', tags: [] },
-            { id: '222', wristbandSlot: '222', name: '830 METAL RED Z JUKE', formation: 'Red', tags: ['Juke'] },
-            { id: '224', wristbandSlot: '224', name: '688 BLUE 1 OPTION', formation: 'Blue', tags: ['Option'] },
-            { id: '226', wristbandSlot: '226', name: '878 GRN WHEEL BUMP*', formation: 'Green', tags: ['Wheel'] },
-            { id: '228', wristbandSlot: '228', name: '889 BRN SMASH + BLADE', formation: 'Brown', tags: ['Smash'] },
-            { id: '230', wristbandSlot: '230', name: '370 BLUE 1', formation: 'Blue', tags: [] },
-            { id: '232', wristbandSlot: '232', name: '876 BLUE 1', formation: 'Blue', tags: [] },
-            { id: '234', wristbandSlot: '234', name: '984 RED 1 + SMOKE (SIG)', formation: 'Red', tags: ['Smoke'] },
-            { id: '236', wristbandSlot: '236', name: 'NUB RT + TUB LEFT BLUE Z THRU 4A', formation: 'Nub Rt', tags: [] },
-            { id: '238', wristbandSlot: '238', name: '480 BLACK WHEEL SHARK', formation: 'Black', tags: ['Wheel', 'Shark'] },
-            { id: '240', wristbandSlot: '240', name: 'SCRAMBLE 984 RED SHOW 3Y MLB*', formation: 'Red', tags: ['Scramble'] },
-            { id: '242', wristbandSlot: '242', name: '370 RED 1 (J ROG)', formation: 'Red', tags: [] },
-            { id: '244', wristbandSlot: '244', name: '983 RED 1*', formation: 'Red', tags: [] },
-            { id: '246', wristbandSlot: '246', name: 'TANK 32A U OVER BLUE QB WEDGE RT', formation: 'Blue', tags: ['Wedge'] },
-            { id: '248', wristbandSlot: '248', name: '934 MAROON (SIG)', formation: 'Maroon', tags: [] },
-        ];
+        const INITIAL_PLAYS = [];
 
         // --- Director of Ops Data ---
-        const WEEKLY_OPS_TASKS = [
-            // Saturday
-            { id: 'sat_1', day: 'Saturday', task: 'Break down our game film', roles: ['HC', 'OC', 'DC'], completed: false },
-            { id: 'sat_2', day: 'Saturday', task: 'Send opponent film to Hudl Assist', roles: ['HC', 'OC', 'DC'], completed: false },
-
-            // Sunday
-            { id: 'sun_1', day: 'Sunday', task: 'Break down opponent scheme, tendencies, and personnel', roles: ['OC', 'DC', 'Position Coach'], completed: false },
-            { id: 'sun_2', day: 'Sunday', task: 'Formulate game plan and prepare scheme tweaks', roles: ['HC', 'OC', 'DC'], completed: false },
-            { id: 'sun_3', day: 'Sunday', task: 'Staff Meeting: Preview opponent & discuss improvements', roles: ['ALL'], completed: false },
-            { id: 'sun_4', day: 'Sunday', task: 'Finalize practice plans and segment allotments', roles: ['HC', 'OC', 'DC'], completed: false },
-
-            // Monday
-            { id: 'mon_1', day: 'Monday', task: 'Check JV Game schedule (adjust practice load)', roles: ['HC', 'OC', 'DC'], completed: false },
-            { id: 'mon_2', day: 'Monday', task: 'Film segment prior to walkthrough', roles: ['HC', 'OC', 'DC', 'Position Coach'], completed: false },
-            { id: 'mon_3', day: 'Monday', task: 'Walkthrough', roles: ['ALL'], completed: false },
-            { id: 'mon_4', day: 'Monday', task: 'Upload previous game film to Hudl (if not done)', roles: ['HC', 'Ops'], completed: false },
-
-            // Tuesday
-            { id: 'tue_1', day: 'Tuesday', task: 'Complete opponent scouting report', roles: ['OC', 'DC'], completed: false },
-            { id: 'tue_2', day: 'Tuesday', task: 'Finalize practice scripts for Wed/Thu', roles: ['OC', 'DC'], completed: false },
-
-            // Wednesday
-            { id: 'wed_1', day: 'Wednesday', task: 'Confirm travel arrangements', roles: ['Ops', 'HC'], completed: false },
-            { id: 'wed_2', day: 'Wednesday', task: 'Check medical/injury reports', roles: ['HC', 'Ops'], completed: false },
-
-            // Thursday
-            { id: 'thu_1', day: 'Thursday', task: 'Review game day roster', roles: ['HC', 'OC', 'DC'], completed: false },
-            { id: 'thu_2', day: 'Thursday', task: 'Print wristbands and call sheets', roles: ['OC', 'DC', 'Ops'], completed: false },
-
-            // Friday
-            { id: 'fri_1', day: 'Friday', task: 'Pre-game meal check', roles: ['Ops'], completed: false },
-            { id: 'fri_2', day: 'Friday', task: 'Equipment check', roles: ['Ops'], completed: false }
-        ];
+        const WEEKLY_OPS_TASKS = [];
 
         // --- Components ---
 
@@ -2001,12 +2005,52 @@
                                                     ))}
                                                 </div>
                                             )}
-                                        </div>
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     ))}
+
+                    {/* BILLING TAB */}
+                    {activeTab === 'billing' && (
+                        <div className="animation-fade-in card">
+                            <h3>Billing & Plans</h3>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1rem' }}>
+                                <div style={{ background: 'var(--bg-body)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-secondary)' }}>Current Plan</h4>
+                                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: currentPlanStatus.includes('PREMIUM') || currentPlanStatus === 'ALL_ACCESS' ? '#22c55e' : 'var(--text-primary)' }}>
+                                        {currentPlanStatus.replace('_', ' ')}
+                                    </div>
+                                    <div style={{ marginTop: '0.5rem', opacity: 0.8 }}>
+                                        {currentPlanStatus === 'PREMIUM_TRIAL' && billingInfo.trialEndsAt && `Trial Ends: ${new Date(billingInfo.trialEndsAt).toLocaleDateString()}`}
+                                        {currentPlanStatus === 'PREMIUM' && billingInfo.subscriptionEndsAt && `Expires: ${new Date(billingInfo.subscriptionEndsAt).toLocaleDateString()}`}
+                                        {currentPlanStatus === 'FREE' && "Limited Features Active"}
+                                    </div>
+                                </div>
+
+                                <div style={{ background: 'var(--bg-body)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-secondary)' }}>Redeem Promo Code</h4>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="Enter Code"
+                                            value={promoCode}
+                                            onChange={e => setPromoCode(e.target.value)}
+                                        />
+                                        <button className="btn btn-primary" disabled={redeeming || !promoCode} onClick={handleRedeemPromo}>
+                                            {redeeming ? 'Applying...' : 'Redeem'}
+                                        </button>
+                                    </div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                                        Enter a code provided by support to extend your premium access.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -8976,6 +9020,7 @@
 
 
         const RosterManager = ({ roster, onUpdateRoster, depthChart }) => {
+            const { isFree } = useSchoolPlan(); // School Plan Hook
             const [newPlayer, setNewPlayer] = useState({
                 number: '', name: '', position: 'QB/LB', offPosition: 'QB', defPosition: 'LB', year: 'Fr', height: '', weight: '',
                 helmetSize: '', shoulderPadSize: '', pantSize: '',
@@ -9011,6 +9056,12 @@
             };
 
             const addPlayer = () => {
+                // Free Plan Guardrail
+                if (isFree && roster.length >= 50) {
+                    alert("Free Plan Limit Reached (50 Players). Upgrade to Premium to add more players.");
+                    return;
+                }
+
                 if (!newPlayer.number || !newPlayer.name) return;
                 const position = `${newPlayer.offPosition}/${newPlayer.defPosition}`;
                 onUpdateRoster([...roster, { ...newPlayer, position, id: Date.now().toString() }]);
@@ -16601,17 +16652,17 @@
                         'PR': { value: '415', holder: 'Aaron Peyton', year: '10/22' }
                     },
                     '250-259': {
-                        '11': { value: '450', holder: 'Roland Yates', year: '5/24' },
+                        '11': { value: '450', holder: 'Record Holder', year: '5/24' },
                         '10': { value: '365', holder: 'Aaron Peyton', year: '5/22' },
                         '9': { value: '230', holder: 'Carson Barber', year: '11/21' },
-                        'PR': { value: '450', holder: 'Roland Yates', year: '5/24' }
+                        'PR': { value: '450', holder: 'Record Holder', year: '5/24' }
                     },
                     '240-249': {
                         '12': { value: '405', holder: 'W. Licht, T. Tjaden, T. Peterson', year: '23/24' },
-                        '11': { value: '415', holder: 'Roland Yates', year: '7/23' },
-                        '10': { value: '380', holder: 'Roland Yates', year: '2/23' },
+                        '11': { value: '415', holder: 'Record Holder', year: '7/23' },
+                        '10': { value: '380', holder: 'Record Holder', year: '2/23' },
                         '9': { value: '225', holder: 'Jackson Mohr', year: '2/23' },
-                        'PR': { value: '415', holder: 'Roland Yates', year: '7/23' }
+                        'PR': { value: '415', holder: 'Record Holder', year: '7/23' }
                     },
                     '230-239': {
                         '12': { value: '400', holder: 'Wes Hansen', year: '7/24' },
@@ -16758,7 +16809,7 @@
                     '230-239': {
                         '12': { value: '265', holder: 'Blake Nelsen', year: '8/25' },
                         '11': { value: '270', holder: 'William Licht', year: '5/23' },
-                        '10': { value: '215', holder: 'Roland Yates', year: '10/22' },
+                        '10': { value: '215', holder: 'Record Holder', year: '10/22' },
                         'PR': { value: '270', holder: 'William Licht', year: '5/23' }
                     },
                     '220-229': {
@@ -16891,7 +16942,7 @@
                     '230-239': {
                         '12': { value: '48.6', holder: 'Blake Nelsen', year: '8/25' },
                         '11': { value: '1:01', holder: 'Nick Stewart', year: '8/21' },
-                        '10': { value: '49.4', holder: 'Roland Yates', year: '8/22' },
+                        '10': { value: '49.4', holder: 'Record Holder', year: '8/22' },
                         'PR': { value: '48.6', holder: 'Blake Nelsen', year: '8/25' }
                     },
                     '220-229': {
@@ -17689,7 +17740,7 @@
             );
         };
 
-        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isSiteAdmin = false }) => {
+        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isSiteAdmin = false, currentSchoolId }) => {
 
 
             const handleImageUpload = (e) => {
@@ -17890,56 +17941,368 @@
                 updateAccessConfig({ ...accessConfig, siteAdmins: newSiteAdmins });
             };
 
+            // --- BILLING & LICENSING ---
+            const [promoCode, setPromoCode] = useState('');
+            const [redeeming, setRedeeming] = useState(false);
+            const { billingInfo, updateBilling, planStatus: currentPlanStatus } = useSchoolPlan();
+
+            const handleRedeemPromo = async () => {
+                if (!promoCode) return;
+                setRedeeming(true);
+                try {
+                    // 1. Validate Code
+                    // NOTE: This assumes 'promo_codes' collection is readable by admins
+                    const codeId = promoCode.trim();
+                    const codeDoc = await window.db.collection('config').doc('billing').collection('promo_codes').doc(codeId).get();
+
+                    if (!codeDoc.exists) throw new Error("Invalid Promo Code");
+                    const codeData = codeDoc.data();
+
+                    if (!codeData.active) throw new Error("Promo Code is inactive");
+                    if (codeData.expiresAt && new Date(codeData.expiresAt) < new Date()) throw new Error("Promo Code expired");
+
+                    // 2. Apply Code
+                    const now = new Date();
+                    let newSubEnd = now;
+
+                    // If already premium/trial, extend from current expiry? 
+                    // Let's simplify: Extend from NOW or Extend from Current Expiry if valid?
+                    // Design: If 'extension', add days to max(now, currentExpiry).
+
+                    let baseDate = now;
+                    if (currentPlanStatus.includes('PREMIUM') && billingInfo.subscriptionEndsAt) {
+                        const currentEnd = new Date(billingInfo.subscriptionEndsAt);
+                        if (currentEnd > now) baseDate = currentEnd;
+                    } else if (currentPlanStatus === 'PREMIUM_TRIAL' && billingInfo.trialEndsAt) {
+                        const trialEnd = new Date(billingInfo.trialEndsAt);
+                        if (trialEnd > now) baseDate = trialEnd;
+                    }
+
+                    if (codeData.durationDays) {
+                        newSubEnd = new Date(baseDate.getTime() + (codeData.durationDays * 24 * 60 * 60 * 1000));
+                    }
+
+                    const newBilling = {
+                        ...billingInfo,
+                        plan: 'premium',
+                        status: 'active',
+                        subscriptionEndsAt: newSubEnd.toISOString(),
+                        promoCode: codeId
+                    };
+
+                    // Update School
+                    await window.db.collection('schools').doc(currentSchoolId).update({
+                        billing: newBilling,
+                        // Track redemption in school doc to prevent reuse? 
+                        redeemedCodes: firebase.firestore.FieldValue.arrayUnion(codeId)
+                    });
+
+                    // Update Local State
+                    updateBilling(newBilling);
+                    setPromoCode('');
+                    alert(`Success! Plan extended until ${newSubEnd.toLocaleDateString()}.\n\nReloading application...`);
+                    window.location.reload();
+
+                } catch (err) {
+                    console.error("Redemption Error:", err);
+                    alert("Redemption Failed: " + err.message);
+                }
+                setRedeeming(false);
+            };
+
             // ... (existing code)
+
+            // NEW: Members Logic
+            const [loadingMembers, setLoadingMembers] = useState(false);
+            const [members, setMembers] = useState([]);
+            const [inviteEmail, setInviteEmail] = useState('');
+            const [inviteRole, setInviteRole] = useState('coach');
+
+            // Domain Management State
+            const [claimedDomains, setClaimedDomains] = useState([]);
+            const [newDomain, setNewDomain] = useState('');
+
+            useEffect(() => {
+                if (activeTab === 'members' && currentSchoolId) {
+                    loadMembers();
+                }
+            }, [activeTab, currentSchoolId]);
+
+            const loadMembers = async () => {
+                setLoadingMembers(true);
+                try {
+                    const schoolDoc = await window.db.collection('schools').doc(currentSchoolId).get();
+                    if (schoolDoc.exists) {
+                        setMembers(schoolDoc.data().memberList || []);
+                        setClaimedDomains(schoolDoc.data().domains || []);
+                    }
+                } catch (err) {
+                    console.error("Error loading members:", err);
+                }
+                setLoadingMembers(false);
+            };
+
+            const handleAddDomain = async () => {
+                if (!newDomain || !newDomain.includes('.')) return alert("Please enter a valid domain (e.g. myschool.edu)");
+                const domain = newDomain.toLowerCase().trim().replace('@', ''); // specific cleanup
+
+                try {
+                    await window.db.collection('schools').doc(currentSchoolId).update({
+                        domains: firebase.firestore.FieldValue.arrayUnion(domain)
+                    });
+                    setClaimedDomains(prev => [...prev, domain]);
+                    setNewDomain('');
+                } catch (err) {
+                    console.error("Error adding domain:", err);
+                    alert("Failed to add domain.");
+                }
+            };
+
+            const handleRemoveDomain = async (domain) => {
+                if (!window.confirm(`Stop auto-joining users from @${domain}?`)) return;
+                try {
+                    await window.db.collection('schools').doc(currentSchoolId).update({
+                        domains: firebase.firestore.FieldValue.arrayRemove(domain)
+                    });
+                    setClaimedDomains(prev => prev.filter(d => d !== domain));
+                } catch (err) {
+                    console.error("Error removing domain:", err);
+                    alert("Failed to remove domain.");
+                }
+            };
+
+            const handleSendInvite = async () => {
+                if (!inviteEmail || !inviteEmail.includes('@')) return;
+
+                try {
+                    // Create Invite Doc
+                    const inviteToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                    await window.db.collection('invites').add({
+                        email: inviteEmail.toLowerCase(),
+                        schoolId: currentSchoolId,
+                        schoolName: localStorage.getItem('hc_school_name') || 'Football Program',
+                        role: inviteRole,
+                        token: inviteToken,
+                        status: 'pending',
+                        createdAt: new Date().toISOString(),
+                        createdBy: window.auth.currentUser.uid
+                    });
+
+                    alert(`Invite Link Generated (Copy & Send):\n\n${window.location.origin}?invite=${inviteToken}`);
+                    setInviteEmail('');
+                } catch (err) {
+                    console.error("Error sending invite:", err);
+                }
+            };
+
+            const handleRemoveMember = async (member) => {
+                const isSelf = member.uid === currentUser.uid;
+
+                if (isSelf) {
+                    if (member.role === 'admin') {
+                        // Prompt for Admin Self-Removal choices
+                        const choice = prompt("You are leaving as an Admin.\n\nType 'DELETE' to permanently delete this school (Wipe Data).\nType 'LEAVE' to just remove yourself.\nClick Cancel to stay.", "LEAVE");
+
+                        if (choice === null) return; // Cancelled
+
+                        const action = choice.toUpperCase().trim();
+
+                        if (action === 'DELETE') {
+                            if (!window.confirm("FINAL WARNING: This will wipe all school data. Are you sure?")) return;
+                            setLoadingMembers(true);
+                            try {
+                                // 1. Delete School Doc
+                                await window.db.collection('schools').doc(currentSchoolId).delete();
+
+                                // 2. Delete Membership
+                                await window.db.collection('users').doc(currentUser.uid).collection('memberships').doc(currentSchoolId).delete();
+
+                                // 3. Update User Legacy Field & Local Storage
+                                await window.db.collection('users').doc(currentUser.uid).update({ schoolId: firebase.firestore.FieldValue.delete() });
+                                localStorage.removeItem('hc_school_id');
+
+                                alert("School deleted. Reloading...");
+                                window.location.reload();
+                            } catch (err) {
+                                console.error("Error deleting school:", err);
+                                alert("Error: " + err.message);
+                                setLoadingMembers(false);
+                            }
+                            return;
+                        }
+
+                        if (action !== 'LEAVE') return; // Invalid input or aborted
+                        // Fallthrough to LEAVE logic
+                    } else {
+                        if (!window.confirm("Are you sure you want to leave this school?")) return;
+                    }
+                } else {
+                    if (!window.confirm(`Are you sure you want to remove ${member.email}?`)) return;
+                }
+
+                // Standard Remove / Leave Logic
+                try {
+                    setLoadingMembers(true);
+
+                    // 1. Remove from School's memberList
+                    // 1. Remove from School's memberList AND staff list
+                    await window.db.collection('schools').doc(currentSchoolId).update({
+                        memberList: firebase.firestore.FieldValue.arrayRemove(member),
+                        staff: firebase.firestore.FieldValue.arrayRemove(member) // Assuming member object is consistent/same ref.
+                    });
+
+                    // Note: arrayRemove only works if the object is IDENTICAL. 
+                    // Members in 'staff' might have different fields than 'memberList'.
+                    // So we might need to Read-Filter-Write for 'staff' array if the object structure differs.
+                    // Given the 'member' passed here comes from the 'members' state which is `memberList`, 
+                    // let's do a more robust Read-Modify-Write for the staff array to be safe.
+
+                    const schoolDocRef = window.db.collection('schools').doc(currentSchoolId);
+                    await window.db.runTransaction(async (transaction) => {
+                        const sDoc = await transaction.get(schoolDocRef);
+                        if (!sDoc.exists) return;
+
+                        const sData = sDoc.data();
+                        const currentStaff = sData.staff || [];
+                        const currentMembers = sData.memberList || [];
+
+                        const newStaff = currentStaff.filter(s => s.uid !== member.uid && s.id !== member.uid); // Check both UID and ID
+                        const newMembers = currentMembers.filter(m => m.uid !== member.uid);
+
+                        transaction.update(schoolDocRef, {
+                            staff: newStaff,
+                            memberList: newMembers
+                        });
+                    });
+
+                    // 2. Delete Membership subdoc for the target user
+                    // Note: This requires write permission to target user's subcollection. 
+                    // If this fails (due to rules), the user is at least removed from the 'memberList'
+                    // so they won't show in UI, but might retain access if rules check membership doc.
+                    // Ideally Admin should have write access.
+                    await window.db.collection('users').doc(member.uid).collection('memberships').doc(currentSchoolId).delete()
+                        .catch(err => console.warn("Could not delete membership doc (perm issue?):", err));
+
+                    // 3. [NEW] Clear Root User Legacy Fields
+                    // This forces the user to be "orphaned" from this school in their personal view
+                    await window.db.collection('users').doc(member.uid).update({
+                        schoolId: firebase.firestore.FieldValue.delete(),
+                        role: firebase.firestore.FieldValue.delete(),
+                        activeYear: firebase.firestore.FieldValue.delete()
+                    }).catch(err => console.warn("Could not clear root user fields (perm issue?):", err));
+
+                    if (isSelf) {
+                        // Also clear legacy field
+                        await window.db.collection('users').doc(currentUser.uid).update({ schoolId: firebase.firestore.FieldValue.delete() });
+                        localStorage.removeItem('hc_school_id');
+                        window.location.reload();
+                    } else {
+                        // Refresh list
+                        fetchMembers();
+                    }
+
+                } catch (err) {
+                    console.error("Error removing member:", err);
+                    alert("Failed to remove member. " + err.message);
+                    setLoadingMembers(false);
+                }
+            };
 
             return (
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {/* ... (Confirmation Modal) ... */}
-                    {/* ... */}
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <h2>Settings</h2>
                         <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-panel)', padding: '0.25rem', borderRadius: '8px' }}>
-                            <button
-                                className="btn"
-                                style={{
-                                    backgroundColor: activeTab === 'general' ? 'var(--accent)' : 'transparent',
-                                    color: activeTab === 'general' ? 'white' : 'var(--text-secondary)',
-                                    border: 'none',
-                                    borderRadius: '6px'
-                                }}
-                                onClick={() => setActiveTab('general')}
-                            >
-                                General
-                            </button>
-                            <button
-                                className="btn"
-                                style={{
-                                    backgroundColor: activeTab === 'cloud' ? 'var(--accent)' : 'transparent',
-                                    color: activeTab === 'cloud' ? 'white' : 'var(--text-secondary)',
-                                    border: 'none',
-                                    borderRadius: '6px'
-                                }}
-                                onClick={() => setActiveTab('cloud')}
-                            >
-                                Cloud Data
-                            </button>
+                            <button className="btn" style={{ backgroundColor: activeTab === 'general' ? 'var(--accent)' : 'transparent', color: activeTab === 'general' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('general')}>General</button>
+                            <button className="btn" style={{ backgroundColor: activeTab === 'cloud' ? 'var(--accent)' : 'transparent', color: activeTab === 'cloud' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('cloud')}>Cloud Data</button>
+                            {currentSchoolId && (
+                                <button className="btn" style={{ backgroundColor: activeTab === 'members' ? 'var(--accent)' : 'transparent', color: activeTab === 'members' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('members')}>Members</button>
+                            )}
                             {isAdmin && (
-                                <button
-                                    className="btn"
-                                    style={{
-                                        backgroundColor: activeTab === 'access' ? 'var(--accent)' : 'transparent',
-                                        color: activeTab === 'access' ? 'white' : 'var(--text-secondary)',
-                                        border: 'none',
-                                        borderRadius: '6px'
-                                    }}
-                                    onClick={() => setActiveTab('access')}
-                                >
-                                    Access Control
-                                </button>
+                                <button className="btn" style={{ backgroundColor: activeTab === 'access' ? 'var(--accent)' : 'transparent', color: activeTab === 'access' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('access')}>Site Admin</button>
+                            )}
+                            {(isAdmin || members.find(m => m.uid === currentUser.uid)?.role === 'admin') && (
+                                <button className="btn" style={{ backgroundColor: activeTab === 'billing' ? 'var(--accent)' : 'transparent', color: activeTab === 'billing' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('billing')}>Billing</button>
                             )}
                         </div>
                     </div>
+
+                    {activeTab === 'members' && currentSchoolId && (
+                        <div className="animation-fade-in card">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <h3>Team Members</h3>
+                                    <p style={{ color: 'var(--text-secondary)' }}>Manage coaches and staff access.</p>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input placeholder="New Member Email" className="form-input" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
+                                    <select className="form-select" value={inviteRole} onChange={e => setInviteRole(e.target.value)}>
+                                        <option value="coach">Coach</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="viewer">Viewer</option>
+                                    </select>
+                                    <button className="btn btn-primary" onClick={handleSendInvite}>Invite</button>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {loadingMembers ? <p>Loading...</p> : members.map((m, idx) => (
+                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-body)', borderRadius: '8px' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold' }}>{m.email}</div>
+                                            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Role: {m.role} • Joined: {new Date(m.joinedAt).toLocaleDateString()}</div>
+                                        </div>
+                                        <button className="btn" style={{ color: '#ef4444' }} onClick={() => handleRemoveMember(m)}>Remove</button>
+                                    </div>
+                                ))}
+                                {!loadingMembers && members.length === 0 && <p style={{ opacity: 0.5, fontStyle: 'italic' }}>No members found (except you, maybe? Try reloading).</p>}
+                            </div>
+
+                            {/* Domain Management UI */}
+                            {(isAdmin || members.find(m => m.uid === currentUser.uid)?.role === 'admin') && (
+                                <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0 }}>Approved Domains</h3>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '0.25rem 0 0 0' }}>
+                                                Auto-join users with these email domains.
+                                            </p>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <input
+                                                placeholder="e.g. myschool.edu"
+                                                className="form-input"
+                                                value={newDomain}
+                                                onChange={e => setNewDomain(e.target.value)}
+                                                style={{ minWidth: '200px' }}
+                                            />
+                                            <button className="btn btn-primary" onClick={handleAddDomain}>Add</button>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        {claimedDomains.map((d, idx) => (
+                                            <div key={idx} style={{
+                                                background: 'var(--bg-main)', border: '1px solid var(--border)',
+                                                padding: '0.5rem 1rem', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                            }}>
+                                                <span style={{ fontWeight: 500 }}>@{d}</span>
+                                                <button
+                                                    onClick={() => handleRemoveDomain(d)}
+                                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                                                    title="Remove Domain"
+                                                >
+                                                    <div style={{ fontSize: '1.2rem', lineHeight: 1 }}>&times;</div>
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {claimedDomains.length === 0 && <span style={{ opacity: 0.5, fontSize: '0.9rem' }}>No domains claimed yet. Users must be invited manually.</span>}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {activeTab === 'access' && isAdmin ? (
                         <div className="animation-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -18289,12 +18652,25 @@
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                    <button className="btn btn-secondary" onClick={() => window.print()}>
-                                        <Icon name="Printer" size={16} /> Print Cards
-                                    </button>
-                                    <button className="btn btn-primary" onClick={onExportData}>
-                                        <Icon name="Download" size={16} /> Download Backup (JSON)
-                                    </button>
+                                    {currentPlanStatus !== 'FREE' ? (
+                                        <>
+                                            <button className="btn btn-secondary" onClick={() => window.print()}>
+                                                <Icon name="Printer" size={16} /> Print Cards
+                                            </button>
+                                            <button className="btn btn-primary" onClick={onExportData}>
+                                                <Icon name="Download" size={16} /> Download Backup (JSON)
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button className="btn" style={{ background: '#e2e8f0', color: '#94a3b8', cursor: 'pointer' }} onClick={() => alert("Printing is a Premium feature. Please upgrade to unlock.")}>
+                                                <Icon name="Lock" size={16} /> Print Cards
+                                            </button>
+                                            <button className="btn" style={{ background: '#e2e8f0', color: '#94a3b8', cursor: 'pointer' }} onClick={() => alert("Data Export is a Premium feature. Please upgrade to unlock.")}>
+                                                <Icon name="Lock" size={16} /> Download Backup
+                                            </button>
+                                        </>
+                                    )}
                                     <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                                         📤 Import Data
                                         <input
@@ -20746,7 +21122,7 @@
             // Let's implement Note Filtering primarily.
 
             // Helper to calculation start time for each period
-            let currentTime = new Date(`2000-01-01T${plan.startTime}`);
+            let currentTime = new Date(`2000-01-01T${plan.startTime} `);
             const formatTime = (date) => date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(' ', '');
 
             return (
@@ -20754,13 +21130,13 @@
 
                     {/* Print-only styles for this specific view */}
                     <style>{`
-                        @media print {
-                            @page { margin: 0.5cm; size: landscape; }
-                            body { -webkit-print-color-adjust: exact; }
-                            .no-print { display: none !important; }
-                            .print-container { padding: 0 !important; width: 100% !important; max-width: none !important; }
+                    @media print {
+                        @page { margin: 0.5cm; size: landscape; }
+                            body { -webkit - print - color - adjust: exact; }
+                            .no - print { display: none!important; }
+                            .print - container { padding: 0!important; width: 100 % !important; max - width: none!important; }
                         }
-                    `}</style>
+        `}</style>
 
                     {/* Navigation Header (Hidden in Print or Batch Mode) */}
                     {!isBatchMode && (
@@ -20786,7 +21162,7 @@
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Start: {new Date(`2000-01-01T${plan.startTime}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Start: {new Date(`2000-01-01T${plan.startTime} `).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div>
                             <div style={{ fontSize: '1.1rem' }}>Duration: {Math.floor(totalDuration / 60)}h {totalDuration % 60}m</div>
                         </div>
                     </header>
@@ -20914,12 +21290,12 @@
             return (
                 <div style={{ width: '100%' }}>
                     <style>{`
-                        @media print {
-                            @page { margin: 0; }
-                            body { -webkit-print-color-adjust: exact; }
-                            .no-print { display: none !important; }
-                        }
-                    `}</style>
+        @media print {
+            @page { margin: 0; }
+                            body { -webkit - print - color - adjust: exact; }
+                            .no - print { display: none!important; }
+        }
+        `}</style>
                     <div className="no-print" style={{ padding: '1rem', background: '#333', color: 'white', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                             <strong>Batch Print Preview</strong> - {components.length} pages ready.
@@ -21006,9 +21382,9 @@
                     const plan = practicePlans[day];
 
                     // Order: Plan -> Script -> Cards (Ideal for Plan Front / Script Back if duplexing)
-                    if (sel.plan) components.push(<PracticePlanPrintView key={`${day}-plan`} plan={plan} isBatchMode={true} coachFilter={selectedPrintCoach} roster={roster} staff={staff} />);
-                    if (sel.script) components.push(<ScriptPrintView key={`${day}-script`} plan={plan} isBatchMode={true} />);
-                    if (sel.cards) components.push(<ScoutCardPrintView key={`${day}-cards`} plan={plan} isBatchMode={true} />);
+                    if (sel.plan) components.push(<PracticePlanPrintView key={`${day} -plan`} plan={plan} isBatchMode={true} coachFilter={selectedPrintCoach} roster={roster} staff={staff} />);
+                    if (sel.script) components.push(<ScriptPrintView key={`${day} -script`} plan={plan} isBatchMode={true} />);
+                    if (sel.cards) components.push(<ScoutCardPrintView key={`${day} -cards`} plan={plan} isBatchMode={true} />);
                 });
 
                 if (components.length === 0) {
@@ -21127,7 +21503,7 @@
                             <button
                                 key={cat.id}
                                 onClick={() => setSelectedCategory(cat.id)}
-                                className={`btn ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
+                                className={`btn ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'} `}
                                 style={{ padding: '1rem 2rem', fontSize: '1.1rem' }}
                             >
                                 <Icon name={cat.icon} size={20} />
@@ -21329,7 +21705,7 @@
                 if (!playerSearch || playerSearch.trim() === '') return players;
                 const searchTerm = playerSearch.toLowerCase().trim();
                 return players.filter(p => {
-                    const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+                    const fullName = `${p.firstName} ${p.lastName} `.toLowerCase();
                     const jerseyStr = p.jersey ? p.jersey.toString() : '';
                     return fullName.includes(searchTerm) || jerseyStr.includes(searchTerm);
                 });
@@ -21780,7 +22156,7 @@
                             <div className="card" style={{ padding: '1.5rem' }}>
                                 <h2 style={{ marginTop: 0, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Icon name="Clipboard" size={24} />
-                                    Attendance Report{eventTypeFilter !== 'All Events' ? ` - ${eventTypeFilter}` : ''}
+                                    Attendance Report{eventTypeFilter !== 'All Events' ? ` - ${eventTypeFilter} ` : ''}
                                 </h2>
 
                                 {/* Summary Cards */}
@@ -22732,7 +23108,7 @@
             const filteredRoster = roster.filter(p => {
                 const matchesClass = filterClass === 'All' || p.year === filterClass;
                 const matchesSearch = searchTerm === '' ||
-                    `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+                    `${p.firstName} ${p.lastName} `.toLowerCase().includes(searchTerm.toLowerCase());
                 return matchesClass && matchesSearch;
             }).sort((a, b) => a.lastName.localeCompare(b.lastName));
 
@@ -22826,7 +23202,7 @@
                             </thead>
                             <tbody>
                                 {filteredRoster.map((player, idx) => (
-                                    <tr key={player.id} className={`border-b border-gray-800 hover:bg-gray-800/50 transition-colors ${idx % 2 === 0 ? 'bg-gray-900' : 'bg-[#151515]'}`}>
+                                    <tr key={player.id} className={`border - b border - gray - 800 hover: bg - gray - 800 / 50 transition - colors ${idx % 2 === 0 ? 'bg-gray-900' : 'bg-[#151515]'} `}>
                                         <td className="p-3 border-r border-gray-800">
                                             <div className="font-bold flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs text-white font-bold">
@@ -23293,7 +23669,7 @@
                         date: today,
                         teammate: randomTeammate ? {
                             id: randomTeammate.id,
-                            name: `${randomTeammate.firstName} ${randomTeammate.lastName}`,
+                            name: `${randomTeammate.firstName} ${randomTeammate.lastName} `,
                             jersey: randomTeammate.jersey,
                             position: randomTeammate.position
                         } : null,
@@ -24181,6 +24557,23 @@
         // PRACTICE COACH APP PREVIEW
         // ============================================
         const PracticeCoachApp = ({ staff = [], roster = [], plans = [], plays = [], drills = [] }) => {
+            const { isPremium } = useSchoolPlan(); // School Plan Hook
+
+            if (!isPremium) {
+                return (
+                    <div className="card" style={{ padding: '3rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🤖</div>
+                        <h2>AI Practice Coach Locked</h2>
+                        <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
+                            Unlock specialized AI drills, practice script generation, and performance tracking with a Premium Plan.
+                        </p>
+                        <button className="btn btn-primary" onClick={() => setView('settings')}>
+                            View Upgrade Options
+                        </button>
+                    </div>
+                );
+            }
+
             // Convert plans object to array if needed to handle {Monday: {}, Tuesday: {}} structure
             const planList = Array.isArray(plans) ? plans : Object.values(plans);
 
@@ -24447,6 +24840,22 @@
         // ============================================
 
         const PlayCallSimulator = ({ plays, roster, gamePlan, onUpdateGamePlan }) => {
+            const { isPremium } = useSchoolPlan();
+
+            if (!isPremium) {
+                return (
+                    <div className="card" style={{ padding: '3rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎮</div>
+                        <h2>Play-Calling Simulator Locked</h2>
+                        <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
+                            Practice your game planning in realistic scenarios. Upgrade to Premium to unlock the simulator.
+                        </p>
+                        <button className="btn btn-primary" onClick={() => setView('settings')}>
+                            View Upgrade Options
+                        </button>
+                    </div>
+                );
+            }
             // ===== GAME STATE =====
             const [gameState, setGameState] = useState({
                 quarter: 1,
@@ -24560,13 +24969,13 @@
             };
 
             // ===== SIMULATE PLAY RESULT =====
-            const simulatePlay = async () => {
-                if (!selectedPlay) {
-                    alert('Please select a play from the call sheet first!');
-                    return;
-                }
+            const handleInitialize = async () => {
+                if (!schoolName) return;
 
-                setIsSimulating(true);
+                // User Feedback: Removed the "Clean Slate" warning prompt. 
+                // Creating a new school is now implicitly a fresh start.
+
+                setIsInitializing(true);
                 setGameState(prev => ({ ...prev, playClockActive: false }));
 
                 // Calculate decision time
@@ -30410,7 +30819,8 @@
             const [createLoading, setCreateLoading] = useState(false);
             const [joinLoading, setJoinLoading] = useState(false);
             const [joinInput, setJoinInput] = useState('');
-            const [createAccessCode, setCreateAccessCode] = useState(''); // NEW: Access Code State
+            const [createAccessCode, setCreateAccessCode] = useState('');
+            const [importData, setImportData] = useState(false); // Changed: Opt-in to data copy
             const [error, setError] = useState('');
 
             const handleCreateSchool = async () => {
@@ -30419,7 +30829,9 @@
                     return;
                 }
 
-                if (!confirm("This will copy your current data to a new School Database. Proceed?")) return;
+                if (!confirm(importData
+                    ? "This will copy your current workspace data to the new School Database. Proceed?"
+                    : "You are creating a new empty school. Proceed?")) return;
                 setCreateLoading(true);
                 setError('');
 
@@ -30445,6 +30857,7 @@
                     }
 
                     const newSchoolId = `SCH_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                    const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase(); // Consistent with SchoolSetupWizard
 
                     // 1. Gather all local data keys
                     const keys = [
@@ -30464,55 +30877,70 @@
                         createdAt: new Date().toISOString(),
                         createdBy: currentUser.uid,
                         id: newSchoolId,
+                        joinCode: joinCode, // Store Join Code
+                        name: "My New School", // Default name
                         settings: {
+                            schoolName: "My New School",
                             teamLogo: localStorage.getItem('oc-dashboard-logo') || '',
                             accentColor: localStorage.getItem('oc-dashboard-accent') || '#3b82f6',
                             theme: localStorage.getItem('oc-dashboard-theme') || 'dark',
                             activeYear: localStorage.getItem('hc-active-year') || '2025',
                             visibleFeatures: JSON.parse(localStorage.getItem('hc-visible-features') || '{}')
+                        },
+                        // Initialize empty arrays if NOT importing data
+                        roster: [],
+                        staff: [],
+                        plays: [],
+                        billing: { // Initialize with trial
+                            plan: 'premium_trial',
+                            trialStartDate: new Date().toISOString(),
+                            trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                            status: 'active'
                         }
                     };
 
-                    // Populate schoolData
-                    keys.forEach(k => {
-                        const val = localStorage.getItem(k);
-                        if (val) {
-                            // Map local keys to cloud keys (reverse of loadUserData logic)
-                            // This is a bit manual but necessary
-                            if (k === 'oc-dashboard-roster') schoolData.roster = JSON.parse(val);
-                            if (k === 'oc-dashboard-plays') schoolData.plays = JSON.parse(val);
-                            if (k === 'oc-dashboard-staff') schoolData.staff = JSON.parse(val);
-                            if (k === 'oc-dashboard-depthchart') schoolData.depthChart = JSON.parse(val);
-                            if (k === 'oc-dashboard-master-tasks') schoolData.masterTasks = JSON.parse(val);
-                            if (k === 'oc-dashboard-weeks') schoolData.weeks = JSON.parse(val);
-                            if (k === 'attendance_log') schoolData.attendance = JSON.parse(val);
-                            if (k === 'oc-dashboard-valhalla') schoolData.valhalla = JSON.parse(val);
-                            if (k === 'oc-dashboard-equipment-inventory') schoolData.inventory = JSON.parse(val);
-                            if (k === 'oc-dashboard-equipment-checkouts') schoolData.checkouts = JSON.parse(val);
-                            if (k === 'formationLayouts') schoolData.formationLayouts = JSON.parse(val);
-                            if (k === 'oc-dashboard-ratings') schoolData.ratings = JSON.parse(val);
-                            if (k === 'oc-dashboard-game-grades') schoolData.gameGrades = JSON.parse(val);
-                            if (k === 'oc-dashboard-summer-comp') schoolData.summerComp = JSON.parse(val);
-                            if (k === 'oc-dashboard-scouting') schoolData.opponentScouting = JSON.parse(val);
-                            if (k === 'oc-dashboard-equipment-issuance') schoolData.issuance = JSON.parse(val);
-                            if (k === 'oc-dashboard-equipment-wishlist') schoolData.wishlist = JSON.parse(val);
-                            if (k === 'athlete_assessments') schoolData.athleteAssessments = JSON.parse(val);
-                            if (k === 'oc-dashboard-formations') schoolData.formations = JSON.parse(val);
-                            if (k === 'oc-dashboard-zone-philosophies') schoolData.zonePhilosophies = JSON.parse(val);
-                            if (k === 'oc-dashboard-custom-focus') schoolData.customFocus = JSON.parse(val);
-                            if (k === 'oc-dashboard-duties') schoolData.duties = JSON.parse(val);
-                            if (k === 'oc-dashboard-metrics') schoolData.metrics = JSON.parse(val);
-                            if (k === 'fatigue-thresholds') schoolData.fatigueThresholds = JSON.parse(val);
-                            if (k === 'position-fatigue-values') schoolData.positionFatigue = JSON.parse(val);
-                            if (k === 'program_budget_data') schoolData.budget = JSON.parse(val);
-                            if (k === 'program_onboarding_data') schoolData.onboarding = JSON.parse(val);
-                            if (k === 'oc-dashboard-position-names') schoolData.positionNames = JSON.parse(val);
-                            if (k === 'player_daily_connections') schoolData.dailyConnections = JSON.parse(val);
-                            if (k === 'player_weight_logs') schoolData.weightLogs = JSON.parse(val);
-                            if (k === 'staff_role_tasks') schoolData.roleTasks = JSON.parse(val);
-                            if (k === 'rooski_ol_library') schoolData.rooskiLib = JSON.parse(val);
-                        }
-                    });
+                    // Populate schoolData only if importing data
+                    if (importData) {
+                        keys.forEach(k => {
+                            const val = localStorage.getItem(k);
+                            if (val) {
+                                // Map local keys to cloud keys (reverse of loadUserData logic)
+                                // This is a bit manual but necessary
+                                if (k === 'oc-dashboard-roster') schoolData.roster = JSON.parse(val);
+                                if (k === 'oc-dashboard-plays') schoolData.plays = JSON.parse(val);
+                                if (k === 'oc-dashboard-staff') schoolData.staff = JSON.parse(val);
+                                if (k === 'oc-dashboard-depthchart') schoolData.depthChart = JSON.parse(val);
+                                if (k === 'oc-dashboard-master-tasks') schoolData.masterTasks = JSON.parse(val);
+                                if (k === 'oc-dashboard-weeks') schoolData.weeks = JSON.parse(val);
+                                if (k === 'attendance_log') schoolData.attendance = JSON.parse(val);
+                                if (k === 'oc-dashboard-valhalla') schoolData.valhalla = JSON.parse(val);
+                                if (k === 'oc-dashboard-equipment-inventory') schoolData.inventory = JSON.parse(val);
+                                if (k === 'oc-dashboard-equipment-checkouts') schoolData.checkouts = JSON.parse(val);
+                                if (k === 'formationLayouts') schoolData.formationLayouts = JSON.parse(val);
+                                if (k === 'oc-dashboard-ratings') schoolData.ratings = JSON.parse(val);
+                                if (k === 'oc-dashboard-game-grades') schoolData.gameGrades = JSON.parse(val);
+                                if (k === 'oc-dashboard-summer-comp') schoolData.summerComp = JSON.parse(val);
+                                if (k === 'oc-dashboard-scouting') schoolData.opponentScouting = JSON.parse(val);
+                                if (k === 'oc-dashboard-equipment-issuance') schoolData.issuance = JSON.parse(val);
+                                if (k === 'oc-dashboard-equipment-wishlist') schoolData.wishlist = JSON.parse(val);
+                                if (k === 'athlete_assessments') schoolData.athleteAssessments = JSON.parse(val);
+                                if (k === 'oc-dashboard-formations') schoolData.formations = JSON.parse(val);
+                                if (k === 'oc-dashboard-zone-philosophies') schoolData.zonePhilosophies = JSON.parse(val);
+                                if (k === 'oc-dashboard-custom-focus') schoolData.customFocus = JSON.parse(val);
+                                if (k === 'oc-dashboard-duties') schoolData.duties = JSON.parse(val);
+                                if (k === 'oc-dashboard-metrics') schoolData.metrics = JSON.parse(val);
+                                if (k === 'fatigue-thresholds') schoolData.fatigueThresholds = JSON.parse(val);
+                                if (k === 'position-fatigue-values') schoolData.positionFatigue = JSON.parse(val);
+                                if (k === 'program_budget_data') schoolData.budget = JSON.parse(val);
+                                if (k === 'program_onboarding_data') schoolData.onboarding = JSON.parse(val);
+                                if (k === 'oc-dashboard-position-names') schoolData.positionNames = JSON.parse(val);
+                                if (k === 'player_daily_connections') schoolData.dailyConnections = JSON.parse(val);
+                                if (k === 'player_weight_logs') schoolData.weightLogs = JSON.parse(val);
+                                if (k === 'staff_role_tasks') schoolData.roleTasks = JSON.parse(val);
+                                if (k === 'rooski_ol_library') schoolData.rooskiLib = JSON.parse(val);
+                            }
+                        });
+                    }
 
                     // 2. Write School Doc
                     await window.db.collection('schools').doc(newSchoolId).set(schoolData);
@@ -30532,27 +30960,61 @@
             };
 
             const handleJoinSchool = async () => {
-                if (!joinInput.trim()) return;
-                if (!confirm("Joining a school will REPLACE your local data with the School's data. This cannot be undone. Proceed?")) return;
+                const input = joinInput.trim();
+                if (!input) return;
 
                 setJoinLoading(true);
                 setError('');
                 try {
-                    // Check if school exists
-                    const schoolDoc = await window.db.collection('schools').doc(joinInput.trim()).get();
-                    if (!schoolDoc.exists) {
-                        throw new Error("School ID not found.");
+                    // Try to find by Join Code first (if len 6)
+                    let targetSchoolId = null;
+                    let targetSchoolName = '';
+
+                    if (input.length === 6) {
+                        try {
+                            const querySnapshot = await window.db.collection('schools')
+                                .where('joinCode', '==', input.toUpperCase())
+                                .limit(1)
+                                .get();
+
+                            if (!querySnapshot.empty) {
+                                targetSchoolId = querySnapshot.docs[0].id;
+                                targetSchoolName = querySnapshot.docs[0].data().name;
+                            }
+                        } catch (err) {
+                            console.log("Join Code lookup failed", err);
+                        }
                     }
 
-                    // Update User Doc
-                    await window.db.collection('users').doc(currentUser.uid).update({ schoolId: joinInput.trim() });
+                    // Fallback to direct ID if not found by code
+                    if (!targetSchoolId) {
+                        const schoolDoc = await window.db.collection('schools').doc(input).get();
+                        if (schoolDoc.exists) {
+                            targetSchoolId = schoolDoc.id;
+                            targetSchoolName = schoolDoc.data().name || 'Unknown School';
+                        }
+                    }
 
-                    alert("Joined School Successfully! Reloading...");
+                    if (!targetSchoolId) {
+                        throw new Error("School not found. Check the Code or ID.");
+                    }
+
+                    if (!confirm(`Join ${targetSchoolName}?`)) return;
+
+                    await window.db.collection('users').doc(currentUser.uid).update({ schoolId: targetSchoolId });
+
+                    // Add to member list (optional but good practice)
+                    await window.db.collection('schools').doc(targetSchoolId).update({
+                        [`memberList.${currentUser.uid}`]: {
+                            email: currentUser.email,
+                            role: 'viewer', // Default role
+                            joinedAt: new Date().toISOString()
+                        }
+                    });
+
                     window.location.reload();
-
                 } catch (e) {
-                    console.error(e);
-                    setError("Failed to join school: " + e.message);
+                    setError(e.message);
                 } finally {
                     setJoinLoading(false);
                 }
@@ -30575,7 +31037,7 @@
                         'fatigue-thresholds', 'position-fatigue-values', 'program_budget_data', 'program_onboarding_data',
                         'oc-dashboard-position-names', 'player_daily_connections', 'player_weight_logs', 'staff_role_tasks',
                         'rooski_ol_library', 'oc-dashboard-weeks',
-                        'hc_school_id'
+                        'hc_school_id', 'hc_school_name' // Clear name too
                     ];
                     keys.forEach(k => localStorage.removeItem(k));
 
@@ -30587,20 +31049,26 @@
             };
 
             return (
-                <div style={{ padding: '2rem' }}>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Team Management</h1>
+                <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
+
+                    <div style={{ marginBottom: '2rem' }}>
+                        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Welcome, {currentUser.displayName || 'Coach'}</h1>
+                        <p style={{ color: 'var(--text-secondary)' }}>
+                            You are currently in your <strong>Personal Workspace</strong>. Data is saved locally.
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }}>
+                            {error}
+                        </div>
+                    )}
 
                     {schoolId ? (
-                        <div className="card" style={{ maxWidth: '600px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                                <div style={{ fontSize: '2rem' }}>🏫</div>
-                                <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>You are part of a School</div>
-                                    <div style={{ color: 'var(--text-secondary)' }}>ID: {schoolId}</div>
-                                </div>
-                            </div>
-                            <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Share this ID</div>
+                        <div className="card">
+                            <h2>Current School</h2>
+                            <div style={{ background: 'var(--bg-body)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>School ID</p>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <code style={{ flex: 1, padding: '0.5rem', background: 'var(--bg-body)', borderRadius: '4px', border: '1px solid var(--border)' }}>
                                         {schoolId}
@@ -30631,6 +31099,15 @@
                                         onChange={e => setCreateAccessCode(e.target.value)}
                                         style={{ width: '100%' }}
                                     />
+                                    <label style={{ display: 'flex', alignItems: 'center', marginTop: '1rem', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={importData}
+                                            onChange={e => setImportData(e.target.checked)}
+                                            style={{ marginRight: '0.5rem', width: 'auto' }}
+                                        />
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>Copy my current workspace data (Optional)</span>
+                                    </label>
                                 </div>
                                 <button
                                     className="btn btn-primary"
@@ -30638,7 +31115,7 @@
                                     disabled={createLoading}
                                     style={{ width: '100%' }}
                                 >
-                                    {createLoading ? 'Creating...' : 'Create School & Migrate Data'}
+                                    {createLoading ? 'Creating...' : (importData ? 'Create & Import Data' : 'Create New School')}
                                 </button>
                             </div>
 
@@ -30646,13 +31123,13 @@
                             <div className="card">
                                 <h2>Join Existing School</h2>
                                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                                    Enter a School ID provided by another coach to sync with their data.
+                                    Enter a <strong>Join Code</strong> (from your HC) or a legacy School ID to sync with your team.
                                 </p>
                                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                                     <input
                                         type="text"
                                         className="form-input"
-                                        placeholder="Enter School ID..."
+                                        placeholder="Enter 6-digit Join Code..."
                                         value={joinInput}
                                         onChange={e => setJoinInput(e.target.value)}
                                     />
@@ -30910,22 +31387,7 @@
         // DEFAULT 2025 DATA
         const DEFAULT_ROSTER_2025 = [];
 
-        const DEFAULT_STAFF_2025 = [
-            { id: 's1', name: 'Matt Finn', roles: ['Head Coach', 'Offensive Coordinator', 'Director of Ops', 'Recruiting Coordinator'], phone: '', email: '' },
-            { id: 's2', name: 'Wyatt Bunn', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's3', name: 'Don Finn', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's4', name: 'Ryan Gelber', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's5', name: 'DJ Hawkins', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's6', name: 'Jeff Janes', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's7', name: 'Hesston Johnson', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's8', name: 'Kirk Knudsen', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's9', name: 'Andy Koester', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's10', name: 'Kale Lande', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's11', name: 'Craig Lyon', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's12', name: 'Alex Macki', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's13', name: 'Rod Ramus', roles: ['Position Coach'], phone: '', email: '' },
-            { id: 's14', name: 'Ross Thoreson', roles: ['Position Coach'], phone: '', email: '' }
-        ];
+        const DEFAULT_STAFF_2025 = [];
 
         // Default Formation Presets
         const DEFAULT_FORMATIONS = [
@@ -31707,9 +32169,7 @@
             const handleInitialize = async () => {
                 if (!localSchoolName) return;
 
-                if (!confirm(`Are you sure you want to initialize "${localSchoolName}"?\n\nWARNING: This will perform a "Clean Slate" reset. All existing local data (Roster, Plays, Staff, etc.) on this device will be cleared to start fresh for the new school.`)) {
-                    return;
-                }
+                // Silent Wipe (No Confirm)
 
                 setIsInitializing(true);
 
@@ -31719,17 +32179,19 @@
 
                     // 1. WIPE LOCAL DATA (Clean Slate)
                     const keysToWipe = [
-                        'oc-dashboard-roster',
-                        'oc-dashboard-plays',
-                        'oc-dashboard-staff',
-                        'oc-dashboard-weeks',
-                        'oc-dashboard-master-tasks',
-                        'oc-dashboard-game-plans',
-                        'oc-dashboard-scripts',
-                        'oc-dashboard-logo',
-                        'oc-dashboard-theme',
-                        'oc-dashboard-accent',
-                        'hc_school_id' // Ensure no stale binding
+                        'oc-dashboard-roster', 'oc-dashboard-plays', 'oc-dashboard-staff',
+                        'oc-dashboard-depthchart', 'oc-dashboard-master-tasks', 'attendance_log',
+                        'oc-dashboard-valhalla', 'oc-dashboard-equipment-inventory', 'oc-dashboard-equipment-checkouts',
+                        'formationLayouts', 'oc-dashboard-ratings', 'oc-dashboard-game-grades', 'oc-dashboard-summer-comp',
+                        'oc-dashboard-scouting', 'oc-dashboard-equipment-issuance', 'oc-dashboard-equipment-wishlist',
+                        'athlete_assessments', 'oc-dashboard-formations', 'oc-dashboard-zone-philosophies',
+                        'oc-dashboard-custom-focus', 'oc-dashboard-duties', 'oc-dashboard-metrics',
+                        'fatigue-thresholds', 'position-fatigue-values', 'program_budget_data', 'program_onboarding_data',
+                        'oc-dashboard-position-names', 'player_daily_connections', 'player_weight_logs', 'staff_role_tasks',
+                        'rooski_ol_library', 'oc-dashboard-weeks',
+                        'oc-dashboard-game-plans', 'oc-dashboard-scripts',
+                        'oc-dashboard-logo', 'oc-dashboard-theme', 'oc-dashboard-accent',
+                        'hc_school_billing', 'hc_school_id', 'hc_school_name', 'hc-active-year', 'hc-visible-features'
                     ];
 
                     keysToWipe.forEach(key => localStorage.removeItem(key));
@@ -31739,16 +32201,28 @@
                     localStorage.setItem('hc_school_id', schoolId); // Bind immediately
 
                     // 3. UPDATE FIRESTORE (School Doc)
+                    const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+                    // 4. Create School Document
                     await window.db.collection('schools').doc(schoolId).set({
                         name: localSchoolName,
                         mascot: localMascot,
+                        joinCode: joinCode, // NEW: Join Code for onboarding
                         primaryColor: primaryColor,
                         initialized: true,
                         createdAt: new Date().toISOString(),
                         createdBy: window.auth.currentUser.email,
                         roster: [], // Explicit empty
                         staff: [], // Explicit empty
-                        plays: [] // Explicit empty
+                        plays: [], // Explicit empty
+                        billing: {
+                            plan: 'trial',
+                            status: 'active',
+                            trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                            promoCode: null,
+                            subscriptionEndsAt: null,
+                            features: {}
+                        }
                     });
 
                     // 4. CRITICAL: UPDATE USER PROFILE & WIPE PERSONAL DATA
@@ -31771,8 +32245,15 @@
                         }
                     }, { merge: true });
 
+                    // 4b. CREATE MEMBERSHIP (Explicit)
+                    await window.db.collection('users').doc(userId).collection('memberships').doc(schoolId).set({
+                        role: 'admin',
+                        joinedAt: new Date().toISOString(),
+                        status: 'active'
+                    });
+
                     // 5. COMPLETE
-                    alert(`Welcome to ${localSchoolName}! Your workspace is ready.`);
+                    // alert(`Welcome to ${localSchoolName}! Your workspace is ready.`); // Removed explicit alert to be faster
                     onComplete();
 
                 } catch (err) {
@@ -31856,16 +32337,126 @@
                                     opacity: (!localSchoolName || isInitializing) ? 0.5 : 1
                                 }}
                             >
-                                {isInitializing ? 'Setting up...' : 'Initialize School & Clean Slate'}
+                                {isInitializing ? 'Setting up...' : 'Create New School'}
                             </button>
-
-                            <p style={{ fontSize: '0.8rem', color: '#64748b', textAlign: 'center', marginTop: '0.5rem' }}>
-                                ⚠️ This will clear any existing data on this device to start fresh.
-                            </p>
                         </div>
                     </div>
                 </div>
             );
+        };
+
+        const SchoolSwitcher = ({ userId, currentSchoolId }) => {
+            const [memberships, setMemberships] = useState([]);
+            const [schools, setSchools] = useState({});
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const fetchMemberships = async () => {
+                    if (!userId) return;
+                    try {
+                        const memSnapshot = await window.db.collection('users').doc(userId).collection('memberships').get();
+                        if (memSnapshot.empty) {
+                            setLoading(false);
+                            return;
+                        }
+
+                        const mems = memSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setMemberships(mems);
+
+                        // Fetch names for these schools
+                        const schoolIds = mems.map(m => m.id);
+                        // Firestore "in" query limited to 10, split if needed but assuming < 10 for now
+                        if (schoolIds.length > 0) {
+                            const schoolsMap = {};
+                            // Use Promise.all for simplicity over 'in' query limitations if list is small
+                            await Promise.all(schoolIds.map(async (sid) => {
+                                const doc = await window.db.collection('schools').doc(sid).get();
+                                if (doc.exists) schoolsMap[sid] = doc.data().name;
+                                else schoolsMap[sid] = "Unknown School";
+                            }));
+                            setSchools(schoolsMap);
+                        }
+                    } catch (err) {
+                        console.error("Error loading memberships:", err);
+                    }
+                    setLoading(false);
+                };
+                fetchMemberships();
+            }, [userId]);
+
+            if (loading) return <div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Loading schools...</div>;
+            if (memberships.length <= 1) return null; // Only show if multiple schools
+
+            return (
+                <div style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Switch School</label>
+                    <select
+                        className="form-select"
+                        value={currentSchoolId || ''}
+                        onChange={(e) => {
+                            const newId = e.target.value;
+                            if (newId && newId !== currentSchoolId) {
+                                if (confirm(`Switch to ${schools[newId]}?`)) {
+                                    localStorage.setItem('hc_school_id', newId);
+                                    // Ensure clean slate for new context
+                                    localStorage.removeItem('oc-dashboard-roster');
+                                    localStorage.removeItem('oc-dashboard-plays');
+                                    localStorage.removeItem('oc-dashboard-staff');
+                                    window.location.reload();
+                                }
+                            }
+                        }}
+                        style={{ width: '100%', fontSize: '0.85rem', padding: '0.25rem', marginTop: '0.25rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                        {memberships.map(m => (
+                            <option key={m.id} value={m.id}>
+                                {schools[m.id] || m.id} ({m.role})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            );
+        };
+
+        const getSchoolPlan = (school, user) => {
+            if (!school) return 'FREE';
+
+            // 1. Site Admin Bypass
+            // Hardcoded for safety across entire app context
+            const SITE_ADMINS = ['matthewfinn14@gmail.com'];
+            if (user && user.email && SITE_ADMINS.includes(user.email.toLowerCase())) {
+                return 'ALL_ACCESS';
+            }
+
+            const billing = school.billing || {};
+
+            // Default to 'free' if no plan set, BUT if it is a legacy school without billing,
+            // we might want to grandfather them or default to trial? 
+            // For now, let's assume default is FREE unless migrated.
+            const plan = billing.plan || 'free';
+            const now = new Date();
+
+            // 2. Trial Check
+            if (plan === 'trial') {
+                if (billing.trialEndsAt && new Date(billing.trialEndsAt) > now) {
+                    return 'PREMIUM_TRIAL';
+                }
+                return 'FREE'; // Trial Expired
+            }
+
+            // 3. Premium Check
+            if (plan === 'premium') {
+                // If subscription has an end date (e.g. from promo), check it
+                if (billing.subscriptionEndsAt && new Date(billing.subscriptionEndsAt) <= now) {
+                    return 'FREE'; // Expired
+                }
+                return 'PREMIUM';
+            }
+
+            // 4. All Access (Configured manually)
+            if (plan === 'all_access') return 'ALL_ACCESS';
+
+            return 'FREE';
         };
 
         const App = () => {
@@ -31899,47 +32490,159 @@
 
             // -- SCHOOL INITIALIZATION CHECK --
             const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
+            const [inviteData, setInviteData] = useState(null); // NEW: Invite State
 
             useEffect(() => {
                 const checkSchoolInit = async () => {
                     if (!authUser) return;
 
                     try {
-                        // 1. Check Access Config (Force Server to ensure latest mapping)
+                        // 1. CHECK FOR PENDING INVITES
+                        console.log("Checking for invites for:", authUser.email);
+                        const inviteQuery = await window.db.collection('invites')
+                            .where('email', '==', authUser.email.toLowerCase())
+                            .where('status', '==', 'pending')
+                            .get();
+
+                        if (!inviteQuery.empty) {
+                            const inviteDoc = inviteQuery.docs[0];
+                            console.log("Found invite:", inviteDoc.id);
+                            setInviteData({ id: inviteDoc.id, ...inviteDoc.data() });
+                            return; // Stop processing to show invite modal
+                        }
+
+                        // 1b. CHECK FOR CLAIMED DOMAINS (Auto-Join)
+                        const emailDomain = authUser.email.split('@')[1];
+                        if (emailDomain) {
+                            const domainQuery = await window.db.collection('schools')
+                                .where('domains', 'array-contains', emailDomain.toLowerCase())
+                                .limit(1)
+                                .get();
+
+                            if (!domainQuery.empty) {
+                                const sDoc = domainQuery.docs[0];
+                                const sData = sDoc.data();
+                                // Check if already a member
+                                const memCheck = await window.db.collection('users').doc(authUser.uid).collection('memberships').doc(sDoc.id).get();
+                                if (!memCheck.exists) {
+                                    setInviteData({
+                                        schoolId: sDoc.id,
+                                        schoolName: sData.name,
+                                        role: 'viewer', // Default to viewer for safety
+                                        type: 'domain_match'
+                                    });
+                                    return;
+                                }
+                            }
+                        }
+
+                        // 1c. PRIMARY SETUP CHECK: DO I HAVE A MEMBERSHIP?
+                        // If user has ANY membership, they are setup. We skip legacy/creation wizard.
+                        // FIX: Ensure User Document actually exists! (Subcollections persist after parent deletion)
+                        const userDocCall = await window.db.collection('users').doc(authUser.uid).get();
+
+                        console.log("DEBUG: Checking memberships for user:", authUser.uid);
+                        const memberships = await window.db.collection('users').doc(authUser.uid).collection('memberships').get();
+                        console.log("DEBUG: Membership count:", memberships.size);
+
+                        // Only respect memberships if the user profile is intact
+                        if (!memberships.empty && userDocCall.exists) {
+                            console.log("User has active memberships. Skipping wizard.");
+                            return;
+                        }
+
+                        // 2. CHECK LEGACY / EXISTING ACCESS
+                        // Force Server Fetch to avoid stale cache loop
                         const accessDoc = await window.db.collection('config').doc('access').get({ source: 'server' });
-                        if (!accessDoc.exists) return;
+                        const accessData = accessDoc.exists ? accessDoc.data() : {};
+                        const userValues = Object.values(accessData.userSchools || {});
 
-                        const accessData = accessDoc.data();
-                        const email = authUser.email.toLowerCase();
+                        const isPaying = accessData.payingAdmins && accessData.payingAdmins.includes(authUser.email.toLowerCase());
 
-                        // 2. Is School Admin?
-                        const isPaying = accessData.payingAdmins && accessData.payingAdmins.includes(email);
-                        if (!isPaying) return;
+                        // Check if user has a school ID assigned in config OR on their profile
+                        let schoolId = accessData.userSchools ? accessData.userSchools[authUser.email.toLowerCase()] : null;
 
-                        // 3. Get School ID
-                        const schoolId = accessData.userSchools ? accessData.userSchools[email] : null;
+                        if (!schoolId) {
+                            const userDoc = await window.db.collection('users').doc(authUser.uid).get();
+                            if (userDoc.exists && userDoc.data().schoolId) {
+                                schoolId = userDoc.data().schoolId;
+                            }
+                        }
 
-                        if (schoolId) {
-                            // 4. Check if School is Initialized (Force Server)
+                        // 3. CHECK FOR ZERO MEMBERSHIPS (Orphaned User -> Create New School)
+                        // If no invites, no domain match, and no legacy school ID, check strict memberships
+                        if (!inviteData && !schoolId) {
+                            console.log("User has no memberships and no legacy setup. Triggering School Creation Wizard.");
+                            const newSchoolId = 'school_' + Date.now();
+                            setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                            return;
+                        }
+
+                        // If Paying Admin + Has School ID + School Not Initialized -> Show Wizard
+                        // (Keep existing legacy check for now)
+                        if (isPaying && schoolId) {
                             const schoolDoc = await window.db.collection('schools').doc(schoolId).get({ source: 'server' });
-
-                            // Debugging log
-                            console.log(`Checking init status for school: ${schoolId}`, schoolDoc.exists ? schoolDoc.data() : 'Doc missing');
-
-                            if (!schoolDoc.exists || !schoolDoc.data().initialized) {
-                                console.log("School not initialized. Showing Setup Wizard.");
-                                setSchoolSetupData({ showWizard: true, schoolId });
+                            if (schoolDoc.exists && !schoolDoc.data().initialized) {
+                                console.log("School not initialized, showing wizard.");
+                                setSchoolSetupData({ showWizard: true, schoolId: schoolId });
                             }
                         }
                     } catch (err) {
                         console.error("Error checking school init:", err);
-                        // Fallback: If server fetch fails (e.g. offline), try cache? 
-                        // For now, failure means we don't show the wizard, preventing a blocking loop if offline.
                     }
                 };
-
                 checkSchoolInit();
             }, [authUser]);
+
+            // INVITE ACCEPTANCE HANDLER
+            const handleAcceptInvite = async () => {
+                if (!inviteData) return;
+                try {
+                    // 1. Create Membership
+                    await window.db.collection('users').doc(authUser.uid).collection('memberships').doc(inviteData.schoolId).set({
+                        role: inviteData.role,
+                        joinedAt: new Date().toISOString(),
+                        status: 'active'
+                    });
+
+                    // 2. Add to School Member List
+                    const newMember = {
+                        uid: authUser.uid,
+                        email: authUser.email,
+                        role: inviteData.role,
+                        joinedAt: new Date().toISOString()
+                    };
+                    await window.db.collection('schools').doc(inviteData.schoolId).update({
+                        memberList: firebase.firestore.FieldValue.arrayUnion(newMember)
+                    });
+
+                    // 3. Mark Invite Accepted (If valid invite)
+                    if (inviteData.id && inviteData.type !== 'domain_match') {
+                        await window.db.collection('invites').doc(inviteData.id).update({
+                            status: 'accepted',
+                            acceptedAt: new Date().toISOString(),
+                            acceptedBy: authUser.uid
+                        });
+                    }
+
+                    // 4. Set Local Context & Reload
+                    localStorage.setItem('hc_school_id', inviteData.schoolId);
+                    localStorage.setItem('hc_school_name', inviteData.schoolName);
+
+                    // Force clean slate for new school
+                    localStorage.removeItem('oc-dashboard-roster');
+                    localStorage.removeItem('oc-dashboard-plays');
+                    localStorage.removeItem('oc-dashboard-staff');
+
+                    alert("Welcome to the team!");
+                    window.location.reload();
+
+                } catch (err) {
+                    console.error("Error accepting invite:", err);
+                    alert("Failed to join. Please try again.");
+                }
+            };
+
 
 
 
@@ -32257,7 +32960,15 @@
                 const initUser = async () => {
                     if (authUser) {
                         try {
-                            await loadUserDataFromFirestore(authUser.uid);
+                            const result = await loadUserDataFromFirestore(authUser.uid);
+                            if (result && result.wiped) {
+                                console.log("User data wiped (New/Deleted User). Forcing School Setup.");
+                                // Force Wizard to appear
+                                setSchoolSetupData({ showWizard: true, schoolId: null });
+                                // Clear Invite Data just in case
+                                setInviteData(null);
+                                // Optional: You could reset other states here if needed, but Wizard hides them.
+                            }
                         } catch (e) {
                             console.error("Critical Load Error", e);
                         } finally {
@@ -33596,17 +34307,20 @@
 
                     <div className="sidebar">
                         <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem' }}>
-                            {schoolName ? (
-                                <div>
-                                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{teamLogo}</div>
-                                    <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', lineHeight: '1.2' }}>{schoolName}</h1>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>DoFO</h1>
+                            {schoolName && (
+                                <div style={{ opacity: 0.8 }}>
+                                    {teamLogo && <span style={{ fontSize: '1.5rem', marginRight: '0.5rem' }}>{teamLogo}</span>}
+                                    <span style={{ fontSize: '1.1rem', fontWeight: '500' }}>{schoolName}</span>
                                 </div>
-                            ) : (
-                                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>DoFO</h1>
                             )}
+
+                            {/* School Switcher */}
+                            <SchoolSwitcher userId={authUser.uid} currentSchoolId={localStorage.getItem('hc_school_id')} />
 
                         </div>
                         <nav style={{ flex: 1, overflowY: 'auto' }}>
+
                             {/* SEASON CATEGORY */}
                             {/* Week Selector */}
                             <div style={{ padding: '0 0.5rem 1.5rem 0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }}>
@@ -34656,7 +35370,7 @@
                                 onUpdateLottery={setLotteryData}
                             />
                         )}
-                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} renderSyncManager={renderDataSyncManager} isSiteAdmin={isSiteAdmin} siteAdmins={siteAdmins} />}
+                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} renderSyncManager={renderDataSyncManager} isSiteAdmin={isSiteAdmin} siteAdmins={siteAdmins} schoolData={isInitializing ? null : { id: localStorage.getItem('hc_school_id'), ...JSON.parse(JSON.stringify(window.db ? {} : {})) /* Hack: appData isn't in state directly, relying on props */ }} currentSchoolId={localStorage.getItem('hc_school_id')} />}
 
                         {view === 'help' && <UserGuide />}
 
@@ -34721,6 +35435,50 @@
                                             Log Out
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+                        {/* Invite Acceptance Modal */}
+                        {inviteData && (
+                            <div style={{
+                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                background: 'rgba(0,0,0,0.85)', zIndex: 10001,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem' }}>
+                                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                                        {inviteData.type === 'domain_match' ? '🏫' : '📩'}
+                                    </div>
+                                    <h2 style={{ marginBottom: '0.5rem' }}>
+                                        {inviteData.type === 'domain_match' ? 'Join Your Team?' : 'You\'re Invited!'}
+                                    </h2>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                        {inviteData.type === 'domain_match'
+                                            ? <span>Your email matches <strong>{inviteData.schoolName}</strong>.<br />Join now as a <strong>{inviteData.role}</strong>?</span>
+                                            : <span>To join <strong>{inviteData.schoolName}</strong> as a <strong>{inviteData.role}</strong>.</span>
+                                        }
+                                    </p>
+                                    <button
+                                        className="btn btn-primary"
+                                        style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
+                                        onClick={handleAcceptInvite}
+                                    >
+                                        Accept & Join Team
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary"
+                                        style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
+                                        onClick={() => {
+                                            if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
+                                                setInviteData(null);
+                                                // Trigger School Setup Wizard (Orphaned User State)
+                                                // We need to ensure we don't loop back to domain matching, so maybe force wizard
+                                                setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
+                                            }
+                                        }}
+                                    >
+                                        No, Create New School Instead
+                                    </button>
                                 </div>
                             </div>
                         )}
