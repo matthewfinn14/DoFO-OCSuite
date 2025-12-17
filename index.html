@@ -35036,7 +35036,7 @@
 
 
                             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                                {(false) && (
+                                {(currentUser?.roles?.includes('Head Coach') || currentUser?.roles?.includes('Team Admin')) && (
                                     <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Settings
                                     </button>
