@@ -13170,6 +13170,13 @@
                             // Fallback to mailto
                             window.location.href = `mailto:${newMember.email}?subject=${encodeURIComponent(subjectRaw)}&body=${encodeURIComponent(bodyRaw)}`;
                         });
+
+                        // Auto-add to Access Control List
+                        // Prevents "Not Invited" errors on signup
+                        window.db.collection('config').doc('access').update({
+                            allowedEmails: firebase.firestore.FieldValue.arrayUnion(newMember.email)
+                        }).catch(err => console.warn("Could not update access list:", err));
+
                     } else {
                         window.location.href = `mailto:${newMember.email}?subject=${encodeURIComponent(subjectRaw)}&body=${encodeURIComponent(bodyRaw)}`;
                     }
