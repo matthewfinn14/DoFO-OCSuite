@@ -4,22 +4,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            alert("CRITICAL ERROR:\n" + msg + "\nLine: " + line + ":" + col + "\n" + (error ? error.stack : ""));
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function (event) {
+            alert("UNHANDLED PROMISE:\n" + event.reason);
+        });
+    </script>
     <title>DoFO</title>
     <link rel="stylesheet" href="style.css">
     <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin
+        onerror="alert('BLOCKED: React failed to load. Your school filter is blocking unpkg.com')"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin
+        onerror="alert('BLOCKED: ReactDOM failed to load. Your school filter is blocking unpkg.com')"></script>
     <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"
+        onerror="alert('BLOCKED: Babel failed to load. Your school filter is blocking unpkg.com')"></script>
     <!-- Lucide Icons -->
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest" onerror="alert('BLOCKED: Lucide Icons failed to load.')"></script>
 
     <!-- Firebase SDKs (Compat Version for Standalone Usage) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"
+        onerror="alert('BLOCKED: Firebase App failed to load. Your school filter is blocking gstatic.com')"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"
+        onerror="alert('BLOCKED: Firebase Auth failed to load.')"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"
+        onerror="alert('BLOCKED: Firebase Firestore failed to load.')"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"
+        onerror="alert('BLOCKED: Firebase Storage failed to load.')"></script>
 
     <!-- Firebase Initialization -->
     <script>
@@ -579,7 +594,21 @@
     <!-- Error Handler (Standard JS) -->
     <script>
         window.onerror = function (message, source, lineno, colno, error) {
-            document.body.innerHTML = '<div style="color:red; padding:20px; font-family: sans-serif;"><h1>Application Error</h1><p><strong>Message:</strong> ' + message + '</p><p><strong>Source:</strong> ' + source + '</p><p><strong>Line:</strong> ' + lineno + '</p></div>';
+            console.error("Global Error Caught:", message, source, lineno, error);
+            // If it's a generic "Script error." (cross-origin), we can't do much, but let's not nuke the app if it's running.
+            // Only show the red screen if the root element is empty or if it's a critical error we want to surface.
+            const root = document.getElementById('root');
+            const hasContent = root && root.childElementCount > 0;
+
+            // Don't nuke if it's just a resize observer loop limit exceeded or similar benign error
+            if (message && message.includes('ResizeObserver')) return false;
+
+            // For critical errors where the app probably crashed:
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:red; padding:20px; font-family:monospace; z-index:99999; overflow:auto;';
+            errorDiv.innerHTML = '<h1>Application Error</h1><p><strong>Message:</strong> ' + message + '</p><p><strong>Source:</strong> ' + source + '</p><p><strong>Line:</strong> ' + lineno + '</p><pre>' + (error ? error.stack : 'No stack trace') + '</pre><button onclick="this.parentElement.remove()">Dismiss</button>';
+
+            document.body.appendChild(errorDiv);
             return false;
         };
     </script>
@@ -600,9 +629,9 @@
 
         const loadUserDataFromFirestore = async (userId) => {
             try {
-                console.log("Loading user data from Firestore for user:", userId);
+                console.log("Loading user data from Firestore for user (Force Server):", userId);
                 const userDocRef = window.db.collection('users').doc(userId);
-                const userDoc = await userDocRef.get();
+                const userDoc = await userDocRef.get({ source: 'server' });
 
                 if (userDoc.exists) {
                     const userData = userDoc.data();
@@ -1125,6 +1154,309 @@
             );
         };
 
+        const SchoolOnboardingWizard = ({ user, onComplete }) => {
+            const [step, setStep] = useState(1);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            // Data State
+            const [schoolName, setSchoolName] = useState('');
+            const [primaryColor, setPrimaryColor] = useState('#000000');
+            const [secondaryColor, setSecondaryColor] = useState('#ffffff');
+            const [mascot, setMascot] = useState('');
+
+            // Default Levels
+            const [levels, setLevels] = useState(['Varsity', 'JV', 'Freshman']);
+
+            // Default Positions
+            const [offensePositions, setOffensePositions] = useState([
+                { name: 'QB', type: 'QB' },
+                { name: 'RB', type: 'RB' },
+                { name: 'WR', type: 'WR' },
+                { name: 'TE', type: 'TE' },
+                { name: 'LT', type: 'OL' },
+                { name: 'LG', type: 'OL' },
+                { name: 'C', type: 'OL' },
+                { name: 'RG', type: 'OL' },
+                { name: 'RT', type: 'OL' }
+            ]);
+
+            const [defensePositions, setDefensePositions] = useState([
+                { name: 'DL', type: 'DL' },
+                { name: 'LB', type: 'LB' },
+                { name: 'DB', type: 'DB' },
+                { name: 'S', type: 'DB' }
+            ]);
+
+            const handleNext = () => setStep(s => s + 1);
+            const handleBack = () => setStep(s => s - 1);
+
+            const handleSave = async () => {
+                setLoading(true);
+                setError('');
+                try {
+                    // 1. Create School Document
+                    const schoolData = {
+                        name: schoolName,
+                        mascot: mascot,
+                        colors: { primary: primaryColor, secondary: secondaryColor },
+                        settings: {
+                            schoolName: schoolName,
+                            accentColor: primaryColor, // Use primary as accent
+                            levels: levels,
+                            offensePositions: offensePositions,
+                            defensePositions: defensePositions,
+                            activeYear: new Date().getFullYear().toString(),
+                            theme: 'dark', // Default
+                            initialized: true,
+                            createdAt: new Date().toISOString(),
+                            createdBy: user.uid
+                        },
+                        // Initialize empty collections/structures if needed
+                        roster: [],
+                        staff: [{
+                            email: user.email,
+                            role: 'Head Coach',
+                            name: user.displayName || 'Coach',
+                            uid: user.uid,
+                            permissions: ['ADMIN']
+                        }]
+                    };
+
+                    const schoolRef = await window.db.collection('schools').add(schoolData);
+                    const schoolId = schoolRef.id;
+
+                    // 2. Update User Profile with School ID
+                    const userRef = window.db.collection('users').doc(user.uid);
+                    await userRef.set({
+                        schoolId: schoolId,
+                        role: 'Head Coach',
+                        email: user.email
+                    }, { merge: true });
+
+                    // 3. VERIFY WRITE (Retry logic to prevent race conditions on reload)
+                    let confirmed = false;
+                    let attempts = 0;
+                    while (!confirmed && attempts < 5) {
+                        try {
+                            const checkDoc = await userRef.get({ source: 'server' }); // Force server check
+                            if (checkDoc.exists && checkDoc.data().schoolId === schoolId) {
+                                confirmed = true;
+                            } else {
+                                await new Promise(r => setTimeout(r, 1000));
+                            }
+                        } catch (e) {
+                            console.warn("Verification check failed, retrying...");
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                        attempts++;
+                    }
+
+                    console.log("School Created & Verified:", schoolId);
+
+                    // Force local storage update nicely
+                    localStorage.setItem('hc_school_id', schoolId);
+
+                    onComplete(schoolId);
+
+                } catch (err) {
+                    console.error("Error creating school:", err);
+                    setError("Failed to create school: " + err.message);
+                    setLoading(false);
+                }
+            };
+
+            // Reusable List Editor
+            const ListEditor = ({ items, setItems, title, placeholder }) => {
+                const [newItem, setNewItem] = useState('');
+                const add = () => {
+                    if (newItem.trim()) {
+                        setItems([...items, newItem]);
+                        setNewItem('');
+                    }
+                };
+                const remove = (idx) => {
+                    setItems(items.filter((_, i) => i !== idx));
+                };
+
+                return (
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#cbd5e1' }}>{title}</label>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <input
+                                value={newItem}
+                                onChange={e => setNewItem(e.target.value)}
+                                placeholder={placeholder}
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #475569', background: '#0f172a', color: 'white' }}
+                            />
+                            <button onClick={add} type="button" style={{ padding: '0.5rem 1rem', background: '#0ea5e9', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Add</button>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            {items.map((item, idx) => (
+                                <span key={idx} style={{ background: '#334155', padding: '0.25rem 0.75rem', borderRadius: '12px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {item}
+                                    <button onClick={() => remove(idx)} style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontWeight: 'bold' }}>×</button>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            // Reusable Position Editor (Simple List for now, maybe expand later)
+            const PositionEditor = ({ items, setItems, title }) => {
+                const [newItem, setNewItem] = useState('');
+                const add = () => {
+                    if (newItem.trim()) {
+                        setItems([...items, { name: newItem, type: 'Flex' }]); // Default type
+                        setNewItem('');
+                    }
+                };
+                const remove = (idx) => {
+                    setItems(items.filter((_, i) => i !== idx));
+                };
+
+                return (
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#cbd5e1' }}>{title}</label>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <input
+                                value={newItem}
+                                onChange={e => setNewItem(e.target.value)}
+                                placeholder="Add Position (e.g. TE or CB)"
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #475569', background: '#0f172a', color: 'white' }}
+                            />
+                            <button onClick={add} type="button" style={{ padding: '0.5rem 1rem', background: '#0ea5e9', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Add</button>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            {items.map((item, idx) => (
+                                <span key={idx} style={{ background: '#334155', padding: '0.25rem 0.75rem', borderRadius: '12px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {item.name}
+                                    <button onClick={() => remove(idx)} style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontWeight: 'bold' }}>×</button>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div style={{
+                    height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
+                }}>
+                    <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '600px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center', color: '#38bdf8' }}>
+                            Welcome to DoFO!
+                        </h1>
+                        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '2rem' }}>
+                            Let&apos;s get your new school set up.
+                        </p>
+
+                        {error && <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>{error}</div>}
+
+                        {/* Step Indicators */}
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
+                            {[1, 2, 3, 4].map(s => (
+                                <div key={s} style={{
+                                    width: '10px', height: '10px', borderRadius: '50%',
+                                    background: step === s ? '#38bdf8' : (s < step ? '#0ea5e9' : '#334155')
+                                }}></div>
+                            ))}
+                        </div>
+
+                        {/* Use a form to handle enter key properly if needed, but simple div is fine for wizard */}
+                        <div>
+                            {step === 1 && (
+                                <div>
+                                    <h2 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', fontWeight: '600' }}>School Details</h2>
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>School Name</label>
+                                        <input
+                                            value={schoolName} onChange={e => setSchoolName(e.target.value)}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', background: '#0f172a', border: '1px solid #475569', color: 'white' }}
+                                            placeholder="e.g. East Dillon Lions"
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <div style={{ flex: 1, marginBottom: '1rem' }}>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>School Colors</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} style={{ border: 'none', width: '40px', height: '40px', cursor: 'pointer' }} />
+                                                <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Primary</span>
+                                            </div>
+                                        </div>
+                                        <div style={{ flex: 1, marginBottom: '1rem' }}>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>&nbsp;</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} style={{ border: 'none', width: '40px', height: '40px', cursor: 'pointer' }} />
+                                                <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Secondary</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 2 && (
+                                <div>
+                                    <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: '600' }}>Team Levels</h2>
+                                    <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '1.5rem' }}>Define the levels in your program (can be edited later).</p>
+                                    <ListEditor items={levels} setItems={setLevels} title="Levels" placeholder="Add Level (e.g. Frosh)" />
+                                </div>
+                            )}
+
+                            {step === 3 && (
+                                <div>
+                                    <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: '600' }}>Offensive Positions</h2>
+                                    <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '1.5rem' }}>What do you call your offensive positions?</p>
+                                    <PositionEditor items={offensePositions} setItems={setOffensePositions} title="Offense" />
+                                </div>
+                            )}
+
+                            {step === 4 && (
+                                <div>
+                                    <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: '600' }}>Defensive Positions</h2>
+                                    <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '1.5rem' }}>What do you call your defensive positions?</p>
+                                    <PositionEditor items={defensePositions} setItems={setDefensePositions} title="Defense" />
+                                </div>
+                            )}
+
+                            {/* Actions */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
+                                {step > 1 ? (
+                                    <button onClick={handleBack} style={{ padding: '0.75rem 1.5rem', background: 'transparent', border: '1px solid #475569', color: 'white', borderRadius: '6px', cursor: 'pointer' }}>Back</button>
+                                ) : <div></div>}
+
+                                {step < 4 ? (
+                                    <button
+                                        onClick={handleNext}
+                                        disabled={step === 1 && !schoolName}
+                                        style={{
+                                            padding: '0.75rem 2rem', background: (step === 1 && !schoolName) ? '#475569' : '#0ea5e9',
+                                            border: 'none', color: 'white', borderRadius: '6px', fontWeight: 'bold', cursor: (step === 1 && !schoolName) ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
+                                        Next
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={loading}
+                                        style={{
+                                            padding: '0.75rem 2rem', background: '#10b981',
+                                            border: 'none', color: 'white', borderRadius: '6px', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer'
+                                        }}
+                                    >
+                                        {loading ? 'Creating School...' : 'Finish Setup'}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )
+        };
+
         // --- Data & Constants ---
         // ... (rest of the file)
 
@@ -1534,10 +1866,8 @@
 
                 default:
                     // Fallback to text if it's an emoji, otherwise question mark
-                    if (/^[\u{1F000}-\u{1F9FF}]/u.test(name)) {
-                        return <span style={{ fontSize: '1.2rem', marginRight: '0.5rem', display: 'inline-block', width: '1.2em', textAlign: 'center', ...style, color: color }}>{name}</span>;
-                    }
-                    return <span style={{ fontSize: '1.2rem', marginRight: '0.5rem', display: 'inline-block', width: '1.2em', textAlign: 'center', ...style, color: color }}>?</span>;
+                    // Fallback to text (Emoji or just text)
+                    return <span style={{ fontSize: '1.2rem', marginRight: '0.5rem', display: 'inline-block', width: '1.2em', textAlign: 'center', ...style, color: color }}>{name}</span>;
             }
         };
 
@@ -10850,7 +11180,7 @@
                                 <Icon name="Swords" color="#ffd700" /> The Quest for Valhalla
                             </h2>
                             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                Quest for Excellence. Earn it or you don't.
+                                Quest for Excellence. Earn it or you don&apos;t.
                             </p>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--surface)', padding: '4px', borderRadius: '8px' }}>
@@ -14479,9 +14809,9 @@
                 return (
                     <div className="print-matrix-container" style={{ padding: '0.5rem' }}>
                         <div className="no-print" style={{ marginBottom: '1rem', fontStyle: 'italic', color: '#666' }}>
-                            Printing Strike 'Em Out (Matrix). Use Landscape mode for best results.
+                            Printing Strike &apos;Em Out (Matrix). Use Landscape mode for best results.
                         </div>
-                        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem', borderBottom: '2px solid black' }}>Strike 'Em Out Matrix</h2>
+                        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem', borderBottom: '2px solid black' }}>Strike &apos;Em Out Matrix</h2>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.6rem', tableLayout: 'fixed' }}>
                             <thead>
                                 <tr>
@@ -14592,7 +14922,7 @@
                             <div style={{ display: 'flex', background: '#334155', borderRadius: '6px', padding: '4px' }}>
                                 <button className={`btn btn-sm ${printMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('grid')}>Basic Grid</button>
                                 <button className={`btn btn-sm ${printMode === 'situations' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('situations')}>Situations & Scripts</button>
-                                <button className={`btn btn-sm ${printMode === 'matrix' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('matrix')}>Strike 'Em Out</button>
+                                <button className={`btn btn-sm ${printMode === 'matrix' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('matrix')}>Strike &apos;Em Out</button>
                             </div>
                         </div>
 
@@ -17560,11 +17890,11 @@
                                         </div>
                                         <div>
                                             <h4 style={{ color: 'var(--accent)', marginBottom: '0.5rem' }}>SHUTTLE RUN</h4>
-                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0 }}>A tape roll is placed on the 10, 20, and 30 yard lines, Procedure: Start; pick up 10 yd, tape, return to start, pick up 20 yd. tape and return to start, pick up 30 yd. tape and return to start, but don't set down tape, return to 30, return 20 yd tape, return 10 yd. tape and finish. One trial run.</p>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0 }}>A tape roll is placed on the 10, 20, and 30 yard lines, Procedure: Start; pick up 10 yd, tape, return to start, pick up 20 yd. tape and return to start, pick up 30 yd. tape and return to start, but don&apos;t set down tape, return to 30, return 20 yd tape, return 10 yd. tape and finish. One trial run.</p>
                                         </div>
                                         <div>
                                             <h4 style={{ color: 'var(--accent)', marginBottom: '0.5rem' }}>BOARD JUMP</h4>
-                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0 }}>Jump laterally over a 12" board or bag, for 30 seconds. Each touch of the ground counts as one. One trial.</p>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0 }}>Jump laterally over a 12&quot; board or bag, for 30 seconds. Each touch of the ground counts as one. One trial.</p>
                                         </div>
                                         <div>
                                             <h4 style={{ color: 'var(--accent)', marginBottom: '0.5rem' }}>BENCH PRESS</h4>
@@ -23584,7 +23914,7 @@
                                         <div className="card" style={{ marginBottom: '1.5rem', padding: '1.5rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(59, 130, 246, 0.2))' }}>
                                             <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 <span style={{ fontSize: '1.5rem' }}>🤝</span>
-                                                Today's Connections
+                                                Today&apos;s Connections
                                             </h3>
                                             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                                                 Connect with this teammate today to build stronger bonds!
@@ -23755,7 +24085,7 @@
                                                         checked={wellnessForm.pain}
                                                         onChange={e => setWellnessForm({ ...wellnessForm, pain: e.target.checked })}
                                                     />
-                                                    <span style={{ fontWeight: 'bold' }}>I'm experiencing pain or discomfort</span>
+                                                    <span style={{ fontWeight: 'bold' }}>I&apos;m experiencing pain or discomfort</span>
                                                 </label>
                                                 {wellnessForm.pain && (
                                                     <div style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem' }}>
@@ -24294,7 +24624,7 @@
                                 <div className="card" style={{ padding: '1.5rem' }}>
                                     <h3 style={{ borderBottom: '2px solid var(--accent)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Daily Feedback Targets</span>
-                                        <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: 'var(--text-secondary)' }}>Today's Group: {selectedCoach.role}</span>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: 'var(--text-secondary)' }}>Today&apos;s Group: {selectedCoach.role}</span>
                                     </h3>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
@@ -31615,258 +31945,12 @@
 
         };
 
-        // --- SCHOOL SETUP WIZARD ---
-        const SchoolSetup = ({ onComplete }) => {
-            const [localSchoolName, setLocalSchoolName] = useState('');
-            const [localMascot, setLocalMascot] = useState('🦅');
-            const [step, setStep] = useState(1);
 
-            const handleSubmit = () => {
-                if (!localSchoolName) return;
-                onComplete({ schoolName: localSchoolName, teamLogo: localMascot });
-            };
 
-            return (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'var(--bg-body)', zIndex: 9999,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexDirection: 'column', padding: '2rem'
-                }}>
-                    <div className="card" style={{ maxWidth: '500px', width: '100%', animation: 'slideUp 0.5s ease' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Welcome Coach! 🏈</h1>
-                            <p style={{ color: 'var(--text-secondary)' }}>Let's get your new program set up.</p>
-                        </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div>
-                                <label className="form-label">What is your School's Name?</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="e.g. West High School"
-                                    value={localSchoolName}
-                                    onChange={(e) => setLocalSchoolName(e.target.value)}
-                                    autoFocus
-                                    style={{ fontSize: '1.1rem', padding: '0.75rem' }}
-                                />
-                            </div>
 
-                            <div>
-                                <label className="form-label">Choose a Mascot / Logo</label>
-                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                                    {['🦅', '🐯', '🦁', '🐻', '🐺', '🐗', '🐍', '🐝', '⚔️', '⚡', '🌪️', '🌲', '⚓'].map(emoji => (
-                                        <button
-                                            key={emoji}
-                                            onClick={() => setLocalMascot(emoji)}
-                                            style={{
-                                                fontSize: '1.5rem', width: '45px', height: '45px',
-                                                border: localMascot === emoji ? '2px solid var(--accent)' : '1px solid var(--border)',
-                                                borderRadius: '8px', background: localMascot === emoji ? 'var(--accent-transparent)' : 'var(--surface)',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            {emoji}
-                                        </button>
-                                    ))}
-                                </div>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="Or type custom emoji/text..."
-                                    value={localMascot}
-                                    onChange={(e) => setLocalMascot(e.target.value)}
-                                    maxLength="5"
-                                />
-                            </div>
 
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleSubmit}
-                                disabled={!localSchoolName}
-                                style={{
-                                    marginTop: '1rem', padding: '1rem',
-                                    fontSize: '1.1rem', justifyContent: 'center'
-                                }}
-                            >
-                                Create School & Start Season
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
 
-        const SchoolSetupWizard = ({ schoolId, onComplete }) => {
-            const [localSchoolName, setLocalSchoolName] = useState('');
-            const [localMascot, setLocalMascot] = useState('🦅');
-            const [primaryColor, setPrimaryColor] = useState('#0ea5e9'); // Default Blue
-            const [isInitializing, setIsInitializing] = useState(false);
-
-            const handleInitialize = async () => {
-                if (!localSchoolName) return;
-
-                if (!confirm(`Are you sure you want to initialize "${localSchoolName}"?\n\nWARNING: This will perform a "Clean Slate" reset. All existing local data (Roster, Plays, Staff, etc.) on this device will be cleared to start fresh for the new school.`)) {
-                    return;
-                }
-
-                setIsInitializing(true);
-
-                try {
-                    const userId = window.auth.currentUser.uid;
-                    const userRef = window.db.collection('users').doc(userId);
-
-                    // 1. WIPE LOCAL DATA (Clean Slate)
-                    const keysToWipe = [
-                        'oc-dashboard-roster',
-                        'oc-dashboard-plays',
-                        'oc-dashboard-staff',
-                        'oc-dashboard-weeks',
-                        'oc-dashboard-master-tasks',
-                        'oc-dashboard-game-plans',
-                        'oc-dashboard-scripts',
-                        'oc-dashboard-logo',
-                        'oc-dashboard-theme',
-                        'oc-dashboard-accent',
-                        'hc_school_id' // Ensure no stale binding
-                    ];
-
-                    keysToWipe.forEach(key => localStorage.removeItem(key));
-
-                    // 2. SET DEFAULTS
-                    localStorage.setItem('oc-dashboard-accent', primaryColor);
-                    localStorage.setItem('hc_school_id', schoolId); // Bind immediately
-
-                    // 3. UPDATE FIRESTORE (School Doc)
-                    await window.db.collection('schools').doc(schoolId).set({
-                        name: localSchoolName,
-                        mascot: localMascot,
-                        primaryColor: primaryColor,
-                        initialized: true,
-                        createdAt: new Date().toISOString(),
-                        createdBy: window.auth.currentUser.email,
-                        roster: [], // Explicit empty
-                        staff: [], // Explicit empty
-                        plays: [] // Explicit empty
-                    });
-
-                    // 4. CRITICAL: UPDATE USER PROFILE & WIPE PERSONAL DATA
-                    // This ensures loadUserDataFromFirestore switches to School Mode
-                    // and doesn't fall back to old personal data.
-                    await userRef.set({
-                        schoolId: schoolId, // LINK USER TO SCHOOL
-                        // Wipe potential leaky fields from personal doc
-                        roster: firebase.firestore.FieldValue.delete(),
-                        plays: firebase.firestore.FieldValue.delete(),
-                        staff: firebase.firestore.FieldValue.delete(),
-                        weeks: firebase.firestore.FieldValue.delete(),
-                        inventory: firebase.firestore.FieldValue.delete(),
-                        attendance: firebase.firestore.FieldValue.delete(),
-                        valhalla: firebase.firestore.FieldValue.delete(),
-                        settings: {
-                            activeYear: '2025',
-                            theme: 'dark', // Reset theme
-                            accentColor: primaryColor
-                        }
-                    }, { merge: true });
-
-                    // 5. COMPLETE
-                    alert(`Welcome to ${localSchoolName}! Your workspace is ready.`);
-                    onComplete();
-
-                } catch (err) {
-                    console.error("Error initializing school:", err);
-                    alert("Failed to initialize school: " + err.message);
-                    setIsInitializing(false);
-                }
-            };
-
-            return (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: '#0f172a', color: 'white', zIndex: 9999,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                    <div style={{
-                        background: '#1e293b', padding: '2rem', borderRadius: '12px',
-                        maxWidth: '500px', width: '90%', border: '1px solid #334155',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-                    }}>
-                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
-                            <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Welcome, Coach!</h2>
-                            <p style={{ color: '#94a3b8' }}>Let's set up your new school workspace.</p>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>School Name</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="e.g. Central High School"
-                                    value={localSchoolName}
-                                    onChange={(e) => setLocalSchoolName(e.target.value)}
-                                    style={{ width: '100%', padding: '0.75rem', fontSize: '1.1rem' }}
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>Primary Color</label>
-                                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                    {[
-                                        '#0ea5e9', // Sky Blue
-                                        '#ef4444', // Red
-                                        '#22c55e', // Green
-                                        '#eab308', // Yellow
-                                        '#f97316', // Orange
-                                        '#a855f7', // Purple
-                                        '#ec4899', // Pink
-                                        '#64748b', // Slate
-                                        '#000000', // Black
-                                        '#1e1b4b'  // Navy
-                                    ].map(color => (
-                                        <button
-                                            key={color}
-                                            onClick={() => setPrimaryColor(color)}
-                                            style={{
-                                                width: '32px', height: '32px', borderRadius: '50%',
-                                                background: color,
-                                                border: primaryColor === color ? '3px solid white' : '1px solid rgba(255,255,255,0.2)',
-                                                cursor: 'pointer',
-                                                transform: primaryColor === color ? 'scale(1.1)' : 'scale(1)',
-                                                transition: 'all 0.2s',
-                                                boxShadow: primaryColor === color ? `0 0 10px ${color}` : 'none'
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleInitialize}
-                                disabled={!localSchoolName || isInitializing}
-                                style={{
-                                    marginTop: '1rem', padding: '1rem',
-                                    fontSize: '1.1rem', justifyContent: 'center',
-                                    background: primaryColor,
-                                    opacity: (!localSchoolName || isInitializing) ? 0.5 : 1
-                                }}
-                            >
-                                {isInitializing ? 'Setting up...' : 'Initialize School & Clean Slate'}
-                            </button>
-
-                            <p style={{ fontSize: '0.8rem', color: '#64748b', textAlign: 'center', marginTop: '0.5rem' }}>
-                                ⚠️ This will clear any existing data on this device to start fresh.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
 
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
@@ -31905,36 +31989,33 @@
                     if (!authUser) return;
 
                     try {
-                        // 1. Check Access Config (Force Server to ensure latest mapping)
-                        const accessDoc = await window.db.collection('config').doc('access').get({ source: 'server' });
-                        if (!accessDoc.exists) return;
+                        console.log("Checking User School Status...");
 
-                        const accessData = accessDoc.data();
-                        const email = authUser.email.toLowerCase();
+                        let userDoc;
+                        try {
+                            // Try Server First (as requested in recent commit)
+                            userDoc = await window.db.collection('users').doc(authUser.uid).get({ source: 'server' });
+                        } catch (serverErr) {
+                            console.warn("Server fetch failed, falling back to cache:", serverErr);
+                            userDoc = await window.db.collection('users').doc(authUser.uid).get();
+                        }
 
-                        // 2. Is School Admin?
-                        const isPaying = accessData.payingAdmins && accessData.payingAdmins.includes(email);
-                        if (!isPaying) return;
+                        let hasSchool = false;
 
-                        // 3. Get School ID
-                        const schoolId = accessData.userSchools ? accessData.userSchools[email] : null;
-
-                        if (schoolId) {
-                            // 4. Check if School is Initialized (Force Server)
-                            const schoolDoc = await window.db.collection('schools').doc(schoolId).get({ source: 'server' });
-
-                            // Debugging log
-                            console.log(`Checking init status for school: ${schoolId}`, schoolDoc.exists ? schoolDoc.data() : 'Doc missing');
-
-                            if (!schoolDoc.exists || !schoolDoc.data().initialized) {
-                                console.log("School not initialized. Showing Setup Wizard.");
-                                setSchoolSetupData({ showWizard: true, schoolId });
+                        if (userDoc && userDoc.exists) {
+                            const userData = userDoc.data();
+                            if (userData.schoolId) {
+                                hasSchool = true;
+                                console.log("User has school:", userData.schoolId);
                             }
+                        }
+
+                        if (!hasSchool) {
+                            console.log("No School ID found. Triggering Onboarding Wizard.");
+                            setSchoolSetupData({ showWizard: true, schoolId: null });
                         }
                     } catch (err) {
                         console.error("Error checking school init:", err);
-                        // Fallback: If server fetch fails (e.g. offline), try cache? 
-                        // For now, failure means we don't show the wizard, preventing a blocking loop if offline.
                     }
                 };
 
@@ -33560,11 +33641,15 @@
             return (
                 <div className="app-container">
                     {schoolSetupData.showWizard && (
-                        <SchoolSetupWizard
-                            schoolId={schoolSetupData.schoolId}
-                            onComplete={() => {
+                        <SchoolOnboardingWizard
+                            user={authUser}
+                            onComplete={async (schoolId) => {
+                                console.log("Onboarding Complete. Fetching new data...");
                                 setSchoolSetupData({ showWizard: false, schoolId: null });
-                                window.location.reload(); // Reload to apply changes (e.g. empty roster)
+                                // Fetch fresh data immediately to populate Dashboard without reload
+                                await loadUserDataFromFirestore(authUser.uid);
+                                // Ensure School ID is set in local state (in case loader didn't catch it yet)
+                                localStorage.setItem('hc_school_id', schoolId);
                             }}
                         />
                     )}
@@ -33596,13 +33681,13 @@
 
                     <div className="sidebar">
                         <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem' }}>
-                            {schoolName ? (
-                                <div>
-                                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{teamLogo}</div>
-                                    <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', lineHeight: '1.2' }}>{schoolName}</h1>
+                            <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent)', marginBottom: schoolName ? '1rem' : '0', letterSpacing: '-1px' }}>DoFO</h1>
+
+                            {schoolName && (
+                                <div style={{ animation: 'fadeIn 0.5s ease' }}>
+                                    <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>{teamLogo}</div>
+                                    <h2 style={{ fontSize: '1.1rem', fontWeight: '600', lineHeight: '1.2', color: 'var(--text-primary)' }}>{schoolName}</h2>
                                 </div>
-                            ) : (
-                                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>DoFO</h1>
                             )}
 
                         </div>
@@ -33964,12 +34049,12 @@
 
 
                             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                                {(currentPermissions.settings.view || (currentUser && currentUser.email === 'matthewfinn14@gmail.com')) && (
+                                {(false) && (
                                     <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Settings
                                     </button>
                                 )}
-                                {currentUser?.roles?.includes('Head Coach') && (
+                                {currentUser && currentUser.roles && currentUser.roles.includes('Head Coach') && (
                                     <button className={`nav-item ${view === 'permissions' ? 'active' : ''}`} onClick={() => setView('permissions')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
                                         <Icon name="Lock" size={16} style={{ marginRight: '8px' }} /> Permissions
                                     </button>
@@ -34006,6 +34091,7 @@
                         {view === 'reports' && <ReportsView roster={roster} attendance={attendance} setAttendance={setAttendance} permissions={currentPermissions.dashboard} />}
                         {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} gamePlans={currentWeek.offensiveGamePlan} depthChart={depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} />}
                         {view === 'drill-library' && <DrillLibraryView />}
+
                         {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
                         {view === 'scouting' && <ScoutingView data={opponentScoutData} onUpdate={setOpponentScoutData} roster={roster} />}
