@@ -828,6 +828,8 @@
                     }
                     if (data.settings.activeYear) localStorage.setItem('hc-active-year', data.settings.activeYear);
                     if (data.settings.visibleFeatures) localStorage.setItem('hc-visible-features', JSON.stringify(data.settings.visibleFeatures));
+                    // Fix: Load Position Names
+                    if (data.settings.positionNames) localStorage.setItem('oc-dashboard-position-names', JSON.stringify(data.settings.positionNames));
                 }
 
                 // --- NEW SYNC ITEMS (Complete Coverage) ---
@@ -33052,7 +33054,11 @@
 
             useEffect(() => {
                 localStorage.setItem('hc-active-year', activeYear);
-            }, [activeYear]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'settings', { activeYear });
+                }
+            }, [activeYear, currentUser]);
 
             // Football 101 Data
             const [football101Data, setFootball101Data] = useLocalStorage('hc-football-101', {
@@ -33931,7 +33937,11 @@
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-theme', theme);
                 document.body.className = `theme-${theme}`;
-            }, [theme]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'settings', { theme });
+                }
+            }, [theme, currentUser]);
 
             const [positionNames, setPositionNames] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-position-names');
@@ -34222,12 +34232,20 @@
             // Save depth chart to localStorage whenever it changes
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-depthchart', JSON.stringify(depthChart));
-            }, [depthChart]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'depthChart', depthChart);
+                }
+            }, [depthChart, currentUser]);
 
             // Save staff to localStorage whenever it changes
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-staff', JSON.stringify(staff));
-            }, [staff]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'staff', staff);
+                }
+            }, [staff, currentUser]);
 
             // Save team logo to localStorage whenever it changes
             useEffect(() => {
@@ -34236,7 +34254,11 @@
                 } else {
                     localStorage.removeItem('oc-dashboard-logo');
                 }
-            }, [teamLogo]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'settings', { teamLogo });
+                }
+            }, [teamLogo, currentUser]);
 
             // Apply and Save Accent Color
             useEffect(() => {
@@ -34263,7 +34285,11 @@
             // Save position names to localStorage
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-position-names', JSON.stringify(positionNames));
-            }, [positionNames]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'settings', { positionNames });
+                }
+            }, [positionNames, currentUser]);
 
             // Save ratings to localStorage whenever they change
             useEffect(() => {
