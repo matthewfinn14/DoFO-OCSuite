@@ -43,8 +43,35 @@
     <!-- SortableJS -->
     <script crossorigin="anonymous"
         src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- Classnames (Dependency for React-SortableJS) -->
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/classnames/2.3.2/index.min.js"></script>
+
+    <!-- React SortableJS Shim (Fix for "require is not defined") -->
+    <script>
+        window.require = function (name) {
+            if (name === 'react') return window.React;
+            if (name === 'sortablejs') return window.Sortable;
+            if (name === 'classnames') return window.classNames;
+            if (name === 'tiny-invariant') return function (condition, message) { if (!condition) console.error("Invariant failed:", message); };
+            return {};
+        };
+        window.module = { exports: {} };
+        window.exports = window.module.exports;
+    </script>
     <script crossorigin="anonymous"
         src="https://cdn.jsdelivr.net/npm/react-sortablejs@6.1.4/dist/index.min.js"></script>
+    <script>
+        if (window.module && window.module.exports && window.module.exports.ReactSortable) {
+            window.ReactSortable = window.module.exports.ReactSortable;
+            console.log("ReactSortable loaded successfully via Shim");
+        } else {
+            console.error("Failed to load ReactSortable via Shim");
+        }
+        // Cleanup global pollution
+        delete window.require;
+        delete window.module;
+        delete window.exports;
+    </script>
 
     <!-- Firebase Initialization -->
     <script>
