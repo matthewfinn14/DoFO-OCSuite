@@ -13659,12 +13659,24 @@
                                             onChange={e => setNewMember({ ...newMember, role: e.target.value })}
                                         >
                                             <option value="">Select Role...</option>
-                                            <option value="Team Admin">Team Admin</option>
+                                            <option value="Head Coach">Head Coach</option>
                                             <option value="Assistant">Assistant</option>
                                             <option value="Student Manager">Student Manager</option>
                                             <option value="Trainer">Trainer</option>
                                             <option value="Stats">Stats</option>
                                         </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '30px' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={newMember.isAdmin || false}
+                                                onChange={e => setNewMember({ ...newMember, isAdmin: e.target.checked })}
+                                                style={{ width: '18px', height: '18px' }}
+                                            />
+                                            <span>Grant Admin Privileges</span>
+                                        </label>
                                     </div>
 
                                     <div>
@@ -31153,16 +31165,14 @@
 
 
         // --- RBAC CONSTANTS & HELPERS ---
+        // --- RBAC CONSTANTS & HELPERS ---
         const ROLES = [
             'Head Coach',
-            'Offensive Coordinator',
-            'Defensive Coordinator',
-            'Special Teams Coordinator',
-            'Position Coach',
-            'Director of Ops',
-            'Recruiting Coordinator',
+            'Assistant',
+            'Student Manager',
+            'Trainer',
             'Stats',
-            'Trainer'
+            'Player'
         ];
 
         const FEATURES = [
@@ -31178,17 +31188,6 @@
         ];
 
         const DEFAULT_PERMISSIONS = {
-            'Team Admin': {
-                dashboard: { view: true, edit: true },
-                playbook: { view: true, edit: true },
-                callsheet: { view: true, edit: true },
-                install: { view: true, edit: true },
-                scripts: { view: true, edit: true },
-                depth: { view: true, edit: true },
-                recruiting: { view: true, edit: true },
-                staff: { view: true, edit: true },
-                settings: { view: true, edit: true }
-            },
             'Head Coach': {
                 dashboard: { view: true, edit: true },
                 playbook: { view: true, edit: true },
@@ -31200,20 +31199,9 @@
                 staff: { view: true, edit: true },
                 settings: { view: true, edit: true }
             },
-            'Offensive Coordinator': {
-                dashboard: { view: true, edit: true }, // Can update injuries/focus
-                playbook: { view: true, edit: true },
-                callsheet: { view: true, edit: true },
-                install: { view: true, edit: true },
-                scripts: { view: true, edit: true },
-                depth: { view: true, edit: true }, // Offense depth
-                recruiting: { view: true, edit: true }, // Offense recruiting
-                staff: { view: true, edit: false },
-                settings: { view: false, edit: false }
-            },
-            'Defensive Coordinator': {
+            'Assistant': {
                 dashboard: { view: true, edit: true },
-                playbook: { view: true, edit: true }, // Assuming shared playbook or separate (future)
+                playbook: { view: true, edit: true },
                 callsheet: { view: true, edit: true },
                 install: { view: true, edit: true },
                 scripts: { view: true, edit: true },
@@ -31222,38 +31210,57 @@
                 staff: { view: true, edit: false },
                 settings: { view: false, edit: false }
             },
-            'Position Coach': {
-                dashboard: { view: true, edit: false }, // View only for program focus
-                playbook: { view: true, edit: false }, // View only
-                callsheet: { view: true, edit: false }, // View only
+            'Student Manager': {
+                dashboard: { view: true, edit: false },
+                playbook: { view: false, edit: false },
+                callsheet: { view: false, edit: false },
                 install: { view: true, edit: false },
-                scripts: { view: true, edit: false },
-                depth: { view: true, edit: true }, // Can edit depth (simplified for now)
-                recruiting: { view: true, edit: true }, // Can add notes
+                scripts: { view: true, edit: true }, // Help with logistics
+                depth: { view: true, edit: false },
+                recruiting: { view: false, edit: false },
                 staff: { view: false, edit: false },
                 settings: { view: false, edit: false }
             },
-            'Director of Ops': {
-                dashboard: { view: true, edit: true },
-                playbook: { view: false, edit: false },
-                callsheet: { view: false, edit: false },
-                install: { view: true, edit: true }, // Logistics
-                scripts: { view: true, edit: true }, // Logistics
-                depth: { view: true, edit: false },
-                recruiting: { view: true, edit: true },
-                staff: { view: true, edit: true },
-                settings: { view: true, edit: false }
-            },
-            'Recruiting Coordinator': {
-                dashboard: { view: true, edit: false },
+            'Trainer': {
+                dashboard: { view: true, edit: true }, // Update injuries
                 playbook: { view: false, edit: false },
                 callsheet: { view: false, edit: false },
                 install: { view: false, edit: false },
                 scripts: { view: false, edit: false },
-                depth: { view: true, edit: false }, // Needs to see roster
-                recruiting: { view: true, edit: true },
+                depth: { view: true, edit: false },
+                recruiting: { view: false, edit: false },
+                staff: { view: true, edit: false }, // View contact info
+                settings: { view: false, edit: false }
+            },
+            'Stats': {
+                dashboard: { view: true, edit: false },
+                playbook: { view: true, edit: false },
+                callsheet: { view: true, edit: false },
+                install: { view: false, edit: false },
+                scripts: { view: true, edit: false },
+                depth: { view: true, edit: false },
+                recruiting: { view: false, edit: false },
                 staff: { view: false, edit: false },
                 settings: { view: false, edit: false }
+            },
+            'Player': {
+                dashboard: { view: true, edit: false },
+                playbook: { view: true, edit: false },
+                callsheet: { view: false, edit: false },
+                install: { view: true, edit: false },
+                scripts: { view: false, edit: false },
+                depth: { view: true, edit: false },
+                recruiting: { view: false, edit: false },
+                staff: { view: false, edit: false },
+                settings: { view: false, edit: false }
+            }
+        };
+        install: { view: false, edit: false },
+        scripts: { view: false, edit: false },
+        depth: { view: true, edit: false }, // Needs to see roster
+        recruiting: { view: true, edit: true },
+        staff: { view: false, edit: false },
+        settings: { view: false, edit: false }
             }
         };
 
@@ -33884,11 +33891,18 @@
 
             const currentPermissions = useMemo(() => {
                 const userRoles = currentUser?.roles || [];
+
+                // SUPER OVERRIDE: Admin Flag or Head Coach Role
+                if (currentUser?.isAdmin || userRoles.includes('Head Coach')) {
+                    // Start with 'Head Coach' permissions (Full Access)
+                    return JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS['Head Coach']));
+                }
+
                 // Default to first role or generic
-                if (userRoles.length === 0) return DEFAULT_PERMISSIONS['Position Coach'];
+                if (userRoles.length === 0) return DEFAULT_PERMISSIONS['Assistant'];
 
                 // Merge Permissions: If ANY role has 'true', specific permission is true.
-                const merged = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS['Position Coach'])); // Start with base restricted
+                const merged = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS['Assistant'])); // Start with base restricted
 
                 userRoles.forEach(role => {
                     const rolePerms = permissions[role] || DEFAULT_PERMISSIONS[role];
