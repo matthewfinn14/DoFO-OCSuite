@@ -34160,6 +34160,20 @@
                 if (accentColor) {
                     document.documentElement.style.setProperty('--accent', accentColor);
                     localStorage.setItem('oc-dashboard-accent', accentColor);
+
+                    // Persist to School Data (Cloud) if possible
+                    const currentSchoolId = localStorage.getItem('hc_school_id');
+                    if (currentSchoolId && window.db) {
+                        try {
+                            const schoolRef = window.db.collection('schools').doc(currentSchoolId);
+                            // Only update if specifically changed (debounce could be added but this is simple)
+                            schoolRef.set({
+                                settings: { accentColor: accentColor }
+                            }, { merge: true }).catch(err => console.error("Error saving color to cloud:", err));
+                        } catch (e) {
+                            console.warn("Could not save color to cloud:", e);
+                        }
+                    }
                 }
             }, [accentColor]);
 
