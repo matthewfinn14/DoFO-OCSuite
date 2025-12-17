@@ -18153,9 +18153,7 @@
             const [accessLoading, setAccessLoading] = useState(false);
             const [newEmail, setNewEmail] = useState('');
 
-            // Cloud Migration State
-            const [migrationStatus, setMigrationStatus] = useState('idle');
-            const [migrationError, setMigrationError] = useState(null);
+            // Cloud Migration State REMOVED
 
             const handleMigrateToCloud = async () => {
                 if (!currentUser) {
@@ -19010,29 +19008,7 @@
                                 <h3>Data Management</h3>
                                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Backup your data or move it to another device.</p>
 
-                                {/* CLOUD MIGRATION SECTION */}
-                                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px' }}>
-                                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#38bdf8', fontSize: '1.1rem' }}>Cloud Migration</h3>
-                                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                                        Move your local data (Roster, Plays, Settings) to the secure cloud database. This creates a backup and makes your data accessible from any device.
-                                    </p>
-                                    <button
-                                        onClick={handleMigrateToCloud}
-                                        disabled={migrationStatus === 'loading'}
-                                        style={{
-                                            background: migrationStatus === 'success' ? '#10b981' : (migrationStatus === 'error' ? '#ef4444' : '#0ea5e9'),
-                                            color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem'
-                                        }}
-                                    >
-                                        <Icon name={migrationStatus === 'loading' ? 'Loader2' : (migrationStatus === 'success' ? 'Check' : 'CloudUpload')} size={18} className={migrationStatus === 'loading' ? 'spin' : ''} />
-                                        {migrationStatus === 'loading' ? 'Migrating...' : (migrationStatus === 'success' ? 'Migration Complete' : 'Migrate to Cloud')}
-                                    </button>
-                                    {migrationError && (
-                                        <div style={{ marginTop: '0.5rem', color: '#ef4444', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                            ⚠️ {migrationError}
-                                        </div>
-                                    )}
-                                </div>
+
 
                                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                     {currentPlanStatus !== 'FREE' ? (
