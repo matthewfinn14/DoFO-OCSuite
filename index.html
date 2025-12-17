@@ -31195,6 +31195,7 @@
             const [joinLoading, setJoinLoading] = useState(false);
             const [joinInput, setJoinInput] = useState('');
             const [createAccessCode, setCreateAccessCode] = useState('');
+            const [createMascot, setCreateMascot] = useState(''); // New: Mascot Input
             const [importData, setImportData] = useState(false); // Changed: Opt-in to data copy
             const [error, setError] = useState('');
 
@@ -31256,6 +31257,7 @@
                         name: "My New School", // Default name
                         settings: {
                             schoolName: "My New School",
+                            schoolMascot: createMascot || 'Tigers', // Default if empty
                             teamLogo: localStorage.getItem('oc-dashboard-logo') || '',
                             accentColor: localStorage.getItem('oc-dashboard-accent') || '#3b82f6',
                             theme: localStorage.getItem('oc-dashboard-theme') || 'dark',
@@ -31474,6 +31476,15 @@
                                     Convert your personal workspace into a shared Team Database. You will become the admin.
                                 </p>
                                 <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>School Mascot</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="e.g. Tigers, Eagles..."
+                                        value={createMascot}
+                                        onChange={e => setCreateMascot(e.target.value)}
+                                        style={{ width: '100%', marginBottom: '1rem' }}
+                                    />
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Admin Access Code</label>
                                     <input
                                         type="password"
