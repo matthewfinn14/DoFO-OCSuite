@@ -13086,7 +13086,7 @@
             );
         };
 
-        const StaffManager = ({ staff, onUpdateStaff, dutyAssignments, onUpdateDuties, view = 'roster', masterTasks, onUpdateMasterTasks }) => {
+        const StaffManager = ({ currentUser, staff, onUpdateStaff, dutyAssignments, onUpdateDuties, view = 'roster', masterTasks, onUpdateMasterTasks }) => {
             // view: 'roster' | 'duties'
             const [newMember, setNewMember] = useState({
                 name: '', role: '', level: ['Varsity'], shirtSize: '',
@@ -13129,6 +13129,25 @@
             };
 
             const addMember = () => {
+                // Email Invitation Logic
+                if (newMember.email) {
+                    const schoolId = localStorage.getItem('hc_school_id') || 'UNKNOWN';
+                    const schoolName = localStorage.getItem('hc_school_name') || 'the team';
+                    const coachName = currentUser?.displayName || 'Head Coach';
+
+                    const subject = encodeURIComponent(`Join the coaching staff at ${schoolName}`);
+                    const body = encodeURIComponent(
+                        `Coach ${coachName} has added you to the staff.\n\n` +
+                        `Please join the team using the following School ID:\n` +
+                        `${schoolId}\n\n` +
+                        `1. Log in to Digital DoFO\n` +
+                        `2. Select "Join Existing School"\n` +
+                        `3. Enter School ID: ${schoolId}`
+                    );
+
+                    window.location.href = `mailto:${newMember.email}?subject=${subject}&body=${body}`;
+                }
+
                 const id = 'coach_' + Date.now();
                 onUpdateStaff([...staff, { ...newMember, id }]);
                 setNewMember({
@@ -35552,6 +35571,7 @@
                         />}
                         {view === 'staff-roster' && (
                             <StaffManager
+                                currentUser={currentUser}
                                 staff={staff}
                                 onUpdateStaff={setStaff}
                                 dutyAssignments={dutyAssignments}
