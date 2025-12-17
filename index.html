@@ -34,6 +34,9 @@
     <!-- Lucide Icons -->
     <script crossorigin="anonymous" src="https://unpkg.com/lucide@0.303.0"></script>
 
+    <!-- PropTypes (Required for Recharts UMD) -->
+    <script crossorigin="anonymous" src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+
     <!-- Recharts -->
     <script crossorigin="anonymous" src="https://unpkg.com/recharts@2.12.3/umd/Recharts.js"></script>
 
@@ -50,6 +53,7 @@
     <script>
         window.require = function (name) {
             if (name === 'react') return window.React;
+            if (name === 'prop-types') return window.PropTypes;
             if (name === 'sortablejs') return window.Sortable;
             if (name === 'classnames') return window.classNames;
             if (name === 'tiny-invariant') return function (condition, message) { if (!condition) console.error("Invariant failed:", message); };
