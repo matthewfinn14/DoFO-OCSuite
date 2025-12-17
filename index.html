@@ -13135,17 +13135,44 @@
                     const schoolName = localStorage.getItem('hc_school_name') || 'the team';
                     const coachName = currentUser?.displayName || 'Head Coach';
 
-                    const subject = encodeURIComponent(`Join the coaching staff at ${schoolName}`);
-                    const body = encodeURIComponent(
-                        `Coach ${coachName} has added you to the staff.\n\n` +
+                    const subjectRaw = `Join the coaching staff at ${schoolName}`;
+                    const bodyRaw = `Coach ${coachName} has added you to the staff.\n\n` +
                         `Please join the team using the following School ID:\n` +
                         `${schoolId}\n\n` +
                         `1. Log in to Digital DoFO\n` +
                         `2. Select "Join Existing School"\n` +
-                        `3. Enter School ID: ${schoolId}`
-                    );
+                        `3. Enter School ID: ${schoolId}`;
 
-                    window.location.href = `mailto:${newMember.email}?subject=${subject}&body=${body}`;
+                    if (window.db) {
+                        // Automated Email via Firebase Extension
+                        window.db.collection('mail').add({
+                            to: newMember.email,
+                            message: {
+                                subject: subjectRaw,
+                                text: bodyRaw,
+                                html: `<div style="font-family: sans-serif; padding: 20px;">
+                                    <h2>Join ${schoolName}</h2>
+                                    <p>Coach ${coachName} has added you to the staff.</p>
+                                    <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                                        <strong>School ID:</strong> <span style="font-family: monospace; font-size: 1.2em;">${schoolId}</span>
+                                    </div>
+                                    <ol>
+                                        <li>Log in to <a href="https://digitaldofo.com">Digital DoFO</a></li>
+                                        <li>Select "Join Existing School"</li>
+                                        <li>Enter the School ID above</li>
+                                    </ol>
+                                </div>`
+                            }
+                        }).then(() => {
+                            alert(`Invitation queued for ${newMember.email}. It should arrive shortly.`);
+                        }).catch(err => {
+                            console.error("Auto-email failed:", err);
+                            // Fallback to mailto
+                            window.location.href = `mailto:${newMember.email}?subject=${encodeURIComponent(subjectRaw)}&body=${encodeURIComponent(bodyRaw)}`;
+                        });
+                    } else {
+                        window.location.href = `mailto:${newMember.email}?subject=${encodeURIComponent(subjectRaw)}&body=${encodeURIComponent(bodyRaw)}`;
+                    }
                 }
 
                 const id = 'coach_' + Date.now();
