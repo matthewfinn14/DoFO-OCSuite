@@ -31107,6 +31107,17 @@
         ];
 
         const DEFAULT_PERMISSIONS = {
+            'Team Admin': {
+                dashboard: { view: true, edit: true },
+                playbook: { view: true, edit: true },
+                callsheet: { view: true, edit: true },
+                install: { view: true, edit: true },
+                scripts: { view: true, edit: true },
+                depth: { view: true, edit: true },
+                recruiting: { view: true, edit: true },
+                staff: { view: true, edit: true },
+                settings: { view: true, edit: true }
+            },
             'Head Coach': {
                 dashboard: { view: true, edit: true },
                 playbook: { view: true, edit: true },
@@ -31249,7 +31260,16 @@
                         },
                         // Initialize empty arrays if NOT importing data
                         roster: [],
-                        staff: [],
+                        staff: [
+                            {
+                                id: currentUser.uid,
+                                name: currentUser.displayName || 'Head Coach',
+                                email: currentUser.email,
+                                roles: ['Head Coach', 'Team Admin'], // FORCE ADMIN RIGHTS
+                                phone: '',
+                                bio: 'School Creator'
+                            }
+                        ],
                         plays: [],
                         billing: { // Initialize with trial
                             plan: 'premium_trial',
