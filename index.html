@@ -33750,7 +33750,7 @@
             const currentUser = staff.find(s => s.id === currentUserId) || staff[0] || DEFAULT_STAFF_2025[0];
 
             const currentPermissions = useMemo(() => {
-                const userRoles = currentUser.roles || [];
+                const userRoles = currentUser?.roles || [];
                 // Default to first role or generic
                 if (userRoles.length === 0) return DEFAULT_PERMISSIONS['Position Coach'];
 
