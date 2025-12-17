@@ -747,7 +747,41 @@
                             console.warn("School ID found but document missing.");
                         }
                     } else {
-                        // Ensure we clear any stale school ID if they are not in a school
+                        // Check for Pending Invites (Auto-Join)
+                        console.log("No membership found. Checking for invites...");
+                        const myEmail = window.auth.currentUser.email.toLowerCase();
+                        let inviteSchoolId = null;
+
+                        try {
+                            const inviteDoc = await window.db.collection('invites').doc(myEmail).get();
+                            if (inviteDoc.exists) {
+                                const inviteData = inviteDoc.data();
+                                console.log("Found invite for school:", inviteData.schoolId);
+                                inviteSchoolId = inviteData.schoolId;
+
+                                // Auto-create membership
+                                await userDocRef.collection('memberships').doc(inviteSchoolId).set({
+                                    role: inviteData.role || 'assistant',
+                                    joinedAt: new Date().toISOString(),
+                                    status: 'active'
+                                });
+                                activeSchoolId = inviteSchoolId;
+                            }
+                        } catch (err) {
+                            console.error("Error checking invites:", err);
+                        }
+
+                        if (activeSchoolId) {
+                            // Recursively load data now that we have a school
+                            // Or just fall through to the logic below?
+                            // Logic below checks `if (activeSchoolId)` so we just need to set it!
+                            console.log("Auto-joined school. Loading data...");
+                        } else {
+                            // Ensure we clear any stale school ID if they are not in a school
+                            console.log("No school data found for user.");
+                            localStorage.removeItem('hc_school_id');
+                        }
+
                         localStorage.removeItem('hc_school_id');
                     }
                 } else {
@@ -13172,10 +13206,19 @@
                         });
 
                         // Auto-add to Access Control List
-                        // Prevents "Not Invited" errors on signup
                         window.db.collection('config').doc('access').update({
                             allowedEmails: firebase.firestore.FieldValue.arrayUnion(newMember.email)
                         }).catch(err => console.warn("Could not update access list:", err));
+
+                        // Create Invite Ticket (For Auto-Join)
+                        window.db.collection('invites').doc(newMember.email.toLowerCase()).set({
+                            schoolId: schoolId,
+                            schoolName: schoolName,
+                            role: newMember.role,
+                            invitedBy: coachName,
+                            invitedAt: new Date().toISOString(),
+                            status: 'pending'
+                        }).catch(err => console.error("Could not create invite ticket:", err));
 
                     } else {
                         window.location.href = `mailto:${newMember.email}?subject=${encodeURIComponent(subjectRaw)}&body=${encodeURIComponent(bodyRaw)}`;
