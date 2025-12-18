@@ -1801,12 +1801,232 @@
 
         const HASH_PREFERENCES = ["Left", "Right", "Middle", "Any"];
 
-        const INITIAL_MASTER_TASKS = [];
+        const INITIAL_MASTER_TASKS = [
+            // DAILY
+            { id: 'dt_1', category: 'Year-Round', task: 'Check Warrior Dials & Outreach (Trends)', recurrence: 'Daily', assignTo: ['All Position Coaches', 'Head Coach'] },
+            { id: 'dt_2', category: 'Year-Round', task: 'Study Player Profiles (Favorites/Preferences)', recurrence: 'Daily', assignTo: ['All Position Coaches'] },
+            { id: 'dt_hc_1', category: 'Year-Round', task: 'Staff Communication / Pulse Check', recurrence: 'Daily', assignTo: ['Head Coach'] },
+            { id: 'dt_hc_2', category: 'Year-Round', task: 'Review Practice Plan & Scripts (Global View)', recurrence: 'Daily', assignTo: ['Head Coach'] },
+            { id: 'dt_hc_3', category: 'Year-Round', task: 'Admin / Parent Communication Check', recurrence: 'Daily', assignTo: ['Head Coach'] },
 
-        const INITIAL_PLAYS = [];
+            // WEEKLY / SATURDAY
+            { id: 'wt_1', category: 'Saturday', task: 'Grade Position Groups', recurrence: 'Weekly: Saturday', assignTo: ['All Position Coaches'] },
+            { id: 'wt_dc', category: 'Saturday', task: 'Finalize Defensive Game Plan / Blitz Packages', recurrence: 'Weekly', assignTo: ['DC'] },
+            { id: 'wt_oc', category: 'Saturday', task: 'Finalize Offensive Script / Opening Drive', recurrence: 'Weekly', assignTo: ['OC'] },
+            { id: 'wt_st', category: 'Saturday', task: 'Scout Opponent Special Teams / Personnel', recurrence: 'Weekly', assignTo: ['STC'] },
+
+            // GAME WEEK
+            { id: 'gw_1', category: 'Game Week', task: 'Opponent Scouting (Assigned Area)', recurrence: 'Weekly: Monday', assignTo: ['All Position Coaches'] },
+            { id: 'gw_2', category: 'Game Week', task: 'Prepare Drills & Link to Practice Plan', recurrence: 'Weekly: Monday', assignTo: ['All Position Coaches'] },
+            { id: 'gw_3', category: 'Game Week', task: 'Populate Practice Equipment Needs', recurrence: 'Daily', assignTo: ['All Position Coaches'] },
+            { id: 'gw_4', category: 'Game Week', task: 'Review Practice Scripts', recurrence: 'Daily', assignTo: ['All Position Coaches'] },
+            { id: 'gw_qb', category: 'Game Week', task: 'Review QB Mechanics / Footwork Drills', recurrence: 'Weekly', assignTo: ['QB Coach'] },
+            { id: 'gw_mgr', category: 'Game Week', task: 'Practice Field Setup (Cones/Bags)', recurrence: 'Daily', assignTo: ['Managers'] },
+
+            // DAY BEFORE GAME
+            { id: 'dbg_1', category: 'Day Before Game', task: 'Pack Footballs & Extra Equipment', recurrence: 'Weekly: Thursday', assignTo: ['Managers', 'Equipment Mgr'] },
+            { id: 'dbg_2', category: 'Day Before Game', task: 'Charge Tablets, Cameras, Headsets', recurrence: 'Weekly: Thursday', assignTo: ['Tech Coodinator'] },
+            { id: 'dbg_3', category: 'Day Before Game', task: 'Clear iPad Storage', recurrence: 'Weekly: Thursday', assignTo: ['Tech Coodinator'] },
+
+            // TRAVEL
+            { id: 'tr_1', category: 'Travel', task: 'Trailer / Suburban Driver', recurrence: 'Weekly: Friday', assignTo: [] },
+            { id: 'tr_2', category: 'Travel', task: 'Bus Supervision', recurrence: 'Weekly: Friday', assignTo: ['All Staff'] },
+            { id: 'tr_3', category: 'Travel', task: 'Load Trailer', recurrence: 'Weekly: Friday', assignTo: ['Managers'] },
+
+            // ARRIVAL / SETUP
+            { id: 'arr_1', category: 'Arrival', task: 'Unload Trailer', recurrence: 'Weekly: Friday', assignTo: ['Managers'] },
+            { id: 'arr_2', category: 'Arrival', task: 'Setup Replay & Cameras', recurrence: 'Weekly: Friday', assignTo: ['Video Coordinator'] },
+            { id: 'arr_3', category: 'Arrival', task: 'Setup Pressbox & Headsets', recurrence: 'Weekly: Friday', assignTo: ['Tech Coodinator'] },
+            { id: 'arr_4', category: 'Arrival', task: 'Locker Room Supervision', recurrence: 'Weekly: Friday', assignTo: ['assigned'] },
+            { id: 'arr_5', category: 'Arrival', task: 'Keep Team on Schedule', recurrence: 'Weekly: Friday', assignTo: ['Get Back Coach'] },
+
+            // PRE-GAME
+            { id: 'pre_1', category: 'Pre-Game', task: 'Run Walkthroughs / Meetings', recurrence: 'Weekly: Friday', assignTo: ['Coordinators'] },
+            { id: 'pre_2', category: 'Pre-Game', task: 'Run Pre-game Stretches / Fundamentals', recurrence: 'Weekly: Friday', assignTo: ['Position Coaches'] },
+
+            // IN-GAME
+            { id: 'ig_1', category: 'In-Game', task: 'Equipment Help / Water', recurrence: 'Weekly: Friday', assignTo: ['Managers'] },
+            { id: 'ig_2', category: 'In-Game', task: 'Injury Communication', recurrence: 'Weekly: Friday', assignTo: ['Trainer'] },
+            { id: 'ig_3', category: 'In-Game', task: 'Pressbox Ops', recurrence: 'Weekly: Friday', assignTo: ['AC'] },
+            { id: 'ig_4', category: 'In-Game', task: 'Stats Logging', recurrence: 'Weekly: Friday', assignTo: ['Stats Crew'] },
+            { id: 'ig_5', category: 'In-Game', task: 'Substitutions', recurrence: 'Weekly: Friday', assignTo: ['Position Coaches'] },
+
+            // POST-GAME
+            { id: 'pg_1', category: 'Post-Game', task: 'Clean Up / Locker Room Check', recurrence: 'Weekly: Friday', assignTo: ['All Staff'] },
+            { id: 'pg_2', category: 'Post-Game', task: 'Upload Film', recurrence: 'Weekly: Friday', assignTo: ['Video Coordinator'] },
+            { id: 'pg_3', category: 'Post-Game', task: 'Upload / Check Stats', recurrence: 'Weekly: Friday', assignTo: ['Stats Crew'] },
+            { id: 'pg_4', category: 'Post-Game', task: 'Injury Forms', recurrence: 'Weekly: Friday', assignTo: ['Trainer'] },
+
+            // SUMMER
+            { id: 'sum_1', category: 'Summer', task: 'Lay out Football Field', recurrence: 'Seasonal', assignTo: ['Staff'] },
+            { id: 'sum_2', category: 'Summer', task: 'Prep for Installs', recurrence: 'Seasonal', assignTo: ['Coordinators'] },
+            { id: 'sum_3', category: 'Summer', task: 'Weight Room Supervision', recurrence: 'Seasonal', assignTo: ['Strength Coach'] },
+            { id: 'sum_4', category: 'Summer', task: 'Thud Camps Support', recurrence: 'Seasonal', assignTo: ['All Staff'] },
+            { id: 'sum_5', category: 'Summer', task: 'Youth Camp Support', recurrence: 'Seasonal', assignTo: ['All Staff'] },
+            { id: 'sum_6', category: 'Summer', task: 'Fundraisers', recurrence: 'Seasonal', assignTo: ['All Staff'] },
+
+            // OFFSEASON
+            { id: 'off_1', category: 'Offseason', task: 'Equipment Turn-in', recurrence: 'Annual', assignTo: ['Equipment Mgr'] },
+            { id: 'off_2', category: 'Offseason', task: 'Banquet Prep (Slides, Video, Speech, Awards)', recurrence: 'Annual', assignTo: ['Head Coach'] },
+            { id: 'off_2b', category: 'Offseason', task: 'Reserve Auditorium for Banquet', recurrence: 'Annual', assignTo: ['Head Coach'] },
+            { id: 'off_3', category: 'Offseason', task: 'Inventory & Order Equipment', recurrence: 'Annual', assignTo: ['Equipment Mgr'] },
+            { id: 'off_4', category: 'Offseason', task: 'Player Evaluations', recurrence: 'Annual', assignTo: ['All Staff'] },
+            { id: 'off_5', category: 'Offseason', task: 'Update Position Manuals / Drills', recurrence: 'Annual', assignTo: ['Position Coaches'] },
+            { id: 'off_6', category: 'Offseason', task: 'College Recruiting Visits (Spring)', recurrence: 'Seasonal', assignTo: ['Recruiting Coord'] },
+            { id: 'off_7', category: 'Offseason', task: 'Submit All-District / All-State Nominations', recurrence: 'Annual', assignTo: ['Head Coach'] },
+            { id: 'off_8', category: 'Offseason', task: 'Schedule Summer Gauntlet Draft & Notify Captains', recurrence: 'Annual', assignTo: ['Head Coach'] },
+            { id: 'off_9', category: 'Offseason', task: 'Send out Youth Camp Forms (Before May)', recurrence: 'Annual', assignTo: ['Head Coach'] },
+            { id: 'off_10', category: 'Offseason', task: 'Set up Team Clothing Store (Late April)', recurrence: 'Annual', assignTo: ['Head Coach', 'Equipment Mgr'] },
+            { id: 'off_11', category: 'Offseason', task: 'Book Hotels & Transport for Winter Clinics', recurrence: 'Annual', assignTo: ['Head Coach'] },
+            { id: 'sum_7', category: 'Summer', task: 'Reserve Auditorium for First Week Meetings', recurrence: 'Annual', assignTo: ['Head Coach'] },
+
+            // ADMIN / ONGOING
+            { id: 'adm_1', category: 'Daily', task: 'Update Valhalla Points', recurrence: 'Weekly', assignTo: ['Head Coach'] },
+            { id: 'adm_2', category: 'Daily', task: 'Player Academic / Recruiting Check-ins', recurrence: 'Weekly', assignTo: ['Head Coach', 'Recruiting Coord'] },
+            { id: 'adm_3', category: 'Administrative', task: 'Reserve Facilities (Pool, Fields)', recurrence: 'Seasonal', assignTo: ['Head Coach'] },
+            { id: 'adm_4', category: 'Administrative', task: 'Order Rentals (Port-a-potty, etc.)', recurrence: 'Seasonal', assignTo: ['Head Coach'] },
+        ];
+
+        const INITIAL_PLAYS = [
+            // 100s - WB1 Left Column
+            { id: '101', wristbandSlot: '101', name: 'DIAMOND RT GRN 3 GAMBLE', formation: 'Diamond Rt', tags: ['Gamble'] },
+            { id: '103', wristbandSlot: '103', name: 'BUNCH RT 2 GAMBLE', formation: 'Bunch Rt', tags: ['Gamble'] },
+            { id: '105', wristbandSlot: '105', name: 'BUNCH LT 3 RED 6 + GAMBLE*', formation: 'Bunch Lt', tags: ['Gamble', 'Red 6'] },
+            { id: '107', wristbandSlot: '107', name: 'GRN BOOMER 1', formation: 'Green', tags: ['Boomer'] },
+            { id: '109', wristbandSlot: '109', name: 'RED 39 MUSTANG', formation: 'Red', tags: ['Mustang'] },
+            { id: '111', wristbandSlot: '111', name: 'BRT 56D + KNIFE', formation: 'Bright', tags: ['Knife'] },
+            { id: '113', wristbandSlot: '113', name: 'GRN Fist Smoke', formation: 'Green', tags: ['Smoke'] },
+            { id: '115', wristbandSlot: '115', name: '983 BLUE 1', formation: 'Blue', tags: ['983'] },
+            { id: '117', wristbandSlot: '117', name: 'BRT RED "A THRU" + SALT', formation: 'Bright Red', tags: ['Salt'] },
+            { id: '119', wristbandSlot: '119', name: '941 BLUE 4+ Y Willy', formation: 'Blue', tags: ['Willy'] },
+            { id: '121', wristbandSlot: '121', name: '983 BLUE 2+ CAPONE', formation: 'Blue', tags: ['Capone'] },
+            { id: '123', wristbandSlot: '123', name: '934 BLUE 2 SUPER', formation: 'Blue', tags: ['Super'] },
+            { id: '125', wristbandSlot: '125', name: '980 BLUE 6+ Y RPO', formation: 'Blue', tags: ['RPO'] },
+            { id: '127', wristbandSlot: '127', name: '984 RED 2+ Y Willy', formation: 'Red', tags: ['Willy'] },
+            { id: '129', wristbandSlot: '129', name: '36A RED 4+Y Willy', formation: 'Red', tags: ['Willy'] },
+            { id: '131', wristbandSlot: '131', name: 'GRN RED "B THRU" + 3T', formation: 'Green Red', tags: [] },
+            { id: '133', wristbandSlot: '133', name: '463 BLUE 4A', formation: 'Blue', tags: [] },
+            { id: '135', wristbandSlot: '135', name: '488 LIZ GREEN STICK + TAG', formation: 'Green', tags: ['Stick'] },
+            { id: '137', wristbandSlot: '137', name: '468 RN "A JET"', formation: 'Rn', tags: ['Jet'] },
+            { id: '139', wristbandSlot: '139', name: '468 LIZ GRN RICE*', formation: 'Green', tags: ['Rice'] },
+            { id: '141', wristbandSlot: '141', name: '430 GRN RICE*', formation: 'Green', tags: ['Rice'] },
+            { id: '143', wristbandSlot: '143', name: '488 RED "A ACROSS" 3A+ KNIFE', formation: 'Red', tags: ['Knife'] },
+            { id: '145', wristbandSlot: '145', name: '987 BLUE 6G+ WILLY', formation: 'Blue', tags: ['Willy'] },
+            { id: '147', wristbandSlot: '147', name: '466 ORNG BOOMER 1 + A SHALLOW', formation: 'Orange', tags: ['Boomer', 'Shallow'] },
+
+            // 100s - WB1 Right Column
+            { id: '102', wristbandSlot: '102', name: 'DIAMOND LT GRN GAMBLE', formation: 'Diamond Lt', tags: ['Gamble'] },
+            { id: '104', wristbandSlot: '104', name: 'BUNCH LT 3 GAMBLE (BULLS)*', formation: 'Bunch Lt', tags: ['Gamble', 'Bulls'] },
+            { id: '106', wristbandSlot: '106', name: 'BUNCH RT RT RED 6 + GAMBLE*', formation: 'Bunch Rt', tags: ['Gamble', 'Red 6'] },
+            { id: '108', wristbandSlot: '108', name: 'GRN BOOMER 1 SPECIAL', formation: 'Green', tags: ['Boomer'] },
+            { id: '110', wristbandSlot: '110', name: 'RED 39 MUSTANG', formation: 'Red', tags: ['Mustang'] },
+            { id: '112', wristbandSlot: '112', name: '987 GRN 5G + KNIFE', formation: 'Green', tags: ['Knife'] },
+            { id: '114', wristbandSlot: '114', name: '988 GRN FIST LEAK', formation: 'Green', tags: ['Leak'] },
+            { id: '116', wristbandSlot: '116', name: '983 GRN 1 SMOKE*', formation: 'Green', tags: ['Smoke'] },
+            { id: '118', wristbandSlot: '118', name: '974 RED 5Y + GOT7!', formation: 'Red', tags: ['Got7'] },
+            { id: '120', wristbandSlot: '120', name: '974 RED 5Y+ GOT7!', formation: 'Red', tags: ['Got7'] },
+            { id: '122', wristbandSlot: '122', name: '974 RED 5Y + CAPONE', formation: 'Red', tags: ['Capone'] },
+            { id: '124', wristbandSlot: '124', name: '934 RED 1 (A ARC)', formation: 'Red', tags: ['Arc'] },
+            { id: '126', wristbandSlot: '126', name: '970 RED 6+ Y RPO', formation: 'Red', tags: ['RPO'] },
+            { id: '128', wristbandSlot: '128', name: '973 BLUE 4Y + WILLY', formation: 'Blue', tags: ['Willy'] },
+            { id: '130', wristbandSlot: '130', name: '473 BLUE 4A + WILLY', formation: 'Blue', tags: ['Willy'] },
+            { id: '132', wristbandSlot: '132', name: '974 RED "B THRU" + 4T', formation: 'Red', tags: [] },
+            { id: '134', wristbandSlot: '134', name: '374 RED 3A', formation: 'Red', tags: [] },
+            { id: '136', wristbandSlot: '136', name: '877 RIP GOLD STICK + TAG', formation: 'Gold', tags: ['Stick'] },
+            { id: '138', wristbandSlot: '138', name: '866 RIP "A JET"', formation: 'Rip', tags: ['Jet'] },
+            { id: '140', wristbandSlot: '140', name: '888 LIZ GRN BOOMER 1 + B SHAL*', formation: 'Green', tags: ['Boomer'] },
+            { id: '142', wristbandSlot: '142', name: '830 RIP Inverted Veer', formation: 'Rip', tags: ['Veer'] },
+            { id: '144', wristbandSlot: '144', name: '470 Rip Red "A ACROSS" 4A + Knife', formation: 'Red', tags: ['Knife'] },
+            { id: '146', wristbandSlot: '146', name: '987 RED 5G+ WILLY', formation: 'Red', tags: ['Willy'] },
+            { id: '148', wristbandSlot: '148', name: '466 ORNG STASH (X ST)', formation: 'Orange', tags: ['Stash'] },
+
+            // 200s - WB2 Left Column
+            { id: '201', wristbandSlot: '201', name: '987 BLUE 3', formation: 'Blue', tags: [] },
+            { id: '203', wristbandSlot: '203', name: '473 GRN B THRU + MICKEY (SIG)', formation: 'Green', tags: ['Mickey'] },
+            { id: '205', wristbandSlot: '205', name: '987 BRN CROSS*', formation: 'Brown', tags: ['Cross'] },
+            { id: '207', wristbandSlot: '207', name: '288 BRN SHARK (SIG)', formation: 'Brown', tags: ['Shark'] },
+            { id: '209', wristbandSlot: '209', name: '469 RED 2', formation: 'Red', tags: [] },
+            { id: '211', wristbandSlot: '211', name: '877 RED 3T', formation: 'Red', tags: [] },
+            { id: '213', wristbandSlot: '213', name: '479 OVER U RED 2*', formation: 'Red', tags: [] },
+            { id: '215', wristbandSlot: '215', name: '430 OVER O DITCH', formation: 'Over', tags: ['Ditch'] },
+            { id: '217', wristbandSlot: '217', name: '888 GRN BOOMER 1', formation: 'Green', tags: ['Boomer'] },
+            { id: '219', wristbandSlot: '219', name: 'TANK 48 OVER RED 2*', formation: 'Red', tags: [] },
+            { id: '221', wristbandSlot: '221', name: '830 METAL RED Z JUKE', formation: 'Red', tags: ['Juke'] },
+            { id: '223', wristbandSlot: '223', name: '677 RED 1 OPTION', formation: 'Red', tags: ['Option'] },
+            { id: '225', wristbandSlot: '225', name: '878 GRN WHEEL BUMP*', formation: 'Green', tags: ['Wheel'] },
+            { id: '227', wristbandSlot: '227', name: '889 BRN TAG+ WHEEL*', formation: 'Brown', tags: ['Wheel'] },
+            { id: '229', wristbandSlot: '229', name: '469 RED 2', formation: 'Red', tags: [] },
+            { id: '231', wristbandSlot: '231', name: '876 J RED 1', formation: 'Red', tags: [] },
+            { id: '233', wristbandSlot: '233', name: '984 RED 1 + SMOKE (SIG)', formation: 'Red', tags: ['Smoke'] },
+            { id: '235', wristbandSlot: '235', name: '697 BROWN SMASH + DEPOT', formation: 'Brown', tags: ['Smash'] },
+            { id: '237', wristbandSlot: '237', name: '369 RED WHEEL BUMP + Q SPK', formation: 'Red', tags: ['Wheel'] },
+            { id: '239', wristbandSlot: '239', name: '983 RED SWING NOLES', formation: 'Red', tags: ['Swing'] },
+            { id: '241', wristbandSlot: '241', name: '489 RED 2 (J ROG)', formation: 'Red', tags: [] },
+            { id: '243', wristbandSlot: '243', name: '676 BLUE 3Y*', formation: 'Blue', tags: [] },
+            { id: '245', wristbandSlot: '245', name: '888 RED BRN', formation: 'Red', tags: [] },
+            { id: '247', wristbandSlot: '247', name: '934 MAROON MOSS', formation: 'Maroon', tags: ['Moss'] },
+
+            // 200s - WB2 Right Column
+            { id: '202', wristbandSlot: '202', name: '987 BLUE 2', formation: 'Blue', tags: [] },
+            { id: '204', wristbandSlot: '204', name: '473 GRN B THRU + MICKEY (SIG)', formation: 'Green', tags: ['Mickey'] },
+            { id: '206', wristbandSlot: '206', name: '987 GRN CROSS*', formation: 'Green', tags: ['Cross'] },
+            { id: '208', wristbandSlot: '208', name: '288 GRN SHARK (SIG)', formation: 'Green', tags: ['Shark'] },
+            { id: '210', wristbandSlot: '210', name: '469 RED 1', formation: 'Red', tags: [] },
+            { id: '212', wristbandSlot: '212', name: '877 RED 3T', formation: 'Red', tags: [] },
+            { id: '214', wristbandSlot: '214', name: '479 OVER U RED 2*', formation: 'Red', tags: [] },
+            { id: '216', wristbandSlot: '216', name: '430 OVER O DITCH', formation: 'Over', tags: ['Ditch'] },
+            { id: '218', wristbandSlot: '218', name: '877 GOLD BOOMER 1', formation: 'Gold', tags: ['Boomer'] },
+            { id: '220', wristbandSlot: '220', name: 'TANK 471 OVER BLUE 2', formation: 'Blue', tags: [] },
+            { id: '222', wristbandSlot: '222', name: '830 METAL RED Z JUKE', formation: 'Red', tags: ['Juke'] },
+            { id: '224', wristbandSlot: '224', name: '688 BLUE 1 OPTION', formation: 'Blue', tags: ['Option'] },
+            { id: '226', wristbandSlot: '226', name: '878 GRN WHEEL BUMP*', formation: 'Green', tags: ['Wheel'] },
+            { id: '228', wristbandSlot: '228', name: '889 BRN SMASH + BLADE', formation: 'Brown', tags: ['Smash'] },
+            { id: '230', wristbandSlot: '230', name: '370 BLUE 1', formation: 'Blue', tags: [] },
+            { id: '232', wristbandSlot: '232', name: '876 BLUE 1', formation: 'Blue', tags: [] },
+            { id: '234', wristbandSlot: '234', name: '984 RED 1 + SMOKE (SIG)', formation: 'Red', tags: ['Smoke'] },
+            { id: '236', wristbandSlot: '236', name: 'NUB RT + TUB LEFT BLUE Z THRU 4A', formation: 'Nub Rt', tags: [] },
+            { id: '238', wristbandSlot: '238', name: '480 BLACK WHEEL SHARK', formation: 'Black', tags: ['Wheel', 'Shark'] },
+            { id: '240', wristbandSlot: '240', name: 'SCRAMBLE 984 RED SHOW 3Y MLB*', formation: 'Red', tags: ['Scramble'] },
+            { id: '242', wristbandSlot: '242', name: '370 RED 1 (J ROG)', formation: 'Red', tags: [] },
+            { id: '244', wristbandSlot: '244', name: '983 RED 1*', formation: 'Red', tags: [] },
+            { id: '246', wristbandSlot: '246', name: 'TANK 32A U OVER BLUE QB WEDGE RT', formation: 'Blue', tags: ['Wedge'] },
+            { id: '248', wristbandSlot: '248', name: '934 MAROON (SIG)', formation: 'Maroon', tags: [] },
+        ];
 
         // --- Director of Ops Data ---
-        const WEEKLY_OPS_TASKS = [];
+        const WEEKLY_OPS_TASKS = [
+            // Saturday
+            { id: 'sat_1', day: 'Saturday', task: 'Break down our game film', roles: ['HC', 'OC', 'DC'], completed: false },
+            { id: 'sat_2', day: 'Saturday', task: 'Send opponent film to Hudl Assist', roles: ['HC', 'OC', 'DC'], completed: false },
+
+            // Sunday
+            { id: 'sun_1', day: 'Sunday', task: 'Break down opponent scheme, tendencies, and personnel', roles: ['OC', 'DC', 'Position Coach'], completed: false },
+            { id: 'sun_2', day: 'Sunday', task: 'Formulate game plan and prepare scheme tweaks', roles: ['HC', 'OC', 'DC'], completed: false },
+            { id: 'sun_3', day: 'Sunday', task: 'Staff Meeting: Preview opponent & discuss improvements', roles: ['ALL'], completed: false },
+            { id: 'sun_4', day: 'Sunday', task: 'Finalize practice plans and segment allotments', roles: ['HC', 'OC', 'DC'], completed: false },
+
+            // Monday
+            { id: 'mon_1', day: 'Monday', task: 'Check JV Game schedule (adjust practice load)', roles: ['HC', 'OC', 'DC'], completed: false },
+            { id: 'mon_2', day: 'Monday', task: 'Film segment prior to walkthrough', roles: ['HC', 'OC', 'DC', 'Position Coach'], completed: false },
+            { id: 'mon_3', day: 'Monday', task: 'Walkthrough', roles: ['ALL'], completed: false },
+            { id: 'mon_4', day: 'Monday', task: 'Upload previous game film to Hudl (if not done)', roles: ['HC', 'Ops'], completed: false },
+
+            // Tuesday
+            { id: 'tue_1', day: 'Tuesday', task: 'Complete opponent scouting report', roles: ['OC', 'DC'], completed: false },
+            { id: 'tue_2', day: 'Tuesday', task: 'Finalize practice scripts for Wed/Thu', roles: ['OC', 'DC'], completed: false },
+
+            // Wednesday
+            { id: 'wed_1', day: 'Wednesday', task: 'Confirm travel arrangements', roles: ['Ops', 'HC'], completed: false },
+            { id: 'wed_2', day: 'Wednesday', task: 'Check medical/injury reports', roles: ['HC', 'Ops'], completed: false },
+
+            // Thursday
+            { id: 'thu_1', day: 'Thursday', task: 'Review game day roster', roles: ['HC', 'OC', 'DC'], completed: false },
+            { id: 'thu_2', day: 'Thursday', task: 'Print wristbands and call sheets', roles: ['OC', 'DC', 'Ops'], completed: false },
+
+            // Friday
+            { id: 'fri_1', day: 'Friday', task: 'Pre-game meal check', roles: ['Ops'], completed: false },
+            { id: 'fri_2', day: 'Friday', task: 'Equipment check', roles: ['Ops'], completed: false }
+        ];
 
         // --- Components ---
 
@@ -6229,6 +6449,31 @@
                 return segment;
             };
 
+            const loadTemplate = (templateName) => {
+                if (!templateName) return;
+                const template = VALHALLA_CONSTANTS.PRACTICE_TEMPLATES.find(t => t.name === templateName);
+                if (!template) return;
+
+                if (confirm(`Load "${templateName}"? This will overwrite the current segments for ${selectedDay}.`)) {
+                    const newSegments = template.segments.map(seg => ({
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        duration: seg.duration,
+                        type: seg.type,
+                        situation: seg.situation || '',
+                        notes: {},
+                        script: [],
+                        staffId: '',
+                        hasScript: !!seg.hasScript,
+                        hasScoutCards: false
+                    }));
+
+                    updateCurrentPlan({
+                        ...plan,
+                        segments: newSegments
+                    });
+                }
+            };
+
             const defaultPlan = {
                 id: Date.now().toString(),
                 date: new Date().toISOString().split('T')[0],
@@ -6583,10 +6828,20 @@
                                                     {seg.type === 'Take-Off' && <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.yardLine}</td>}
                                                     {seg.type !== 'Take-Off' && seg.type !== 'Ghost Script' && <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', whiteSpace: 'nowrap' }}>{slot.situation}</td>}
                                                     <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                                        {slot.tempo === 'NOHUDDLE' && <span style={{ color: '#d97706' }}>NH</span>}
+                                                        {slot.tempo === 'BLUR' && <span style={{ color: '#dc2626' }}>BLUR</span>}
+                                                        {slot.tempo === 'SUGAR' && <span style={{ color: '#7c3aed' }}>SUGAR</span>}
+                                                        {slot.tempo === 'REGULAR' && <span style={{ color: '#64748b' }}>H</span>}
+                                                        {slot.tempo === 'SCRAMBLE' && <span style={{ color: '#2563eb' }}>SCR</span>}
+                                                        {slot.tempo === '4MIN' && <span style={{ color: '#059669' }}>4M</span>}
+                                                        {/* Support legacy/shorthand */}
+                                                        {slot.tempo === 'Huddle' && <span style={{ color: '#64748b' }}>H</span>}
+                                                        {slot.tempo === 'No-Huddle' && <span style={{ color: '#d97706' }}>NH</span>}
                                                         {slot.tempo === 'No Huddle' && <span style={{ color: '#d97706' }}>NH</span>}
                                                         {slot.tempo === 'Tempo' && <span style={{ color: '#dc2626' }}>T</span>}
                                                         {slot.tempo === 'Sugar' && <span style={{ color: '#7c3aed' }}>S</span>}
-                                                        {slot.tempo === 'Huddle' && <span style={{ color: '#64748b' }}>H</span>}
+                                                        {slot.tempo === 'Sugar Huddle' && <span style={{ color: '#7c3aed' }}>S</span>}
+                                                        {slot.tempo === 'Blur Tempo' && <span style={{ color: '#dc2626' }}>B</span>}
                                                     </td>
                                                     <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>
                                                         {(() => {
@@ -6628,6 +6883,20 @@
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                 <h2>{selectedDay} Schedule</h2>
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <select
+                                        className="form-select"
+                                        style={{ width: 'auto', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--accent)' }}
+                                        onChange={(e) => {
+                                            loadTemplate(e.target.value);
+                                            e.target.value = ""; // Reset
+                                        }}
+                                        value=""
+                                    >
+                                        <option value="" disabled>Load Template...</option>
+                                        {VALHALLA_CONSTANTS.PRACTICE_TEMPLATES.map(t => (
+                                            <option key={t.name} value={t.name}>{t.name}</option>
+                                        ))}
+                                    </select>
                                     <label>Start Time:</label>
                                     <input
                                         type="time"
@@ -7586,10 +7855,12 @@
                                                                 }}
                                                             >
                                                                 <option value="">-</option>
-                                                                <option value="Huddle">Huddle</option>
-                                                                <option value="No Huddle">No Huddle</option>
-                                                                <option value="Tempo">Tempo</option>
-                                                                <option value="Sugar">Sugar</option>
+                                                                <option value="REGULAR">Huddle</option>
+                                                                <option value="NOHUDDLE">No-Huddle</option>
+                                                                <option value="BLUR">Blur Tempo</option>
+                                                                <option value="SUGAR">Sugar Huddle</option>
+                                                                <option value="SCRAMBLE">Scramble</option>
+                                                                <option value="4MIN">4-Min Huddle</option>
                                                             </select>
                                                         </td>
                                                         <td style={{ padding: '0.5rem' }}>
@@ -10000,6 +10271,35 @@
         const PRESET_COLORS = ['#38bdf8', '#3b82f6', '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#000000', '#4b5563'];
 
         const VALHALLA_CONSTANTS = {
+            PRACTICE_TEMPLATES: [
+                {
+                    name: "Monday - Base Install",
+                    segments: [
+                        { type: "O FUNDI", duration: 10, situation: "Base", hasScript: false },
+                        { type: "Team O", duration: 15, situation: "Base Down / 1st-10", hasScript: true },
+                        { type: "7-on-7", duration: 10, situation: "Medium", hasScript: true },
+                        { type: "Inside Run", duration: 10, situation: "Base", hasScript: true }
+                    ]
+                },
+                {
+                    name: "Tuesday - Red Zone / Situations",
+                    segments: [
+                        { type: "D FUNDI", duration: 10, situation: "Agility", hasScript: false },
+                        { type: "Team D", duration: 15, situation: "Red Zone", hasScript: true },
+                        { type: "Team O", duration: 15, situation: "3rd & Short", hasScript: true },
+                        { type: "Specials", duration: 10, situation: "PAT/Field Goal", hasScript: false }
+                    ]
+                },
+                {
+                    name: "Wednesday - Game Prep",
+                    segments: [
+                        { type: "Take-Off", duration: 5, situation: "Agility", hasScript: true },
+                        { type: "Team O", duration: 20, situation: "Game Script", hasScript: true },
+                        { type: "Team D", duration: 20, situation: "Game Script", hasScript: true },
+                        { type: "Competition", duration: 10, situation: "10-yd Fight", hasScript: false }
+                    ]
+                }
+            ],
             PILLARS: {
                 CHARACTER: { id: 'CHARACTER', label: 'Character', color: '#8884d8', description: 'Discipline, integrity, grit, follow-through' },
                 CONNECTION: { id: 'CONNECTION', label: 'Connection', color: '#82ca9d', description: 'Serving others, bonding, showing up' },
@@ -14867,10 +15167,22 @@
                 setShowSyncConfirm(false);
             };
 
-            const getPlayName = (id) => {
-                if (!id) return '';
+            const getPlayName = (input) => {
+                if (!input) return '';
+                const id = typeof input === 'object' ? input.id : input;
+                const tempo = typeof input === 'object' ? input.tempo : null;
+
                 const p = plays.find(x => x.id === id);
-                return p ? `${p.name} (${p.formation})` : id;
+                if (!p) return id;
+
+                let name = `${p.name} (${p.formation})`;
+                if (tempo && tempo !== 'REGULAR') {
+                    const protocol = PLAY_PROTOCOLS.find(pp => pp.id === tempo);
+                    if (protocol) {
+                        name = `[${protocol.code}] ${name}`;
+                    }
+                }
+                return name;
             };
             const renderSituationsPrint = () => {
                 if (!gamePlanLayouts || !gamePlanLayouts.CALL_SHEET) return <div>No Game Plan Data</div>;
@@ -14898,7 +15210,11 @@
                                             {(section.rows || []).map((row, rIdx) => (
                                                 <div key={rIdx} style={{ padding: '0.25rem 0.5rem', borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                                                     <span>{rIdx + 1}. {getPlayName(row.content)}</span>
-                                                    {section.tempos?.[rIdx] && <span style={{ fontWeight: 'bold', fontSize: '0.7rem' }}>[{section.tempos[rIdx]}]</span>}
+                                                    {section.tempos?.[rIdx] && section.tempos[rIdx] !== 'REGULAR' && (
+                                                        <span style={{ fontWeight: 'bold', fontSize: '0.7rem', color: PLAY_PROTOCOLS.find(p => p.id === section.tempos[rIdx])?.color || 'black' }}>
+                                                            [{PLAY_PROTOCOLS.find(p => p.id === section.tempos[rIdx])?.label || section.tempos[rIdx]}]
+                                                        </span>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -19625,10 +19941,18 @@
                 if (sectionPlayIds.length === 0 && selectedSection.startsWith('ms_')) {
                     const script = (gamePlan.miniScripts || []).find(s => s.id === selectedSection);
                     if (script) {
-                        return script.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                        return script.playIds.map(item => {
+                            const id = typeof item === 'object' ? item.id : item;
+                            const play = plays.find(p => p.id === id);
+                            return play ? { ...play, ...(typeof item === 'object' ? item : {}), _raw: item } : null;
+                        }).filter(Boolean);
                     }
                 }
-                return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                return sectionPlayIds.map(item => {
+                    const id = typeof item === 'object' ? item.id : item;
+                    const play = plays.find(p => p.id === id);
+                    return play ? { ...play, ...(typeof item === 'object' ? item : {}), _raw: item } : null;
+                }).filter(Boolean);
             };
 
             const sectionPlays = getSectionPlays();
@@ -20561,7 +20885,21 @@
                                                                     }}
                                                                 >
                                                                     <div style={{ padding: '1.5rem' }}>
-                                                                        <div style={{ fontWeight: 'bold', fontSize: '1.3rem', marginBottom: '0.5rem' }}>{play.name}</div>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+                                                                            <div style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>{play.name}</div>
+                                                                            {play.tempo && play.tempo !== 'REGULAR' && (
+                                                                                <span style={{
+                                                                                    fontSize: '0.75rem',
+                                                                                    padding: '2px 6px',
+                                                                                    borderRadius: '4px',
+                                                                                    background: PLAY_PROTOCOLS.find(pp => pp.id === play.tempo)?.color || '#64748b',
+                                                                                    color: 'white',
+                                                                                    fontWeight: 'bold'
+                                                                                }}>
+                                                                                    {PLAY_PROTOCOLS.find(pp => pp.id === play.tempo)?.label || play.tempo}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                         <div style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{play.formation}</div>
                                                                         {play.concept && <div style={{ fontSize: '0.9rem', marginBottom: '0.75rem' }}>Concept: {play.concept}</div>}
                                                                         {play.sequenceName && (
@@ -20814,21 +21152,18 @@
                                                                                 e.currentTarget.style.transform = 'translateY(0)';
                                                                             }}
                                                                         >
-                                                                            <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>
+                                                                            <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                                 {play.name} {play.wristbandSlot ? <span style={{ fontWeight: 'normal' }}>({play.wristbandSlot})</span> : ''}
-                                                                                {play.tempo && (
+                                                                                {play.tempo && play.tempo !== 'REGULAR' && (
                                                                                     <span style={{
-                                                                                        marginLeft: '6px',
                                                                                         fontSize: '0.65rem',
-                                                                                        padding: '1px 3px',
+                                                                                        padding: '1px 4px',
                                                                                         borderRadius: '3px',
-                                                                                        background: play.tempo === 'No Huddle' ? '#d97706' : play.tempo === 'Tempo' ? '#dc2626' : play.tempo === 'Sugar' ? '#7c3aed' : '#64748b',
+                                                                                        background: PLAY_PROTOCOLS.find(pp => pp.id === play.tempo)?.color || '#64748b',
                                                                                         color: 'white',
-                                                                                        fontWeight: 'normal',
-                                                                                        display: 'inline-block',
-                                                                                        verticalAlign: 'middle'
+                                                                                        fontWeight: 'normal'
                                                                                     }}>
-                                                                                        {play.tempo === 'No Huddle' ? 'NH' : play.tempo === 'Tempo' ? 'T' : play.tempo === 'Sugar' ? 'S' : 'H'}
+                                                                                        {PLAY_PROTOCOLS.find(pp => pp.id === play.tempo)?.code || play.tempo}
                                                                                     </span>
                                                                                 )}
                                                                             </div>
@@ -20912,7 +21247,21 @@
                                         }}
                                     >
                                         <div style={{ padding: '1.5rem' }}>
-                                            <div style={{ fontWeight: 'bold', fontSize: '1.3rem', marginBottom: '0.5rem' }}>{play.name}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
+                                                <div style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>{play.name}</div>
+                                                {play.tempo && play.tempo !== 'REGULAR' && (
+                                                    <span style={{
+                                                        fontSize: '0.75rem',
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        background: PLAY_PROTOCOLS.find(pp => pp.id === play.tempo)?.color || '#64748b',
+                                                        color: 'white',
+                                                        fontWeight: 'bold'
+                                                    }}>
+                                                        {PLAY_PROTOCOLS.find(pp => pp.id === play.tempo)?.label || play.tempo}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{play.formation}</div>
                                             {play.concept && <div style={{ fontSize: '0.9rem', marginBottom: '0.75rem' }}>Concept: {play.concept}</div>}
                                             {play.sequenceName && (
@@ -27127,6 +27476,15 @@
             }
         };
 
+        const PLAY_PROTOCOLS = [
+            { id: 'REGULAR', label: 'Regular', color: '#64748b', code: 'R' },
+            { id: 'SCRAMBLE', label: 'Scramble', color: '#2563eb', code: 'SC' },
+            { id: 'SUGAR', label: 'Sugar Huddle', color: '#7c3aed', code: 'S' },
+            { id: '4MIN', label: '4-Min Huddle', color: '#16a34a', code: '4M' },
+            { id: 'NOHUDDLE', label: 'No-Huddle', color: '#d97706', code: 'NH' },
+            { id: 'BLUR', label: 'Blur Tempo', color: '#dc2626', code: 'B' }
+        ];
+
         // Game Plan 2.0 Component
 
 
@@ -28202,10 +28560,8 @@
                 const playsInSet = getPlaysForSet(setId);
 
                 const handleToggleTempo = (playIndex, currentTempo) => {
-                    // Cycle: undefined/'' -> 'Huddle' -> 'No Huddle' -> 'Tempo' -> 'Sugar' -> ''
-                    const tempos = ['', 'Huddle', 'No Huddle', 'Tempo', 'Sugar'];
-                    const nextIdx = (tempos.indexOf(currentTempo || '') + 1) % tempos.length;
-                    const nextTempo = tempos[nextIdx];
+                    const nextIdx = (PLAY_PROTOCOLS.findIndex(p => p.id === (currentTempo || 'REGULAR')) + 1) % PLAY_PROTOCOLS.length;
+                    const nextTempo = PLAY_PROTOCOLS[nextIdx].id;
 
                     // Update logic using index
                     const set = getSet(setId);
@@ -28232,19 +28588,15 @@
 
                 // Helper for Tempo Badge
                 const renderTempoBadge = (tempo) => {
-                    if (!tempo) return <span style={{ width: '20px', display: 'inline-block', textAlign: 'center', color: '#cbd5e1', cursor: 'pointer', fontSize: '0.65rem' }}>-</span>;
-                    let color = '#64748b';
-                    let code = 'H';
-                    if (tempo === 'No Huddle') { color = '#d97706'; code = 'NH'; }
-                    if (tempo === 'Tempo') { color = '#dc2626'; code = 'T'; }
-                    if (tempo === 'Sugar') { color = '#7c3aed'; code = 'S'; }
+                    const protocol = PLAY_PROTOCOLS.find(p => p.id === (tempo || 'REGULAR'));
+                    if (!protocol || protocol.id === 'REGULAR') return <span style={{ width: '20px', display: 'inline-block', textAlign: 'center', color: '#cbd5e1', cursor: 'pointer', fontSize: '0.65rem' }}>-</span>;
 
                     return (
                         <span style={{
-                            background: color, color: 'white', fontSize: '0.6rem', padding: '1px 3px', borderRadius: '3px',
+                            background: protocol.color, color: 'white', fontSize: '0.6rem', padding: '1px 3px', borderRadius: '3px',
                             cursor: 'pointer', minWidth: '18px', display: 'inline-block', textAlign: 'center', fontWeight: 'bold'
-                        }} title={tempo}>
-                            {code}
+                        }} title={protocol.label}>
+                            {protocol.code}
                         </span>
                     );
                 };
@@ -28679,20 +29031,19 @@
                 if (onUpdateLayouts) onUpdateLayouts(newLayouts);
             };
 
-            const toggleTempo = (sectionIdx, rowIdx) => {
+            const setTempo = (sectionIdx, rowIdx, value) => {
                 const newLayouts = { ...gamePlanLayouts };
                 const sheet = { ...newLayouts.CALL_SHEET };
                 const section = { ...sheet.sections[sectionIdx] };
                 if (!section.tempos) section.tempos = {};
 
-                const current = section.tempos[rowIdx] || 'TEMPO';
-                const next = current === 'TEMPO' ? 'REGULAR' : current === 'REGULAR' ? 'HUDDLE' : 'TEMPO';
-
-                section.tempos[rowIdx] = next;
+                section.tempos[rowIdx] = value;
                 sheet.sections[sectionIdx] = section;
                 newLayouts.CALL_SHEET = sheet;
                 if (onUpdateLayouts) onUpdateLayouts(newLayouts);
             };
+
+
 
             const PlaySlot = ({ playId, onUpdate, isLocked, placeholder = "+" }) => {
                 const play = plays.find(p => p.id === playId);
@@ -28753,18 +29104,29 @@
                                 </div>
 
                                 {rowIdx < section.rows.length - 1 && (
-                                    <div
-                                        onClick={() => !isLocked && toggleTempo(idx, rowIdx)}
-                                        style={{
-                                            textAlign: 'center', fontSize: '0.7rem', fontWeight: 'bold',
-                                            padding: '2px', background: '#f1f5f9', borderRadius: '12px', margin: '2px auto', width: 'fit-content', minWidth: '80px',
-                                            cursor: !isLocked ? 'pointer' : 'default', userSelect: 'none',
-                                            color: (section.tempos?.[rowIdx] || 'TEMPO') === 'TEMPO' ? '#dc2626' :
-                                                (section.tempos?.[rowIdx] || 'TEMPO') === 'REGULAR' ? '#16a34a' : '#2563eb',
-                                            border: '1px solid #e2e8f0'
-                                        }}
-                                    >
-                                        {section.tempos?.[rowIdx] || 'TEMPO'}
+                                    <div style={{ margin: '4px auto', width: 'fit-content' }}>
+                                        <select
+                                            disabled={isLocked}
+                                            value={section.tempos?.[rowIdx] || 'REGULAR'}
+                                            onChange={(e) => setTempo(idx, rowIdx, e.target.value)}
+                                            style={{
+                                                fontSize: '0.65rem',
+                                                fontWeight: 'bold',
+                                                padding: '2px 4px',
+                                                borderRadius: '12px',
+                                                border: '1px solid #e2e8f0',
+                                                background: '#f1f5f9',
+                                                cursor: !isLocked ? 'pointer' : 'default',
+                                                color: PLAY_PROTOCOLS.find(p => p.id === (section.tempos?.[rowIdx] || 'REGULAR'))?.color || '#64748b',
+                                                appearance: 'none',
+                                                textAlign: 'center',
+                                                minWidth: '100px'
+                                            }}
+                                        >
+                                            {PLAY_PROTOCOLS.map(proto => (
+                                                <option key={proto.id} value={proto.id}>{proto.label}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 )}
                             </React.Fragment>
@@ -34890,6 +35252,11 @@
                                     <button className={`nav-item ${view === 'game-week-overview' ? 'active' : ''}`} onClick={() => setView('game-week-overview')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="Eye" size={16} style={{ marginRight: '8px' }} /> Week Overview
                                     </button>
+                                    {currentPermissions.install.view && (
+                                        <button className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Megaphone" size={16} style={{ marginRight: '8px' }} /> Practice Plans
+                                        </button>
+                                    )}
 
                                     {/* Moved Depth Charts */}
                                     {currentPermissions.depth.view && (
@@ -34945,9 +35312,7 @@
                                             <button className={`nav-item ${view === 'wristband' ? 'active' : ''}`} onClick={() => setView('wristband')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                                 <Icon name="Watch" size={16} style={{ marginRight: '8px' }} /> Wristband Builder
                                             </button>
-                                            <button className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Megaphone" size={16} style={{ marginRight: '8px' }} /> Practice Plans
-                                            </button>
+
                                         </>
                                     )}
 
