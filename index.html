@@ -16596,6 +16596,9 @@
             const [isCreatingNew, setIsCreatingNew] = useState(false);
             const fieldRef = useRef(null);
             const [draggingPlayer, setDraggingPlayer] = useState(null);
+            const [selectedIndices, setSelectedIndices] = useState([]);
+            const [selectionBox, setSelectionBox] = useState(null);
+            const [lastMousePos, setLastMousePos] = useState(null);
 
             const handleStartNew = () => {
                 setIsCreatingNew(true);
@@ -16619,6 +16622,7 @@
                     setSelectedFormationId(formationId);
                     setEditingFormation(JSON.parse(JSON.stringify(formation)));
                     setIsCreatingNew(false);
+                    setSelectedIndices([]);
                 }
             };
 
@@ -16685,21 +16689,80 @@
                                         height="100%"
                                         viewBox="0 0 800 500"
                                         preserveAspectRatio="none"
-                                        style={{ border: '2px solid #cbd5e1', borderRadius: '8px', cursor: draggingPlayer !== null ? 'grabbing' : 'default' }}
-                                        onMouseMove={(e) => {
-                                            if (draggingPlayer === null || !fieldRef.current || !editingFormation) return;
+                                        style={{ border: '2px solid #cbd5e1', borderRadius: '8px', cursor: (draggingPlayer !== null || selectionBox !== null) ? 'grabbing' : 'default' }}
+                                        onMouseDown={(e) => {
+                                            if (!fieldRef.current || !editingFormation) return;
                                             const rect = fieldRef.current.getBoundingClientRect();
                                             const x = ((e.clientX - rect.left) / rect.width) * 100;
                                             const y = ((e.clientY - rect.top) / rect.height) * 100;
-                                            setEditingFormation(prev => ({
-                                                ...prev,
-                                                positions: prev.positions.map((p, idx) =>
-                                                    idx === draggingPlayer ? { ...p, x: Math.max(2, Math.min(98, x)), y: Math.max(2, Math.min(98, y)) } : p
-                                                )
-                                            }));
+
+                                            // If not Shift, clear other selections when clicking background
+                                            if (!e.shiftKey) {
+                                                setSelectedIndices([]);
+                                            }
+
+                                            setSelectionBox({ startX: x, startY: y, currentX: x, currentY: y });
                                         }}
-                                        onMouseUp={() => setDraggingPlayer(null)}
-                                        onMouseLeave={() => setDraggingPlayer(null)}
+                                        onMouseMove={(e) => {
+                                            if (!fieldRef.current || !editingFormation) return;
+                                            const rect = fieldRef.current.getBoundingClientRect();
+                                            const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                            const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+                                            if (draggingPlayer !== null && lastMousePos) {
+                                                // Handle Multi-Drag
+                                                const dx = x - lastMousePos.x;
+                                                const dy = y - lastMousePos.y;
+
+                                                setEditingFormation(prev => ({
+                                                    ...prev,
+                                                    positions: prev.positions.map((p, idx) => {
+                                                        if (selectedIndices.includes(idx)) {
+                                                            return {
+                                                                ...p,
+                                                                x: Math.max(2, Math.min(98, p.x + dx)),
+                                                                y: Math.max(2, Math.min(98, p.y + dy))
+                                                            };
+                                                        }
+                                                        return p;
+                                                    })
+                                                }));
+                                                setLastMousePos({ x, y });
+                                            } else if (selectionBox) {
+                                                // Handle Marquee Selection
+                                                setSelectionBox(prev => ({ ...prev, currentX: x, currentY: y }));
+                                            }
+                                        }}
+                                        onMouseUp={() => {
+                                            if (selectionBox) {
+                                                const x1 = Math.min(selectionBox.startX, selectionBox.currentX);
+                                                const x2 = Math.max(selectionBox.startX, selectionBox.currentX);
+                                                const y1 = Math.min(selectionBox.startY, selectionBox.currentY);
+                                                const y2 = Math.max(selectionBox.startY, selectionBox.currentY);
+
+                                                const newSelections = [];
+                                                editingFormation.positions.forEach((p, idx) => {
+                                                    if (p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) {
+                                                        newSelections.push(idx);
+                                                    }
+                                                });
+
+                                                if (newSelections.length > 0) {
+                                                    setSelectedIndices(prev => {
+                                                        const combined = Array.from(new Set([...prev, ...newSelections]));
+                                                        return combined;
+                                                    });
+                                                }
+                                            }
+                                            setDraggingPlayer(null);
+                                            setSelectionBox(null);
+                                            setLastMousePos(null);
+                                        }}
+                                        onMouseLeave={() => {
+                                            setDraggingPlayer(null);
+                                            setSelectionBox(null);
+                                            setLastMousePos(null);
+                                        }}
                                     >
                                         <defs>
                                             {/* Grid Pattern */}
@@ -16786,16 +16849,38 @@
                                         {editingFormation.positions.map((pos, idx) => {
                                             const x = (pos.x / 100) * 800;
                                             const y = (pos.y / 100) * 500;
+                                            const isSelected = selectedIndices.includes(idx);
                                             return (
-                                                <g key={idx} onMouseDown={(e) => { e.preventDefault(); setDraggingPlayer(idx); }} style={{ cursor: 'grab' }}>
+                                                <g key={idx}
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+
+                                                        // Handle selection logic
+                                                        if (e.shiftKey) {
+                                                            setSelectedIndices(prev =>
+                                                                prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                                                            );
+                                                        } else if (!isSelected) {
+                                                            setSelectedIndices([idx]);
+                                                        }
+
+                                                        setDraggingPlayer(idx);
+                                                        const rect = fieldRef.current.getBoundingClientRect();
+                                                        const mx = ((e.clientX - rect.left) / rect.width) * 100;
+                                                        const my = ((e.clientY - rect.top) / rect.height) * 100;
+                                                        setLastMousePos({ x: mx, y: my });
+                                                    }}
+                                                    style={{ cursor: 'grab' }}
+                                                >
                                                     <circle
                                                         cx={x}
                                                         cy={y}
                                                         r="16"
-                                                        fill={draggingPlayer === idx ? '#60a5fa' : '#3b82f6'}
-                                                        stroke="#fff"
-                                                        strokeWidth="3"
-                                                        style={{ filter: draggingPlayer === idx ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+                                                        fill={isSelected ? '#60a5fa' : '#3b82f6'}
+                                                        stroke={isSelected ? '#fbbf24' : '#fff'}
+                                                        strokeWidth={isSelected ? '4' : '3'}
+                                                        style={{ filter: isSelected ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
                                                     />
                                                     <text
                                                         x={x}
@@ -16811,6 +16896,20 @@
                                                 </g>
                                             );
                                         })}
+
+                                        {/* Selection Marquee */}
+                                        {selectionBox && (
+                                            <rect
+                                                x={Math.min(selectionBox.startX, selectionBox.currentX) * 8}
+                                                y={Math.min(selectionBox.startY, selectionBox.currentY) * 5}
+                                                width={Math.abs(selectionBox.startX - selectionBox.currentX) * 8}
+                                                height={Math.abs(selectionBox.startY - selectionBox.currentY) * 5}
+                                                fill="rgba(59, 130, 246, 0.2)"
+                                                stroke="#3b82f6"
+                                                strokeWidth="1"
+                                                strokeDasharray="4,2"
+                                            />
+                                        )}
 
                                         {/* Help Text */}
                                         <text x="10" y="490" fontSize="11" fill="#666">💡 Drag players to position</text>
