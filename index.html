@@ -975,7 +975,6 @@
         const AuthProvider = ({ children }) => {
             const [currentUser, setCurrentUser] = useState(null);
             const [loading, setLoading] = useState(true);
-            const [loadingData, setLoadingData] = useState(false);
 
             useEffect(() => {
                 const unsubscribe = window.auth.onAuthStateChanged(async (user) => {
@@ -1037,60 +1036,25 @@
                             // Default to ALLOW to avoid lockout during outages, but log heavily.
                         }
                     }
+                    if (user) {
+                        try {
+                            // ... access control logic already handled above ...
+
+                            // LOAD DATA BEFORE SETTING LOADING TO FALSE
+                            // This ensures the App component sees fresh cloud data on its first render
+                            // and removes the need for a flickering window.location.reload()
+                            console.log("Fetching cloud data for user:", user.uid);
+                            await loadUserDataFromFirestore(user.uid);
+                        } catch (err) {
+                            console.error("Error in startup sync:", err);
+                        }
+                    }
                     setCurrentUser(user);
                     setLoading(false);
                 });
                 return unsubscribe;
             }, []);
 
-            // Auto-load data from Firestore when user logs in
-            // Auto-load data from Firestore when user logs in
-            useEffect(() => {
-                if (currentUser && window.db) {
-                    // Always load fresh data on startup/refresh to ensure sync across devices
-                    setLoadingData(true);
-                    loadUserDataFromFirestore(currentUser.uid)
-                        .then(result => {
-                            if (result.success) {
-                                console.log("User data loaded successfully");
-                                // We do NOT reload here to avoid infinite loops since we removed the check.
-                                // loadUserDataFromFirestore updates localStorage.
-                                // To apply changes to the current running state, we would ideally need to hot-reload state,
-                                // but for now, we rely on the user refreshing OR we trigger a reload ONLY if we detect a version change (complex).
-                                // COMPROMISE: We will set a session flag *in memory* (not persistent storage) or just rely on the fact that
-                                // this effect runs on mount. If the user refreshes, it runs again.
-                                // THE ISSUE: If we don't reload, the App component has already initialized from OLD localStorage.
-                                // We need to trigger a reload IF the data was actually updated?
-                                // OR: We assume this runs once per page load.
-                                // PROPOSAL: We check a SHORT TERM session storage key "just_reloaded".
-
-                                const justReloaded = sessionStorage.getItem('just_reloaded_for_sync');
-                                if (!justReloaded) {
-                                    sessionStorage.setItem('just_reloaded_for_sync', 'true');
-                                    window.location.reload();
-                                } else {
-                                    // We just reloaded, so state should be fresh.
-                                    // Clear the flag so next real refresh works? 
-                                    // No, if we clear it, a manual refresh will trigger another reload. 
-                                    // We want: 1. Load Page -> 2. Fetch Data -> 3. Update LocalStorage -> 4. Reload Page -> 5. Load (Clean).
-                                    // If we use 'just_reloaded', step 5 sees it and skips step 2? NO.
-                                    // Step 5 should skip the RELOAD, not the fetch (fetching is harmless).
-
-                                    // Better: We fetch. If successful, we check if we need to reload.
-                                    sessionStorage.removeItem('just_reloaded_for_sync'); // Clear for next time
-                                    setLoadingData(false);
-                                }
-                            } else {
-                                console.error("Failed to load user data:", result.error);
-                                setLoadingData(false);
-                            }
-                        })
-                        .catch(error => {
-                            console.error("Error loading data:", error);
-                            setLoadingData(false);
-                        });
-                }
-            }, [currentUser]);
 
             const login = (email, password, loginMode = 'coach') => {
                 // Store user type for routing
@@ -1149,17 +1113,15 @@
                 return window.auth.signOut();
             };
 
-            if (loading || loadingData) {
+            if (loading) {
                 return (
                     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', gap: '1rem' }}>
                         <div style={{ fontSize: '1.2rem' }}>
-                            {loading ? 'Loading Dashboard...' : 'Loading your data from cloud...'}
+                            Loading Dashboard...
                         </div>
-                        {loadingData && (
-                            <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                                Syncing roster, plays, and settings...
-                            </div>
-                        )}
+                        <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                            Syncing roster, plays, and settings from cloud...
+                        </div>
                     </div>
                 );
             }
@@ -3656,354 +3618,160 @@
                         <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', background: '#f8fafc', gap: '0.5rem', flexWrap: 'wrap' }}>
                             <h3 style={{ margin: 0, marginRight: '0.5rem', fontSize: '1rem' }}>Diagrammer</h3>
 
-                            {/* Field Position Selector */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginRight: '0.5rem' }}>
-                                <label style={{ fontSize: '0.8rem', color: '#666' }}>Field:</label>
-                                <select
-                                    value={fieldPosition}
-                                    onChange={(e) => setFieldPosition(parseInt(e.target.value))}
-                                    style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc' }}
-                                >
-                                    <option value={5}>Own 5</option>
-                                    <option value={10}>Own 10</option>
-                                    <option value={15}>Own 15</option>
-                                    <option value={20}>Own 20</option>
-                                    <option value={25}>Own 25</option>
-                                    <option value={30}>Own 30</option>
-                                    <option value={35}>Own 35</option>
-                                    <option value={40}>Own 40</option>
-                                    <option value={45}>Own 45</option>
-                                    <option value={50}>Midfield</option>
-                                    <option value={55}>Opp 45</option>
-                                    <option value={60}>Opp 40</option>
-                                    <option value={65}>Opp 35</option>
-                                    <option value={70}>Opp 30</option>
-                                    <option value={75}>Opp 25</option>
-                                    <option value={80}>Opp 20</option>
-                                    <option value={85}>Opp 15</option>
-                                    <option value={90}>Opp 10</option>
-                                    <option value={95}>Opp 5</option>
-                                </select>
-                            </div>
-
-                            {/* Formation Selector (Rooski Modes) */}
-                            {mode.startsWith('rooski') && formations.length > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginRight: '0.5rem' }}>
-                                    <label style={{ fontSize: '0.8rem', color: '#666' }}>Formation:</label>
-                                    <select
-                                        value={selectedFormationId}
-                                        onChange={(e) => {
-                                            setSelectedFormationId(e.target.value);
-                                            if (e.target.value) {
-                                                loadFormation(e.target.value);
-                                            }
-                                        }}
-                                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc' }}
-                                    >
-                                        <option value="">-- Load Formation --</option>
-                                        {formations.map(f => (
-                                            <option key={f.id} value={f.id}>{f.name} {f.description && `- ${f.description}`}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-
-                            {/* Undo / Redo */}
-                            <div className="btn-group" style={{ display: 'flex', gap: '0.25rem', marginRight: '0.5rem' }}>
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={undo}
-                                    disabled={historyIndex === 0}
-                                    title="Undo (Ctrl+Z)"
-                                    style={{ padding: '0.4rem' }}
-                                >
-                                    <Icon name="RotateCcw" size={16} />
-                                </button>
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={redo}
-                                    disabled={historyIndex === history.length - 1}
-                                    title="Redo (Ctrl+Shift+Z)"
-                                    style={{ padding: '0.4rem' }}
-                                >
-                                    <Icon name="RotateCw" size={16} />
-                                </button>
-                            </div>
-
-                            {/* Tools - With Text Labels */}
-                            <div className="btn-group" style={{ display: 'flex', gap: '0.25rem' }}>
-                                {TOOLS.filter(t => t.id !== 'delete').map(tool => {
-                                    if (tool.id === 'line') {
-                                        // SMART LINE TOOL
-                                        return (
-                                            <div key={tool.id} style={{ position: 'relative' }}>
-                                                <button
-                                                    className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`}
-                                                    onClick={() => {
-                                                        if (selectedTool === 'line') {
-                                                            // Provide options if already selected
-                                                            setShowLineOptions(!showLineOptions);
-                                                        } else {
-                                                            // Activate and default to Arrow
-                                                            setSelectedTool('line');
-                                                            setEndType('arrow');
-                                                            setShowLineOptions(false);
-                                                        }
-                                                    }}
-                                                    title="Line Tool (Click again for options)"
-                                                    style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center' }}
-                                                >
-                                                    <Icon name={tool.icon} size={16} />
-                                                    <span style={{ fontSize: '0.8rem' }}>Line</span>
-                                                    {selectedTool === 'line' && <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>▼</span>}
-                                                </button>
-
-                                                {/* Line Options Dropdown */}
-                                                {showLineOptions && selectedTool === 'line' && (
-                                                    <div style={{
-                                                        position: 'absolute', top: '100%', left: 0, marginTop: '4px',
-                                                        background: 'white', border: '1px solid #ccc', borderRadius: '4px',
-                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50,
-                                                        display: 'flex', flexDirection: 'column', minWidth: '120px'
-                                                    }}>
-                                                        {[
-                                                            { id: 'arrow', label: 'Start → End' },
-                                                            { id: 't', label: '—| Block' },
-                                                            { id: 'dot', label: '• Dot' },
-                                                            { id: 'none', label: 'Straight Line' }
-                                                        ].map(opt => (
-                                                            <button
-                                                                key={opt.id}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setEndType(opt.id);
-                                                                    setShowLineOptions(false);
-                                                                }}
-                                                                style={{
-                                                                    padding: '0.5rem', textAlign: 'left', background: endType === opt.id ? '#f0f9ff' : 'white',
-                                                                    border: 'none', borderBottom: '1px solid #eee', cursor: 'pointer', fontSize: '0.8rem',
-                                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                                                                }}
-                                                            >
-                                                                {opt.label}
-                                                                {endType === opt.id && <Icon name="CheckCircle" size={12} color="#0284c7" />}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    }
-                                    return (
-                                        <button
-                                            key={tool.id}
-                                            className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`}
-                                            onClick={() => {
-                                                setSelectedTool(tool.id);
-                                                if (tool.id !== 'line') setShowLineOptions(false);
-                                            }}
-                                            title={tool.label}
-                                            style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center' }}
-                                        >
-                                            <Icon name={tool.icon} size={16} />
-                                            <span style={{ fontSize: '0.8rem' }}>{tool.label}</span>
-                                        </button>
-                                    );
-                                })}
-
-                                {/* Separate Delete Button */}
-                                <button
-                                    className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`}
-                                    onClick={() => {
-                                        if (selectedIds.size > 0) {
-                                            // If something selected, delete it immediately
-                                            updateElements(elements.filter(el => !selectedIds.has(el.id)));
-                                            setSelectedIds(new Set());
-                                        } else {
-                                            // Toggle delete tool mode
-                                            setSelectedTool('delete');
+                            {/* --- GROUP 1: DRAWING TOOLS & COLORS (LEFT) --- */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div className="btn-group" style={{ display: 'flex', gap: '0.25rem' }}>
+                                    {TOOLS.filter(t => t.id !== 'delete' && !(mode === 'rooski-oline' && t.id === 'player')).map(tool => {
+                                        if (tool.id === 'line') {
+                                            return (
+                                                <div key={tool.id} style={{ position: 'relative' }}>
+                                                    <button
+                                                        className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`}
+                                                        onClick={() => selectedTool === 'line' ? setShowLineOptions(!showLineOptions) : (setSelectedTool('line'), setEndType('arrow'), setShowLineOptions(false))}
+                                                        title="Line Tool"
+                                                        style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b' }}
+                                                    >
+                                                        <Icon name={tool.icon} size={16} />
+                                                        <span style={{ fontSize: '0.8rem' }}>Line</span>
+                                                        {selectedTool === 'line' && <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>▼</span>}
+                                                    </button>
+                                                    {showLineOptions && selectedTool === 'line' && (
+                                                        <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column', minWidth: '120px' }}>
+                                                            {[{ id: 'arrow', label: 'Start → End' }, { id: 't', label: '—| Block' }, { id: 'dot', label: '• Dot' }, { id: 'none', label: 'Straight Line' }].map(opt => (
+                                                                <button key={opt.id} onClick={(e) => { e.stopPropagation(); setEndType(opt.id); setShowLineOptions(false); }} style={{ padding: '0.5rem', textAlign: 'left', background: endType === opt.id ? '#f0f9ff' : 'white', border: 'none', borderBottom: '1px solid #eee', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    {opt.label}
+                                                                    {endType === opt.id && <Icon name="CheckCircle" size={12} color="#0284c7" />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
                                         }
-                                    }}
-                                    title="Delete Selected or Toggle Delete Mode"
-                                    style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444' }}
-                                >
-                                    <Icon name="Trash" size={16} />
-                                    <span style={{ fontSize: '0.8rem' }}>Delete</span>
-                                </button>
+                                        return (
+                                            <button key={tool.id} className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setSelectedTool(tool.id); if (tool.id !== 'line') setShowLineOptions(false); }} title={tool.label} style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b' }}>
+                                                <Icon name={tool.icon} size={16} /><span style={{ fontSize: '0.8rem' }}>{tool.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center', background: '#f1f5f9', padding: '0.2rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                    {COLORS.map(c => (
+                                        <button key={c} onClick={() => { setColor(c); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: c } : el)); }} style={{ width: '18px', height: '18px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px var(--accent)' : 'none' }}></button>
+                                    ))}
+                                </div>
+
+                                {(selectedTool === 'line' || selectedTool === 'free') && (
+                                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', background: '#e2e8f0', padding: '0.25rem', borderRadius: '4px' }}>
+                                        <select value={lineStyle} onChange={(e) => setLineStyle(e.target.value)} className="form-input" style={{ padding: '2px', fontSize: '0.8rem', width: 'auto', background: 'white' }}>
+                                            <option value="solid">Solid</option>
+                                            <option value="dashed">Dashed</option>
+                                            <option value="zigzag">Zigzag</option>
+                                        </select>
+                                        <select value={lineWidth} onChange={(e) => { const w = parseInt(e.target.value); setLineWidth(w); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && (el.type === 'line' || el.type === 'free' || el.type === 'poly')) ? { ...el, strokeWidth: w } : el)); }} className="form-input" style={{ padding: '2px', fontSize: '0.8rem', width: 'auto', background: 'white' }}>
+                                            <option value={2}>Thin</option>
+                                            <option value={4}>Med</option>
+                                            <option value={6}>Thick</option>
+                                        </select>
+                                    </div>
+                                )}
                             </div>
 
-                            <div style={{ width: '1px', height: '20px', background: '#cbd5e1', margin: '0 0.25rem' }}></div>
+                            <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 0.25rem' }}></div>
 
-                            {/* Line Options (If Line/Free Tool selected OR Line(s) Selected) */}
-                            {(selectedTool === 'line' || selectedTool === 'free') && (
-                                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', background: '#e2e8f0', padding: '0.25rem', borderRadius: '4px' }}>
-                                    {/* Style */}
-                                    <select value={lineStyle} onChange={(e) => setLineStyle(e.target.value)} className="form-input" style={{ padding: '2px', fontSize: '0.8rem', width: 'auto' }}>
-                                        <option value="solid">Solid</option>
-                                        <option value="dashed">-- Dashed</option>
-                                        <option value="zigzag">Zigzag</option>
-                                    </select>
-
-                                    {/* Width */}
-                                    <select
-                                        value={lineWidth}
-                                        onChange={(e) => {
-                                            const w = parseInt(e.target.value);
-                                            setLineWidth(w);
-                                            // Bulk Update Selected Lines
-                                            if (selectedIds.size > 0) {
-                                                updateElements(elements.map(el =>
-                                                    (selectedIds.has(el.id) && (el.type === 'line' || el.type === 'free' || el.type === 'poly')) ? { ...el, strokeWidth: w } : el
-                                                ));
-                                            }
-                                        }}
-                                        className="form-input"
-                                        style={{ padding: '2px', fontSize: '0.8rem', width: 'auto' }}
-                                        title="Line Width"
-                                    >
-                                        <option value={2}>Thin</option>
-                                        <option value={4}>Medium</option>
-                                        <option value={6}>Thick</option>
-                                        <option value={8}>X-Thick</option>
-                                    </select>
-
-                                    {/* Consolidated End Type - Display badge of current type */}
-                                    {selectedTool === 'line' && (
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '4px', textTransform: 'capitalize' }}>
-                                            {endType === 'none' ? 'Line' : endType}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* ROOSKI MODE TOGGLES */}
-                            {/* ROOSKI MODE TOGGLES */}
-                            {(mode === 'rooski-oline' || mode === 'rooski-skill') && (
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: '0.5rem', background: '#e0f2fe', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
-                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#0369a1' }}>Personnel:</span>
-                                    {mode === 'rooski-skill' && (
-                                        <>
-                                            <button className={`btn ${elements.some(e => e.label === 'Y') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRooskiNode('Y')} style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem' }}>+ Y</button>
-                                            <button className={`btn ${elements.some(e => e.label === 'F') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRooskiNode('F')} style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem' }}>+ F</button>
-                                        </>
-                                    )}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                        <input
-                                            type="text"
-                                            value={customLetterInput}
-                                            onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
-                                            placeholder="A"
-                                            maxLength={2}
-                                            className="form-input"
-                                            style={{ width: '30px', padding: '2px', textAlign: 'center', fontSize: '0.85rem' }}
-                                        />
-                                        <button
-                                            className="btn btn-secondary"
-                                            onClick={() => {
-                                                if (customLetterInput) {
-                                                    toggleRooskiNode(customLetterInput);
-                                                    setCustomLetterInput(''); // Reset
-                                                }
-                                            }}
-                                            disabled={!customLetterInput}
-                                            style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem' }}
-                                        >
-                                            + Add
-                                        </button>
+                            {/* --- GROUP 2: CONFIG & SELECTORS (CENTER) --- */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {mode !== 'rooski-oline' && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 'bold' }}>Field:</label>
+                                        <select value={fieldPosition} onChange={(e) => setFieldPosition(parseInt(e.target.value))} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', color: '#1e293b', backgroundColor: 'white' }}>
+                                            <option value={50}>Midfield</option><option value={20}>Red Zone</option><option value={5}>Goal Line</option><option value={35}>Open Field</option>
+                                        </select>
                                     </div>
+                                )}
 
+                                {mode.startsWith('rooski') && formations.length > 0 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 'bold' }}>Formation:</label>
+                                        <select value={selectedFormationId} onChange={(e) => { setSelectedFormationId(e.target.value); if (e.target.value) loadFormation(e.target.value); }} style={{ padding: '0.25rem 1.5rem 0.25rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', color: '#1e293b', backgroundColor: 'white' }}>
+                                            <option value="">-- Formation --</option>
+                                            {formations.map(f => (<option key={f.id} value={f.id}>{f.name}</option>))}
+                                        </select>
+                                    </div>
+                                )}
 
-                                    {/* Text Size Controls for Rooski OL */}
-                                    {mode === 'rooski-oline' && (
-                                        <React.Fragment>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.5rem', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Size:</span>
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    onClick={() => {
-                                                        const newSize = Math.max(12, rooskiTextSize - 4);
-                                                        setRooskiTextSize(newSize);
-                                                        // Bulk Resize Selected
-                                                        if (selectedIds.size > 0) {
-                                                            updateElements(elements.map(el =>
-                                                                (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: newSize } : el
-                                                            ));
-                                                        }
-                                                    }}
-                                                    style={{ padding: '0 0.4rem', fontSize: '1rem' }}
-                                                >-</button>
-                                                <span style={{ fontSize: '0.85rem', minWidth: '24px', textAlign: 'center' }}>{rooskiTextSize}</span>
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    onClick={() => {
-                                                        const newSize = Math.min(200, rooskiTextSize + 4);
-                                                        setRooskiTextSize(newSize);
-                                                        if (selectedIds.size > 0) {
-                                                            updateElements(elements.map(el =>
-                                                                (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: newSize } : el
-                                                            ));
-                                                        }
-                                                    }}
-                                                    style={{ padding: '0 0.4rem', fontSize: '1rem' }}
-                                                >+</button>
+                                {(mode === 'rooski-oline' || mode === 'rooski-skill') && (
+                                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', background: '#e0f2fe', padding: '0.25rem 0.4rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#0369a1' }}>Personnel:</span>
+                                        {mode === 'rooski-skill' && (
+                                            <div style={{ display: 'flex', gap: '2px' }}>
+                                                <button className={`btn ${elements.some(e => e.label === 'Y') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRooskiNode('Y')} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ Y</button>
+                                                <button className={`btn ${elements.some(e => e.label === 'F') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRooskiNode('F')} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ F</button>
                                             </div>
+                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                            <input type="text" value={customLetterInput} onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())} placeholder="A" maxLength={2} style={{ width: '25px', padding: '1px', textAlign: 'center', fontSize: '0.8rem', color: '#1e293b', border: '1px solid #94a3b8', borderRadius: '2px' }} />
+                                            <button className="btn btn-secondary" onClick={() => { if (customLetterInput) { toggleRooskiNode(customLetterInput); setCustomLetterInput(''); } }} disabled={!customLetterInput} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ Add</button>
+                                        </div>
 
-                                            {/* LIBRARY CONTROLS */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem', background: '#fffbeb', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid #fcd34d' }}>
-                                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#b45309' }}>Library:</span>
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    onClick={initiateSave}
-                                                    title="Save current diagram to library"
-                                                    style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem', display: 'flex', gap: '4px', alignItems: 'center' }}
-                                                >
-                                                    <Icon name="Save" size={14} /> Save
-                                                </button>
+                                        {mode === 'rooski-oline' && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.25rem', padding: '0 0.25rem', borderLeft: '1px solid #7dd3fc' }}>
+                                                <button className="btn btn-secondary" onClick={() => { const s = Math.max(12, rooskiTextSize - 4); setRooskiTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.3rem', fontSize: '0.9rem', color: '#1e293b' }}>-</button>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', minWidth: '1.2rem', textAlign: 'center' }}>{rooskiTextSize}</span>
+                                                <button className="btn btn-secondary" onClick={() => { const s = Math.min(200, rooskiTextSize + 4); setRooskiTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.3rem', fontSize: '0.9rem', color: '#1e293b' }}>+</button>
+                                            </div>
+                                        )}
 
-                                                <select
-                                                    className="form-input"
-                                                    style={{ padding: '0.2rem', fontSize: '0.85rem', width: '140px' }}
-                                                    onChange={(e) => {
-                                                        if (e.target.value) {
-                                                            loadRooskiPreset(e.target.value);
-                                                            e.target.value = ""; // Reset
-                                                        }
-                                                    }}
-                                                    defaultValue=""
-                                                >
-                                                    <option value="" disabled>Load Saved Play...</option>
-                                                    {rooskiLibrary.map(preset => (
-                                                        <option key={preset.id} value={preset.id}>{preset.name}</option>
-                                                    ))}
+                                        {mode === 'rooski-oline' && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', background: '#fffbeb', padding: '0.15rem 0.25rem', borderRadius: '4px', border: '1px solid #fcd34d' }}>
+                                                <button className="btn btn-secondary" onClick={initiateSave} title="Save to library" style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', color: '#1e293b', border: 'none', background: 'transparent' }}><Icon name="Save" size={12} /></button>
+                                                <select style={{ padding: '1px', fontSize: '0.75rem', width: '80px', color: '#1e293b', border: 'none', background: 'transparent' }} onChange={(e) => { if (e.target.value) { loadRooskiPreset(e.target.value); e.target.value = ""; } }} defaultValue="">
+                                                    <option value="" disabled>Lib...</option>
+                                                    {rooskiLibrary.map(preset => (<option key={preset.id} value={preset.id}>{preset.name}</option>))}
                                                 </select>
                                             </div>
-                                        </React.Fragment>
-                                    )}
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ flex: 1 }}></div>
+
+                            {/* --- GROUP 3: SYSTEM ACTIONS (RIGHT) --- */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <div className="btn-group" style={{ display: 'flex', gap: '0.2rem' }}>
+                                    <button className="btn btn-secondary" onClick={undo} disabled={historyIndex === 0} title="Undo" style={{ padding: '0.3rem', color: '#1e293b' }}><Icon name="RotateCcw" size={14} /></button>
+                                    <button className="btn btn-secondary" onClick={redo} disabled={historyIndex === history.length - 1} title="Redo" style={{ padding: '0.3rem', color: '#1e293b' }}><Icon name="RotateCw" size={14} /></button>
+                                </div>
+                                <button className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`} onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }} title="Delete" style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444', backgroundColor: selectedTool === 'delete' ? '#ef4444' : 'transparent', border: '1px solid #ef4444' }}>
+                                    <Icon name="Trash" size={14} />
+                                </button>
+                                <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 0.15rem' }}></div>
+                                <button className="btn btn-secondary" onClick={onCancel} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', color: '#1e293b', background: 'white', border: '1px solid #ccc' }}>Cancel</button>
+                                <button className="btn btn-primary" onClick={() => onSave({ elements })} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', color: '#1e293b', fontWeight: 'bold' }}>
+                                    <Icon name="Save" size={14} style={{ marginRight: '4px', color: '#1e293b' }} /> Save
+                                </button>
+                            </div>
+
+                            {/* --- OVERLAYS (Floating within the toolbar wrap context) --- */}
+                            {selectedTool === 'player' && (
+                                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', background: '#e2e8f0', padding: '0.25rem', borderRadius: '4px', width: '100%', marginTop: '0.25rem' }}>
+                                    {PLAYER_ICONS.map(p => (
+                                        <button key={p.label + p.shape} onClick={() => setSelectedPlayerIcon(p)} style={{ width: '24px', height: '24px', borderRadius: '4px', border: selectedPlayerIcon.label === p.label && selectedPlayerIcon.shape === p.shape ? '2px solid var(--accent)' : '1px solid #ccc', background: 'white', fontWeight: 'bold', fontSize: '0.7rem', color: 'black', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{p.shape === 'star' ? '★' : p.shape === 'target' ? '⌖' : p.label}</button>
+                                    ))}
+                                    <button className="btn btn-secondary" onClick={handleQuickOffense} title="11-Man Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', color: '#1e293b', background: 'white', border: '1px solid #ccc' }}>⚡ Quick 11</button>
+                                    <button className="btn btn-secondary" onClick={handleScoutDefense} title="Scout Defense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#374151', color: 'white' }}>🛡 Scout Def</button>
+                                    <button className="btn btn-secondary" onClick={handleScoutOffense} title="Scout Offense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#eab308', color: 'black' }}>⚔️ Scout Off</button>
+                                    <button className="btn btn-secondary" onClick={handleRooskiOffense} title="Rooski Skill Colors" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>🎨 Rooski</button>
                                 </div>
                             )}
 
-                            {/* SAVE MODAL */}
                             {showSaveModal && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 0, left: 0, right: 0, bottom: 0,
-                                    background: 'rgba(0,0,0,0.5)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 50
-                                }}>
+                                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
                                     <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '300px' }}>
                                         <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Save to Library</h3>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            placeholder="Enter play name..."
-                                            value={saveName}
-                                            onChange={e => setSaveName(e.target.value)}
-                                            style={{ width: '100%', marginBottom: '1rem' }}
-                                            autoFocus
-                                        />
+                                        <input type="text" className="form-input" placeholder="Enter play name..." value={saveName} onChange={e => setSaveName(e.target.value)} style={{ width: '100%', marginBottom: '1rem', background: 'white', color: 'black' }} autoFocus />
                                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                                             <button className="btn btn-secondary" onClick={() => setShowSaveModal(false)}>Cancel</button>
                                             <button className="btn btn-primary" onClick={confirmSave} disabled={!saveName}>Save</button>
@@ -4011,53 +3779,6 @@
                                     </div>
                                 </div>
                             )}
-
-                            {/* Player Icons Palette */}
-                            {selectedTool === 'player' && (
-                                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', background: '#e2e8f0', padding: '0.25rem', borderRadius: '4px' }}>
-                                    {PLAYER_ICONS.map(p => (
-                                        <button
-                                            key={p.label + p.shape} onClick={() => setSelectedPlayerIcon(p)}
-                                            style={{ width: '24px', height: '24px', borderRadius: '4px', border: selectedPlayerIcon.label === p.label && selectedPlayerIcon.shape === p.shape ? '2px solid var(--accent)' : '1px solid #ccc', background: 'white', fontWeight: 'bold', fontSize: '0.7rem', color: 'black', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        >
-                                            {p.shape === 'star' ? '★' : p.shape === 'target' ? '⌖' : p.label}
-                                        </button>
-                                    ))}
-                                    <button className="btn btn-secondary" onClick={handleQuickOffense} title="11-Man Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem' }}>⚡ Quick 11</button>
-                                    <button className="btn btn-secondary" onClick={handleScoutDefense} title="Scout Defense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#374151', color: 'white' }}>🛡 Scout Def</button>
-                                    <button className="btn btn-secondary" onClick={handleScoutOffense} title="Scout Offense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#eab308', color: 'black' }}>⚔️ Scout Off</button>
-                                    <button className="btn btn-secondary" onClick={handleRooskiOffense} title="Rooski Skill Colors" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>🎨 Rooski</button>
-                                </div>
-                            )}
-
-                            <div style={{ flex: 1 }}></div>
-
-                            {/* Color Picker */}
-                            <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                                {COLORS.map(c => (
-                                    <button
-                                        key={c}
-                                        onClick={() => {
-                                            setColor(c);
-                                            // Bulk Color Change
-                                            if (selectedIds.size > 0) {
-                                                updateElements(elements.map(el =>
-                                                    selectedIds.has(el.id) ? { ...el, color: c } : el
-                                                ));
-                                            }
-                                        }}
-                                        style={{ width: '20px', height: '20px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px var(--accent)' : 'none', transform: color === c ? 'scale(1.1)' : 'scale(1)' }}
-                                    ></button>
-                                ))}
-                            </div>
-
-                            <div style={{ width: '1px', height: '20px', background: '#cbd5e1', margin: '0 0.5rem' }}></div>
-
-                            {/* Actions */}
-                            <button className="btn btn-secondary" onClick={onCancel} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>Cancel</button>
-                            <button className="btn btn-primary" onClick={() => onSave({ elements })} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
-                                <Icon name="Save" size={14} style={{ marginRight: '4px' }} /> Save
-                            </button>
                         </div>
 
                         {/* Help Text */}
@@ -4762,10 +4483,10 @@
                                 {/* Player Assignment Notes */}
                                 <div className="form-group">
                                     <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Player Assignment Notes</label>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', padding: '1rem', background: 'var(--bg-input)', borderRadius: '8px', border: '1px solid var(--border)', display: 'grid' }}>
                                         {['QB', 'RB', 'X', 'Z', 'Y', 'F', 'OL'].map(pos => (
                                             <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <span style={{ width: '30px', fontWeight: 'bold', fontSize: '0.85rem', color: '#475569' }}>{pos}</span>
+                                                <span style={{ width: '30px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{pos}</span>
                                                 <input
                                                     className="form-input"
                                                     style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
@@ -4898,7 +4619,7 @@
                                             {formData.rooskiOlineData ? (
                                                 <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                                     {/* Mini Preview */}
-                                                    <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid #ddd', background: 'white', position: 'relative' }}>
+                                                    <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid var(--border)', background: 'white', position: 'relative' }}>
                                                         <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
                                                             <g opacity="0.1">
                                                                 <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
@@ -4962,7 +4683,7 @@
                                         {formData.rooskiSkillData ? (
                                             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                                 {/* Mini Preview */}
-                                                <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid #ddd', background: 'white', position: 'relative' }}>
+                                                <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid var(--border)', background: 'white', position: 'relative' }}>
                                                     <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
                                                         {formData.rooskiSkillData.map(el => (
                                                             <circle key={el.id} cx={el.points[0].x} cy={el.points[0].y} r="5" fill={el.color} />
@@ -6420,7 +6141,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -6911,22 +6632,24 @@
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                 <h2>{selectedDay} Schedule</h2>
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                    <select
-                                        className="form-select"
-                                        style={{ width: 'auto', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--accent)' }}
-                                        onChange={(e) => {
-                                            loadTemplate(e.target.value);
-                                            e.target.value = ""; // Reset
-                                        }}
-                                        value=""
-                                    >
-                                        <option value="" disabled>Load Template...</option>
-                                        {allTemplates.map(t => (
-                                            <option key={t.name} value={t.name}>
-                                                {t.id ? '🌐 ' : '📋 '}{t.name}{t.category ? ` (${t.category})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {!isLocked && (
+                                        <select
+                                            className="form-select"
+                                            style={{ width: 'auto', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--accent)' }}
+                                            onChange={(e) => {
+                                                loadTemplate(e.target.value);
+                                                e.target.value = ""; // Reset
+                                            }}
+                                            value=""
+                                        >
+                                            <option value="" disabled>Load Template...</option>
+                                            {allTemplates.map(t => (
+                                                <option key={t.name} value={t.name}>
+                                                    {t.id ? '🌐 ' : '📋 '}{t.name}{t.category ? ` (${t.category})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
                                     <label>Start Time:</label>
                                     <input
                                         type="time"
@@ -6934,6 +6657,7 @@
                                         style={{ width: 'auto' }}
                                         value={plan.startTime}
                                         onChange={e => updateCurrentPlan({ ...plan, startTime: e.target.value })}
+                                        disabled={isLocked}
                                     />
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                         <select
@@ -7162,37 +6886,41 @@
                                                     >
                                                         See Script
                                                     </button>
-                                                    <button
-                                                        className="btn"
-                                                        style={{ padding: '0.25rem 0.4rem', fontSize: '0.7rem', color: '#ef4444' }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (confirm('Disable scripting for warmup? This will clear the script.')) {
-                                                                updateCurrentPlan({ ...plan, warmupHasScript: false, warmupScript: [] });
-                                                                if (selectedSegmentId === 'WARMUP') {
-                                                                    setSelectedSegmentId(null);
+                                                    {!isLocked && (
+                                                        <button
+                                                            className="btn"
+                                                            style={{ padding: '0.25rem 0.4rem', fontSize: '0.7rem', color: '#ef4444' }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (confirm('Disable scripting for warmup? This will clear the script.')) {
+                                                                    updateCurrentPlan({ ...plan, warmupHasScript: false, warmupScript: [] });
+                                                                    if (selectedSegmentId === 'WARMUP') {
+                                                                        setSelectedSegmentId(null);
+                                                                    }
                                                                 }
-                                                            }
-                                                        }}
-                                                        title="Disable scripting"
-                                                    >
-                                                        ×
-                                                    </button>
+                                                            }}
+                                                            title="Disable scripting"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    )}
                                                 </div>
                                             ) : (
-                                                <input
-                                                    type="checkbox"
-                                                    checked={false}
-                                                    onChange={e => {
-                                                        updateCurrentPlan({ ...plan, warmupHasScript: e.target.checked });
-                                                        if (e.target.checked) {
-                                                            setSelectedSegmentId('WARMUP');
-                                                            setShowScriptView(true);
-                                                        }
-                                                    }}
-                                                    onClick={e => e.stopPropagation()}
-                                                    style={{ cursor: 'pointer' }}
-                                                />
+                                                !isLocked ? (
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={false}
+                                                        onChange={e => {
+                                                            updateCurrentPlan({ ...plan, warmupHasScript: e.target.checked });
+                                                            if (e.target.checked) {
+                                                                setSelectedSegmentId('WARMUP');
+                                                                setShowScriptView(true);
+                                                            }
+                                                        }}
+                                                        onClick={e => e.stopPropagation()}
+                                                        style={{ cursor: 'pointer' }}
+                                                    />
+                                                ) : null
                                             )}
                                         </td>
                                         <td className="no-print" style={{ padding: '0.5rem', textAlign: 'center' }}>
@@ -7212,19 +6940,22 @@
                                                         });
                                                     }
                                                 }}
+                                                disabled={isLocked}
                                             />
                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        document.getElementById('warmup-scout-card').click();
-                                                    }}
-                                                    title="Upload PDF Card"
-                                                >
-                                                    {plan.warmupScoutCard ? '📎 Replace' : '📎 Upload'}
-                                                </button>
+                                                {!isLocked && (
+                                                    <button
+                                                        className="btn btn-secondary"
+                                                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            document.getElementById('warmup-scout-card').click();
+                                                        }}
+                                                        title="Upload PDF Card"
+                                                    >
+                                                        {plan.warmupScoutCard ? '📎 Replace' : '📎 Upload'}
+                                                    </button>
+                                                )}
                                                 {plan.warmupScoutCard && (
                                                     <div style={{ fontSize: '0.7rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {scoutCardUrls['WARMUP'] ? (
@@ -7263,157 +6994,167 @@
                                                 <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
                                                     {index + 1}
                                                     {/* Insert Segment Button */}
-                                                    <button
-                                                        className="btn btn-secondary no-print"
-                                                        style={{ marginLeft: '4px', padding: '0 4px', fontSize: '0.7rem', height: '20px', lineHeight: '20px' }}
-                                                        title="Insert new segment below"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const newSegment = {
-                                                                id: Date.now().toString(),
-                                                                type: 'Competition',
-                                                                duration: 5,
-                                                                startTime: '',
-                                                                hasScript: false,
-                                                                script: [],
-                                                                notes: user?.role === 'HC' ? { 'ALL_COACHES': '' } : {}
-                                                            };
+                                                    {!isLocked && (
+                                                        <button
+                                                            className="btn btn-secondary no-print"
+                                                            style={{ marginLeft: '4px', padding: '0 4px', fontSize: '0.7rem', height: '20px', lineHeight: '20px' }}
+                                                            title="Insert new segment below"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const newSegment = {
+                                                                    id: Date.now().toString(),
+                                                                    type: 'Competition',
+                                                                    duration: 5,
+                                                                    startTime: '',
+                                                                    hasScript: false,
+                                                                    script: [],
+                                                                    notes: user?.role === 'HC' ? { 'ALL_COACHES': '' } : {}
+                                                                };
 
-                                                            const newSegments = [...plan.segments];
-                                                            newSegments.splice(index + 1, 0, newSegment);
+                                                                const newSegments = [...plan.segments];
+                                                                newSegments.splice(index + 1, 0, newSegment);
 
-                                                            updateCurrentPlan({ ...plan, segments: newSegments });
-                                                        }}
-                                                    >
-                                                        +
-                                                    </button>
+                                                                updateCurrentPlan({ ...plan, segments: newSegments });
+                                                            }}
+                                                        >
+                                                            +
+                                                        </button>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>{seg.startTime}</td>
                                                 <td style={{ padding: '0.5rem' }}>
-                                                    <span className="print-only-text screen-hidden">{seg.duration}</span>
-                                                    <input
-                                                        type="number"
-                                                        className="form-input no-print"
-                                                        style={{ width: '60px', padding: '0.25rem' }}
-                                                        value={seg.duration}
-                                                        onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value))}
-                                                        onClick={e => e.stopPropagation()}
-                                                    />
+                                                    <span className="print-only-text">{seg.duration}</span>
+                                                    {!isLocked && (
+                                                        <input
+                                                            type="number"
+                                                            className="form-input no-print"
+                                                            style={{ width: '60px', padding: '0.25rem' }}
+                                                            value={seg.duration}
+                                                            onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value))}
+                                                            onClick={e => e.stopPropagation()}
+                                                        />
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
-                                                    <span className="print-only-text screen-hidden">{seg.type}</span>
-                                                    <select
-                                                        className="form-select no-print"
-                                                        style={{ width: '130px', padding: '0.25rem' }}
-                                                        value={seg.type}
-                                                        onChange={e => {
-                                                            const newType = e.target.value;
-                                                            if (newType === 'Ghost Script') {
-                                                                const ghostSequence = [
-                                                                    'COIN TOSS', 'KICKOFF', 'TEAM D', 'PUNT RETURN', 'TEAM O', 'PAT',
-                                                                    'BACKED-UP PUNT', 'TEAM D', 'PAT BLOCK', 'KICKOFF RET', 'TEAM O',
-                                                                    'PUNT', 'HALFTIME', 'HANDS TEAM', 'HAIL MARY', '2-PT PLAY',
-                                                                    'ONSIDE KICK', 'PREVENT DEFENSE', 'VICTORY'
-                                                                ];
+                                                    <span className="print-only-text">{seg.type}</span>
+                                                    {!isLocked && (
+                                                        <select
+                                                            className="form-select no-print"
+                                                            style={{ width: '130px', padding: '0.25rem' }}
+                                                            value={seg.type}
+                                                            onChange={e => {
+                                                                const newType = e.target.value;
+                                                                if (newType === 'Ghost Script') {
+                                                                    const ghostSequence = [
+                                                                        'COIN TOSS', 'KICKOFF', 'TEAM D', 'PUNT RETURN', 'TEAM O', 'PAT',
+                                                                        'BACKED-UP PUNT', 'TEAM D', 'PAT BLOCK', 'KICKOFF RET', 'TEAM O',
+                                                                        'PUNT', 'HALFTIME', 'HANDS TEAM', 'HAIL MARY', '2-PT PLAY',
+                                                                        'ONSIDE KICK', 'PREVENT DEFENSE', 'VICTORY'
+                                                                    ];
 
-                                                                const PATTERN_A = ['L', 'LM', 'RM', 'R', 'R', 'RM', 'LM', 'L'];
-                                                                const PATTERN_B = ['R', 'RM', 'LM', 'L', 'L', 'LM', 'RM', 'R'];
-                                                                const pattern = Math.random() > 0.5 ? PATTERN_A : PATTERN_B;
+                                                                    const PATTERN_A = ['L', 'LM', 'RM', 'R', 'R', 'RM', 'LM', 'L'];
+                                                                    const PATTERN_B = ['R', 'RM', 'LM', 'L', 'L', 'LM', 'RM', 'R'];
+                                                                    const pattern = Math.random() > 0.5 ? PATTERN_A : PATTERN_B;
 
-                                                                const ghostScript = ghostSequence.map((situation, i) => ({
-                                                                    id: Date.now().toString() + i,
-                                                                    playId: '',
-                                                                    playName: '',
-                                                                    hash: pattern[i % 8],
-                                                                    situation: situation
-                                                                }));
+                                                                    const ghostScript = ghostSequence.map((situation, i) => ({
+                                                                        id: Date.now().toString() + i,
+                                                                        playId: '',
+                                                                        playName: '',
+                                                                        hash: pattern[i % 8],
+                                                                        situation: situation
+                                                                    }));
 
-                                                                updateCurrentPlan({
-                                                                    ...plan,
-                                                                    segments: plan.segments.map(s => s.id === seg.id ? {
-                                                                        ...s,
-                                                                        type: newType,
-                                                                        hasScript: true,
-                                                                        script: ghostScript,
-                                                                        situation: '' // Clear focus to avoid 3rd down dropdown logic interactions
-                                                                    } : s)
-                                                                });
-                                                            } else {
-                                                                updateSegment(seg.id, 'type', newType);
-                                                            }
-                                                        }}
-                                                        onClick={e => e.stopPropagation()}
-                                                    >
-                                                        <option value="">-- Select Type --</option>
-                                                        {['Competition', 'O FUNDI', 'D FUNDI', '7-on-7', 'Def. 7-on-7', 'Team O', 'Team D', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Inside Run', 'Field Goal', 'Conditioning', 'Take-Off', 'Ghost Script', 'One-on-Ones', 'Tackling', 'Turnover', 'Specials'].map(t => (
-                                                            <option key={t} value={t}>{t}</option>
-                                                        ))}
-                                                    </select>
+                                                                    updateCurrentPlan({
+                                                                        ...plan,
+                                                                        segments: plan.segments.map(s => s.id === seg.id ? {
+                                                                            ...s,
+                                                                            type: newType,
+                                                                            hasScript: true,
+                                                                            script: ghostScript,
+                                                                            situation: '' // Clear focus to avoid 3rd down dropdown logic interactions
+                                                                        } : s)
+                                                                    });
+                                                                } else {
+                                                                    updateSegment(seg.id, 'type', newType);
+                                                                }
+                                                            }}
+                                                            onClick={e => e.stopPropagation()}
+                                                        >
+                                                            <option value="">-- Select Type --</option>
+                                                            {['Competition', 'O FUNDI', 'D FUNDI', '7-on-7', 'Def. 7-on-7', 'Team O', 'Team D', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Inside Run', 'Field Goal', 'Conditioning', 'Take-Off', 'Ghost Script', 'One-on-Ones', 'Tackling', 'Turnover', 'Specials'].map(t => (
+                                                                <option key={t} value={t}>{t}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
                                                     <td style={{ padding: '0.5rem' }}>
-                                                        <span className="print-only-text screen-hidden">{seg.situation}</span>
-                                                        {customInputState?.id === seg.id ? (
-                                                            <input
-                                                                autoFocus
-                                                                className="form-input no-print"
-                                                                style={{ padding: '0.25rem', width: '100%' }}
-                                                                defaultValue=""
-                                                                placeholder="Custom focus..."
-                                                                onBlur={(e) => {
-                                                                    const val = e.target.value.trim();
-                                                                    if (val) {
-                                                                        addCustomFocusItem(val);
-                                                                        updateSegment(seg.id, 'situation', val);
-                                                                    }
-                                                                    setCustomInputState(null);
-                                                                }}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') e.target.blur();
-                                                                    if (e.key === 'Escape') setCustomInputState(null);
-                                                                }}
-                                                                onClick={e => e.stopPropagation()}
-                                                            />
-                                                        ) : (
-                                                            <select
-                                                                className="form-select no-print"
-                                                                style={{ padding: '0.25rem' }}
-                                                                value={seg.situation || ''}
-                                                                onChange={e => {
-                                                                    if (e.target.value === '__ADD_CUSTOM__') {
-                                                                        setCustomInputState({ id: seg.id });
-                                                                    } else {
-                                                                        updateSegment(seg.id, 'situation', e.target.value);
-                                                                    }
-                                                                }}
-                                                                onClick={e => e.stopPropagation()}
-                                                            >
-                                                                <option value="">-- Focus --</option>
-                                                                {focusItems.map(item => (
-                                                                    <option key={item} value={item}>{item}</option>
-                                                                ))}
-                                                                <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
-                                                            </select>
+                                                        <span className="print-only-text">{seg.situation}</span>
+                                                        {!isLocked && (
+                                                            customInputState?.id === seg.id ? (
+                                                                <input
+                                                                    autoFocus
+                                                                    className="form-input no-print"
+                                                                    style={{ padding: '0.25rem', width: '100%' }}
+                                                                    defaultValue=""
+                                                                    placeholder="Custom focus..."
+                                                                    onBlur={(e) => {
+                                                                        const val = e.target.value.trim();
+                                                                        if (val) {
+                                                                            addCustomFocusItem(val);
+                                                                            updateSegment(seg.id, 'situation', val);
+                                                                        }
+                                                                        setCustomInputState(null);
+                                                                    }}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') e.target.blur();
+                                                                        if (e.key === 'Escape') setCustomInputState(null);
+                                                                    }}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                />
+                                                            ) : (
+                                                                <select
+                                                                    className="form-select no-print"
+                                                                    style={{ padding: '0.25rem' }}
+                                                                    value={seg.situation || ''}
+                                                                    onChange={e => {
+                                                                        if (e.target.value === '__ADD_CUSTOM__') {
+                                                                            setCustomInputState({ id: seg.id });
+                                                                        } else {
+                                                                            updateSegment(seg.id, 'situation', e.target.value);
+                                                                        }
+                                                                    }}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                >
+                                                                    <option value="">-- Focus --</option>
+                                                                    {focusItems.map(item => (
+                                                                        <option key={item} value={item}>{item}</option>
+                                                                    ))}
+                                                                    <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
+                                                                </select>
+                                                            )
                                                         )}
                                                     </td>
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
-                                                    <span className="print-only-text screen-hidden">{seg.contactLevel}</span>
-                                                    <select
-                                                        className="form-select no-print"
-                                                        style={{ padding: '0.25rem', width: '90px' }}
-                                                        value={seg.contactLevel || ''}
-                                                        onChange={e => updateSegment(seg.id, 'contactLevel', e.target.value)}
-                                                        onClick={e => e.stopPropagation()}
-                                                    >
-                                                        <option value="">--</option>
-                                                        <option value="Touch">Touch</option>
-                                                        <option value="Thud">Thud</option>
-                                                        <option value="Bird-Dog">Bird-Dog</option>
-                                                        <option value="ON AIR">ON AIR</option>
-                                                        <option value="Slight Resist">Slight Resist</option>
-                                                        <option value="Live">Live</option>
-                                                    </select>
+                                                    <span className="print-only-text">{seg.contactLevel}</span>
+                                                    {!isLocked && (
+                                                        <select
+                                                            className="form-select no-print"
+                                                            style={{ padding: '0.25rem', width: '90px' }}
+                                                            value={seg.contactLevel || ''}
+                                                            onChange={e => updateSegment(seg.id, 'contactLevel', e.target.value)}
+                                                            onClick={e => e.stopPropagation()}
+                                                        >
+                                                            <option value="">--</option>
+                                                            <option value="Touch">Touch</option>
+                                                            <option value="Thud">Thud</option>
+                                                            <option value="Bird-Dog">Bird-Dog</option>
+                                                            <option value="ON AIR">ON AIR</option>
+                                                            <option value="Slight Resist">Slight Resist</option>
+                                                            <option value="Live">Live</option>
+                                                        </select>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '0.5rem', whiteSpace: 'pre-wrap' }}>
                                                     {(() => {
@@ -7440,6 +7181,7 @@
                                                                     onChange={e => updateSegmentNotes(seg.id, selectedNotesCoach, e.target.value)}
                                                                     onClick={e => e.stopPropagation()}
                                                                     placeholder={selectedNotesCoach === 'ALL_COACHES' ? 'Notes for all coaches...' : `Notes for ${staff?.find(s => s.id === selectedNotesCoach)?.name || 'this coach'}...`}
+                                                                    disabled={isLocked}
                                                                 />
                                                             </div>
                                                         );
@@ -7459,56 +7201,60 @@
                                                             >
                                                                 See Script
                                                             </button>
-                                                            <button
-                                                                className="btn"
-                                                                style={{ padding: '0.25rem 0.4rem', fontSize: '0.7rem', color: '#ef4444' }}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (confirm('Disable scripting for this segment? This will clear the script.')) {
-                                                                        // Perform single atomic update to avoid race condition
-                                                                        updateCurrentPlan({
-                                                                            ...plan,
-                                                                            segments: plan.segments.map(s => s.id === seg.id ? { ...s, hasScript: false, script: [] } : s)
-                                                                        });
+                                                            {!isLocked && (
+                                                                <button
+                                                                    className="btn"
+                                                                    style={{ padding: '0.25rem 0.4rem', fontSize: '0.7rem', color: '#ef4444' }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (confirm('Disable scripting for this segment? This will clear the script.')) {
+                                                                            // Perform single atomic update to avoid race condition
+                                                                            updateCurrentPlan({
+                                                                                ...plan,
+                                                                                segments: plan.segments.map(s => s.id === seg.id ? { ...s, hasScript: false, script: [] } : s)
+                                                                            });
 
-                                                                        if (selectedSegmentId === seg.id) {
-                                                                            setSelectedSegmentId(null);
+                                                                            if (selectedSegmentId === seg.id) {
+                                                                                setSelectedSegmentId(null);
+                                                                            }
                                                                         }
-                                                                    }
-                                                                }}
-                                                                title="Disable scripting"
-                                                            >
-                                                                ×
-                                                            </button>
+                                                                    }}
+                                                                    title="Disable scripting"
+                                                                >
+                                                                    ×
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     ) : (
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={false}
-                                                            onChange={e => {
-                                                                if (e.target.checked) {
-                                                                    // Atomically enable script AND populate slots based on duration/type
-                                                                    const initializedScript = ensureScriptSlots([], parseInt(seg.duration || 0), seg.type);
+                                                        !isLocked ? (
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={false}
+                                                                onChange={e => {
+                                                                    if (e.target.checked) {
+                                                                        // Atomically enable script AND populate slots based on duration/type
+                                                                        const initializedScript = ensureScriptSlots([], parseInt(seg.duration || 0), seg.type);
 
-                                                                    updateCurrentPlan({
-                                                                        ...plan,
-                                                                        segments: plan.segments.map(s => s.id === seg.id ? {
-                                                                            ...s,
-                                                                            hasScript: true,
-                                                                            script: initializedScript
-                                                                        } : s)
-                                                                    });
+                                                                        updateCurrentPlan({
+                                                                            ...plan,
+                                                                            segments: plan.segments.map(s => s.id === seg.id ? {
+                                                                                ...s,
+                                                                                hasScript: true,
+                                                                                script: initializedScript
+                                                                            } : s)
+                                                                        });
 
-                                                                    setSelectedSegmentId(seg.id);
-                                                                    setShowScriptView(true);
-                                                                } else {
-                                                                    // Should not happen as unchecked state renders button, but for safety:
-                                                                    updateSegment(seg.id, 'hasScript', false);
-                                                                }
-                                                            }}
-                                                            onClick={e => e.stopPropagation()}
-                                                            style={{ cursor: 'pointer' }}
-                                                        />
+                                                                        setSelectedSegmentId(seg.id);
+                                                                        setShowScriptView(true);
+                                                                    } else {
+                                                                        // Should not happen as unchecked state renders button, but for safety:
+                                                                        updateSegment(seg.id, 'hasScript', false);
+                                                                    }
+                                                                }}
+                                                                onClick={e => e.stopPropagation()}
+                                                                style={{ cursor: 'pointer' }}
+                                                            />
+                                                        ) : null
                                                     )}
                                                 </td>
                                                 <td className="no-print" style={{ padding: '0.5rem', textAlign: 'center' }}>
@@ -7525,19 +7271,22 @@
                                                                 updateSegment(seg.id, 'scoutCard', { name: file.name });
                                                             }
                                                         }}
+                                                        disabled={isLocked}
                                                     />
                                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                                                        <button
-                                                            className="btn btn-secondary"
-                                                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                document.getElementById(`scout-card-${seg.id}`).click();
-                                                            }}
-                                                            title="Upload PDF Card"
-                                                        >
-                                                            {seg.scoutCard ? '📎 Replace' : '📎 Upload'}
-                                                        </button>
+                                                        {!isLocked && (
+                                                            <button
+                                                                className="btn btn-secondary"
+                                                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    document.getElementById(`scout-card-${seg.id}`).click();
+                                                                }}
+                                                                title="Upload PDF Card"
+                                                            >
+                                                                {seg.scoutCard ? '📎 Replace' : '📎 Upload'}
+                                                            </button>
+                                                        )}
                                                         {seg.scoutCard && (
                                                             <div style={{ fontSize: '0.7rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                                 {scoutCardUrls[seg.id] ? (
@@ -7560,13 +7309,15 @@
                                                     </div>
                                                 </td>
                                                 <td className="no-print" style={{ padding: '0.5rem' }}>
-                                                    <button
-                                                        className="btn"
-                                                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#ef4444' }}
-                                                        onClick={(e) => { e.stopPropagation(); removeSegment(seg.id); }}
-                                                    >
-                                                        ×
-                                                    </button>
+                                                    {!isLocked && (
+                                                        <button
+                                                            className="btn"
+                                                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#ef4444' }}
+                                                            onClick={(e) => { e.stopPropagation(); removeSegment(seg.id); }}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -7590,9 +7341,11 @@
                                 </tbody>
                             </table>
 
-                            <div style={{ marginTop: '1rem' }}>
-                                <button className="btn btn-primary" onClick={addSegment}>+ Add Segment</button>
-                            </div>
+                            {!isLocked && (
+                                <div style={{ marginTop: '1rem' }}>
+                                    <button className="btn btn-primary" onClick={addSegment}>+ Add Segment</button>
+                                </div>
+                            )}
 
                             {/* Post Practice Notes Section */}
                             <div style={{ marginTop: '2rem', borderTop: '2px solid var(--border)', paddingTop: '1rem' }}>
@@ -7606,6 +7359,7 @@
                                     value={plan.postPracticeNotes || ''}
                                     onChange={e => updateCurrentPlan({ ...plan, postPracticeNotes: e.target.value })}
                                     placeholder="Post-practice thoughts, injuries, adjustments for tomorrow..."
+                                    disabled={isLocked}
                                 />
                             </div>
                         </div>
@@ -8242,7 +7996,7 @@
         };
 
 
-        const PregameTimeline = ({ plan = {}, onUpdatePlan, teamLogo, staff, user }) => {
+        const PregameTimeline = ({ plan = {}, onUpdatePlan, teamLogo, staff, user, isLocked }) => {
             const [kickoffTime, setKickoffTime] = useState(plan?.kickoffTime || '19:00');
             const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
             const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
@@ -8364,6 +8118,7 @@
                                     style={{ width: 'auto', display: 'inline-block' }}
                                     value={kickoffTime}
                                     onChange={e => updateKickoff(e.target.value)}
+                                    disabled={isLocked}
                                 />
                             </div>
                             <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
@@ -8412,6 +8167,7 @@
                                                     className="form-input"
                                                     value={segment.startTime}
                                                     onChange={e => updateSegment(segment.id, 'startTime', e.target.value)}
+                                                    disabled={isLocked}
                                                 />
                                             </td>
                                             <td style={{ padding: '0.5rem' }}>
@@ -8421,6 +8177,7 @@
                                                     style={{ width: '60px', padding: '0.25rem' }}
                                                     value={segment.duration || 15}
                                                     onChange={e => updateSegment(segment.id, 'duration', parseInt(e.target.value))}
+                                                    disabled={isLocked}
                                                 />
                                             </td>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
@@ -8432,6 +8189,7 @@
                                                     className="form-input"
                                                     value={segment.activity}
                                                     onChange={e => updateSegment(segment.id, 'activity', e.target.value)}
+                                                    disabled={isLocked}
                                                 />
                                             </td>
                                             <td style={{ padding: '0.5rem' }}>
@@ -8440,6 +8198,7 @@
                                                     className="form-input"
                                                     value={segment.location}
                                                     onChange={e => updateSegment(segment.id, 'location', e.target.value)}
+                                                    disabled={isLocked}
                                                 />
                                             </td>
                                             <td style={{ padding: '0.5rem' }}>
@@ -8453,56 +8212,62 @@
                                                     })()}
                                                     onChange={e => updateSegmentNotes(segment.id, selectedNotesCoach, e.target.value)}
                                                     placeholder={selectedNotesCoach === 'ALL_COACHES' ? 'Notes for all coaches...' : `Notes for ${staff?.find(s => s.id === selectedNotesCoach)?.name || 'this coach'}...`}
+                                                    disabled={isLocked}
                                                 />
                                             </td>
                                             <td style={{ padding: '0.5rem', textAlign: 'right' }}>
-                                                <button className="btn" style={{ color: '#ef4444' }} onClick={() => deleteSegment(segment.id)}>
-                                                    <Icon name="PlusCircle" style={{ transform: 'rotate(45deg)' }} />
-                                                </button>
+                                                {!isLocked && (
+                                                    <button className="btn" style={{ color: '#ef4444' }} onClick={() => deleteSegment(segment.id)}>
+                                                        <Icon name="PlusCircle" style={{ transform: 'rotate(45deg)' }} />
+                                                    </button>
+                                                )}
 
-                                                <button
-                                                    className="btn btn-secondary no-print"
-                                                    style={{ marginLeft: '4px', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                                                    title="Insert new item below"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
+                                                {!isLocked && (
+                                                    <button
+                                                        className="btn btn-secondary no-print"
+                                                        style={{ marginLeft: '4px', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                                                        title="Insert new item below"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
 
-                                                        let nextTime = '';
-                                                        if (segment.startTime) {
-                                                            const [hours, minutes] = segment.startTime.split(':').map(Number);
-                                                            const date = new Date();
-                                                            date.setHours(hours);
-                                                            date.setMinutes(minutes + (segment.duration || 15));
-                                                            nextTime = date.toTimeString().slice(0, 5);
-                                                        }
+                                                            let nextTime = '';
+                                                            if (segment.startTime) {
+                                                                const [hours, minutes] = segment.startTime.split(':').map(Number);
+                                                                const date = new Date();
+                                                                date.setHours(hours);
+                                                                date.setMinutes(minutes + (segment.duration || 15));
+                                                                nextTime = date.toTimeString().slice(0, 5);
+                                                            }
 
-                                                        const newSegment = {
-                                                            id: Date.now().toString(),
-                                                            type: 'Pregame',
-                                                            duration: 15,
-                                                            startTime: nextTime,
-                                                            activity: '',
-                                                            location: '',
-                                                            staffId: user?.id,
-                                                            notes: user?.role === 'HC' ? { 'ALL_COACHES': '' } : {}
-                                                        };
+                                                            const newSegment = {
+                                                                id: Date.now().toString(),
+                                                                type: 'Pregame',
+                                                                duration: 15,
+                                                                startTime: nextTime,
+                                                                activity: '',
+                                                                location: '',
+                                                                staffId: user?.id,
+                                                                notes: user?.role === 'HC' ? { 'ALL_COACHES': '' } : {}
+                                                            };
 
-                                                        const newSegments = [...(plan.segments || []), newSegment];
-                                                        onUpdatePlan({ ...plan, segments: newSegments });
-                                                    }}
-                                                >
-                                                    + Below
-                                                </button>
+                                                            const newSegments = [...(plan.segments || []), newSegment];
+                                                            onUpdatePlan({ ...plan, segments: newSegments });
+                                                        }}
+                                                    >
+                                                        + Below
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
                             </tbody>
                         </table>
 
-                        {/* Add Segment Button - placed below table for better UX */}
-                        <div style={{ marginTop: '1rem' }}>
-                            <button className="btn btn-primary" onClick={addSegment}>+ Add Segment</button>
-                        </div>
+                        {!isLocked && (
+                            <div style={{ marginTop: '1rem' }}>
+                                <button className="btn btn-primary" onClick={addSegment}>+ Add Segment</button>
+                            </div>
+                        )}
 
                         {/* Hidden Print Container */}
                         <div className="pregame-print-container" style={{ display: 'none' }}>
@@ -28684,7 +28449,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts }) => {
+        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked }) => {
 
             const [viewMode, setViewMode] = useState('call-sheet'); // 'call-sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
@@ -29162,8 +28927,7 @@
                 setEditingFormationId(null);
             };
 
-            // Layout Lock & Drag State
-            const [isLocked, setIsLocked] = useLocalStorage('gamePlanLocked', true);
+            // Layout Drag State
             const [confirmResetLayout, setConfirmResetLayout] = useState(false);
             const [draggedCell, setDraggedCell] = useState(null); // { sectionIdx, rowIdx }
             const [draggedSection, setDraggedSection] = useState(null); // { sectionIdx }
@@ -29704,8 +29468,8 @@
                         </div>
 
                         <div
-                            style={{ minHeight: '60px', cursor: 'pointer', background: '#f8fafc', borderRadius: '4px', padding: '6px', border: '1px dashed #e2e8f0' }}
-                            onClick={() => !isEditing && openPlaySelector(box.setId)}
+                            style={{ minHeight: '60px', cursor: isLocked ? 'default' : 'pointer', background: '#f8fafc', borderRadius: '4px', padding: '6px', border: '1px dashed #e2e8f0' }}
+                            onClick={() => !isLocked && !isEditing && openPlaySelector(box.setId)}
                             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
                             onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
                         >
@@ -29852,42 +29616,30 @@
                                     )}
                                 </>
                             )}
-                            <button
-                                className={`btn ${isLocked ? 'btn-secondary' : 'btn-primary'}`}
-                                onClick={() => {
-                                    const newLayouts = { ...gamePlanLayouts };
-                                    const sheet = { ...newLayouts.CALL_SHEET };
-                                    sheet.sections.push({
-                                        id: `section_${Date.now()}`,
-                                        title: 'New Section',
-                                        color: '#1e293b',
-                                        boxes: []
-                                    });
-                                    newLayouts.CALL_SHEET = sheet;
-                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                }}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    backgroundColor: isLocked ? '#f1f5f9' : 'var(--accent)',
-                                    color: isLocked ? '#334155' : 'white',
-                                    border: isLocked ? '1px solid #cbd5e1' : 'none'
-                                }}
-                            >
-                                + Add Section
-                            </button>
-                            <button
-                                className={`btn ${isLocked ? 'btn-secondary' : 'btn-primary'}`}
-                                onClick={() => setIsLocked(!isLocked)}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    backgroundColor: isLocked ? '#f1f5f9' : 'var(--accent)',
-                                    color: isLocked ? '#334155' : 'white',
-                                    border: isLocked ? '1px solid #cbd5e1' : 'none'
-                                }}
-                            >
-                                <Icon name={isLocked ? "Lock" : "Unlock"} size={14} />
-                                {isLocked ? "Unlock Layout" : "Lock Layout"}
-                            </button>
+                            {!isLocked && (
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        const newLayouts = { ...gamePlanLayouts };
+                                        const sheet = { ...newLayouts.CALL_SHEET };
+                                        sheet.sections.push({
+                                            id: `section_${Date.now()}`,
+                                            title: 'New Section',
+                                            color: '#1e293b',
+                                            boxes: []
+                                        });
+                                        newLayouts.CALL_SHEET = sheet;
+                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                    }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                        backgroundColor: 'var(--accent)',
+                                        color: 'white'
+                                    }}
+                                >
+                                    + Add Section
+                                </button>
+                            )}
                         </div>
 
 
@@ -33143,7 +32895,7 @@
             );
         };
 
-        const GameWeekOverview = ({ week, onUpdateWeek, teamLogo }) => {
+        const GameWeekOverview = ({ week, onUpdateWeek, teamLogo, isLocked }) => {
             const overview = week.overview || {
                 travel: { location: '', departure: '', notes: '' },
                 uniforms: { jersey: 'Red', pants: 'Red', helmet: 'Red' },
@@ -33195,6 +32947,7 @@
                                     value={overview.message}
                                     onChange={(e) => handleChange(null, 'message', e.target.value)}
                                     style={{ fontSize: '1.1rem', fontStyle: 'italic' }}
+                                    disabled={isLocked}
                                 />
                             </div>
 
@@ -33209,6 +32962,7 @@
                                             value={overview.travel.location}
                                             onChange={(e) => handleChange('travel', 'location', e.target.value)}
                                             placeholder="Stadium / Field"
+                                            disabled={isLocked}
                                         />
                                     </div>
                                     <div>
@@ -33218,6 +32972,7 @@
                                             value={overview.travel.departure}
                                             onChange={(e) => handleChange('travel', 'departure', e.target.value)}
                                             placeholder="Time"
+                                            disabled={isLocked}
                                         />
                                     </div>
                                 </div>
@@ -33229,6 +32984,7 @@
                                         value={overview.travel.notes}
                                         onChange={(e) => handleChange('travel', 'notes', e.target.value)}
                                         placeholder="Bus details, stops, etc."
+                                        disabled={isLocked}
                                     />
                                 </div>
                             </div>
@@ -33244,6 +33000,7 @@
                                             value={overview.meal.host}
                                             onChange={(e) => handleChange('meal', 'host', e.target.value)}
                                             placeholder="Family or Restaurant"
+                                            disabled={isLocked}
                                         />
                                     </div>
                                     <div>
@@ -33253,6 +33010,7 @@
                                             value={overview.meal.time}
                                             onChange={(e) => handleChange('meal', 'time', e.target.value)}
                                             placeholder="Meal Time"
+                                            disabled={isLocked}
                                         />
                                     </div>
                                 </div>
@@ -33273,6 +33031,7 @@
                                             className="form-select"
                                             value={overview.uniforms.helmet}
                                             onChange={(e) => handleChange('uniforms', 'helmet', e.target.value)}
+                                            disabled={isLocked}
                                         >
                                             {HELMET_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
@@ -33284,6 +33043,7 @@
                                             className="form-select"
                                             value={overview.uniforms.jersey}
                                             onChange={(e) => handleChange('uniforms', 'jersey', e.target.value)}
+                                            disabled={isLocked}
                                         >
                                             {JERSEY_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
@@ -33295,6 +33055,7 @@
                                             className="form-select"
                                             value={overview.uniforms.pants}
                                             onChange={(e) => handleChange('uniforms', 'pants', e.target.value)}
+                                            disabled={isLocked}
                                         >
                                             {PANT_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
@@ -33313,6 +33074,7 @@
                                     value={overview.improvement}
                                     onChange={(e) => handleChange(null, 'improvement', e.target.value)}
                                     style={{ height: '100%' }}
+                                    disabled={isLocked}
                                 />
                             </div>
 
@@ -33325,6 +33087,7 @@
                                     placeholder="Standings, Playoff contentions, etc."
                                     value={overview.context}
                                     onChange={(e) => handleChange(null, 'context', e.target.value)}
+                                    disabled={isLocked}
                                 />
                             </div>
 
@@ -34367,6 +34130,7 @@
                         name: phase,
                         opponent: '',
                         scoutingReport: '',
+                        isLocked: false,
                         practicePlans: createDefaultPracticePlans(),
                         gameLog: []
                     };
@@ -34477,23 +34241,28 @@
             const situation = currentWeek.situation || { down: 1, distance: 10, yardLine: 25, driveNumber: 1, hash: 'M' };
 
             const setSituation = (newSituation) => {
+                if (currentWeek.isLocked) return;
                 setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, situation: newSituation } : w));
             };
 
             // Derived state setters for compatibility with existing components
             const setPracticePlans = (newPlans) => {
+                if (currentWeek.isLocked) return;
                 setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, practicePlans: newPlans } : w));
             };
 
             const setPregamePlan = (newPlan) => {
+                if (currentWeek.isLocked) return;
                 setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, pregamePlan: newPlan } : w));
             };
 
             const setGameLog = (newLog) => {
+                if (currentWeek.isLocked) return;
                 setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, gameLog: newLog } : w));
             };
 
             const setGamePlan = (newPlan) => {
+                if (currentWeek.isLocked) return;
                 setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, offensiveGamePlan: newPlan } : w));
             };
 
@@ -34508,6 +34277,7 @@
                     date: '',
                     opponent: '',
                     scoutingReport: '',
+                    isLocked: false,
                     // Copy practice plans structure but maybe clear specific details? For now, full copy is safest/easiest base.
                     // Actually, let's keep the structure but maybe reset dates? 
                     // User asked for "saves practice plans... but allows you to edit". Copying is best.
@@ -34521,12 +34291,74 @@
                 setCurrentWeekId(newWeekId);
             };
 
+            const toggleWeekLock = () => {
+                setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, isLocked: !w.isLocked } : w));
+            };
+
             const handleUpdateWeek = (id, field, value) => {
                 setWeeks(weeks.map(w => w.id === id ? { ...w, [field]: value } : w));
             };
 
             const handleUpdateGameLog = (newLog) => {
+                if (currentWeek.isLocked) return;
                 setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, gameLog: newLog } : w));
+            };
+
+            const [globalWeekTemplates, setGlobalWeekTemplates] = useState([]);
+
+            // Fetch Week Templates from Firestore
+            useEffect(() => {
+                if (window.db && authUser) {
+                    const fetchTemplates = async () => {
+                        try {
+                            const snapshot = await window.db.collection('global_week_templates').get();
+                            const templates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            setGlobalWeekTemplates(templates);
+                        } catch (err) {
+                            console.error("Error fetching week templates:", err);
+                        }
+                    };
+                    fetchTemplates();
+                }
+            }, [authUser]);
+
+            const handleSaveWeekToTemplates = async (name) => {
+                if (!name.trim()) return;
+                const templateData = {
+                    name: name.trim(),
+                    practicePlans: JSON.parse(JSON.stringify(currentWeek.practicePlans)),
+                    offensiveGamePlan: JSON.parse(JSON.stringify(currentWeek.offensiveGamePlan)),
+                    pregamePlan: currentWeek.pregamePlan ? JSON.parse(JSON.stringify(currentWeek.pregamePlan)) : null,
+                    createdAt: new Date().toISOString(),
+                    createdBy: authUser.uid
+                };
+
+                try {
+                    const docRef = await window.db.collection('global_week_templates').add(templateData);
+                    setGlobalWeekTemplates([...globalWeekTemplates, { id: docRef.id, ...templateData }]);
+                    alert("Week saved as template!");
+                } catch (err) {
+                    console.error("Error saving week template:", err);
+                    alert("Failed to save template.");
+                }
+            };
+
+            const handleLoadWeekFromTemplate = (templateId) => {
+                if (currentWeek.isLocked) {
+                    alert("Current week is locked. Unlock it to apply a template.");
+                    return;
+                }
+                const template = globalWeekTemplates.find(t => t.id === templateId);
+                if (!template) return;
+
+                if (confirm(`Apply template "${template.name}" to the current week? This will overwrite your current plans.`)) {
+                    setWeeks(weeks.map(w => w.id === currentWeekId ? {
+                        ...w,
+                        practicePlans: JSON.parse(JSON.stringify(template.practicePlans)),
+                        offensiveGamePlan: JSON.parse(JSON.stringify(template.offensiveGamePlan)),
+                        pregamePlan: template.pregamePlan ? JSON.parse(JSON.stringify(template.pregamePlan)) : w.pregamePlan
+                    } : w));
+                }
             };
 
             // Persistence for Weeks
@@ -35556,26 +35388,73 @@
                                 <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block' }}>
                                     Active Week
                                 </label>
-                                <select
-                                    className="form-select"
-                                    value={currentWeekId}
-                                    onChange={(e) => {
-                                        if (e.target.value === 'NEW_WEEK') {
-                                            handleAddWeek();
-                                        } else {
-                                            setCurrentWeekId(e.target.value);
-                                            setView('landing');
-                                        }
-                                    }}
-                                    style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.2)', marginBottom: '0.5rem' }}
-                                >
-                                    {weeks.map(w => (
-                                        <option key={w.id} value={w.id}>
-                                            {w.name} {w.opponent ? `vs ${w.opponent}` : ''}
-                                        </option>
-                                    ))}
-                                    <option value="NEW_WEEK">+ Create New Week</option>
-                                </select>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <select
+                                        className="form-select"
+                                        value={currentWeekId}
+                                        onChange={(e) => {
+                                            if (e.target.value === 'NEW_WEEK') {
+                                                handleAddWeek();
+                                            } else {
+                                                setCurrentWeekId(e.target.value);
+                                                setView('landing');
+                                            }
+                                        }}
+                                        style={{ flex: 1, padding: '0.5rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.2)' }}
+                                    >
+                                        {weeks.map(w => (
+                                            <option key={w.id} value={w.id}>
+                                                {w.isLocked ? '🔒 ' : ''}{w.name} {w.opponent ? `vs ${w.opponent}` : ''}
+                                            </option>
+                                        ))}
+                                        <option value="NEW_WEEK">+ Create New Week</option>
+                                    </select>
+                                    <button
+                                        className="btn btn-icon"
+                                        onClick={(e) => { e.stopPropagation(); toggleWeekLock(); }}
+                                        title={currentWeek.isLocked ? "Unlock Week" : "Lock Week"}
+                                        style={{
+                                            padding: '0.5rem',
+                                            background: currentWeek.isLocked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                                            border: `1px solid ${currentWeek.isLocked ? '#ef4444' : 'rgba(255,255,255,0.2)'}`,
+                                            color: currentWeek.isLocked ? '#f87171' : 'var(--text-secondary)'
+                                        }}
+                                    >
+                                        <Icon name={currentWeek.isLocked ? "Lock" : "Unlock"} size={16} />
+                                    </button>
+                                </div>
+
+                                {/* Week Template Actions */}
+                                <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {globalWeekTemplates.length > 0 && (
+                                        <select
+                                            className="form-select"
+                                            style={{ width: '100%', padding: '0.25rem 0.5rem', fontSize: '0.8rem', backgroundColor: 'rgba(0,0,0,0.1)', border: '1px dashed rgba(255,255,255,0.2)' }}
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleLoadWeekFromTemplate(e.target.value);
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            value=""
+                                        >
+                                            <option value="" disabled>Apply Week Template...</option>
+                                            {globalWeekTemplates.map(t => (
+                                                <option key={t.id} value={t.id}>📋 {t.name}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ fontSize: '0.75rem', width: '100%', padding: '0.25rem' }}
+                                        onClick={() => {
+                                            const name = prompt("Save current week as template?", currentWeek.name + " Master");
+                                            if (name) handleSaveWeekToTemplates(name);
+                                        }}
+                                    >
+                                        Save Week as Template
+                                    </button>
+                                </div>
 
                                 {/* RBAC View As Selector - NOW STAFF CENTRIC - ADMIN ONLY */}
                                 {isSiteAdmin && (
@@ -36404,12 +36283,12 @@
                         {view === 'formations' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} />}
 
                         {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} />}
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} />}
 
-                        {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} />}
-                        {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} />}
-                        {view === 'game-week-overview' && <GameWeekOverview week={currentWeek} onUpdateWeek={handleUpdateWeek} teamLogo={teamLogo} />}
-                        {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} user={authUser} />}
+                        {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} />}
+                        {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} />}
+                        {view === 'game-week-overview' && <GameWeekOverview week={currentWeek} onUpdateWeek={handleUpdateWeek} teamLogo={teamLogo} isLocked={currentWeek.isLocked} />}
+                        {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} user={authUser} isLocked={currentWeek.isLocked} />}
                         {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} depthChart={depthChart} />}
                         {view === 'player-profiles' && <PlayerProfileGallery
                             roster={roster}
