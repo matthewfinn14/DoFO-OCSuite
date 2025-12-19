@@ -3741,16 +3741,20 @@
                             {/* --- GROUP 3: SYSTEM ACTIONS (RIGHT) --- */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                 <div className="btn-group" style={{ display: 'flex', gap: '0.2rem' }}>
-                                    <button className="btn btn-secondary" onClick={undo} disabled={historyIndex === 0} title="Undo" style={{ padding: '0.3rem', color: '#1e293b' }}><Icon name="RotateCcw" size={14} /></button>
-                                    <button className="btn btn-secondary" onClick={redo} disabled={historyIndex === history.length - 1} title="Redo" style={{ padding: '0.3rem', color: '#1e293b' }}><Icon name="RotateCw" size={14} /></button>
+                                    <button className="btn btn-secondary" onClick={undo} disabled={historyIndex === 0} title="Undo" style={{ padding: '0.3rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#1e293b', backgroundColor: 'white' }}>
+                                        <Icon name="RotateCcw" size={14} /> <span style={{ fontSize: '0.7rem' }}>Undo</span>
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={redo} disabled={historyIndex === history.length - 1} title="Redo" style={{ padding: '0.3rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#1e293b', backgroundColor: 'white' }}>
+                                        <Icon name="RotateCw" size={14} /> <span style={{ fontSize: '0.7rem' }}>Redo</span>
+                                    </button>
                                 </div>
-                                <button className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`} onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }} title="Delete" style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444', backgroundColor: selectedTool === 'delete' ? '#ef4444' : 'transparent', border: '1px solid #ef4444' }}>
-                                    <Icon name="Trash" size={14} />
+                                <button className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`} onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }} title="Delete" style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444', backgroundColor: selectedTool === 'delete' ? '#ef4444' : 'white', border: '1px solid #ef4444' }}>
+                                    <Icon name="Trash" size={14} /> <span style={{ fontSize: '0.8rem' }}>Delete</span>
                                 </button>
                                 <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 0.15rem' }}></div>
                                 <button className="btn btn-secondary" onClick={onCancel} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', color: '#1e293b', background: 'white', border: '1px solid #ccc' }}>Cancel</button>
-                                <button className="btn btn-primary" onClick={() => onSave({ elements })} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', color: '#1e293b', fontWeight: 'bold' }}>
-                                    <Icon name="Save" size={14} style={{ marginRight: '4px', color: '#1e293b' }} /> Save
+                                <button className="btn btn-primary" onClick={() => onSave({ elements })} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', color: 'white', backgroundColor: '#ef4444', fontWeight: 'bold', border: 'none' }}>
+                                    <Icon name="Save" size={14} style={{ marginRight: '4px' }} /> Save
                                 </button>
                             </div>
 
