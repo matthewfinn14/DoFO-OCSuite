@@ -27847,61 +27847,50 @@
                 id: 'CALL_SHEET',
                 name: 'Call Sheet',
                 sections: [
-                    // Top Row: Scripts, Opening, 2nd & XL
                     {
+                        id: 'section_scripts',
                         title: 'SCRIPTS',
-                        type: 'grid',
-                        cols: 4,
-                        rows: [
-                            { header: 'OPENING SCRIPT', setId: 'opening_script', colSpan: 1, color: '#10b981' },
-                            { header: '2ND HALF OPENER', setId: 'second_half_openers', colSpan: 1, color: '#f97316' },
-                            { header: 'P&10', setId: 'p_and_10', colSpan: 1, color: '#ef4444' },
-                            { header: '2ND & XL (LH)', setId: '2nd_xl_lh', colSpan: 1, color: '#3b82f6' },
+                        color: '#1e293b',
+                        boxes: [
+                            { header: 'OPENING SCRIPT', setId: 'opening_script', type: 'script', colSpan: 1, color: '#10b981' },
+                            { header: '2ND HALF OPENER', setId: 'second_half_openers', type: 'script', colSpan: 1, color: '#f97316' },
+                            { header: 'P&10', setId: 'p_and_10', type: 'script', colSpan: 1, color: '#ef4444' },
+                            { header: '2ND & XL (LH)', setId: '2nd_xl_lh', type: 'script', colSpan: 1, color: '#3b82f6' },
                         ]
                     },
-                    // Situational Rows
                     {
+                        id: 'section_down_distance',
                         title: 'DOWN AND DISTANCE',
-                        type: 'grid',
-                        cols: 4,
-                        rows: [
-                            // Formations / Motion / Tag / Strikeout
-                            { header: '1 WORD', setId: 'one_word', colSpan: 1, color: '#f59e0b' },
-                            { header: 'FORM ADJ', setId: 'form_adj', colSpan: 1, color: '#f59e0b' },
-                            { header: 'MOTION', setId: 'motion', colSpan: 1, color: '#f59e0b' },
-                            { header: 'TAG', setId: 'tag', colSpan: 1, color: '#f59e0b' },
-
-                            // 3rd Downs
-                            { header: '3RD & SHORT', setId: '3rd_short', colSpan: 1, color: '#10b981' },
-                            { header: '3RD & MED', setId: '3rd_med', colSpan: 1, color: '#10b981' },
-                            { header: '3RD & LONG', setId: '3rd_long', colSpan: 1, color: '#10b981' },
-                            { header: '3RD & XL', setId: '3rd_xl', colSpan: 1, color: '#10b981' },
-
-                            // Field Zones
-                            { header: 'BACKED UP', setId: 'backed_up', colSpan: 1, color: '#dc2626' },
-                            { header: 'COMING OUT', setId: 'coming_out', colSpan: 1, color: '#ea580c' },
-                            { header: 'OPEN FIELD', setId: 'open_field', colSpan: 1, color: '#16a34a' },
-                            { header: 'FRINGE (+45-25)', setId: 'fringe', colSpan: 1, color: '#ca8a04' },
-                            { header: 'HIGH RED (25-15)', setId: 'high_red', colSpan: 1, color: '#ef4444' },
-                            { header: 'LOW RED (15-6)', setId: 'low_red', colSpan: 1, color: '#ef4444' },
-                            { header: 'GOAL LINE (5-GL)', setId: 'goal_line', colSpan: 1, color: '#ef4444' },
-                            { header: '2-POINT', setId: 'two_point', colSpan: 1, color: '#8b5cf6' },
-
-                            // 2-Minute Drill Categories
-                            { header: '2-MIN: OOB/YAC', setId: 'two_minute_oob_yac', colSpan: 1, color: '#8b5cf6' },
-                            { header: '2-MIN: 1st DOWN', setId: 'two_minute_first_down', colSpan: 1, color: '#8b5cf6' },
-                            { header: '2-MIN: TD', setId: 'two_minute_touchdown', colSpan: 1, color: '#8b5cf6' },
-                            { header: '2-MIN: FINAL PLAY', setId: 'two_minute_final_play', colSpan: 1, color: '#8b5cf6' },
-
-                            // Other Time Situations
-                            { header: '4-MINUTE', setId: 'four_minute', colSpan: 1, color: '#8b5cf6' },
+                        color: '#1e293b',
+                        boxes: [
+                            { header: '1 WORD', setId: 'one_word', type: 'grid', colSpan: 1, color: '#f59e0b' },
+                            { header: 'FORM ADJ', setId: 'form_adj', type: 'grid', colSpan: 1, color: '#f59e0b' },
+                            { header: 'MOTION', setId: 'motion', type: 'grid', colSpan: 1, color: '#f59e0b' },
+                            { header: 'TAG', setId: 'tag', type: 'grid', colSpan: 1, color: '#f59e0b' },
+                            { header: '3RD & SHORT', setId: '3rd_short', type: 'grid', colSpan: 1, color: '#10b981' },
+                            { header: '3RD & MED', setId: '3rd_med', type: 'grid', colSpan: 1, color: '#10b981' },
+                            { header: '3RD & LONG', setId: '3rd_long', type: 'grid', colSpan: 1, color: '#10b981' },
+                            { header: '3RD & XL', setId: '3rd_xl', type: 'grid', colSpan: 1, color: '#10b981' },
+                            { header: 'BACKED UP', setId: 'backed_up', type: 'grid', colSpan: 1, color: '#dc2626' },
+                            { header: 'COMING OUT', setId: 'coming_out', type: 'grid', colSpan: 1, color: '#ea580c' },
+                            { header: 'OPEN FIELD', setId: 'open_field', type: 'grid', colSpan: 1, color: '#16a34a' },
+                            { header: 'FRINGE (+45-25)', setId: 'fringe', type: 'grid', colSpan: 1, color: '#ca8a04' },
+                            { header: 'HIGH RED (25-15)', setId: 'high_red', type: 'grid', colSpan: 1, color: '#ef4444' },
+                            { header: 'LOW RED (15-6)', setId: 'low_red', type: 'grid', colSpan: 1, color: '#ef4444' },
+                            { header: 'GOAL LINE (5-GL)', setId: 'goal_line', type: 'grid', colSpan: 1, color: '#ef4444' },
+                            { header: '2-POINT', setId: 'two_point', type: 'grid', colSpan: 1, color: '#8b5cf6' },
+                            { header: '2-MIN: OOB/YAC', setId: 'two_minute_oob_yac', type: 'grid', colSpan: 1, color: '#8b5cf6' },
+                            { header: '2-MIN: 1st DOWN', setId: 'two_minute_first_down', type: 'grid', colSpan: 1, color: '#8b5cf6' },
+                            { header: '2-MIN: TD', setId: 'two_minute_touchdown', type: 'grid', colSpan: 1, color: '#8b5cf6' },
+                            { header: '2-MIN: FINAL PLAY', setId: 'two_minute_final_play', type: 'grid', colSpan: 1, color: '#8b5cf6' },
+                            { header: '4-MINUTE', setId: 'four_minute', type: 'grid', colSpan: 1, color: '#8b5cf6' },
                         ]
                     },
                     {
-                        type: 'grid',
-                        cols: 5,
+                        id: 'section_mini_scripts',
                         title: 'MINI SCRIPTS',
-                        rows: []
+                        color: '#1e293b',
+                        boxes: []
                     }
                 ]
             },
@@ -29020,14 +29009,13 @@
 
             // --- RENDERERS ---
 
-            const renderPlayListSimple = (setId) => {
+            const renderPlayListSimple = (setId, isEditing) => {
                 const playsInSet = getPlaysForSet(setId);
 
                 const handleToggleTempo = (playIndex, currentTempo) => {
                     const nextIdx = (PLAY_PROTOCOLS.findIndex(p => p.id === (currentTempo || 'REGULAR')) + 1) % PLAY_PROTOCOLS.length;
                     const nextTempo = PLAY_PROTOCOLS[nextIdx].id;
 
-                    // Update logic using index
                     const set = getSet(setId);
                     if (!set) return;
 
@@ -29035,7 +29023,6 @@
                     const item = newPlayIds[playIndex];
 
                     if (typeof item === 'string') {
-                        // Convert to object
                         newPlayIds[playIndex] = { id: item, tempo: nextTempo };
                     } else if (typeof item === 'object') {
                         newPlayIds[playIndex] = { ...item, tempo: nextTempo };
@@ -29050,7 +29037,6 @@
                     }
                 };
 
-                // Helper for Tempo Badge
                 const renderTempoBadge = (tempo) => {
                     const protocol = PLAY_PROTOCOLS.find(p => p.id === (tempo || 'REGULAR'));
                     if (!protocol || protocol.id === 'REGULAR') return <span style={{ width: '20px', display: 'inline-block', textAlign: 'center', color: '#cbd5e1', cursor: 'pointer', fontSize: '0.65rem' }}>-</span>;
@@ -29067,95 +29053,34 @@
 
                 return (
                     <div style={{ padding: '0.25rem' }}>
-                        {playsInSet.map(p => {
-                            if (p.type === 'note') {
-                                return (
-                                    <div key={`${p.id}_${p._index}`} style={{
-                                        fontSize: '0.75rem',
-                                        marginTop: '6px',
-                                        marginBottom: '6px',
-                                        padding: '4px',
-                                        background: '#fef3c7',
-                                        color: '#92400e',
-                                        textAlign: 'center',
-                                        fontWeight: 'bold',
-                                        borderRadius: '4px',
-                                        border: '1px dashed #d97706',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        position: 'relative',
-                                        group: 'note-row'
+                        {playsInSet.map((p, pIdx) => (
+                            <div key={`${p.id}_${pIdx}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 0', position: 'relative' }}>
+                                {p.type === 'note' ? (
+                                    <div style={{
+                                        fontSize: '0.75rem', marginTop: '4px', marginBottom: '4px', padding: '2px 4px',
+                                        background: '#fef3c7', color: '#92400e', textAlign: 'center', fontWeight: 'bold',
+                                        borderRadius: '4px', border: '1px dashed #d97706', flex: 1
                                     }}>
                                         {p.name}
-                                        {/* Delete Note Button */}
-                                        <div
-                                            style={{
-                                                position: 'absolute',
-                                                right: '4px',
-                                                cursor: 'pointer',
-                                                opacity: 0.5
-                                            }}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const set = getSet(setId);
-                                                if (set) {
-                                                    const newPlayIds = [...set.playIds];
-                                                    newPlayIds.splice(p._index, 1); // Remove by index
-
-                                                    if (setId.startsWith('ms_')) {
-                                                        const newMiniScripts = gamePlan.miniScripts.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
-                                                        onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
-                                                    } else {
-                                                        const newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
-                                                        onUpdateGamePlan({ ...gamePlan, sets: newSets });
-                                                    }
-                                                }
-                                            }}
-                                        >
-                                            ×
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div onClick={(e) => { e.stopPropagation(); handleToggleTempo(pIdx, p.tempo); }}>
+                                            {renderTempoBadge(p.tempo)}
                                         </div>
-                                    </div>
-                                );
-                            }
-
-                            return (
-                                <div key={`${p.id}_${p._index}`} style={{ fontSize: '0.75rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-
-                                    {/* Tempo Toggle */}
-                                    <div onClick={(e) => { e.stopPropagation(); handleToggleTempo(p._index, p.tempo); }}>
-                                        {renderTempoBadge(p.tempo)}
-                                    </div>
-
-                                    {/* Play Name */}
-                                    <div style={{ flex: 1, fontWeight: '500', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {p.name} {p.wristbandSlot ? `(${p.wristbandSlot})` : ''}
-                                    </div>
-
-                                    {/* Delete Play Button (re-impl for index based removal) */}
-                                    <div
-                                        style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '12px', padding: '0 4px' }}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            const set = getSet(setId);
-                                            if (set) {
-                                                const newPlayIds = [...set.playIds];
-                                                newPlayIds.splice(p._index, 1);
-                                                if (setId.startsWith('ms_')) {
-                                                    const newMiniScripts = gamePlan.miniScripts.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
-                                                    onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
-                                                } else {
-                                                    const newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
-                                                    onUpdateGamePlan({ ...gamePlan, sets: newSets });
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        ×
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                        <span style={{ fontSize: '0.75rem', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
+                                        {isEditing && (
+                                            <div style={{ cursor: 'pointer', opacity: 0.5, marginLeft: '4px' }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRemovePlayFromSet(setId, p.id);
+                                                }}
+                                            >×</div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        ))}
                         {playsInSet.length === 0 && <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>+ Add Play</div>}
                     </div>
                 );
@@ -29372,9 +29297,9 @@
                 const newLayouts = { ...gamePlanLayouts };
                 const sheet = { ...newLayouts.CALL_SHEET };
                 sheet.sections = [...sheet.sections];
-                const rows = [...sheet.sections[sectionIdx].rows];
-                rows[rowIdx] = { ...rows[rowIdx], header: newName };
-                sheet.sections[sectionIdx].rows = rows;
+                const boxes = [...sheet.sections[sectionIdx].boxes];
+                boxes[rowIdx] = { ...boxes[rowIdx], header: newName };
+                sheet.sections[sectionIdx] = { ...sheet.sections[sectionIdx], boxes };
                 newLayouts.CALL_SHEET = sheet;
                 onUpdateLayouts(newLayouts);
                 setEditingHeader(null);
@@ -29385,9 +29310,9 @@
                 const newLayouts = { ...gamePlanLayouts };
                 const sheet = { ...newLayouts.CALL_SHEET };
                 sheet.sections = [...sheet.sections];
-                const rows = [...sheet.sections[sectionIdx].rows];
-                rows[rowIdx] = { ...rows[rowIdx], hidden: !rows[rowIdx].hidden };
-                sheet.sections[sectionIdx].rows = rows;
+                const boxes = [...sheet.sections[sectionIdx].boxes];
+                boxes[rowIdx] = { ...boxes[rowIdx], hidden: !boxes[rowIdx].hidden };
+                sheet.sections[sectionIdx].boxes = boxes;
                 newLayouts.CALL_SHEET = sheet;
                 onUpdateLayouts(newLayouts);
             };
@@ -29479,16 +29404,23 @@
                 const sheet = { ...newLayouts.CALL_SHEET };
                 const section = { ...sheet.sections[sectionIdx] };
 
+                // Ensure boxes array exists
+                if (!section.boxes) section.boxes = [];
+
                 // Create new Box
                 const newBox = {
                     header: 'New Box',
                     color: '#3b82f6',
                     setId: `box_${Date.now()}`,
+                    type: 'grid', // Default type
                     colSpan: 1,
-                    hidden: false
+                    hidden: false,
+                    gridHeadings: ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'],
+                    gridRowLabels: ['Group 1', 'Group 2', 'Group 3', 'Group 4'],
+                    cornerLabel: 'Group/Type'
                 };
 
-                section.rows.push(newBox);
+                section.boxes.push(newBox);
 
                 sheet.sections[sectionIdx] = section;
                 newLayouts.CALL_SHEET = sheet;
@@ -29550,10 +29482,50 @@
                 );
             };
 
-            const renderScriptSection = (section, idx) => {
+            const renderInteriorConfig = (box, sectionIdx, boxIdx) => (
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '8px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Box Type</div>
+                            <select
+                                value={box.type || 'grid'}
+                                onChange={(e) => {
+                                    const newLayouts = { ...gamePlanLayouts };
+                                    newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].type = e.target.value;
+                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                }}
+                                style={{ width: '100%', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem' }}
+                            >
+                                <option value="grid">Grid (4x4)</option>
+                                <option value="script">Script (Rows)</option>
+                            </select>
+                        </div>
+                        <button
+                            className="btn-sm"
+                            onClick={() => {
+                                if (confirm('Delete this box?')) {
+                                    const newLayouts = { ...gamePlanLayouts };
+                                    newLayouts.CALL_SHEET.sections[sectionIdx].boxes.splice(boxIdx, 1);
+                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                    setEditingHeader(null);
+                                }
+                            }}
+                            style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.7rem', padding: '6px', borderRadius: '4px', border: '1px solid #fca5a5' }}
+                        ><Icon name="Trash2" size={14} /></button>
+                    </div>
+                </div>
+            );
+
+            const renderScriptBox = (box, sectionIdx, boxIdx, isEditing) => {
+                const rows = box.rows || [];
+                const tempos = box.tempos || {};
+                const protocolList = box.customTempos || PLAY_PROTOCOLS;
+
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'white', borderRadius: '4px' }}>
-                        {section.rows.map((row, rowIdx) => (
+                        {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
+
+                        {rows.map((row, rowIdx) => (
                             <React.Fragment key={row.id || rowIdx}>
                                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
                                     <PlaySlot
@@ -29561,18 +29533,24 @@
                                         isLocked={isLocked}
                                         onUpdate={(pid) => {
                                             const newLayouts = { ...gamePlanLayouts };
-                                            newLayouts.CALL_SHEET.sections[idx].rows[rowIdx].content = pid;
+                                            newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].content = pid;
                                             if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                         }}
                                     />
                                 </div>
 
-                                {rowIdx < section.rows.length - 1 && (
+                                {rowIdx < rows.length - 1 && (
                                     <div style={{ margin: '4px auto', width: 'fit-content' }}>
                                         <select
                                             disabled={isLocked}
-                                            value={section.tempos?.[rowIdx] || 'REGULAR'}
-                                            onChange={(e) => setTempo(idx, rowIdx, e.target.value)}
+                                            value={tempos[rowIdx] || 'REGULAR'}
+                                            onChange={(e) => {
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                if (!b.tempos) b.tempos = {};
+                                                b.tempos[rowIdx] = e.target.value;
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            }}
                                             style={{
                                                 fontSize: '0.65rem',
                                                 fontWeight: 'bold',
@@ -29581,13 +29559,13 @@
                                                 border: '1px solid #e2e8f0',
                                                 background: '#f1f5f9',
                                                 cursor: !isLocked ? 'pointer' : 'default',
-                                                color: PLAY_PROTOCOLS.find(p => p.id === (section.tempos?.[rowIdx] || 'REGULAR'))?.color || '#64748b',
+                                                color: protocolList.find(p => p.id === (tempos[rowIdx] || 'REGULAR'))?.color || '#64748b',
                                                 appearance: 'none',
                                                 textAlign: 'center',
                                                 minWidth: '100px'
                                             }}
                                         >
-                                            {PLAY_PROTOCOLS.map(proto => (
+                                            {protocolList.map(proto => (
                                                 <option key={proto.id} value={proto.id}>{proto.label}</option>
                                             ))}
                                         </select>
@@ -29599,140 +29577,217 @@
                             <button
                                 className="btn-sm"
                                 style={{ marginTop: '4px', width: '100%', border: '1px dashed #cbd5e1', color: '#64748b', padding: '4px' }}
-                                onClick={() => handleAddRowToSection(idx)}
+                                onClick={() => {
+                                    const newLayouts = { ...gamePlanLayouts };
+                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                    if (!b.rows) b.rows = [];
+                                    b.rows.push({ content: null, id: `slot_${Date.now()}` });
+                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                }}
                             >
                                 + Add Play Slot
                             </button>
                         )}
-                    </div>
-                );
-            };
 
-            const renderStandardSection = (section, idx) => {
-                // Wristband style layout
-                return (
-                    <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden', background: 'white' }}>
-                        {section.rows.map((row, rowIdx) => (
-                            <div key={row.id || rowIdx} style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', minHeight: '32px' }}>
-                                {/* Number Column */}
-                                <div style={{
-                                    width: '32px', background: '#f8fafc', borderRight: '1px solid #e2e8f0',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b'
-                                }}>
-                                    {rowIdx + 1}
+                        {isEditing && (
+                            <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '12px', marginTop: '12px' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Manage Script Tempos</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                                    {(box.customTempos || PLAY_PROTOCOLS).map((proto, pIdx) => (
+                                        <div key={proto.id || pIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                            <input
+                                                type="color"
+                                                value={proto.color}
+                                                onChange={(e) => {
+                                                    const newLayouts = { ...gamePlanLayouts };
+                                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                    if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                    b.customTempos[pIdx] = { ...b.customTempos[pIdx], color: e.target.value };
+                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                }}
+                                                style={{ width: '24px', height: '24px', border: 'none', padding: 0, background: 'none', cursor: 'pointer' }}
+                                            />
+                                            <input
+                                                value={proto.label}
+                                                onChange={(e) => {
+                                                    const newLayouts = { ...gamePlanLayouts };
+                                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                    if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                    b.customTempos[pIdx] = { ...b.customTempos[pIdx], label: e.target.value };
+                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                }}
+                                                style={{ fontSize: '0.8rem', flex: 1, border: 'none', background: 'transparent', fontWeight: '500' }}
+                                            />
+                                            <button
+                                                className="btn-sm"
+                                                onClick={() => {
+                                                    const newLayouts = { ...gamePlanLayouts };
+                                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                    if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                    b.customTempos.splice(pIdx, 1);
+                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                }}
+                                                style={{ border: 'none', background: 'none', color: '#ef4444', padding: '0 4px', cursor: 'pointer' }}
+                                            ><Icon name="Trash2" size={14} /></button>
+                                        </div>
+                                    ))}
                                 </div>
-                                {/* Play Content */}
-                                <div style={{ flex: 1, position: 'relative' }}>
-                                    <PlaySlot
-                                        playId={row.content}
-                                        isLocked={isLocked}
-                                        placeholder=""
-                                        onUpdate={(pid) => {
-                                            const newLayouts = { ...gamePlanLayouts };
-                                            newLayouts.CALL_SHEET.sections[idx].rows[rowIdx].content = pid;
-                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        placeholder="Add tempo label..."
+                                        style={{ flex: 1, fontSize: '0.8rem', padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                const label = e.target.value.trim();
+                                                if (!label) return;
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                b.customTempos.push({ id: `custom_${Date.now()}`, label, color: '#64748b' });
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                e.target.value = '';
+                                            }
                                         }}
                                     />
                                 </div>
                             </div>
-                        ))}
-                        {!isLocked && (
-                            <div
-                                onClick={() => handleAddRowToSection(idx)}
-                                style={{
-                                    padding: '6px', cursor: 'pointer', textAlign: 'center',
-                                    fontSize: '0.8rem', color: '#64748b', background: '#f8fafc'
-                                }}
-                            >
-                                + quick add
-                            </div>
                         )}
                     </div>
                 );
             };
 
-            const renderFieldPositionSection = (section, idx) => {
-                // Strike Em Out style table
-                const colHeaders = section.columnHeaders || ['Fastball', 'Curveball', 'Changeup', 'Strike Out'];
-                const rowLabels = section.rowLabels || ['Group 1', 'Group 2'];
-                const gridData = section.gridData || {};
+            const renderGridBox = (box, sectionIdx, boxIdx, isEditing) => {
+                const headings = box.gridHeadings || ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                const allPlays = getGridPlays(box.setId);
+                const assignedPlays = allPlays.filter(p => p.type !== 'GAP');
 
                 return (
-                    <div style={{ overflowX: 'auto', background: 'white', borderRadius: '4px' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                            <thead>
-                                <tr>
-                                    <th style={{ border: '1px solid #e2e8f0', padding: '4px', background: '#f1f5f9', width: '80px' }}></th>
-                                    {colHeaders.map((header, colIdx) => (
-                                        <th key={colIdx} style={{ border: '1px solid #e2e8f0', padding: '4px', background: '#f1f5f9' }}>
-                                            {!isLocked ? (
-                                                <input
-                                                    value={header}
-                                                    onChange={(e) => {
-                                                        const newLayouts = { ...gamePlanLayouts };
-                                                        newLayouts.CALL_SHEET.sections[idx].columnHeaders[colIdx] = e.target.value;
-                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                    }}
-                                                    style={{ width: '100%', background: 'transparent', border: 'none', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem' }}
-                                                />
-                                            ) : header}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rowLabels.map((label, rIdx) => (
-                                    <tr key={rIdx}>
-                                        <td style={{ border: '1px solid #e2e8f0', padding: '4px', background: '#f8fafc', fontWeight: 'bold' }}>
-                                            {!isLocked ? (
-                                                <input
-                                                    value={label}
-                                                    onChange={(e) => {
-                                                        const newLayouts = { ...gamePlanLayouts };
-                                                        newLayouts.CALL_SHEET.sections[idx].rowLabels[rIdx] = e.target.value;
-                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                    }}
-                                                    style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.8rem' }}
-                                                />
-                                            ) : label}
-                                        </td>
-                                        {colHeaders.map((_, cIdx) => {
-                                            const playId = gridData[`${rIdx}-${cIdx}`];
-                                            return (
-                                                <td key={cIdx} style={{ border: '1px solid #e2e8f0', height: '40px', padding: 0, minWidth: '120px' }}>
-                                                    <PlaySlot
-                                                        playId={playId}
-                                                        isLocked={isLocked}
-                                                        onUpdate={(pid) => {
-                                                            const newLayouts = { ...gamePlanLayouts };
-                                                            const s = newLayouts.CALL_SHEET.sections[idx];
-                                                            if (!s.gridData) s.gridData = {};
-                                                            s.gridData[`${rIdx}-${cIdx}`] = pid;
-                                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                        }}
-                                                    />
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        {!isLocked && (
-                            <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                                <button className="btn-sm btn-secondary" onClick={() => {
-                                    const newLayouts = { ...gamePlanLayouts };
-                                    newLayouts.CALL_SHEET.sections[idx].rowLabels.push(`Group ${newLayouts.CALL_SHEET.sections[idx].rowLabels.length + 1}`);
-                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                }}>+ Row</button>
-                                <button className="btn-sm btn-secondary" onClick={() => {
-                                    const newLayouts = { ...gamePlanLayouts };
-                                    newLayouts.CALL_SHEET.sections[idx].columnHeaders.push('New Col');
-                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                }}>+ Col</button>
+                    <div style={{ padding: '8px' }}>
+                        {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(60px, auto) repeat(4, 1fr)', gap: '4px', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isEditing ? (
+                                    <input
+                                        value={box.cornerLabel || ''}
+                                        onChange={(e) => {
+                                            const newLayouts = { ...gamePlanLayouts };
+                                            newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].cornerLabel = e.target.value;
+                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                        }}
+                                        style={{ width: '100%', fontSize: '0.6rem', border: 'none', background: 'transparent', textAlign: 'center', color: '#94a3b8' }}
+                                        placeholder="Label..."
+                                    />
+                                ) : (
+                                    box.cornerLabel || ''
+                                )}
                             </div>
-                        )}
+                            {headings.map((h, hIdx) => (
+                                <div key={hIdx} style={{ textAlign: 'center' }}>
+                                    {isEditing ? (
+                                        <input
+                                            value={h}
+                                            onChange={(e) => {
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                if (!b.gridHeadings) b.gridHeadings = ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                                                b.gridHeadings[hIdx] = e.target.value;
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            }}
+                                            style={{ width: '100%', fontSize: '0.65rem', padding: '2px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '2px', fontWeight: 'bold' }}
+                                        />
+                                    ) : (
+                                        <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px' }}>{h}</div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div
+                            style={{ minHeight: '60px', cursor: 'pointer', background: '#f8fafc', borderRadius: '4px', padding: '6px', border: '1px dashed #e2e8f0' }}
+                            onClick={() => !isEditing && openPlaySelector(box.setId)}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                        >
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                {assignedPlays.slice(0, 12).map((p, idx) => (
+                                    <div key={idx} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1e293b' }}>
+                                        • {p.name}
+                                    </div>
+                                ))}
+                                {assignedPlays.length > 12 && <div style={{ fontSize: '0.7rem', color: '#94a3b8', gridColumn: '1 / -1' }}>+ {assignedPlays.length - 12} more plays...</div>}
+                                {assignedPlays.length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', paddingTop: '10px' }}>Click to select plays</div>}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderBox = (box, sectionIdx, boxIdx) => {
+                const isEditing = editingHeader && editingHeader.sectionIdx === sectionIdx && editingHeader.rowIdx === boxIdx;
+
+                return (
+                    <div
+                        key={box.setId}
+                        draggable={!isLocked}
+                        onDragStart={(e) => handleDragStart(e, sectionIdx, boxIdx)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDrop(e, sectionIdx, boxIdx);
+                        }}
+                        style={{
+                            gridColumn: `span ${box.colSpan || 1}`,
+                            border: isEditing ? '2px solid var(--accent)' : '1px solid #ddd',
+                            borderRadius: '4px', overflow: 'visible',
+                            minHeight: box.type === 'script' ? '100px' : '150px',
+                            backgroundColor: 'white', cursor: !isLocked ? 'move' : 'default',
+                            opacity: draggedCell && draggedCell.sectionIdx === sectionIdx && draggedCell.rowIdx === boxIdx ? 0.5 : (box.hidden && !isLocked ? 0.5 : 1),
+                            display: (box.hidden && isLocked) ? 'none' : 'block',
+                            position: 'relative'
+                        }}
+                        onDoubleClick={(e) => {
+                            if (isLocked) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditingHeader({ sectionIdx, rowIdx: boxIdx });
+                        }}
+                    >
+                        <div style={{ backgroundColor: box.color, color: 'white', padding: '0.25rem 0.5rem', fontWeight: 'bold', fontSize: '0.8rem', textAlign: 'center', textTransform: 'uppercase', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+                            {isEditing ? (
+                                <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '4px' }}>
+                                    <input
+                                        autoFocus
+                                        defaultValue={box.header}
+                                        onBlur={(e) => saveHeader(sectionIdx, boxIdx, e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') saveHeader(sectionIdx, boxIdx, e.target.value); }}
+                                        style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', textAlign: 'center', flex: 1, fontSize: '0.8rem', fontWeight: 'bold', outline: 'none' }}
+                                    />
+                                    <input
+                                        type="color"
+                                        value={box.color || '#8b5cf6'}
+                                        onChange={(e) => {
+                                            const newLayouts = { ...gamePlanLayouts };
+                                            newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].color = e.target.value;
+                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                        }}
+                                        style={{ width: '20px', height: '20px', border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer', padding: 0 }}
+                                    />
+                                    <div style={{ cursor: 'pointer' }} onClick={() => setEditingHeader(null)}><Icon name="X" size={14} /></div>
+                                </div>
+                            ) : (
+                                <>
+                                    <span style={{ cursor: 'default', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{box.header}</span>
+                                    {!isLocked && (
+                                        <div style={{ position: 'absolute', right: '4px', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setEditingHeader({ sectionIdx, rowIdx: boxIdx }); }}>
+                                            <Icon name="Pencil" size={14} />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                        {box.type === 'script' ? renderScriptBox(box, sectionIdx, boxIdx, isEditing) : renderGridBox(box, sectionIdx, boxIdx, isEditing)}
                     </div>
                 );
             };
@@ -29803,10 +29858,10 @@
                                     const newLayouts = { ...gamePlanLayouts };
                                     const sheet = { ...newLayouts.CALL_SHEET };
                                     sheet.sections.push({
-                                        title: 'New Box',
-                                        type: 'unconfigured',
-                                        cols: 1,
-                                        rows: []
+                                        id: `section_${Date.now()}`,
+                                        title: 'New Section',
+                                        color: '#1e293b',
+                                        boxes: []
                                     });
                                     newLayouts.CALL_SHEET = sheet;
                                     if (onUpdateLayouts) onUpdateLayouts(newLayouts);
@@ -29877,14 +29932,14 @@
                                             sheet.sections = [...sheet.sections];
 
                                             // Source
-                                            const sourceRows = [...sheet.sections[draggedCell.sectionIdx].rows];
-                                            const itemToMove = sourceRows[draggedCell.rowIdx];
-                                            sourceRows.splice(draggedCell.rowIdx, 1);
-                                            sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], rows: sourceRows };
+                                            const sourceBoxes = [...sheet.sections[draggedCell.sectionIdx].boxes];
+                                            const itemToMove = sourceBoxes[draggedCell.rowIdx];
+                                            sourceBoxes.splice(draggedCell.rowIdx, 1);
+                                            sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], boxes: sourceBoxes };
 
                                             // Target (Append to this section)
-                                            const targetRows = [...sheet.sections[idx].rows, itemToMove];
-                                            sheet.sections[idx] = { ...sheet.sections[idx], rows: targetRows };
+                                            const targetBoxes = [...sheet.sections[idx].boxes, itemToMove];
+                                            sheet.sections[idx] = { ...sheet.sections[idx], boxes: targetBoxes };
 
                                             newLayouts.CALL_SHEET = sheet;
                                             if (onUpdateLayouts) onUpdateLayouts(newLayouts);
@@ -29971,11 +30026,11 @@
                                                                 sheet.sections = [...sheet.sections];
 
                                                                 // Move all boxes from this section to the previous section
-                                                                const currentSectionRows = [...sheet.sections[idx].rows];
-                                                                const previousSectionRows = [...sheet.sections[idx - 1].rows];
+                                                                const currentSectionBoxes = [...sheet.sections[idx].boxes];
+                                                                const previousSectionBoxes = [...sheet.sections[idx - 1].boxes];
                                                                 sheet.sections[idx - 1] = {
                                                                     ...sheet.sections[idx - 1],
-                                                                    rows: [...previousSectionRows, ...currentSectionRows]
+                                                                    boxes: [...previousSectionBoxes, ...currentSectionBoxes]
                                                                 };
 
                                                                 // Remove this section
@@ -30036,7 +30091,7 @@
                                     /* Default/Grid Layout */
                                     <div
                                         style={{
-                                            display: 'grid', gridTemplateColumns: `repeat(${Math.min(section.cols, 4)}, 1fr)`, gap: '4px',
+                                            display: 'grid', gridTemplateColumns: `repeat(${Math.min(section.cols || 1, 4)}, 1fr)`, gap: '4px',
                                             minHeight: '100px', // Ensure empty sections are drop targets
                                             border: isLocked ? 'none' : '1px dashed #cbd5e1', // Visual cue
                                             borderRadius: '8px',
@@ -30060,243 +30115,20 @@
                                             const sheet = { ...newLayouts.CALL_SHEET };
                                             sheet.sections = [...sheet.sections];
 
-                                            const sourceRows = [...sheet.sections[draggedCell.sectionIdx].rows];
-                                            const itemToMove = sourceRows[draggedCell.rowIdx];
-                                            sourceRows.splice(draggedCell.rowIdx, 1);
-                                            sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], rows: sourceRows };
+                                            const sourceBoxes = [...sheet.sections[draggedCell.sectionIdx].boxes];
+                                            const itemToMove = sourceBoxes[draggedCell.rowIdx];
+                                            sourceBoxes.splice(draggedCell.rowIdx, 1);
+                                            sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], boxes: sourceBoxes };
 
-                                            const targetRows = [...sheet.sections[idx].rows, itemToMove];
-                                            sheet.sections[idx] = { ...sheet.sections[idx], rows: targetRows };
+                                            const targetBoxes = [...sheet.sections[idx].boxes, itemToMove];
+                                            sheet.sections[idx] = { ...sheet.sections[idx], boxes: targetBoxes };
 
                                             newLayouts.CALL_SHEET = sheet;
                                             if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                             setDraggedCell(null);
                                         }}
                                     >
-                                        {section.rows.map((cell, cellIdx) => {
-                                            const isEditing = editingHeader && editingHeader.sectionIdx === idx && editingHeader.rowIdx === cellIdx;
-                                            return (
-                                                <div
-                                                    key={cell.setId} // Ideally use a stable ID but we swap setId so this is actually OK for stability, but Dnd might prefer index key if items move? No, key should follow data.
-                                                    draggable={!isLocked}
-                                                    onDragStart={(e) => handleDragStart(e, idx, cellIdx)}
-                                                    onDragOver={handleDragOver}
-                                                    onDrop={(e) => {
-                                                        // Stop container drop from firing
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        handleDrop(e, idx, cellIdx);
-                                                    }}
-                                                    style={{
-                                                        gridColumn: `span ${cell.colSpan}`,
-                                                        border: '1px solid #ddd',
-                                                        borderRadius: '4px',
-                                                        overflow: 'visible',
-                                                        minHeight: '150px',
-                                                        backgroundColor: 'white',
-                                                        cursor: !isLocked ? 'move' : 'default',
-                                                        opacity: draggedCell && draggedCell.sectionIdx === idx && draggedCell.rowIdx === cellIdx ? 0.5 : (cell.hidden && !isLocked ? 0.5 : 1),
-                                                        display: (cell.hidden && isLocked) ? 'none' : 'block',
-                                                        position: 'relative'
-                                                    }}
-                                                    onClick={(e) => {
-                                                        // Don't open Play Selector if clicking the pencil icon or edit menu
-                                                        if (e.target.closest('.pencil-icon-container')) return;
-                                                        if (e.target.closest('.box-edit-menu')) return;
-                                                        if (!isEditing) openPlaySelector(cell.setId);
-                                                    }}
-                                                >
-                                                    <div
-                                                        style={{ backgroundColor: cell.color, color: 'white', padding: '0.25rem 0.5rem', fontWeight: 'bold', fontSize: '0.8rem', textAlign: 'center', textTransform: 'uppercase', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}
-                                                    >
-                                                        <span style={{ cursor: 'default', padding: '0 4px', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: !isLocked ? '20px' : '0' }}>
-                                                            {cell.header}
-                                                        </span>
-
-                                                        {/* Pencil Icon for Menu (Only when unlocked) */}
-                                                        {!isLocked && (
-                                                            <div
-                                                                className="pencil-icon-container"
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    right: '4px',
-                                                                    top: '50%',
-                                                                    transform: 'translateY(-55%)',
-                                                                    cursor: 'pointer',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                }}
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    setEditingHeader({ sectionIdx: idx, rowIdx: cellIdx });
-                                                                }}
-                                                            >
-                                                                <Icon name="Pencil" size={14} color="white" />
-                                                            </div>
-                                                        )}
-
-                                                        {isEditing && (
-                                                            <div
-                                                                className="box-edit-menu"
-                                                                style={{
-                                                                    position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                                                                    width: '240px', maxHeight: '300px', overflowY: 'auto', zIndex: 9999,
-                                                                    background: 'white', border: '1px solid #ccc', borderRadius: '4px',
-                                                                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)', padding: '0.75rem',
-                                                                    display: 'flex', flexDirection: 'column', gap: '8px', color: '#1e293b',
-                                                                    cursor: 'default', marginTop: '4px'
-                                                                }}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Edit Box</div>
-
-                                                                {/* Rename */}
-                                                                <input
-                                                                    autoFocus
-                                                                    defaultValue={cell.header}
-                                                                    placeholder="Rename..."
-                                                                    id={`rename-input-${idx}-${cellIdx}`}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter') {
-                                                                            saveHeader(idx, cellIdx, e.target.value);
-                                                                        }
-                                                                    }}
-                                                                    style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '6px', fontSize: '0.9rem', color: '#0f172a' }}
-                                                                />
-
-                                                                {/* Color Picker */}
-                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                    <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>Header Color</label>
-                                                                    <input
-                                                                        type="color"
-                                                                        value={cell.color || '#8b5cf6'}
-                                                                        onChange={(e) => {
-                                                                            const newLayouts = { ...gamePlanLayouts };
-                                                                            const sheet = { ...newLayouts.CALL_SHEET };
-                                                                            sheet.sections = [...sheet.sections];
-                                                                            const rows = [...sheet.sections[idx].rows];
-                                                                            rows[cellIdx] = { ...rows[cellIdx], color: e.target.value };
-                                                                            sheet.sections[idx] = { ...sheet.sections[idx], rows };
-                                                                            newLayouts.CALL_SHEET = sheet;
-                                                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                                        }}
-                                                                        style={{ width: '100%', height: '32px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer' }}
-                                                                    />
-                                                                </div>
-
-                                                                {/* Save Name Button */}
-                                                                <button
-                                                                    className="btn-sm"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const input = document.getElementById(`rename-input-${idx}-${cellIdx}`);
-                                                                        if (input) {
-                                                                            saveHeader(idx, cellIdx, input.value);
-                                                                        }
-                                                                    }}
-                                                                    style={{
-                                                                        background: 'var(--accent)', color: 'white', border: 'none',
-                                                                        width: '100%', fontSize: '0.8rem', padding: '6px', cursor: 'pointer',
-                                                                        borderRadius: '4px', textAlign: 'center', fontWeight: 'bold'
-                                                                    }}
-                                                                >
-                                                                    Save Name
-                                                                </button>
-
-                                                                {/* Clear Plays */}
-                                                                <button
-                                                                    className="btn-sm"
-                                                                    onMouseDown={(e) => {
-                                                                        e.preventDefault(); // Prevent input blur
-                                                                        handleClearPlays(cell.setId);
-                                                                        setEditingHeader(null);
-                                                                    }}
-                                                                    style={{
-                                                                        background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0',
-                                                                        width: '100%', fontSize: '0.8rem', padding: '6px', cursor: 'pointer',
-                                                                        borderRadius: '4px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px'
-                                                                    }}
-                                                                    title="Remove all plays from this box"
-                                                                >
-                                                                    <Icon name="Minus" size={12} /> Clear All Plays
-                                                                </button>
-
-                                                                {/* Delete Box */}
-                                                                <button
-                                                                    className="btn-sm"
-                                                                    onMouseDown={(e) => {
-                                                                        e.stopPropagation();
-                                                                        e.preventDefault();
-                                                                    }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        e.preventDefault();
-
-                                                                        // Delete the box immediately without confirmation
-                                                                        const newLayouts = { ...gamePlanLayouts };
-                                                                        const sheet = { ...newLayouts.CALL_SHEET };
-                                                                        sheet.sections = [...sheet.sections];
-                                                                        const rows = [...sheet.sections[idx].rows];
-                                                                        rows.splice(cellIdx, 1);
-                                                                        sheet.sections[idx] = { ...sheet.sections[idx], rows };
-                                                                        newLayouts.CALL_SHEET = sheet;
-                                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-
-                                                                        // Close menu after deletion
-                                                                        setEditingHeader(null);
-                                                                    }}
-                                                                    style={{
-                                                                        background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5',
-                                                                        width: '100%', fontSize: '0.8rem', padding: '6px', cursor: 'pointer',
-                                                                        borderRadius: '4px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px'
-                                                                    }}
-                                                                >
-                                                                    <Icon name="Trash2" size={12} /> Delete Box
-                                                                </button>
-
-                                                                <div style={{ textAlign: 'right', marginTop: '4px' }}>
-                                                                    <span
-                                                                        style={{ fontSize: '0.75rem', color: '#64748b', cursor: 'pointer', textDecoration: 'underline' }}
-                                                                        onClick={() => setEditingHeader(null)}
-                                                                    >
-                                                                        Close
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div style={{ padding: '0.5rem' }}>
-                                                        {renderPlayListSimple(cell.setId)}
-                                                        {onQuickAddPlay && (
-                                                            <input
-                                                                type="text"
-                                                                placeholder="+"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    marginTop: '6px',
-                                                                    padding: '4px 6px',
-                                                                    fontSize: '0.8rem',
-                                                                    border: '1px dashed var(--border)',
-                                                                    borderRadius: '4px',
-                                                                    background: 'rgba(255,255,255,0.1)'
-                                                                }}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter' && e.target.value.trim()) {
-                                                                        handleQuickAddToSet(cell.setId, e.target.value);
-                                                                        e.target.value = '';
-                                                                        e.preventDefault();
-                                                                    }
-                                                                }}
-                                                            />
-                                                        )}
-
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                        {(section.boxes || []).map((box, boxIdx) => renderBox(box, idx, boxIdx))}
                                         {!isLocked && (
                                             <div
                                                 onClick={() => handleAddBoxToSection(idx)}
@@ -30305,8 +30137,10 @@
                                                     minHeight: '150px',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     cursor: 'pointer', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 'bold',
-                                                    background: 'rgba(255,255,255,0.5)'
+                                                    transition: 'all 0.2s', background: '#f8fafc'
                                                 }}
+                                                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#94a3b8'; }}
                                             >
                                                 + Add Box
                                             </div>
@@ -30782,11 +30616,26 @@
             const renderPlaySelector = () => {
 
                 if (!showPlaySelector) return null;
+
+                // Find the box being edited
+                let activeBox = null;
+                gamePlanLayouts.CALL_SHEET.sections.forEach(section => {
+                    const found = (section.boxes || []).find(b => b.setId === activeCellSetId);
+                    if (found) activeBox = found;
+                });
+
+                const isGridMode = activeBox?.type === 'grid';
                 const gridPlays = getGridPlays(activeCellSetId);
 
-                // Split into Left (0-9) and Right (10-19)
+                // Split into Left (0-9) and Right (10-19) for normal mode
                 const leftPlays = gridPlays.slice(0, 10); // Indices 0-9
                 const rightPlays = gridPlays.slice(10, 20); // Indices 10-19
+
+                // Slice for Grid mode (16 plays)
+                const gridModePlays = gridPlays.slice(0, 16);
+                const gridHeadings = activeBox?.gridHeadings || ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                const gridRowLabels = activeBox?.gridRowLabels || ['Group 1', 'Group 2', 'Group 3', 'Group 4'];
+                const cornerLabel = activeBox?.cornerLabel || 'Group/Type';
 
                 // Wristband Input Component with Autocomplete
                 const WristbandInput = ({ play, playIndex }) => {
@@ -30890,7 +30739,7 @@
                     }} onClick={() => setShowPlaySelector(false)}>
                         <div style={{ width: '90%', height: '90%', backgroundColor: 'var(--bg-panel)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                                <h2>Select Plays</h2>
+                                <h2>Select Plays {activeBox?.header ? `(${activeBox.header})` : ''}</h2>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
 
                                     <button className="btn" onClick={() => setShowPlaySelector(false)}>Close</button>
@@ -30928,99 +30777,239 @@
                             <div style={{ display: 'flex', flex: 1, gap: '1rem', overflow: 'hidden' }}>
 
                                 {/* GRID SIDE */}
-                                <div style={{ flex: '0 0 450px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
+                                <div style={{ flex: isGridMode ? '1' : '0 0 450px', maxWidth: isGridMode ? 'none' : '450px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
                                     <h4 style={{ marginBottom: '0.5rem', textAlign: 'center' }}>Selected Plays (Drag to Move)</h4>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', height: '100%', overflowY: 'auto' }}>
-
-                                        {/* Left Column */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', background: '#334155', color: 'white', padding: '4px', borderRadius: '4px' }}>LEFT HASH</div>
-                                            {leftPlays.map((p, idx) => (
-                                                <div key={idx}
-                                                    draggable
-                                                    onDragStart={(e) => {
-                                                        e.dataTransfer.setData('text/plain', idx); // Global index 0-9
-                                                        setDraggedGridIndex(idx);
-                                                    }}
-                                                    onDragOver={(e) => { e.preventDefault(); }}
-                                                    onDrop={(e) => {
-                                                        e.preventDefault();
-                                                        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
-                                                        handleGridMove(fromIdx, idx);
-                                                        setDraggedGridIndex(null);
-                                                    }}
-                                                    style={{
-                                                        height: '40px', border: '1px solid #cbd5e1', borderRadius: '4px',
-                                                        display: 'flex', alignItems: 'center', padding: '0 4px', gap: '4px',
-                                                        background: p.type === 'GAP' ? '#f8fafc' : 'white',
-                                                        opacity: draggedGridIndex === idx ? 0.5 : 1
-                                                    }}
-                                                >
-                                                    {p.type !== 'GAP' && (
-                                                        <>
-                                                            {showWristband && (
-                                                                <WristbandInput play={p} playIndex={idx} />
-                                                            )}
-                                                            <div style={{ flex: 1, fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold', color: '#1e293b' }} title={p.name}>
-                                                                {p.name}
-                                                            </div>
-                                                            <div
-                                                                style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '10px' }}
-                                                                onClick={() => handleGridRemove(idx)}
-                                                            >✖</div>
-                                                        </>
-                                                    )}
+                                    {isGridMode ? (
+                                        /* 4x4 Grid Mode */
+                                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                                            {/* Column Headers Row */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '120px repeat(4, 1fr)', gap: '10px', marginBottom: '8px' }}>
+                                                {/* Corner Label */}
+                                                <div style={{ position: 'relative' }}>
+                                                    <input
+                                                        value={cornerLabel}
+                                                        onChange={(e) => {
+                                                            const newLayouts = { ...gamePlanLayouts };
+                                                            const sheet = { ...newLayouts.CALL_SHEET };
+                                                            sheet.sections.forEach(section => {
+                                                                (section.boxes || []).forEach(b => {
+                                                                    if (b.setId === activeCellSetId) {
+                                                                        b.cornerLabel = e.target.value;
+                                                                    }
+                                                                });
+                                                            });
+                                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                        }}
+                                                        style={{
+                                                            width: '100%', fontSize: '0.7rem', fontWeight: 'bold',
+                                                            background: '#475569', color: 'white', border: 'none',
+                                                            padding: '6px 4px', borderRadius: '4px', textAlign: 'center'
+                                                        }}
+                                                        placeholder="Corner..."
+                                                    />
                                                 </div>
-                                            ))}
-                                        </div>
+                                                {gridHeadings.map((h, i) => (
+                                                    <div key={i} style={{ textAlign: 'center', position: 'relative' }}>
+                                                        <input
+                                                            value={h}
+                                                            onChange={(e) => {
+                                                                const newLayouts = { ...gamePlanLayouts };
+                                                                const sheet = { ...newLayouts.CALL_SHEET };
+                                                                sheet.sections.forEach(section => {
+                                                                    (section.boxes || []).forEach(b => {
+                                                                        if (b.setId === activeCellSetId) {
+                                                                            if (!b.gridHeadings) b.gridHeadings = ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                                                                            b.gridHeadings[i] = e.target.value;
+                                                                        }
+                                                                    });
+                                                                });
+                                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                            }}
+                                                            style={{
+                                                                width: '100%', fontSize: '0.7rem', fontWeight: 'bold',
+                                                                background: '#334155', color: 'white', border: 'none',
+                                                                padding: '6px 4px', borderRadius: '4px', textAlign: 'center'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
 
-                                        {/* Right Column */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', background: '#334155', color: 'white', padding: '4px', borderRadius: '4px' }}>RIGHT HASH</div>
-                                            {rightPlays.map((p, localIdx) => {
-                                                const globalIdx = localIdx + 10;
-                                                return (
-                                                    <div key={globalIdx}
+                                            {/* Grid Body with Row Labels */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto', paddingBottom: '1rem' }}>
+                                                {[0, 1, 2, 3].map(rowNum => (
+                                                    <div key={rowNum} style={{ display: 'grid', gridTemplateColumns: '120px repeat(4, 1fr)', gap: '8px', alignItems: 'stretch' }}>
+                                                        {/* Row Label */}
+                                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                            <input
+                                                                value={gridRowLabels[rowNum]}
+                                                                onChange={(e) => {
+                                                                    const newLayouts = { ...gamePlanLayouts };
+                                                                    const sheet = { ...newLayouts.CALL_SHEET };
+                                                                    sheet.sections.forEach(section => {
+                                                                        (section.boxes || []).forEach(b => {
+                                                                            if (b.setId === activeCellSetId) {
+                                                                                if (!b.gridRowLabels) b.gridRowLabels = ['Group 1', 'Group 2', 'Group 3', 'Group 4'];
+                                                                                b.gridRowLabels[rowNum] = e.target.value;
+                                                                            }
+                                                                        });
+                                                                    });
+                                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                                }}
+                                                                style={{
+                                                                    width: '100%', fontSize: '0.7rem', fontWeight: 'bold',
+                                                                    background: '#334155', color: 'white', border: 'none',
+                                                                    padding: '6px 4px', borderRadius: '4px', textAlign: 'center',
+                                                                    height: '100%'
+                                                                }}
+                                                            />
+                                                        </div>
+
+                                                        {/* 4 Data Cells for this row */}
+                                                        {[0, 1, 2, 3].map(colNum => {
+                                                            const idx = rowNum * 4 + colNum;
+                                                            const p = gridModePlays[idx];
+                                                            return (
+                                                                <div key={idx}
+                                                                    draggable
+                                                                    onDragStart={(e) => {
+                                                                        e.dataTransfer.setData('text/plain', idx);
+                                                                        setDraggedGridIndex(idx);
+                                                                    }}
+                                                                    onDragOver={(e) => { e.preventDefault(); }}
+                                                                    onDrop={(e) => {
+                                                                        e.preventDefault();
+                                                                        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                                                                        handleGridMove(fromIdx, idx);
+                                                                        setDraggedGridIndex(null);
+                                                                    }}
+                                                                    style={{
+                                                                        height: '100px', border: '2px dashed #cbd5e1', borderRadius: '8px',
+                                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px', gap: '4px',
+                                                                        background: p.type === 'GAP' ? '#f8fafc' : 'white',
+                                                                        opacity: draggedGridIndex === idx ? 0.5 : 1,
+                                                                        transition: 'all 0.2s',
+                                                                        textAlign: 'center'
+                                                                    }}
+                                                                >
+                                                                    {p.type !== 'GAP' ? (
+                                                                        <>
+                                                                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                                {showWristband && <WristbandInput play={p} playIndex={idx} />}
+                                                                                <div
+                                                                                    style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '14px', padding: '2px' }}
+                                                                                    onClick={() => handleGridRemove(idx)}
+                                                                                >✖</div>
+                                                                            </div>
+                                                                            <div style={{ flex: 1, fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                                {p.name}
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{p.formation}</div>
+                                                                        </>
+                                                                    ) : (
+                                                                        <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>+ Empty</div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* Default 2-Column List */
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', height: '100%', overflowY: 'auto' }}>
+
+                                            {/* Left Column */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', background: '#334155', color: 'white', padding: '4px', borderRadius: '4px' }}>LEFT HASH</div>
+                                                {leftPlays.map((p, idx) => (
+                                                    <div key={idx}
                                                         draggable
                                                         onDragStart={(e) => {
-                                                            e.dataTransfer.setData('text/plain', globalIdx);
-                                                            setDraggedGridIndex(globalIdx);
+                                                            e.dataTransfer.setData('text/plain', idx); // Global index 0-9
+                                                            setDraggedGridIndex(idx);
                                                         }}
                                                         onDragOver={(e) => { e.preventDefault(); }}
                                                         onDrop={(e) => {
                                                             e.preventDefault();
                                                             const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
-                                                            handleGridMove(fromIdx, globalIdx);
+                                                            handleGridMove(fromIdx, idx);
                                                             setDraggedGridIndex(null);
                                                         }}
                                                         style={{
                                                             height: '40px', border: '1px solid #cbd5e1', borderRadius: '4px',
                                                             display: 'flex', alignItems: 'center', padding: '0 4px', gap: '4px',
                                                             background: p.type === 'GAP' ? '#f8fafc' : 'white',
-                                                            opacity: draggedGridIndex === globalIdx ? 0.5 : 1
+                                                            opacity: draggedGridIndex === idx ? 0.5 : 1
                                                         }}
                                                     >
                                                         {p.type !== 'GAP' && (
                                                             <>
                                                                 {showWristband && (
-                                                                    <WristbandInput play={p} playIndex={globalIdx} />
+                                                                    <WristbandInput play={p} playIndex={idx} />
                                                                 )}
                                                                 <div style={{ flex: 1, fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold', color: '#1e293b' }} title={p.name}>
                                                                     {p.name}
                                                                 </div>
                                                                 <div
                                                                     style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '10px' }}
-                                                                    onClick={() => handleGridRemove(globalIdx)}
+                                                                    onClick={() => handleGridRemove(idx)}
                                                                 >✖</div>
                                                             </>
                                                         )}
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
+                                                ))}
+                                            </div>
 
-                                    </div>
+                                            {/* Right Column */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', background: '#334155', color: 'white', padding: '4px', borderRadius: '4px' }}>RIGHT HASH</div>
+                                                {rightPlays.map((p, localIdx) => {
+                                                    const globalIdx = localIdx + 10;
+                                                    return (
+                                                        <div key={globalIdx}
+                                                            draggable
+                                                            onDragStart={(e) => {
+                                                                e.dataTransfer.setData('text/plain', globalIdx);
+                                                                setDraggedGridIndex(globalIdx);
+                                                            }}
+                                                            onDragOver={(e) => { e.preventDefault(); }}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                                                                handleGridMove(fromIdx, globalIdx);
+                                                                setDraggedGridIndex(null);
+                                                            }}
+                                                            style={{
+                                                                height: '40px', border: '1px solid #cbd5e1', borderRadius: '4px',
+                                                                display: 'flex', alignItems: 'center', padding: '0 4px', gap: '4px',
+                                                                background: p.type === 'GAP' ? '#f8fafc' : 'white',
+                                                                opacity: draggedGridIndex === globalIdx ? 0.5 : 1
+                                                            }}
+                                                        >
+                                                            {p.type !== 'GAP' && (
+                                                                <>
+                                                                    {showWristband && (
+                                                                        <WristbandInput play={p} playIndex={globalIdx} />
+                                                                    )}
+                                                                    <div style={{ flex: 1, fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold', color: '#1e293b' }} title={p.name}>
+                                                                        {p.name}
+                                                                    </div>
+                                                                    <div
+                                                                        style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '10px' }}
+                                                                        onClick={() => handleGridRemove(globalIdx)}
+                                                                    >✖</div>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* AVAILABLE PLAYS */}
@@ -31060,9 +31049,6 @@
 
                     {/* Toolbar */}
                     <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
-                        <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
-                            Strike 'Em Out
-                        </button>
                         <button className={`btn ${viewMode === 'call-sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('call-sheet')}>
                             SITUATIONS & SCRIPTS
                         </button>
@@ -31075,7 +31061,6 @@
                     <div style={{ flex: 1, overflow: 'hidden', background: 'white', padding: '1rem', borderRadius: '8px' }}>
                         {viewMode === 'call-sheet' && renderCallSheet()}
                         {viewMode === 'player-touches' && renderPlayerTouches()}
-                        {viewMode === 'matrix' && renderMatrix()}
                     </div>
 
 
