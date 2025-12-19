@@ -6141,7 +6141,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -6196,6 +6196,56 @@
                     };
                 }
                 return segment;
+            };
+
+            const saveAsGlobalTemplate = async () => {
+                const name = prompt("Enter a name for this Global Template:");
+                if (!name) return;
+
+                const category = prompt("Enter a category (e.g. 'Monday', 'Situations', 'Base Install'):", selectedDay);
+
+                try {
+                    // Sanitize segments for template (only keeping structure, not specific data like staffId or scripts if they are too specific, 
+                    // though user asked to save "it", so we keep types and durations and hasScript flag)
+                    const templateSegments = plan.segments.map(seg => ({
+                        type: seg.type,
+                        duration: seg.duration,
+                        situation: seg.situation || '',
+                        hasScript: !!seg.hasScript
+                    }));
+
+                    await window.db.collection('global_templates').add({
+                        type: 'practice_plan',
+                        name: name,
+                        category: category || '',
+                        data: {
+                            segments: templateSegments
+                        },
+                        createdAt: new Date().toISOString(),
+                        createdBy: user?.email || 'Admin'
+                    });
+
+                    alert(`Global Template "${name}" saved successfully!`);
+
+                    // Trigger a re-fetch of global templates to update the dropdown immediately
+                    const fetchGlobalTemplates = async () => {
+                        const snapshot = await window.db.collection('global_templates')
+                            .where('type', '==', 'practice_plan')
+                            .get();
+                        const templates = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            name: doc.data().name,
+                            category: doc.data().category,
+                            segments: doc.data().data?.segments || []
+                        }));
+                        setGlobalTemplates(templates);
+                    };
+                    fetchGlobalTemplates();
+
+                } catch (err) {
+                    console.error("Error saving global template:", err);
+                    alert("Error saving template. Check console for details.");
+                }
             };
 
             const loadTemplate = (templateName) => {
@@ -6633,22 +6683,34 @@
                                 <h2>{selectedDay} Schedule</h2>
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                     {!isLocked && (
-                                        <select
-                                            className="form-select"
-                                            style={{ width: 'auto', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--accent)' }}
-                                            onChange={(e) => {
-                                                loadTemplate(e.target.value);
-                                                e.target.value = ""; // Reset
-                                            }}
-                                            value=""
-                                        >
-                                            <option value="" disabled>Load Template...</option>
-                                            {allTemplates.map(t => (
-                                                <option key={t.name} value={t.name}>
-                                                    {t.id ? '🌐 ' : '📋 '}{t.name}{t.category ? ` (${t.category})` : ''}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                            <select
+                                                className="form-select"
+                                                style={{ width: 'auto', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--accent)' }}
+                                                onChange={(e) => {
+                                                    loadTemplate(e.target.value);
+                                                    e.target.value = ""; // Reset
+                                                }}
+                                                value=""
+                                            >
+                                                <option value="" disabled>Load Template...</option>
+                                                {allTemplates.map(t => (
+                                                    <option key={t.name} value={t.name}>
+                                                        {t.id ? '🌐 ' : '📋 '}{t.name}{t.category ? ` (${t.category})` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {isSiteAdmin && (
+                                                <button
+                                                    className="btn btn-secondary"
+                                                    onClick={saveAsGlobalTemplate}
+                                                    title="Save Current Plan as Global Template"
+                                                    style={{ padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                                >
+                                                    <Icon name="Globe" size={14} /> <span>Save Global</span>
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                     <label>Start Time:</label>
                                     <input
@@ -36285,8 +36347,8 @@
                         {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} />}
 
-                        {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} />}
-                        {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} />}
+                        {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
+                        {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
                         {view === 'game-week-overview' && <GameWeekOverview week={currentWeek} onUpdateWeek={handleUpdateWeek} teamLogo={teamLogo} isLocked={currentWeek.isLocked} />}
                         {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} user={authUser} isLocked={currentWeek.isLocked} />}
                         {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} depthChart={depthChart} />}
