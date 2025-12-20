@@ -2722,7 +2722,7 @@
         };
 
         // --- PLAY DIAGRAM EDITOR ---
-        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], rooskiLibrary = [], setRooskiLibrary = () => { } }) => {
+        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], rooskiLibrary = [], setRooskiLibrary = () => { }, positionNames = {} }) => {
 
             // Helper for default formation (Red QB, Blue Skill, Black OL)
             const getDefaultFormation = () => {
@@ -2766,34 +2766,34 @@
                         { id: Date.now() + 4, type: 'player', points: [{ x: center - (spacing * 2), y: olY }], color: cOL, label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
                         { id: Date.now() + 5, type: 'player', points: [{ x: center + (spacing * 2), y: olY }], color: cOL, label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
                         // Skill Players (Custom Colors, Filled)
-                        { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 100 }], color: cQB, label: 'Q', shape: 'circle', variant: 'filled' },
-                        { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 140 }], color: '#3b82f6', label: 'B', shape: 'circle', variant: 'filled' }, // Blue
-                        { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: '#a855f7', label: 'X', shape: 'circle', variant: 'filled' }, // Purple
-                        { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: '#22c55e', label: 'Z', shape: 'circle', variant: 'filled' }, // Green
-                        { id: Date.now() + 10, type: 'player', points: [{ x: 200, y: los + 35 }], color: '#ef4444', label: 'A', shape: 'circle', variant: 'filled' }, // Red (A/Slot)
-                        { id: Date.now() + 11, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: '#eab308', label: 'Y', shape: 'circle', variant: 'filled' }, // Yellow
+                        { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 100 }], color: cQB, label: positionNames['QB'] || 'Q', shape: 'circle', variant: 'filled' },
+                        { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 140 }], color: '#3b82f6', label: positionNames['RB'] || 'B', shape: 'circle', variant: 'filled' }, // Blue
+                        { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: '#a855f7', label: positionNames['X'] || 'X', shape: 'circle', variant: 'filled' }, // Purple
+                        { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: '#22c55e', label: positionNames['Z'] || 'Z', shape: 'circle', variant: 'filled' }, // Green
+                        { id: Date.now() + 10, type: 'player', points: [{ x: 200, y: los + 35 }], color: '#ef4444', label: positionNames['A'] || 'A', shape: 'circle', variant: 'filled' }, // Red (A/Slot)
+                        { id: Date.now() + 11, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: '#eab308', label: positionNames['Y'] || 'Y', shape: 'circle', variant: 'filled' }, // Yellow
                     ];
                 }
 
                 return [
                     // OL - Now Circles, Filled, Shifted back (+18)
-                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cOL, label: 'C', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 40, y: los + 18 }], color: cOL, label: 'G', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 40, y: los + 18 }], color: cOL, label: 'G', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 80, y: los + 18 }], color: cOL, label: 'T', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 80, y: los + 18 }], color: cOL, label: 'T', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cOL, label: positionNames['C'] || 'C', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 40, y: los + 18 }], color: cOL, label: positionNames['LG'] || 'G', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 40, y: los + 18 }], color: cOL, label: positionNames['RG'] || 'G', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 80, y: los + 18 }], color: cOL, label: positionNames['LT'] || 'T', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 80, y: los + 18 }], color: cOL, label: positionNames['RT'] || 'T', shape: 'circle', variant: 'filled' },
                     // QB
-                    { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 120 }], color: cQB, label: 'Q', shape: 'circle' },
+                    { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 120 }], color: cQB, label: positionNames['QB'] || 'Q', shape: 'circle' },
                     // RB
-                    { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 220 }], color: cSkill, label: 'R', shape: 'circle' },
+                    { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 220 }], color: cSkill, label: positionNames['RB'] || 'R', shape: 'circle' },
                     // WR Left
-                    { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: cSkill, label: 'X', shape: 'circle' },
+                    { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: cSkill, label: positionNames['X'] || 'X', shape: 'circle' },
                     // WR Right
-                    { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: cSkill, label: 'Z', shape: 'circle' },
+                    { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: cSkill, label: positionNames['Z'] || 'Z', shape: 'circle' },
                     // Slot Left
-                    { id: Date.now() + 10, type: 'player', points: [{ x: 200, y: los + 35 }], color: cSkill, label: 'H', shape: 'circle' },
+                    { id: Date.now() + 10, type: 'player', points: [{ x: 200, y: los + 35 }], color: cSkill, label: positionNames['A'] || 'H', shape: 'circle' },
                     // TE Right
-                    { id: Date.now() + 11, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: cSkill, label: 'Y', shape: 'circle' },
+                    { id: Date.now() + 11, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: cSkill, label: positionNames['Y'] || 'Y', shape: 'circle' },
                 ];
             };
 
@@ -2839,21 +2839,21 @@
 
                 return [
                     // OL
-                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cScout, label: 'C', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 40, y: los + 18 }], color: cScout, label: 'G', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 40, y: los + 18 }], color: cScout, label: 'G', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 80, y: los + 18 }], color: cScout, label: 'T', shape: 'circle', variant: 'filled' },
-                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 80, y: los + 18 }], color: cScout, label: 'T', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cScout, label: positionNames['C'] || 'C', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 40, y: los + 18 }], color: cScout, label: positionNames['LG'] || 'G', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 40, y: los + 18 }], color: cScout, label: positionNames['RG'] || 'G', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 80, y: los + 18 }], color: cScout, label: positionNames['LT'] || 'T', shape: 'circle', variant: 'filled' },
+                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 80, y: los + 18 }], color: cScout, label: positionNames['RT'] || 'T', shape: 'circle', variant: 'filled' },
                     // QB
-                    { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 50 }], color: cScout, label: 'Q', shape: 'circle' },
+                    { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 50 }], color: cScout, label: positionNames['QB'] || 'Q', shape: 'circle' },
                     // RB
-                    { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 120 }], color: cScout, label: 'R', shape: 'circle' },
+                    { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 120 }], color: cScout, label: positionNames['RB'] || 'R', shape: 'circle' },
                     // WRs
-                    { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: cScout, label: 'X', shape: 'circle' },
-                    { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: cScout, label: 'Z', shape: 'circle' },
+                    { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: cScout, label: positionNames['X'] || 'X', shape: 'circle' },
+                    { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: cScout, label: positionNames['Z'] || 'Z', shape: 'circle' },
                     // TE/Slot
-                    { id: Date.now() + 10, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: cScout, label: 'Y', shape: 'circle' },
-                    { id: Date.now() + 11, type: 'player', points: [{ x: 200, y: los + 35 }], color: cScout, label: 'H', shape: 'circle' },
+                    { id: Date.now() + 10, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: cScout, label: positionNames['Y'] || 'Y', shape: 'circle' },
+                    { id: Date.now() + 11, type: 'player', points: [{ x: 200, y: los + 35 }], color: cScout, label: positionNames['A'] || 'H', shape: 'circle' },
                 ];
             };
 
@@ -2943,7 +2943,7 @@
                         type: 'player',
                         points: [{ x, y }],
                         color: config.color,
-                        label: config.label || pos.label,
+                        label: positionNames[pos.label] || config.label || pos.label,
                         shape: config.shape || 'circle',
                         variant: config.variant || 'filled',
                         fontSize: config.fontSize
@@ -4054,7 +4054,7 @@
             );
         };
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], rooskiLibrary, setRooskiLibrary, formations = [] }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], rooskiLibrary, setRooskiLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {} }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
             const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'rooski-oline', 'rooski-skill', 'detailed'
@@ -4086,8 +4086,30 @@
                 sequenceName: '', // Look-alike sequence
                 sequenceOrder: '', // Order in sequence
                 assignedScriptIds: initialAssignedScriptIds, // New: Tracks mini script assignments
+                syntaxValues: {},
                 ...initialData // Merge existing data ON TOP of defaults
             });
+
+
+
+            // Auto-calculate Name and Formation when Syntax Values change
+            useEffect(() => {
+                if (playSyntax && playSyntax.length > 0) {
+                    // 1. Calculate Name: Join all values
+                    const nameParts = playSyntax.map(s => formData.syntaxValues?.[s.id]).filter(v => v);
+                    const newName = nameParts.join(' ');
+
+                    // 2. Extract Formation: Find component with label containing "Formation"
+                    const formationComp = playSyntax.find(s => s.label.toLowerCase().includes('formation'));
+                    const newFormation = formationComp ? (formData.syntaxValues?.[formationComp.id] || '') : formData.formation;
+
+                    setFormData(prev => {
+                        // Only update if changed to avoid loops (though check is cheap)
+                        if (prev.name === newName && prev.formation === newFormation) return prev;
+                        return { ...prev, name: newName, formation: newFormation };
+                    });
+                }
+            }, [formData.syntaxValues, playSyntax]);
 
             // If initialData has diagramData but no image, we can render it? 
             // Currently the system uses 'image' for display. We might need to generate an SVG string as image or support rendering diagramData.
@@ -4231,6 +4253,7 @@
                             onCancel={() => setIsDiagramming(false)}
                             rooskiLibrary={rooskiLibrary}
                             setRooskiLibrary={setRooskiLibrary}
+                            positionNames={positionNames}
                         />
                     )}
 
@@ -4246,6 +4269,7 @@
                             onCancel={() => setActiveDiagramMode(null)}
                             rooskiLibrary={rooskiLibrary}
                             setRooskiLibrary={setRooskiLibrary}
+                            positionNames={positionNames}
                         />
                     )}
 
@@ -4262,6 +4286,7 @@
                             onCancel={() => setActiveDiagramMode(null)}
                             rooskiLibrary={rooskiLibrary}
                             setRooskiLibrary={setRooskiLibrary}
+                            positionNames={positionNames}
                         />
                     )}
 
@@ -4277,6 +4302,7 @@
                             onCancel={() => setActiveDiagramMode(null)}
                             rooskiLibrary={rooskiLibrary}
                             setRooskiLibrary={setRooskiLibrary}
+                            positionNames={positionNames}
                         />
                     )}
 
@@ -4332,82 +4358,128 @@
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                             <div>
                                 {/* REQUESTED ORDER: Formation, Formation Tag, Color, Action, Play Name, Tag 1, Tag 2 */}
-                                <div className="form-group">
-                                    <label className="form-label">Formation</label>
-                                    <input
-                                        className="form-input"
-                                        value={formData.formation}
-                                        onChange={e => setFormData({ ...formData, formation: e.target.value })}
-                                        placeholder="e.g. Gun Trips Right"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Formation Tag</label>
-                                    <input
-                                        className="form-input"
-                                        value={formData.formationTag}
-                                        onChange={e => setFormData({ ...formData, formationTag: e.target.value })}
-                                        placeholder="e.g. Bunch, Stack"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Color (RB/Protection)</label>
-                                    <input
-                                        className="form-input"
-                                        value={formData.color}
-                                        onChange={e => setFormData({ ...formData, color: e.target.value })}
-                                        placeholder="e.g. Slide Right / Blue"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Action (Shift/Motion/PA)</label>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <input
-                                            className="form-input"
-                                            value={formData.motion}
-                                            onChange={e => setFormData({ ...formData, motion: e.target.value })}
-                                            placeholder="e.g. Jet Motion"
-                                        />
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', whiteSpace: 'nowrap', padding: '0 1rem', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+
+                                {/* LEGACY TOP FIELDS - Only show if NO Syntax is configured */}
+                                {(!playSyntax || playSyntax.length === 0) && (
+                                    <>
+                                        <div className="form-group">
+                                            <label className="form-label">Formation</label>
                                             <input
-                                                type="checkbox"
-                                                checked={formData.playAction}
-                                                onChange={e => setFormData({ ...formData, playAction: e.target.checked })}
+                                                className="form-input"
+                                                value={formData.formation}
+                                                onChange={e => setFormData({ ...formData, formation: e.target.value })}
+                                                placeholder="e.g. Gun Trips Right"
                                             />
-                                            <span style={{ fontSize: '0.9rem' }}>Play Action</span>
-                                        </label>
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Play Name</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <input
+                                                    className="form-input"
+                                                    value={formData.name}
+                                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                    placeholder="e.g. TRIBE / Spider 2 Y Banana"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* DYNAMIC PLAY SYNTAX OR FALLBACK LEGACY FIELDS */}
+                                {playSyntax && playSyntax.length > 0 ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', gridColumn: '1 / -1', background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                        <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                                            Play Components
+                                        </div>
+                                        {playSyntax.map(comp => (
+                                            <div key={comp.id} className="form-group">
+                                                <label className="form-label">{comp.label}</label>
+                                                <input
+                                                    className="form-input"
+                                                    list={`terms-${comp.id}`}
+                                                    value={formData.syntaxValues?.[comp.id] || ''}
+                                                    onChange={e => {
+                                                        const newVal = e.target.value;
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            syntaxValues: {
+                                                                ...(prev.syntaxValues || {}),
+                                                                [comp.id]: newVal
+                                                            }
+                                                        }));
+                                                    }}
+                                                    placeholder={`Select or typing ${comp.label}...`}
+                                                />
+                                                <datalist id={`terms-${comp.id}`}>
+                                                    {termLibrary[comp.id]?.map(t => (
+                                                        <option key={t.id} value={t.label} />
+                                                    ))}
+                                                </datalist>
+                                            </div>
+                                        ))}
                                     </div>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Play Name</label>
-                                    <input
-                                        className="form-input"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="e.g. TRIBE / Spider 2 Y Banana"
-                                        required
-                                    />
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div className="form-group">
-                                        <label className="form-label">Tag 1</label>
-                                        <input
-                                            className="form-input"
-                                            value={formData.tag1}
-                                            onChange={e => setFormData({ ...formData, tag1: e.target.value })}
-                                            placeholder="e.g. Alert"
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Tag 2</label>
-                                        <input
-                                            className="form-input"
-                                            value={formData.tag2}
-                                            onChange={e => setFormData({ ...formData, tag2: e.target.value })}
-                                            placeholder="e.g. Check"
-                                        />
-                                    </div>
-                                </div>
+                                ) : (
+                                    <>
+                                        <div className="form-group">
+                                            <label className="form-label">Formation Tag</label>
+                                            <input
+                                                className="form-input"
+                                                value={formData.formationTag}
+                                                onChange={e => setFormData({ ...formData, formationTag: e.target.value })}
+                                                placeholder="e.g. Bunch, Stack"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Color (RB/Protection)</label>
+                                            <input
+                                                className="form-input"
+                                                value={formData.color}
+                                                onChange={e => setFormData({ ...formData, color: e.target.value })}
+                                                placeholder="e.g. Slide Right / Blue"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Action (Shift/Motion/PA)</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <input
+                                                    className="form-input"
+                                                    value={formData.motion}
+                                                    onChange={e => setFormData({ ...formData, motion: e.target.value })}
+                                                    placeholder="e.g. Jet Motion"
+                                                />
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', whiteSpace: 'nowrap', padding: '0 1rem', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.playAction}
+                                                        onChange={e => setFormData({ ...formData, playAction: e.target.checked })}
+                                                    />
+                                                    <span style={{ fontSize: '0.9rem' }}>Play Action</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div className="form-group">
+                                                <label className="form-label">Tag 1</label>
+                                                <input
+                                                    className="form-input"
+                                                    value={formData.tag1}
+                                                    onChange={e => setFormData({ ...formData, tag1: e.target.value })}
+                                                    placeholder="e.g. Alert"
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Tag 2</label>
+                                                <input
+                                                    className="form-input"
+                                                    value={formData.tag2}
+                                                    onChange={e => setFormData({ ...formData, tag2: e.target.value })}
+                                                    placeholder="e.g. Check"
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
 
                                 {/* Hash Preference */}
                                 <div className="form-group">
@@ -4811,7 +4883,7 @@
                     <div
                         onClick={(e) => {
                             e.stopPropagation();
-                            onToggleSelection(play.id);
+                            onToggleSelection(play.id, e.shiftKey);
                         }}
                         style={{
                             position: 'absolute',
@@ -13446,7 +13518,7 @@
             // view: 'roster' | 'duties'
             const [newMember, setNewMember] = useState({
                 name: '', role: '', level: ['Varsity'], shirtSize: '',
-                positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
+                positions: { offense: '', offenseCoordinator: false, defense: '', defenseCoordinator: false, specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' }, specialsCoordinator: false },
                 name: '', role: '', level: ['Varsity'], shirtSize: '', phone: '', email: '',
                 positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
                 otherDuties: ''
@@ -13551,7 +13623,7 @@
                 onUpdateStaff([...staff, { ...newMember, id }]);
                 setNewMember({
                     name: '', role: '', level: ['Varsity'], shirtSize: '',
-                    positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
+                    positions: { offense: '', offenseCoordinator: false, defense: '', defenseCoordinator: false, specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' }, specialsCoordinator: false },
                     name: '', role: '', level: ['Varsity'], shirtSize: '', phone: '', email: '',
                     positions: { offense: '', defense: '', specials: { ko: '', kr: '', punt: '', pr: '', fg: '', block: '' } },
                     otherDuties: ''
@@ -13886,34 +13958,40 @@
                                                         </td>
                                                         <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.9rem' }}>
                                                             {isEditing === member.id ? (
-                                                                <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: '0.5rem', alignItems: 'center' }}>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '30px 20px 1fr', gap: '0.5rem', alignItems: 'center' }}>
                                                                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Off</span>
+                                                                    <input type="checkbox" checked={member.positions?.offenseCoordinator || false} onChange={e => updatePosition(member.id, 'offenseCoordinator', e.target.checked)} title="Coordinator" style={{ cursor: 'pointer' }} />
                                                                     <input
                                                                         className="form-input"
                                                                         value={member.positions?.offense || ''}
                                                                         onChange={e => updatePosition(member.id, 'offense', e.target.value)}
+                                                                        placeholder="Position"
                                                                     />
                                                                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Def</span>
+                                                                    <input type="checkbox" checked={member.positions?.defenseCoordinator || false} onChange={e => updatePosition(member.id, 'defenseCoordinator', e.target.checked)} title="Coordinator" style={{ cursor: 'pointer' }} />
                                                                     <input
                                                                         className="form-input"
                                                                         value={member.positions?.defense || ''}
                                                                         onChange={e => updatePosition(member.id, 'defense', e.target.value)}
+                                                                        placeholder="Position"
                                                                     />
                                                                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Spc</span>
+                                                                    <input type="checkbox" checked={member.positions?.specialsCoordinator || false} onChange={e => updatePosition(member.id, 'specialsCoordinator', e.target.checked)} title="Coordinator" style={{ cursor: 'pointer' }} />
                                                                     <input
                                                                         className="form-input"
                                                                         value={typeof member.positions?.specials === 'object' ? 'See Details' : (member.positions?.specials || '')}
                                                                         disabled={typeof member.positions?.specials === 'object'}
                                                                         onChange={e => updatePosition(member.id, 'specials', e.target.value)}
                                                                         title={typeof member.positions?.specials === 'object' ? "Edit in Detail View" : ""}
+                                                                        placeholder="Position"
                                                                     />
                                                                 </div>
                                                             ) : (
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                                    {member.positions?.offense && <div><span style={{ color: 'var(--text-secondary)' }}>Off:</span> {member.positions.offense}</div>}
-                                                                    {member.positions?.defense && <div><span style={{ color: 'var(--text-secondary)' }}>Def:</span> {member.positions.defense}</div>}
+                                                                    {member.positions?.offense && <div><span style={{ color: 'var(--text-secondary)' }}>Off{member.positions.offenseCoordinator ? ' (C)' : ''}:</span> {member.positions.offense}</div>}
+                                                                    {member.positions?.defense && <div><span style={{ color: 'var(--text-secondary)' }}>Def{member.positions.defenseCoordinator ? ' (C)' : ''}:</span> {member.positions.defense}</div>}
                                                                     {(member.positions?.specials && member.positions.specials !== ' - ') && (
-                                                                        <div><span style={{ color: 'var(--text-secondary)' }}>Spc:</span> {typeof member.positions.specials === 'object' ? formatSpecials(member.positions.specials) : member.positions.specials}</div>
+                                                                        <div><span style={{ color: 'var(--text-secondary)' }}>Spc{member.positions.specialsCoordinator ? ' (C)' : ''}:</span> {typeof member.positions.specials === 'object' ? formatSpecials(member.positions.specials) : member.positions.specials}</div>
                                                                     )}
                                                                 </div>
                                                             )}
@@ -14123,7 +14201,17 @@
                                     )}
 
                                     <div>
-                                        <label className="form-label">Offensive Assignment</label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                            <label className="form-label" style={{ marginBottom: 0 }}>Offensive Assignment</label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={newMember.positions.offenseCoordinator || false}
+                                                    onChange={e => setNewMember({ ...newMember, positions: { ...newMember.positions, offenseCoordinator: e.target.checked } })}
+                                                />
+                                                Coordinator
+                                            </label>
+                                        </div>
                                         <input
                                             className="form-input"
                                             value={newMember.positions.offense}
@@ -14132,7 +14220,17 @@
                                         />
                                     </div>
                                     <div>
-                                        <label className="form-label">Defensive Assignment</label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                            <label className="form-label" style={{ marginBottom: 0 }}>Defensive Assignment</label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={newMember.positions.defenseCoordinator || false}
+                                                    onChange={e => setNewMember({ ...newMember, positions: { ...newMember.positions, defenseCoordinator: e.target.checked } })}
+                                                />
+                                                Coordinator
+                                            </label>
+                                        </div>
                                         <input
                                             className="form-input"
                                             value={newMember.positions.defense}
@@ -16590,7 +16688,7 @@
             );
         };
 
-        const FormationManager = ({ formations, onAddFormation, onUpdateFormation, onDeleteFormation }) => {
+        const FormationManager = ({ formations, onAddFormation, onUpdateFormation, onDeleteFormation, positionNames = {} }) => {
             const [selectedFormationId, setSelectedFormationId] = useState(null);
             const [editingFormation, setEditingFormation] = useState(null);
             const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -16891,7 +16989,7 @@
                                                         textAnchor="middle"
                                                         style={{ pointerEvents: 'none', userSelect: 'none' }}
                                                     >
-                                                        {pos.label}
+                                                        {positionNames[pos.label] || pos.label}
                                                     </text>
                                                 </g>
                                             );
@@ -19301,16 +19399,18 @@
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {loadingMembers ? <p>Loading...</p> : members.map((m, idx) => (
-                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-body)', borderRadius: '8px' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold' }}>{m.email}</div>
-                                            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Role: {m.role} • Joined: {new Date(m.joinedAt).toLocaleDateString()}</div>
+                                {loadingMembers ? <p>Loading...</p> : members
+                                    .filter(m => m.email !== currentUser?.email)
+                                    .map((m, idx) => (
+                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-body)', borderRadius: '8px' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold' }}>{m.email}</div>
+                                                <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Role: {m.role} • Joined: {new Date(m.joinedAt).toLocaleDateString()}</div>
+                                            </div>
+                                            <button className="btn" style={{ color: '#ef4444' }} onClick={() => handleRemoveMember(m)}>Remove</button>
                                         </div>
-                                        <button className="btn" style={{ color: '#ef4444' }} onClick={() => handleRemoveMember(m)}>Remove</button>
-                                    </div>
-                                ))}
-                                {!loadingMembers && members.length === 0 && <p style={{ opacity: 0.5, fontStyle: 'italic' }}>No members found (except you, maybe? Try reloading).</p>}
+                                    ))}
+                                {!loadingMembers && members.filter(m => m.email !== currentUser?.email).length === 0 && <p style={{ opacity: 0.5, fontStyle: 'italic' }}>No other members found.</p>}
                             </div>
 
                             {/* Domain Management UI */}
@@ -19613,39 +19713,7 @@
                                 </div>
                             </div>
 
-                            <div className="card">
-                                <h3>Position Names</h3>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Customize position labels for your offense.</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
-                                    {[
-                                        { key: 'X', default: 'X', description: 'Left WR' },
-                                        { key: 'Z', default: 'Z', description: 'Right WR' },
-                                        { key: 'A', default: 'A', description: 'Slot WR' },
-                                        { key: 'Y', default: 'Y', description: 'Tight End' },
-                                        { key: 'QB', default: 'QB', description: 'Quarterback' },
-                                        { key: 'RB', default: 'RB', description: 'Running Back' },
-                                        { key: 'LT', default: 'LT', description: 'Left Tackle' },
-                                        { key: 'LG', default: 'LG', description: 'Left Guard' },
-                                        { key: 'C', default: 'C', description: 'Center' },
-                                        { key: 'RG', default: 'RG', description: 'Right Guard' },
-                                        { key: 'RT', default: 'RT', description: 'Right Tackle' },
-                                    ].map(pos => (
-                                        <div key={pos.key}>
-                                            <label className="form-label" style={{ fontSize: '0.75rem' }}>{pos.description}</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={positionNames[pos.key] || pos.default}
-                                                onChange={(e) => onUpdatePositionNames({ ...positionNames, [pos.key]: e.target.value.toUpperCase().slice(0, 3) })}
-                                                placeholder={pos.default}
-                                                maxLength="3"
-                                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
-                                                title={`Customize ${pos.description} label`}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+
 
                             <div className="card">
                                 <h3>Interface Theme</h3>
@@ -24802,7 +24870,7 @@
             );
         };
 
-        const PlayerApp = ({ roster, attendance, setRoster, setAttendance, getPlayerWeightLogs, addWeightLog, tasks, onUpdateTasks, dailyConnections, setDailyConnections }) => {
+        const PlayerApp = ({ roster, attendance, setRoster, setAttendance, getPlayerWeightLogs, addWeightLog, tasks, onUpdateTasks, dailyConnections, setDailyConnections, currentWeek }) => {
             const [selectedPlayerId, setSelectedPlayerId] = useState(roster.length > 0 ? roster[0].id : '');
             const [activeTab, setActiveTab] = useState('wellness'); // wellness, profile, attendance, achievements
             const [showCoachAlert, setShowCoachAlert] = useState(false);
@@ -25116,6 +25184,7 @@
                                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)', overflowX: 'auto' }}>
                                     {[
                                         { id: 'wellness', label: 'Daily Check-In', icon: 'Heart' },
+                                        { id: 'gameweek', label: 'Game Week', icon: 'Calendar' },
                                         { id: 'profile', label: 'My Profile', icon: 'User' },
                                         { id: 'attendance', label: 'Attendance', icon: 'Calendar' },
                                         { id: 'achievements', label: 'Progress', icon: 'Award' }
@@ -25435,6 +25504,85 @@
                                                 </button>
                                             </div>
                                         </div>
+                                    </div>
+                                )}
+
+
+                                {/* GAME WEEK TAB */}
+                                {activeTab === 'gameweek' && currentWeek && (
+                                    <div style={{ paddingBottom: '2rem' }}>
+                                        {/* Header */}
+                                        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, var(--surface) 0%, var(--bg-body) 100%)' }}>
+                                            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Week {currentWeek.weekNum}: {currentWeek.opponent}</h2>
+                                            <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-secondary)' }}>
+                                                <span>{currentWeek.overview?.isHomeGame ? '🏠 Home' : '🚌 Away'}</span>
+                                                <span>•</span>
+                                                <span>{currentWeek.date || 'TBD'}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Overview Section */}
+                                        {(!currentWeek.overview?.distribution || currentWeek.overview.distribution.showOverview) && (
+                                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                                <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Overview</h3>
+                                                {/* Message */}
+                                                {currentWeek.overview?.message && (
+                                                    <div style={{ marginBottom: '1.5rem', fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                                                        "{currentWeek.overview.message}"
+                                                    </div>
+                                                )}
+                                                {/* Logistics */}
+                                                <div style={{ display: 'grid', gap: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span style={{ color: 'var(--text-secondary)' }}>Location:</span>
+                                                        <span style={{ fontWeight: 'bold' }}>{currentWeek.overview?.travel?.location || 'TBD'}</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span style={{ color: 'var(--text-secondary)' }}>{currentWeek.overview?.isHomeGame ? 'Arrival' : 'Departure'}:</span>
+                                                        <span style={{ fontWeight: 'bold' }}>{currentWeek.overview?.travel?.departure || 'TBD'}</span>
+                                                    </div>
+                                                    {currentWeek.overview?.uniforms && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <span style={{ color: 'var(--text-secondary)' }}>Uniforms:</span>
+                                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                                {['Helmet', 'Jersey', 'Pants'].map(part => (
+                                                                    <div key={part} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: currentWeek.overview.uniforms[part.toLowerCase()]?.toLowerCase() === 'chrome' ? 'linear-gradient(135deg, #e0e0e0, #fff)' : currentWeek.overview.uniforms[part.toLowerCase()]?.toLowerCase(), border: '1px solid white' }}></div>
+                                                                        <span style={{ fontSize: '0.8rem' }}>{currentWeek.overview.uniforms[part.toLowerCase()]}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Schedule Section */}
+                                        {currentWeek.overview?.distribution?.showSchedule && currentWeek.overview?.practiceSchedule && (
+                                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                                <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Weekly Schedule</h3>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                    {currentWeek.overview.practiceSchedule.map(day => (
+                                                        <div key={day.day} style={{ display: 'grid', gridTemplateColumns: 'min-content 1fr', gap: '1rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                                            <div style={{ fontWeight: 'bold', minWidth: '40px', color: 'var(--accent)' }}>{day.day.substring(0, 3)}</div>
+                                                            <div>
+                                                                <div style={{ fontWeight: 'bold' }}>{day.start} - {day.end}</div>
+                                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{day.notes}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Depth Chart Placeholder */}
+                                        {currentWeek.overview?.distribution?.showDepthChart && (
+                                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', opacity: 0.5 }}>
+                                                <h3 style={{ marginBottom: '0.5rem' }}>Depth Chart</h3>
+                                                <p style={{ fontSize: '0.9rem' }}>Depth Chat viewing is coming soon.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -29451,6 +29599,40 @@
                 </div>
             );
 
+            const [editingBox, setEditingBox] = useState(null); // { sectionIdx, boxIdx }
+
+            const renderBoxEditorModal = () => {
+                if (!editingBox) return null;
+                const { sectionIdx, boxIdx } = editingBox;
+                const section = gamePlanLayouts.CALL_SHEET.sections[sectionIdx];
+                if (!section) return null;
+                const box = section.boxes[boxIdx];
+                if (!box) return null;
+
+                return (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }} onClick={() => setEditingBox(null)}>
+                        <div style={{
+                            width: '90%', maxWidth: '800px', maxHeight: '90vh',
+                            background: 'white', borderRadius: '8px',
+                            display: 'flex', flexDirection: 'column',
+                            overflow: 'hidden'
+                        }} onClick={e => e.stopPropagation()}>
+                            <div style={{ padding: '1rem', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: box.color || '#f8fafc', color: 'white' }}>
+                                <h3 style={{ margin: 0, textTransform: 'uppercase' }}>Edit {box.header}</h3>
+                                <button className="btn" onClick={() => setEditingBox(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white' }}>Close</button>
+                            </div>
+                            <div style={{ padding: '1rem', overflowY: 'auto', flex: 1 }}>
+                                {box.type === 'script' ? renderScriptBox(box, sectionIdx, boxIdx, true) : renderGridBox(box, sectionIdx, boxIdx, true)}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             const renderScriptBox = (box, sectionIdx, boxIdx, isEditing) => {
                 const rows = box.rows || [];
                 const tempos = box.tempos || {};
@@ -29645,12 +29827,11 @@
                             onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
                         >
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                                {assignedPlays.slice(0, 12).map((p, idx) => (
+                                {assignedPlays.map((p, idx) => (
                                     <div key={idx} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1e293b' }}>
                                         • {p.name}
                                     </div>
                                 ))}
-                                {assignedPlays.length > 12 && <div style={{ fontSize: '0.7rem', color: '#94a3b8', gridColumn: '1 / -1' }}>+ {assignedPlays.length - 12} more plays...</div>}
                                 {assignedPlays.length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', paddingTop: '10px' }}>Click to select plays</div>}
                             </div>
                         </div>
@@ -29660,6 +29841,17 @@
 
             const renderBox = (box, sectionIdx, boxIdx) => {
                 const isEditing = editingHeader && editingHeader.sectionIdx === sectionIdx && editingHeader.rowIdx === boxIdx;
+                const isBoxEditing = editingBox && editingBox.sectionIdx === sectionIdx && editingBox.boxIdx === boxIdx;
+
+                // Summary Logic
+                let summaryText = "";
+                if (box.type === 'script') {
+                    const playCount = (box.rows || []).filter(r => r.content).length;
+                    summaryText = `${playCount} Plays in Script`;
+                } else {
+                    const playCount = getGridPlays(box.setId).filter(p => p.type !== 'GAP').length;
+                    summaryText = `${playCount} Situational Plays`;
+                }
 
                 return (
                     <div
@@ -29675,8 +29867,8 @@
                         style={{
                             gridColumn: `span ${box.colSpan || 1}`,
                             border: isEditing ? '2px solid var(--accent)' : '1px solid #ddd',
-                            borderRadius: '4px', overflow: 'visible',
-                            minHeight: box.type === 'script' ? '100px' : '150px',
+                            borderRadius: '4px', overflow: 'hidden',
+                            minHeight: '80px', // Smaller collapsed height
                             backgroundColor: 'white', cursor: !isLocked ? 'move' : 'default',
                             opacity: draggedCell && draggedCell.sectionIdx === sectionIdx && draggedCell.rowIdx === boxIdx ? 0.5 : (box.hidden && !isLocked ? 0.5 : 1),
                             display: (box.hidden && isLocked) ? 'none' : 'block',
@@ -29686,7 +29878,7 @@
                             if (isLocked) return;
                             e.preventDefault();
                             e.stopPropagation();
-                            setEditingHeader({ sectionIdx, rowIdx: boxIdx });
+                            setEditingBox({ sectionIdx, boxIdx });
                         }}
                     >
                         <div style={{ backgroundColor: box.color, color: 'white', padding: '0.25rem 0.5rem', fontWeight: 'bold', fontSize: '0.8rem', textAlign: 'center', textTransform: 'uppercase', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
@@ -29722,7 +29914,16 @@
                                 </>
                             )}
                         </div>
-                        {box.type === 'script' ? renderScriptBox(box, sectionIdx, boxIdx, isEditing) : renderGridBox(box, sectionIdx, boxIdx, isEditing)}
+
+                        {/* Summary View */}
+                        <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#1e293b' }}>
+                                {box.type === 'script' ? '📜' : '🔢'}
+                            </div>
+                            <div style={{ marginTop: '0.5rem' }}>{summaryText}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '0.5rem' }}>Double-click to edit</div>
+                        </div>
+
                     </div>
                 );
             };
@@ -30967,31 +31168,442 @@
                 );
             };
 
+            const renderStaples = () => {
+                const staplesLayout = gamePlanLayouts.STAPLES || { sections: [] };
+
+                const updateStaplesLayout = (newLayout) => {
+                    const newLayouts = { ...gamePlanLayouts, STAPLES: newLayout };
+                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                };
+
+                const handleAddSection = () => {
+                    const newSection = {
+                        id: `staple_sec_${Date.now()}`,
+                        title: "New Staples Section",
+                        columns: ["Column 1", "Column 2", "Column 3"],
+                        rows: [
+                            { id: `row_${Date.now()}_1`, label: "Row 1", cells: {} },
+                            { id: `row_${Date.now()}_2`, label: "Row 2", cells: {} }
+                        ]
+                    };
+                    updateStaplesLayout({ ...staplesLayout, sections: [...staplesLayout.sections, newSection] });
+                };
+
+                const handleUpdateSection = (sectionIdx, updatedSection) => {
+                    const newSections = [...staplesLayout.sections];
+                    newSections[sectionIdx] = updatedSection;
+                    updateStaplesLayout({ ...staplesLayout, sections: newSections });
+                };
+
+                const handleDeleteSection = (sectionIdx) => {
+                    if (!confirm("Are you sure you want to delete this section?")) return;
+                    const newSections = [...staplesLayout.sections];
+                    newSections.splice(sectionIdx, 1);
+                    updateStaplesLayout({ ...staplesLayout, sections: newSections });
+                };
+
+                return (
+                    <div style={{ padding: '1rem', height: '100%', overflowY: 'auto' }}>
+                        <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                            {!isLocked && (
+                                <button className="btn btn-primary" onClick={handleAddSection}>
+                                    + Add Staples Section
+                                </button>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            {staplesLayout.sections.map((section, sIdx) => (
+                                <StapleSection
+                                    key={section.id}
+                                    section={section}
+                                    index={sIdx}
+                                    isLocked={isLocked}
+                                    onUpdate={(updated) => handleUpdateSection(sIdx, updated)}
+                                    onDelete={() => handleDeleteSection(sIdx)}
+                                    plays={plays}
+                                />
+                            ))}
+                        </div>
+
+                        {staplesLayout.sections.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8', border: '2px dashed #e2e8f0', borderRadius: '8px' }}>
+                                <h3>No Staples Sections Yet</h3>
+                                <p>Click the button above to create a customizable grid for your staple plays.</p>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const StapleSection = ({ section, index, isLocked, onUpdate, onDelete, plays }) => {
+                const [isEditingLayout, setIsEditingLayout] = useState(false);
+
+                const handleTitleChange = (e) => onUpdate({ ...section, title: e.target.value });
+
+                const handleAddColumn = () => {
+                    onUpdate({ ...section, columns: [...section.columns, "New Col"] });
+                };
+                const handleRemoveColumn = (colIdx) => {
+                    const newCols = [...section.columns];
+                    newCols.splice(colIdx, 1);
+                    // Cleanup cells data
+                    const newRows = section.rows.map(row => {
+                        const newCells = {};
+                        Object.keys(row.cells).forEach(key => {
+                            const k = parseInt(key);
+                            if (k < colIdx) newCells[k] = row.cells[k];
+                            else if (k > colIdx) newCells[k - 1] = row.cells[k];
+                        });
+                        return { ...row, cells: newCells };
+                    });
+                    onUpdate({ ...section, columns: newCols, rows: newRows });
+                };
+                const handleColNameChange = (colIdx, val) => {
+                    const newCols = [...section.columns];
+                    newCols[colIdx] = val;
+                    onUpdate({ ...section, columns: newCols });
+                };
+
+                const handleAddRow = () => {
+                    onUpdate({
+                        ...section,
+                        rows: [...section.rows, { id: `row_${Date.now()}`, label: "New Row", cells: {} }]
+                    });
+                };
+                const handleRemoveRow = (rowIdx) => {
+                    const newRows = [...section.rows];
+                    newRows.splice(rowIdx, 1);
+                    onUpdate({ ...section, rows: newRows });
+                };
+                const handleRowLabelChange = (rowIdx, val) => {
+                    const newRows = [...section.rows];
+                    newRows[rowIdx] = { ...newRows[rowIdx], label: val };
+                    onUpdate({ ...section, rows: newRows });
+                };
+
+                const handleDrop = (e, rowIdx, colIdx) => {
+                    e.preventDefault();
+                    if (isLocked) return;
+                    try {
+                        const data = JSON.parse(e.dataTransfer.getData('application/react-dnd'));
+                        if (data && data.playId) {
+                            const newRows = [...section.rows];
+                            const currentCells = { ...(newRows[rowIdx].cells || {}) };
+                            newRows[rowIdx] = {
+                                ...newRows[rowIdx],
+                                cells: { ...currentCells, [colIdx]: data.playId }
+                            };
+                            onUpdate({ ...section, rows: newRows });
+                        }
+                    } catch (e) { }
+                };
+
+                const handleClearCell = (rowIdx, colIdx) => {
+                    const newRows = [...section.rows];
+                    const currentCells = { ...newRows[rowIdx].cells };
+                    delete currentCells[colIdx];
+                    newRows[rowIdx] = { ...newRows[rowIdx], cells: currentCells };
+                    onUpdate({ ...section, rows: newRows });
+                };
+
+                return (
+                    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                        {/* Header */}
+                        <div style={{ padding: '0.75rem 1rem', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            {isEditingLayout ? (
+                                <input
+                                    value={section.title}
+                                    onChange={handleTitleChange}
+                                    style={{ fontSize: '1.1rem', fontWeight: 'bold', border: '1px solid #cbd5e1', padding: '4px', borderRadius: '4px' }}
+                                />
+                            ) : (
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#334155' }}>{section.title}</h3>
+                            )}
+
+                            {!isLocked && (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        className={`btn-sm ${isEditingLayout ? 'btn-primary' : 'btn-secondary'}`}
+                                        onClick={() => setIsEditingLayout(!isEditingLayout)}
+                                    >
+                                        {isEditingLayout ? 'Done Editing' : 'Edit Layout'}
+                                    </button>
+                                    <button className="btn-sm" style={{ color: '#ef4444' }} onClick={onDelete}>
+                                        <Icon name="Trash2" size={16} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Grid Content */}
+                        <div style={{ padding: '1rem', overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: '150px', padding: '8px', textAlign: 'left', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '0.8rem' }}>
+                                            {isEditingLayout ? "ROW LABELS" : ""}
+                                        </th>
+                                        {section.columns.map((col, cIdx) => (
+                                            <th key={cIdx} style={{ padding: '8px', minWidth: '120px', textAlign: 'center', borderBottom: '2px solid #e2e8f0' }}>
+                                                {isEditingLayout ? (
+                                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <input
+                                                            value={col}
+                                                            onChange={(e) => handleColNameChange(cIdx, e.target.value)}
+                                                            style={{ width: '100%', fontSize: '0.8rem', textAlign: 'center', padding: '2px' }}
+                                                        />
+                                                        <div style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => handleRemoveColumn(cIdx)}>×</div>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase' }}>{col}</div>
+                                                )}
+                                            </th>
+                                        ))}
+                                        {isEditingLayout && (
+                                            <th style={{ width: '40px', padding: '8px', borderBottom: '2px solid #e2e8f0' }}>
+                                                <button className="btn-sm" style={{ fontSize: '1.2rem', padding: '0 6px' }} onClick={handleAddColumn}>+</button>
+                                            </th>
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {section.rows.map((row, rIdx) => (
+                                        <tr key={row.id}>
+                                            <td style={{ padding: '8px', borderBottom: '1px solid #f1f5f9', fontWeight: 'bold', color: '#475569', fontSize: '0.9rem' }}>
+                                                {isEditingLayout ? (
+                                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                        <div style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => handleRemoveRow(rIdx)}>×</div>
+                                                        <input
+                                                            value={row.label}
+                                                            onChange={(e) => handleRowLabelChange(rIdx, e.target.value)}
+                                                            style={{ width: '100%', fontSize: '0.9rem', padding: '2px' }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    row.label
+                                                )}
+                                            </td>
+                                            {section.columns.map((col, cIdx) => {
+                                                const playId = row.cells ? row.cells[cIdx] : null;
+                                                const play = playId ? plays.find(p => p.id === playId) : null;
+                                                return (
+                                                    <td
+                                                        key={cIdx}
+                                                        style={{ padding: '4px', borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #f1f5f9', textAlign: 'center' }}
+                                                        onDragOver={e => e.preventDefault()}
+                                                        onDrop={e => handleDrop(e, rIdx, cIdx)}
+                                                    >
+                                                        {play ? (
+                                                            <div style={{
+                                                                background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px',
+                                                                padding: '4px', fontSize: '0.8rem', position: 'relative',
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                            }}>
+                                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{play.name}</div>
+                                                                {!isLocked && (
+                                                                    <div
+                                                                        onClick={() => handleClearCell(rIdx, cIdx)}
+                                                                        style={{ position: 'absolute', right: '-4px', top: '-4px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '14px', height: '14px', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                                    >×</div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ height: '32px', background: '#fafafa', borderRadius: '4px', border: '1px dashed #e2e8f0' }}></div>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                            {isEditingLayout && <td style={{ borderBottom: '1px solid #f1f5f9' }}></td>}
+                                        </tr>
+                                    ))}
+                                    {isEditingLayout && (
+                                        <tr>
+                                            <td style={{ padding: '8px' }}>
+                                                <button className="btn-sm" onClick={handleAddRow}>+ Add Row</button>
+                                            </td>
+                                            <td colSpan={section.columns.length + 1}></td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderPriorityPlays = () => {
+                const priorityList = gamePlan.priorityPlays || Array(20).fill(null);
+
+                const updatePriorityList = (newList) => {
+                    if (onUpdateGamePlan) {
+                        onUpdateGamePlan({ ...gamePlan, priorityPlays: newList });
+                    }
+                };
+
+                const handleRemoveFromPriority = (index) => {
+                    const newList = [...priorityList];
+                    newList[index] = null;
+                    updatePriorityList(newList);
+                };
+
+                const handleAddToPriority = (playId) => {
+                    // Find first empty slot
+                    const emptyIndex = priorityList.findIndex(p => p === null);
+                    if (emptyIndex === -1) {
+                        alert("Top 20 list is full. Remove a play first.");
+                        return;
+                    }
+                    const newList = [...priorityList];
+                    newList[emptyIndex] = playId;
+                    updatePriorityList(newList);
+                };
+
+                // Drag and Drop for Priority List
+                const handlePriorityDrop = (e, index) => {
+                    e.preventDefault();
+                    if (isLocked) return;
+                    try {
+                        const data = JSON.parse(e.dataTransfer.getData('application/react-dnd'));
+                        if (data && data.playId) {
+                            const newList = [...priorityList];
+                            // If play is already in list, maybe remove from old spot? For now just overwrite or add.
+                            // Let's allow duplicates or just replace.
+                            newList[index] = data.playId;
+                            updatePriorityList(newList);
+                        }
+                    } catch (e) { }
+                };
+
+                return (
+                    <div style={{ display: 'flex', height: '100%', gap: '1rem' }}>
+                        {/* LEFT: Top 20 List */}
+                        <div style={{ flex: '0 0 350px', display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '8px', border: '1px solid #ddd', overflow: 'hidden' }}>
+                            <div style={{ padding: '1rem', background: '#f8fafc', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Top 20 Priority Plays</h3>
+                                {!isLocked && (
+                                    <button
+                                        className="btn btn-primary btn-sm"
+                                        onClick={() => {
+                                            const name = prompt("Enter new play name:");
+                                            if (name && onQuickAddPlay) {
+                                                const newPlay = onQuickAddPlay(name);
+                                                handleAddToPriority(newPlay.id);
+                                            }
+                                        }}
+                                    >
+                                        + New Play
+                                    </button>
+                                )}
+                            </div>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+                                {priorityList.map((playId, idx) => {
+                                    const play = playId ? plays.find(p => p.id === playId) : null;
+                                    return (
+                                        <div
+                                            key={idx}
+                                            onDragOver={e => e.preventDefault()}
+                                            onDrop={e => handlePriorityDrop(e, idx)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '8px',
+                                                padding: '0.5rem', marginBottom: '0.5rem',
+                                                background: play ? '#f0f9ff' : '#f8fafc',
+                                                border: play ? '1px solid #bae6fd' : '1px dashed #cbd5e1',
+                                                borderRadius: '4px'
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: 'bold', color: '#64748b', minWidth: '24px' }}>{idx + 1}.</div>
+                                            {play ? (
+                                                <>
+                                                    <div style={{ flex: 1, fontWeight: 'bold' }}>{play.name}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{play.formation}</div>
+                                                    {!isLocked && (
+                                                        <button
+                                                            onClick={() => handleRemoveFromPriority(idx)}
+                                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                                        >
+                                                            <Icon name="X" size={16} />
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.9rem' }}>Empty Slot</div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* RIGHT: Play Browser */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '8px', border: '1px solid #ddd', overflow: 'hidden' }}>
+                            <div style={{ padding: '1rem', background: '#f8fafc', borderBottom: '1px solid #ddd' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Playbook Browser</h3>
+                            </div>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+                                {/* Reusing Play Selector Logic partially (or just listing plays) */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem' }}>
+                                    {plays.filter(p => !p.archived).map(play => (
+                                        <div
+                                            key={play.id}
+                                            draggable={!isLocked}
+                                            onDragStart={(e) => {
+                                                e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id }));
+                                            }}
+                                            onClick={() => !isLocked && handleAddToPriority(play.id)}
+                                            style={{
+                                                padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '4px',
+                                                cursor: isLocked ? 'default' : 'pointer', background: 'white',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{play.name}</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{play.formation}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)', gap: '1rem' }}>
 
                     {/* Toolbar */}
                     <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
+                        <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')}>
+                            STAPLES
+                        </button>
+                        <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')}>
+                            PRIORITY PLAYS
+                        </button>
                         <button className={`btn ${viewMode === 'call-sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('call-sheet')}>
                             SITUATIONS & SCRIPTS
                         </button>
+                        <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
+                            STRIKE 'EM OUT
+                        </button>
                         <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
-                            Player Touches
+                            PLAYER TOUCHES
                         </button>
                     </div>
 
                     {/* View Content */}
-                    <div style={{ flex: 1, overflow: 'hidden', background: 'white', padding: '1rem', borderRadius: '8px' }}>
+                    <div style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px' }}>
                         {viewMode === 'call-sheet' && renderCallSheet()}
+                        {viewMode === 'matrix' && renderMatrix()}
                         {viewMode === 'player-touches' && renderPlayerTouches()}
+                        {viewMode === 'priority' && renderPriorityPlays()}
+                        {viewMode === 'staples' && renderStaples()}
                     </div>
-
-
 
                     {/* Play Selector Modal */}
                     {/* Play Selector Modal */}
                     {renderPlaySelector()}
                     {renderSectionConfigurationModal()}
+                    {renderBoxEditorModal()}
 
                 </div >
             );
@@ -33068,6 +33680,21 @@
 
         const GameWeekOverview = ({ week, onUpdateWeek, teamLogo, isLocked }) => {
             const overview = week.overview || {
+                isHomeGame: false,
+                practiceSchedule: [
+                    { day: 'Monday', start: '', end: '', notes: '' },
+                    { day: 'Tuesday', start: '', end: '', notes: '' },
+                    { day: 'Wednesday', start: '', end: '', notes: '' },
+                    { day: 'Thursday', start: '', end: '', notes: '' },
+                    { day: 'Friday', start: '', end: '', notes: '' }
+                ],
+                distribution: {
+                    showOverview: true,
+                    showSchedule: true,
+                    showDepthChart: false,
+                    showScoutReport: false,
+                    showGamePlan: false
+                },
                 travel: { location: '', departure: '', notes: '' },
                 uniforms: { jersey: 'Red', pants: 'Red', helmet: 'Red' },
                 message: '',
@@ -33096,8 +33723,16 @@
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                         <div>
                             <h1>Game Week Overview</h1>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>
-                                Week {week.weekNum}: {week.opponent} ({week.location})
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <span>Week {week.weekNum}: {week.opponent}</span>
+                                <button
+                                    className={`btn ${overview.isHomeGame ? 'btn-primary' : ''}`}
+                                    style={{ padding: '0.25rem 0.75rem', fontSize: '0.9rem', border: '1px solid var(--border)' }}
+                                    onClick={() => handleChange(null, 'isHomeGame', !overview.isHomeGame)}
+                                    disabled={isLocked}
+                                >
+                                    {overview.isHomeGame ? '🏠 Home Game' : '🚌 Away Game'}
+                                </button>
                             </div>
                         </div>
                         {teamLogo && <img src={teamLogo} alt="Logo" style={{ height: '60px' }} />}
@@ -33124,7 +33759,7 @@
 
                             {/* Logistics & Travel */}
                             <div className="card">
-                                <h2>Logistics & Travel</h2>
+                                <h2>Logistics & {overview.isHomeGame ? 'Arrival' : 'Travel'}</h2>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                     <div>
                                         <label className="form-label">Location</label>
@@ -33137,7 +33772,7 @@
                                         />
                                     </div>
                                     <div>
-                                        <label className="form-label">Departure</label>
+                                        <label className="form-label">{overview.isHomeGame ? 'Arrival Time' : 'Departure Time'}</label>
                                         <input
                                             type="text" className="form-input"
                                             value={overview.travel.departure}
@@ -33147,17 +33782,19 @@
                                         />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="form-label">Travel Notes</label>
-                                    <textarea
-                                        className="form-input"
-                                        rows="2"
-                                        value={overview.travel.notes}
-                                        onChange={(e) => handleChange('travel', 'notes', e.target.value)}
-                                        placeholder="Bus details, stops, etc."
-                                        disabled={isLocked}
-                                    />
-                                </div>
+                                {!overview.isHomeGame && (
+                                    <div>
+                                        <label className="form-label">Travel Notes</label>
+                                        <textarea
+                                            className="form-input"
+                                            rows="2"
+                                            value={overview.travel.notes}
+                                            onChange={(e) => handleChange('travel', 'notes', e.target.value)}
+                                            placeholder="Bus details, stops, etc."
+                                            disabled={isLocked}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Team Meal */}
@@ -33249,22 +33886,100 @@
                                 />
                             </div>
 
-                            {/* District Context */}
+
+
+                            {/* Practice Schedule */}
                             <div className="card">
-                                <h2>District / Class Context</h2>
-                                <textarea
-                                    className="form-input"
-                                    rows="3"
-                                    placeholder="Standings, Playoff contentions, etc."
-                                    value={overview.context}
-                                    onChange={(e) => handleChange(null, 'context', e.target.value)}
-                                    disabled={isLocked}
-                                />
+                                <h2>Practice Schedule</h2>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                                    <thead>
+                                        <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ padding: '0.5rem' }}>Day</th>
+                                            <th style={{ padding: '0.5rem' }}>Start</th>
+                                            <th style={{ padding: '0.5rem' }}>End</th>
+                                            <th style={{ padding: '0.5rem' }}>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(overview.practiceSchedule || []).map((day, index) => (
+                                            <tr key={day.day} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>{day.day}</td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <input
+                                                        className="form-input"
+                                                        value={day.start}
+                                                        onChange={(e) => {
+                                                            const newSchedule = [...(overview.practiceSchedule || [])];
+                                                            newSchedule[index] = { ...day, start: e.target.value };
+                                                            handleChange(null, 'practiceSchedule', newSchedule);
+                                                        }}
+                                                        disabled={isLocked}
+                                                        style={{ padding: '0.25rem' }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <input
+                                                        className="form-input"
+                                                        value={day.end}
+                                                        onChange={(e) => {
+                                                            const newSchedule = [...(overview.practiceSchedule || [])];
+                                                            newSchedule[index] = { ...day, end: e.target.value };
+                                                            handleChange(null, 'practiceSchedule', newSchedule);
+                                                        }}
+                                                        disabled={isLocked}
+                                                        style={{ padding: '0.25rem' }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <input
+                                                        className="form-input"
+                                                        value={day.notes}
+                                                        onChange={(e) => {
+                                                            const newSchedule = [...(overview.practiceSchedule || [])];
+                                                            newSchedule[index] = { ...day, notes: e.target.value };
+                                                            handleChange(null, 'practiceSchedule', newSchedule);
+                                                        }}
+                                                        disabled={isLocked}
+                                                        style={{ padding: '0.25rem' }}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Player App Distribution */}
+                            <div className="card">
+                                <h2>Player App Distribution</h2>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Control what information players can see in their app.</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                                    {[
+                                        { key: 'showOverview', label: 'Overview' },
+                                        { key: 'showSchedule', label: 'Schedule' },
+                                        { key: 'showDepthChart', label: 'Depth Chart' },
+                                        { key: 'showScoutReport', label: 'Scout Report' },
+                                        { key: 'showGamePlan', label: 'Game Plan' }
+                                    ].map(item => (
+                                        <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={overview.distribution?.[item.key] || false}
+                                                onChange={(e) => {
+                                                    const newDist = { ...(overview.distribution || {}), [item.key]: e.target.checked };
+                                                    handleChange(null, 'distribution', newDist);
+                                                }}
+                                                disabled={isLocked}
+                                            />
+                                            {item.label}
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
 
                         </div>
                     </div>
-                </div>
+                </div >
             );
 
         };
@@ -34759,6 +35474,12 @@
             });
             const [depthChartType, setDepthChartType] = useState('OFFENSE');
 
+            // Offense Setup State
+            const [playSyntax, setPlaySyntax] = useLocalStorage('oc-dashboard-play-syntax', []);
+            const [termLibrary, setTermLibrary] = useLocalStorage('oc-dashboard-term-library', {});
+            const [offenseSetupTab, setOffenseSetupTab] = useState('positions');
+            const [offenseSetupCategory, setOffenseSetupCategory] = useState(null);
+
 
             // Layout Persistence
             const [dumbCallSheetData, setDumbCallSheetData] = useLocalStorage('dumbCallSheetData', {});
@@ -35033,7 +35754,11 @@
             // Save roster to localStorage whenever it changes
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-roster', JSON.stringify(roster));
-            }, [roster]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'roster', roster);
+                }
+            }, [roster, currentUser]);
 
             // Save depth chart to localStorage whenever it changes
             useEffect(() => {
@@ -35159,6 +35884,7 @@
                         formations={formations}
                         rooskiLibrary={rooskiLibrary}
                         setRooskiLibrary={setRooskiLibrary}
+                        positionNames={positionNames}
                     />
                 )
             }
@@ -35237,6 +35963,7 @@
 
             // Batch Delete State
             const [selectedPlays, setSelectedPlays] = useState([]);
+            const [lastSelectedPlayId, setLastSelectedPlayId] = useState(null);
 
             const handleImportDefaultData = () => {
                 if (window.confirm('This will OVERWRITE your current roster and staff list with the 2025 default data. Are you sure?')) {
@@ -35284,7 +36011,27 @@
                 alert(`✅ Season Regressed!\n\n${updatedRoster.length} players moved back one grade.\n\nNote: Graduated seniors were NOT restored.`);
             };
 
-            const togglePlaySelection = (playId) => {
+            const togglePlaySelection = (playId, isShift) => {
+                const currentFiltered = getFilteredPlaybook();
+                setLastSelectedPlayId(playId);
+
+                if (isShift && lastSelectedPlayId) {
+                    const currentIndex = currentFiltered.findIndex(p => p.id === playId);
+                    const lastIndex = currentFiltered.findIndex(p => p.id === lastSelectedPlayId);
+
+                    if (currentIndex !== -1 && lastIndex !== -1) {
+                        const start = Math.min(currentIndex, lastIndex);
+                        const end = Math.max(currentIndex, lastIndex);
+                        const idsInRange = currentFiltered.slice(start, end + 1).map(p => p.id);
+
+                        setSelectedPlays(prev => {
+                            const newSet = new Set([...prev, ...idsInRange]);
+                            return Array.from(newSet);
+                        });
+                        return;
+                    }
+                }
+
                 setSelectedPlays(prev =>
                     prev.includes(playId)
                         ? prev.filter(id => id !== playId)
@@ -35496,6 +36243,261 @@
                             ))}
                         </div>
                     </div >
+                );
+            };
+
+            const renderOffenseSetup = () => {
+                const getTerms = (catId) => termLibrary[catId] || [];
+                const addTerm = (catId) => {
+                    const term = prompt("Enter new term:");
+                    if (term) {
+                        const newTerms = [...getTerms(catId), { id: Date.now().toString(), label: term }];
+                        setTermLibrary({ ...termLibrary, [catId]: newTerms });
+                    }
+                };
+                const deleteTerm = (catId, termId) => {
+                    if (confirm("Delete this term?")) {
+                        const newTerms = getTerms(catId).filter(t => t.id !== termId);
+                        setTermLibrary({ ...termLibrary, [catId]: newTerms });
+                    }
+                };
+
+                return (
+                    <div className="card" style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+                            <h1 style={{ margin: 0 }}>Offense Setup</h1>
+                            <p style={{ opacity: 0.7, margin: '0.5rem 0 0 0' }}>Configure your offensive language, positions, and terminology.</p>
+                        </div>
+
+                        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
+                            <button
+                                className={`btn-ghost`}
+                                style={{
+                                    borderRadius: 0,
+                                    padding: '1rem 1.5rem',
+                                    borderBottom: offenseSetupTab === 'positions' ? '3px solid var(--accent)' : '3px solid transparent',
+                                    fontWeight: offenseSetupTab === 'positions' ? 'bold' : 'normal',
+                                    color: offenseSetupTab === 'positions' ? 'var(--text-primary)' : 'var(--text-secondary)'
+                                }}
+                                onClick={() => setOffenseSetupTab('positions')}
+                            >
+                                <Icon name="Users" size={16} /> Positions
+                            </button>
+                            <button
+                                className={`btn-ghost`}
+                                style={{
+                                    borderRadius: 0,
+                                    padding: '1rem 1.5rem',
+                                    borderBottom: offenseSetupTab === 'syntax' ? '3px solid var(--accent)' : '3px solid transparent',
+                                    fontWeight: offenseSetupTab === 'syntax' ? 'bold' : 'normal',
+                                    color: offenseSetupTab === 'syntax' ? 'var(--text-primary)' : 'var(--text-secondary)'
+                                }}
+                                onClick={() => setOffenseSetupTab('syntax')}
+                            >
+                                <Icon name="Code" size={16} /> Play Syntax
+                            </button>
+                            <button
+                                className={`btn-ghost`}
+                                style={{
+                                    borderRadius: 0,
+                                    padding: '1rem 1.5rem',
+                                    borderBottom: offenseSetupTab === 'terms' ? '3px solid var(--accent)' : '3px solid transparent',
+                                    fontWeight: offenseSetupTab === 'terms' ? 'bold' : 'normal',
+                                    color: offenseSetupTab === 'terms' ? 'var(--text-primary)' : 'var(--text-secondary)'
+                                }}
+                                onClick={() => setOffenseSetupTab('terms')}
+                            >
+                                <Icon name="BookOpen" size={16} /> Term Library
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '1.5rem', flex: 1 }}>
+                            {offenseSetupTab === 'positions' && (
+                                <div>
+                                    <h3 style={{ marginBottom: '1rem' }}>Position Names</h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                                        {[
+                                            { key: 'X', default: 'X', description: 'Left WR' },
+                                            { key: 'Z', default: 'Z', description: 'Right WR' },
+                                            { key: 'A', default: 'A', description: 'Slot WR' },
+                                            { key: 'Y', default: 'Y', description: 'Tight End' },
+                                            { key: 'QB', default: 'QB', description: 'Quarterback' },
+                                            { key: 'RB', default: 'RB', description: 'Running Back' },
+                                            { key: 'LT', default: 'LT', description: 'Left Tackle' },
+                                            { key: 'LG', default: 'LG', description: 'Left Guard' },
+                                            { key: 'C', default: 'C', description: 'Center' },
+                                            { key: 'RG', default: 'RG', description: 'Right Guard' },
+                                            { key: 'RT', default: 'RT', description: 'Right Tackle' },
+                                        ].map(pos => (
+                                            <div key={pos.key} style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                    <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{pos.default}</label>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{pos.description}</span>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={positionNames[pos.key] || pos.default}
+                                                    onChange={(e) => setPositionNames({ ...positionNames, [pos.key]: e.target.value.toUpperCase().slice(0, 3) })}
+                                                    placeholder={pos.default}
+                                                    maxLength="3"
+                                                    style={{ padding: '0.5rem', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}
+                                                    title={`Customize ${pos.description} label`}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {offenseSetupTab === 'syntax' && (
+                                <div style={{ maxWidth: '800px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0 }}>Play Call Structure</h3>
+                                            <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7 }}>Define the order and components of a play call.</p>
+                                        </div>
+                                        <button className="btn btn-primary" onClick={() => {
+                                            const newId = Date.now().toString();
+                                            setPlaySyntax([...playSyntax, { id: newId, label: 'New Component', type: 'text' }]);
+                                        }}>
+                                            <Icon name="Plus" size={16} style={{ marginRight: '6px' }} /> Add Component
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {playSyntax.map((item, idx) => (
+                                            <div key={item.id} style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '1rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-main)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', background: 'var(--bg-panel)', borderRadius: '50%', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                                    {idx + 1}
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Component Name</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={item.label}
+                                                        onChange={(e) => {
+                                                            const newSyntax = [...playSyntax];
+                                                            newSyntax[idx].label = e.target.value;
+                                                            setPlaySyntax(newSyntax);
+                                                        }}
+                                                        placeholder="e.g. Formation"
+                                                    />
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                    <button className="btn btn-ghost btn-sm" onClick={() => {
+                                                        if (idx === 0) return;
+                                                        const newSyntax = [...playSyntax];
+                                                        [newSyntax[idx - 1], newSyntax[idx]] = [newSyntax[idx], newSyntax[idx - 1]];
+                                                        setPlaySyntax(newSyntax);
+                                                    }} disabled={idx === 0} style={{ padding: '2px' }}><Icon name="ChevronUp" size={16} /></button>
+                                                    <button className="btn btn-ghost btn-sm" onClick={() => {
+                                                        if (idx === playSyntax.length - 1) return;
+                                                        const newSyntax = [...playSyntax];
+                                                        [newSyntax[idx + 1], newSyntax[idx]] = [newSyntax[idx], newSyntax[idx + 1]];
+                                                        setPlaySyntax(newSyntax);
+                                                    }} disabled={idx === playSyntax.length - 1} style={{ padding: '2px' }}><Icon name="ChevronDown" size={16} /></button>
+                                                </div>
+                                                <button className="btn btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => {
+                                                    if (confirm('Delete this syntax component? All associated terms will be hidden.')) {
+                                                        const newSyntax = playSyntax.filter((_, i) => i !== idx);
+                                                        setPlaySyntax(newSyntax);
+                                                    }
+                                                }}>
+                                                    <Icon name="Trash" size={18} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {playSyntax.length === 0 && (
+                                            <div style={{ textAlign: 'center', padding: '3rem', border: '2px dashed var(--border)', borderRadius: '8px', opacity: 0.6 }}>
+                                                <Icon name="Code" size={48} style={{ marginBottom: '1rem' }} />
+                                                <p>No play components defined.</p>
+                                                <p>Click "Add Component" to start building your play call structure.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {offenseSetupTab === 'terms' && (
+                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <h3 style={{ margin: 0 }}>Term Library</h3>
+                                        <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7 }}>Manage vocabulary for your play components.</p>
+                                    </div>
+
+                                    {playSyntax.length === 0 ? (
+                                        <div className="alert alert-warning">
+                                            <Icon name="AlertTriangle" size={18} />
+                                            Please define your Play Call Structure in the Syntax tab first.
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', gap: '2rem', flex: 1, minHeight: '0' }}>
+                                            <div style={{ width: '250px', borderRight: '1px solid var(--border)', paddingRight: '1rem', overflowY: 'auto' }}>
+                                                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>COMPONENTS</div>
+                                                {playSyntax.map(cat => (
+                                                    <button
+                                                        key={cat.id}
+                                                        onClick={() => setOffenseSetupCategory(cat.id)}
+                                                        style={{
+                                                            display: 'block',
+                                                            width: '100%',
+                                                            textAlign: 'left',
+                                                            padding: '0.75rem 1rem',
+                                                            background: offenseSetupCategory === cat.id ? 'var(--bg-main)' : 'none',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            fontWeight: offenseSetupCategory === cat.id ? 'bold' : 'normal',
+                                                            color: offenseSetupCategory === cat.id ? 'var(--accent)' : 'var(--text-primary)',
+                                                            marginBottom: '2px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                    >
+                                                        {cat.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div style={{ flex: 1, overflowY: 'auto' }}>
+                                                {!offenseSetupCategory ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5, flexDirection: 'column' }}>
+                                                        <Icon name="ArrowLeft" size={24} style={{ marginBottom: '1rem' }} />
+                                                        Select a component to manage terms
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                                            <h4 style={{ margin: 0 }}>
+                                                                {playSyntax.find(s => s.id === offenseSetupCategory)?.label} Terms
+                                                            </h4>
+                                                            <button className="btn btn-sm btn-primary" onClick={() => addTerm(offenseSetupCategory)}>
+                                                                + Add Term
+                                                            </button>
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                                            {getTerms(offenseSetupCategory).map(term => (
+                                                                <div key={term.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--bg-main)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                                                    <span style={{ fontWeight: '500' }}>{term.label}</span>
+                                                                    <button className="btn-icon" style={{ color: 'var(--text-secondary)' }} onClick={() => deleteTerm(offenseSetupCategory, term.id)}>
+                                                                        <Icon name="X" size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            {getTerms(offenseSetupCategory).length === 0 && (
+                                                                <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', opacity: 0.6, border: '1px dashed var(--border)', borderRadius: '6px' }}>
+                                                                    No terms added yet.
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 );
             };
 
@@ -35795,6 +36797,9 @@
                                         <>
                                             <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                                 <Icon name="Book" size={16} style={{ marginRight: '8px' }} /> Playbook
+                                            </button>
+                                            <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
                                             </button>
                                         </>
                                     )}
@@ -36318,6 +37323,8 @@
                         {view === 'valhalla' && <ValhallaDashboard roster={roster} valhallaData={valhallaData || { progress: {}, xpLog: [], programEvents: [], participation: {} }} onUpdateValhalla={setValhallaData} initialTab="player" />}
                         {view === 'valhalla-events' && <ValhallaDashboard roster={roster} valhallaData={valhallaData || { progress: {}, xpLog: [], programEvents: [], participation: {} }} onUpdateValhalla={setValhallaData} initialTab="events" />}
 
+                        {view === 'offense-setup' && renderOffenseSetup()}
+
                         {view === 'new-play' && (
                             <PlayInput
                                 onSave={handleSavePlay}
@@ -36326,7 +37333,10 @@
                                 initialData={editingPlay}
                                 rooskiLibrary={rooskiLibrary}
                                 setRooskiLibrary={setRooskiLibrary}
+                                positionNames={positionNames}
                                 formations={formations}
+                                playSyntax={playSyntax}
+                                termLibrary={termLibrary}
                             />
                         )}
 
@@ -36451,7 +37461,7 @@
                             </div>
                         )}
 
-                        {view === 'formations' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} />}
+                        {view === 'formations' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} />}
 
                         {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} />}
@@ -36600,7 +37610,7 @@
                         {view === 'ratings' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
                         {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={handleUpdateGameLog} roster={roster} depthChart={currentWeek.depthChart || {}} situation={situation} onUpdateSituation={setSituation} formations={formations} activePlay={activePlay} setActivePlay={setActivePlay} />}
                         {view === 'grading' && <GameGradingView gameLog={currentWeek.gameLog} roster={roster} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} valhallaData={valhallaData} onUpdateValhalla={setValhallaData} />}
-                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} />}
+                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} />}
                         {view === 'coach-app' && <PracticeCoachApp staff={staff} roster={roster} plans={currentWeek.practicePlans || []} plays={plays} drills={DRILL_DATA} />}
                         {view === 'self-assessment' && <AthleteSelfAssessment roster={roster} staff={staff} currentUser={currentUser} onSync={(data) => syncToFirestore(currentUser?.uid, 'athleteAssessments', data)} />}
                         {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} gamePlanLayouts={gamePlanLayouts} />}
