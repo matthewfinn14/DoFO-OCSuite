@@ -630,6 +630,72 @@
                 flex-shrink: 0;
             }
 
+            /* Colored wristband backgrounds */
+            /* Green shades - alternating */
+            .wristband-color-green-light {
+                background: #d1fae5 !important;
+            }
+
+            .wristband-color-green-medium {
+                background: #a7f3d0 !important;
+            }
+
+            .wristband-color-green-dark {
+                background: #6ee7b7 !important;
+            }
+
+            /* Orange shades - alternating */
+            .wristband-color-orange-light {
+                background: #fed7aa !important;
+            }
+
+            .wristband-color-orange-medium {
+                background: #fdba74 !important;
+            }
+
+            .wristband-color-orange-dark {
+                background: #fb923c !important;
+            }
+
+            /* Red shades - alternating */
+            .wristband-color-red-light {
+                background: #fecaca !important;
+            }
+
+            .wristband-color-red-medium {
+                background: #fca5a5 !important;
+            }
+
+            .wristband-color-red-dark {
+                background: #f87171 !important;
+            }
+
+            /* Blue shades - alternating */
+            .wristband-color-blue-light {
+                background: #bfdbfe !important;
+            }
+
+            .wristband-color-blue-medium {
+                background: #93c5fd !important;
+            }
+
+            .wristband-color-blue-dark {
+                background: #60a5fa !important;
+            }
+
+            /* Yellow shades - alternating */
+            .wristband-color-yellow-light {
+                background: #fef08a !important;
+            }
+
+            .wristband-color-yellow-medium {
+                background: #fde047 !important;
+            }
+
+            .wristband-color-yellow-dark {
+                background: #facc15 !important;
+            }
+
             /* Card content area */
             .wristband-print-card .print-card-content {
                 flex: 1;
@@ -5559,13 +5625,29 @@
                 let displayRows = [];
                 if (isModular) {
                     // Modular uses the sequence of rows defined in the card
-                    displayRows = card.rows.map((row, idx) => ({
-                        slot: slots[0] + idx,
-                        type: row.type,
-                        text: row.type === 'play' ? row.playName : row.label,
-                        playId: row.playId,
-                        rowId: row.id
-                    }));
+                    displayRows = card.rows.map((row, idx) => {
+                        if (row.type === 'play') {
+                            const play = plays.find(p => p.id === row.playId);
+                            const playName = row.playName || play?.name || 'Unknown';
+                            const wristbandSlot = play?.wristbandSlot || '';
+                            const displayText = wristbandSlot ? `[${wristbandSlot}] ${playName}` : playName;
+                            return {
+                                slot: slots[0] + idx,
+                                type: row.type,
+                                text: displayText,
+                                playId: row.playId,
+                                rowId: row.id
+                            };
+                        } else {
+                            return {
+                                slot: slots[0] + idx,
+                                type: row.type,
+                                text: row.label,
+                                playId: row.playId,
+                                rowId: row.id
+                            };
+                        }
+                    });
                 } else {
                     // Standard uses the absolute slots
                     displayRows = slots.map(slot => {
@@ -5807,11 +5889,8 @@
                 );
             };
 
-            const renderRooskiGrid = (slots, title, type) => {
-                // 4x4 Grid for 3x5 card
-                // 3 inches height / 4 rows = 0.75" per row
-                // 5 inches width / 4 cols = 1.25" per col
-
+            const renderRooskiGrid = (slots, title, viewType) => {
+                // 4x4 Grid for 3x5 card - each cell has diagram on top, coordinate/name below
                 const rows = [];
                 for (let i = 0; i < slots.length; i += 4) {
                     rows.push(slots.slice(i, i + 4));
@@ -5819,9 +5898,19 @@
 
                 return (
                     <div className="rooski-grid-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
-                        {/* Header */}
-                        <div style={{ background: 'black', color: 'white', textAlign: 'center', fontWeight: 'bold', fontSize: '10pt', padding: '2px 0', textTransform: 'uppercase' }}>
-                            {title}
+                        {/* Header - Split layout */}
+                        <div style={{
+                            background: 'black',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: '10pt',
+                            padding: '2px 4px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <span style={{ textTransform: 'uppercase' }}>ROOSKI</span>
+                            <span>{title}</span>
                         </div>
                         {/* Grid */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -5829,6 +5918,18 @@
                                 <div key={rIndex} style={{ flex: 1, display: 'flex', borderBottom: rIndex < rows.length - 1 ? '1px solid black' : 'none' }}>
                                     {rowSlots.map((slot, cIndex) => {
                                         const play = slotMap[slot];
+
+                                        // Filter plays based on view type
+                                        let shouldShowPlay = false;
+                                        if (play) {
+                                            if (viewType === 'skill') {
+                                                shouldShowPlay = play.rooskiSkillData && !play.isOlineOnly;
+                                            } else if (viewType === 'oline') {
+                                                shouldShowPlay = play.rooskiOlineData;
+                                            }
+                                        }
+
+                                        const displayPlay = shouldShowPlay ? play : null;
                                         const isClickable = selectedPlayId && !play;
 
                                         return (
@@ -5837,44 +5938,64 @@
                                                 style={{
                                                     flex: 1,
                                                     borderRight: cIndex < 3 ? '1px solid black' : 'none',
-                                                    position: 'relative',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
                                                     cursor: isClickable ? 'pointer' : 'default',
                                                     background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white'
                                                 }}
                                                 onClick={() => handleAssignSlot(slot)}
                                             >
-                                                {/* Slot Number */}
-                                                <div style={{ position: 'absolute', top: 0, left: 0, padding: '1px 3px', fontSize: '8pt', fontWeight: 'bold', background: 'rgba(255,255,255,0.8)' }}>
-                                                    {slot}
-                                                </div>
-
-                                                {/* Diagram */}
+                                                {/* Diagram area - takes up most of the cell */}
                                                 <div style={{
-                                                    width: '100%',
-                                                    height: '80%',
+                                                    flex: 1,
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    overflow: 'hidden'
-                                                }}>
-                                                    {play && renderPlayThumbnail(play, type)}
-                                                </div>
-
-                                                {/* Text Footer */}
-                                                <div style={{
-                                                    height: '20%',
-                                                    borderTop: '1px solid #ccc',
-                                                    fontSize: '6pt',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    textAlign: 'center',
                                                     overflow: 'hidden',
-                                                    whiteSpace: 'nowrap',
-                                                    padding: '0 2px',
-                                                    fontWeight: 'bold'
+                                                    padding: '2px'
                                                 }}>
-                                                    {play ? play.name : ''}
+                                                    {displayPlay && renderPlayThumbnail(displayPlay, viewType)}
+                                                </div>
+
+                                                {/* Bottom row: Coordinate (left) | Play Name (right) */}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    borderTop: '1px solid #ccc',
+                                                    height: '18px',
+                                                    minHeight: '18px'
+                                                }}>
+                                                    {/* Coordinate cell */}
+                                                    <div style={{
+                                                        width: '35px',
+                                                        minWidth: '35px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '8pt',
+                                                        fontWeight: 'bold',
+                                                        color: '#000',
+                                                        borderRight: '1px solid #ccc',
+                                                        background: 'white'
+                                                    }}>
+                                                        {slot}
+                                                    </div>
+
+                                                    {/* Play name cell */}
+                                                    <div style={{
+                                                        flex: 1,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '7pt',
+                                                        padding: '0 2px',
+                                                        textAlign: 'center',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        background: 'white'
+                                                    }}>
+                                                        {displayPlay ? displayPlay.name : ''}
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
@@ -5888,6 +6009,19 @@
 
             // Card-specific slots
             const getSlotsForCard = (cardId) => {
+                const card = wbSettings[cardId];
+
+                if (card.type === 'rooski') {
+                    // Rooski uses 16 slots: X01-X16 where X is the series number
+                    const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : 3);
+                    const slots = [];
+                    for (let i = 1; i <= 16; i++) {
+                        slots.push(`${series}${String(i).padStart(2, '0')}`);
+                    }
+                    return slots;
+                }
+
+                // Standard/Modular use 48 slots
                 const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : 301);
                 const slots = [];
                 for (let i = start; i <= start + 47; i++) slots.push(i);
@@ -6076,8 +6210,7 @@
                                 >
                                     <option value="standard">Standard (Traditional)</option>
                                     <option value="modular">Modular (Script/Tempo)</option>
-                                    <option value="rooski-skill">Rooski Skill</option>
-                                    <option value="rooski-oline">Rooski O-Line</option>
+                                    <option value="rooski">Rooski (16-slot grid)</option>
                                 </select>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -6100,6 +6233,62 @@
                                     placeholder="1"
                                 />
                             </div>
+                            {activeCard.type === 'standard' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Color:</label>
+                                    <select
+                                        className="form-input"
+                                        style={{ width: 'auto', padding: '4px 8px' }}
+                                        value={activeCard.color || 'none'}
+                                        onChange={e => updateCard(selectedCardId, { color: e.target.value })}
+                                    >
+                                        <option value="none">None (White)</option>
+                                        <option value="green">Green (alternating shades)</option>
+                                        <option value="orange">Orange (alternating shades)</option>
+                                        <option value="red">Red (alternating shades)</option>
+                                        <option value="blue">Blue (alternating shades)</option>
+                                        <option value="yellow">Yellow (alternating shades)</option>
+                                    </select>
+                                </div>
+                            )}
+                            {activeCard.type === 'rooski' && (
+                                <>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>View:</label>
+                                        <select
+                                            className="form-input"
+                                            style={{ width: 'auto', padding: '4px 8px' }}
+                                            value={activeCard.rooskiView || 'skill'}
+                                            onChange={e => updateCard(selectedCardId, { rooskiView: e.target.value })}
+                                        >
+                                            <option value="skill">Skill Positions</option>
+                                            <option value="oline">O-Line</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            style={{ width: '120px', padding: '4px 8px' }}
+                                            value={activeCard.opponent || ''}
+                                            onChange={(e) => updateCard(selectedCardId, { opponent: e.target.value })}
+                                            placeholder="e.g., Oelwein"
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iteration:</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            className="form-input"
+                                            style={{ width: '60px', padding: '4px 8px' }}
+                                            value={activeCard.iteration || 1}
+                                            onChange={(e) => updateCard(selectedCardId, { iteration: parseInt(e.target.value) || 1 })}
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Rendering Logic */}
@@ -6173,14 +6362,18 @@
                                         <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
                                         <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
                                     </div>
-                                    {activeCard.type.startsWith('rooski') ? (
+                                    {activeCard.type === 'rooski' ? (
                                         <div style={{
                                             width: '600px',
                                             height: '360px',
                                             margin: '0 auto',
                                             aspectRatio: '5 / 3'
                                         }}>
-                                            {renderRooskiGrid(getSlotsForCard(selectedCardId).slice(0, 16), activeCard.type === 'rooski-skill' ? 'Skill' : 'O-Line', activeCard.type === 'rooski-skill' ? 'skill' : 'oline')}
+                                            {renderRooskiGrid(
+                                                getSlotsForCard(selectedCardId),
+                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                activeCard.rooskiView || 'skill'
+                                            )}
                                         </div>
                                     ) : (
                                         renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId)
@@ -6190,34 +6383,72 @@
                     </div>
 
                     {/* Print Layout (hidden on screen, shown when printing) */}
-                    <div className="wristband-print-container" style={{ display: 'none' }}>
-                        <div className="wristband-print-grid">
-                            {/* Render 4 identical copies of the active card */}
-                            {[1, 2, 3, 4].map(copyNum => (
-                                <div key={copyNum} className="wristband-print-card">
-                                    {activeCard.type.startsWith('rooski') ? (
-                                        renderRooskiGrid(
-                                            getSlotsForCard(selectedCardId).slice(0, 16),
-                                            `${activeCard.opp || 'OPPONENT'} - ${selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v${activeCard.iter || '1'})`,
-                                            activeCard.type === 'rooski-skill' ? 'skill' : 'oline'
-                                        )
-                                    ) : (
-                                        <>
-                                            {/* Header */}
-                                            <div className="print-card-header">
-                                                <span>{activeCard.opp || 'OPPONENT'}</span>
-                                                <span>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
-                                            </div>
-                                            {/* Content */}
-                                            <div className="print-card-content">
-                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId)}
-                                            </div>
-                                        </>
-                                    )}
+                    {activeCard.type === 'rooski' ? (
+                        <>
+                            {/* Skill Version - Page 1 */}
+                            <div className="wristband-print-container" style={{ display: 'none', pageBreakAfter: 'always' }}>
+                                <div className="wristband-print-grid">
+                                    {[1, 2, 3, 4].map(copyNum => (
+                                        <div key={copyNum} className="wristband-print-card">
+                                            {renderRooskiGrid(
+                                                getSlotsForCard(selectedCardId),
+                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                'skill'
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
+
+                            {/* O-Line Version - Page 2 */}
+                            <div className="wristband-print-container" style={{ display: 'none' }}>
+                                <div className="wristband-print-grid">
+                                    {[1, 2, 3, 4].map(copyNum => (
+                                        <div key={copyNum} className="wristband-print-card">
+                                            {renderRooskiGrid(
+                                                getSlotsForCard(selectedCardId),
+                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                'oline'
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="wristband-print-container" style={{ display: 'none' }}>
+                            <div className="wristband-print-grid">
+                                {/* Render 4 identical copies of the active card */}
+                                {[1, 2, 3, 4].map(copyNum => {
+                                    // Determine color class based on activeCard.color and copy number
+                                    // Alternating shades: copy 1 = light, copy 2 = medium, copy 3 = dark, copy 4 = light
+                                    let colorClass = '';
+                                    if (activeCard.color && activeCard.color !== 'none') {
+                                        const colorBase = activeCard.color;
+                                        const shades = ['light', 'medium', 'dark', 'light'];
+                                        const shade = shades[copyNum - 1];
+                                        colorClass = `wristband-color-${colorBase}-${shade}`;
+                                    }
+
+                                    return (
+                                        <div key={copyNum} className={`wristband-print-card ${colorClass}`}>
+                                            <>
+                                                {/* Header */}
+                                                <div className="print-card-header">
+                                                    <span>{activeCard.opp || 'OPPONENT'}</span>
+                                                    <span>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
+                                                </div>
+                                                {/* Content */}
+                                                <div className="print-card-content">
+                                                    {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId)}
+                                                </div>
+                                            </>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             );
 
