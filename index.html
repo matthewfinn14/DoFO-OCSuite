@@ -9641,6 +9641,169 @@
             const [isEditing, setIsEditing] = useState(null);
             const [viewProfileId, setViewProfileId] = useState(null);
             const [showArchived, setShowArchived] = useState(false);
+            const fileInputRef = useRef(null);
+
+            const handleImportClick = () => {
+                if (fileInputRef.current) fileInputRef.current.click();
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target.result;
+                    processCSV(text);
+                };
+                reader.readAsText(file);
+                // Reset input
+                e.target.value = '';
+            };
+
+            const processCSV = (csvText) => {
+                // detailed parser to handle quotes
+                const rows = [];
+                let currentRow = [];
+                let currentCell = '';
+                let inQuotes = false;
+
+                for (let i = 0; i < csvText.length; i++) {
+                    const char = csvText[i];
+                    const nextChar = csvText[i + 1];
+
+                    if (char === '"') {
+                        if (inQuotes && nextChar === '"') {
+                            currentCell += '"';
+                            i++; // skip escaped quote
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        currentRow.push(currentCell.trim());
+                        currentCell = '';
+                    } else if ((char === '\r' || char === '\n') && !inQuotes) {
+                        if (currentCell || currentRow.length > 0) {
+                            currentRow.push(currentCell.trim());
+                            rows.push(currentRow);
+                        }
+                        currentRow = [];
+                        currentCell = '';
+                        if (char === '\r' && nextChar === '\n') i++;
+                    } else {
+                        currentCell += char;
+                    }
+                }
+                if (currentCell || currentRow.length > 0) {
+                    currentRow.push(currentCell.trim());
+                    rows.push(currentRow);
+                }
+
+                if (rows.length < 2) {
+                    alert("Invalid CSV format or empty file.");
+                    return;
+                }
+
+                const headers = rows[0].map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                const map = {};
+
+                // Smart Mapping
+                headers.forEach((h, i) => {
+                    if (['number', 'jersey', 'no', '#'].includes(h)) map.number = i;
+                    if (['name', 'fullname', 'player'].includes(h)) map.name = i;
+                    if (['firstname', 'first'].includes(h)) map.firstName = i;
+                    if (['lastname', 'last'].includes(h)) map.lastName = i;
+                    if (['position', 'pos'].includes(h)) map.pos = i;
+                    if (['offpos', 'offense'].includes(h)) map.offPos = i;
+                    if (['defpos', 'defense'].includes(h)) map.defPos = i;
+                    if (['year', 'grade', 'class', 'yr', 'gr'].includes(h)) map.year = i;
+                    if (['height', 'ht'].includes(h)) map.height = i;
+                    if (['weight', 'wt'].includes(h)) map.weight = i;
+                });
+
+                if (map.name === undefined && (map.firstName === undefined || map.lastName === undefined)) {
+                    alert("Could not detect Name column. Please ensure header contains 'Name' or 'First Name'/'Last Name'.");
+                    return;
+                }
+
+                const newPlayers = rows.slice(1).map(row => {
+                    const p = {};
+
+                    // Number
+                    p.number = map.number !== undefined ? row[map.number] : '';
+
+                    // Name
+                    if (map.name !== undefined) p.name = row[map.name];
+                    else if (map.firstName !== undefined && map.lastName !== undefined) {
+                        p.name = `${row[map.firstName]} ${row[map.lastName]}`;
+                    }
+
+                    // Parse Name if strictly Last, First? (Simple check)
+                    if (p.name && p.name.includes(',')) {
+                        const parts = p.name.split(',');
+                        if (parts.length === 2) p.name = `${parts[1].trim()} ${parts[0].trim()}`;
+                    }
+
+                    // Position
+                    let offPos = 'NA';
+                    let defPos = 'NA';
+
+                    if (map.offPos !== undefined) offPos = row[map.offPos] || 'NA';
+                    if (map.defPos !== undefined) defPos = row[map.defPos] || 'NA';
+
+                    if (map.pos !== undefined) {
+                        // Try to split generic 'QB/LB'
+                        const rawPos = row[map.pos] || '';
+                        if (rawPos.includes('/')) {
+                            const parts = rawPos.split('/');
+                            offPos = parts[0].trim();
+                            defPos = parts[1].trim();
+                        } else {
+                            // Assign to Offense by default if known offense pos, else defense
+                            if (['QB', 'RB', 'WR', 'TE', 'OL', 'T', 'G', 'C'].includes(rawPos)) offPos = rawPos;
+                            else if (['DL', 'DE', 'DT', 'LB', 'CB', 'S', 'DB', 'SS', 'FS'].includes(rawPos)) defPos = rawPos;
+                            else offPos = rawPos; // Fallback
+                        }
+                    }
+
+                    p.offPosition = offPos;
+                    p.defPosition = defPos;
+                    p.position = `${offPos}/${defPos}`;
+
+                    // Year
+                    let rawYear = map.year !== undefined ? row[map.year] : 'Fr';
+                    // Normalize Year
+                    if (rawYear.toUpperCase() === 'SR' || rawYear === '12') p.year = 'Sr';
+                    else if (rawYear.toUpperCase() === 'JR' || rawYear === '11') p.year = 'Jr';
+                    else if (rawYear.toUpperCase() === 'SO' || rawYear === '10') p.year = 'So';
+                    else if (rawYear.toUpperCase() === 'FR' || rawYear === '9') p.year = 'Fr';
+                    else p.year = rawYear;
+
+                    // Height/Weight
+                    p.height = map.height !== undefined ? row[map.height] : '';
+                    p.weight = map.weight !== undefined ? row[map.weight] : '';
+
+                    // Defaults
+                    p.id = 'import_' + Date.now() + Math.random().toString(36).substr(2, 9);
+                    p.active = true;
+                    p.archived = false;
+
+                    // Init structures
+                    p.profile = { favorites: {}, goals: {} };
+                    p.metrics = { attendanceStreak: 0, awards: [] };
+
+                    return p;
+                }).filter(p => p.name); // valid players only
+
+                if (confirm(`Found ${newPlayers.length} players. Import them to roster?`)) {
+                    // Check for existing numbers to avoid total duplicates? 
+                    // For now, simple append or maybe filter by existing number?
+                    // Let's Append but warn logic is typically preferred.
+                    // The user usually wants to bulk add.
+                    onUpdateRoster([...roster, ...newPlayers]);
+                    alert("Import successful!");
+                }
+            };
 
 
 
@@ -9734,6 +9897,14 @@
                             <button className={`btn ${showArchived ? 'btn-danger' : 'btn-secondary'}`} onClick={() => setShowArchived(!showArchived)}>
                                 {showArchived ? 'Back to Active Roster' : 'View Archive'}
                             </button>
+                            <button className="btn btn-secondary" onClick={handleImportClick}>Import CSV</button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                style={{ display: 'none' }}
+                                accept=".csv"
+                                onChange={handleFileChange}
+                            />
                             <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Attendance</button>
                         </div>
                     </div>
