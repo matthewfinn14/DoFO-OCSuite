@@ -640,10 +640,6 @@
                 background: #a7f3d0 !important;
             }
 
-            .wristband-color-green-dark {
-                background: #6ee7b7 !important;
-            }
-
             /* Orange shades - alternating */
             .wristband-color-orange-light {
                 background: #fed7aa !important;
@@ -651,10 +647,6 @@
 
             .wristband-color-orange-medium {
                 background: #fdba74 !important;
-            }
-
-            .wristband-color-orange-dark {
-                background: #fb923c !important;
             }
 
             /* Red shades - alternating */
@@ -666,10 +658,6 @@
                 background: #fca5a5 !important;
             }
 
-            .wristband-color-red-dark {
-                background: #f87171 !important;
-            }
-
             /* Blue shades - alternating */
             .wristband-color-blue-light {
                 background: #bfdbfe !important;
@@ -679,10 +667,6 @@
                 background: #93c5fd !important;
             }
 
-            .wristband-color-blue-dark {
-                background: #60a5fa !important;
-            }
-
             /* Yellow shades - alternating */
             .wristband-color-yellow-light {
                 background: #fef08a !important;
@@ -690,10 +674,6 @@
 
             .wristband-color-yellow-medium {
                 background: #fde047 !important;
-            }
-
-            .wristband-color-yellow-dark {
-                background: #facc15 !important;
             }
 
             /* Card content area */
@@ -5702,16 +5682,16 @@
                                         let cellBackground = 'inherit';
                                         if (card.color && card.color !== 'none') {
                                             const colorBase = card.color;
-                                            // Alternate shades every row: light, medium, dark, light, medium, dark...
-                                            const shadeIndex = rowIndex % 3;
-                                            const shades = ['light', 'medium', 'dark'];
+                                            // Alternate between two tones every row: light, medium, light, medium...
+                                            const shadeIndex = rowIndex % 2;
+                                            const shades = ['light', 'medium'];
                                             const shade = shades[shadeIndex];
                                             const colorMap = {
-                                                'green-light': '#d1fae5', 'green-medium': '#a7f3d0', 'green-dark': '#6ee7b7',
-                                                'orange-light': '#fed7aa', 'orange-medium': '#fdba74', 'orange-dark': '#fb923c',
-                                                'red-light': '#fecaca', 'red-medium': '#fca5a5', 'red-dark': '#f87171',
-                                                'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd', 'blue-dark': '#60a5fa',
-                                                'yellow-light': '#fef08a', 'yellow-medium': '#fde047', 'yellow-dark': '#facc15'
+                                                'green-light': '#d1fae5', 'green-medium': '#a7f3d0',
+                                                'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
+                                                'red-light': '#fecaca', 'red-medium': '#fca5a5',
+                                                'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
+                                                'yellow-light': '#fef08a', 'yellow-medium': '#fde047'
                                             };
                                             cellBackground = colorMap[`${colorBase}-${shade}`] || 'inherit';
                                         }
@@ -6455,11 +6435,11 @@
                                 {/* Render 4 identical copies of the active card */}
                                 {[1, 2, 3, 4].map(copyNum => {
                                     // Determine color class based on activeCard.color and copy number
-                                    // Alternating shades: copy 1 = light, copy 2 = medium, copy 3 = dark, copy 4 = light
+                                    // Alternating tones: copy 1 = light, copy 2 = medium, copy 3 = light, copy 4 = medium
                                     let colorClass = '';
                                     if (activeCard.color && activeCard.color !== 'none') {
                                         const colorBase = activeCard.color;
-                                        const shades = ['light', 'medium', 'dark', 'light'];
+                                        const shades = ['light', 'medium', 'light', 'medium'];
                                         const shade = shades[copyNum - 1];
                                         colorClass = `wristband-color-${colorBase}-${shade}`;
                                     }
