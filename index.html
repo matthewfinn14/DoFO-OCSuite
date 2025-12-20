@@ -6124,7 +6124,14 @@
                                         <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
                                     </div>
                                     {activeCard.type.startsWith('rooski') ? (
-                                        renderRooskiGrid(getSlotsForCard(selectedCardId).slice(0, 16), activeCard.type === 'rooski-skill' ? 'Skill' : 'O-Line', activeCard.type === 'rooski-skill' ? 'skill' : 'oline')
+                                        <div style={{
+                                            width: '600px',
+                                            height: '360px',
+                                            margin: '0 auto',
+                                            aspectRatio: '5 / 3'
+                                        }}>
+                                            {renderRooskiGrid(getSlotsForCard(selectedCardId).slice(0, 16), activeCard.type === 'rooski-skill' ? 'Skill' : 'O-Line', activeCard.type === 'rooski-skill' ? 'skill' : 'oline')}
+                                        </div>
                                     ) : (
                                         renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId)
                                     )}
