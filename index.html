@@ -556,77 +556,116 @@
 
         /* Print styles for spreadsheet view */
         @media print {
-            .wristband-print-container {
-                display: block !important;
+            @page {
+                size: letter landscape;
+                margin: 0;
             }
 
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            /* Hide all non-print elements */
             .wristband-spreadsheet-container,
             .sidebar,
             button,
-            .nav-item {
+            .nav-item,
+            .top-nav,
+            .main-content>*:not(.wristband-print-container) {
                 display: none !important;
             }
 
-            .wristband-print-card-spreadsheet {
-                page-break-inside: avoid;
-                width: 5in;
-                height: 3in;
-                border: 2px solid black;
-                display: inline-block;
-                margin: 0.125in;
-                overflow: hidden;
+            /* Show print container */
+            .wristband-print-container {
+                display: block !important;
+                width: 11in;
+                height: 8.5in;
+                margin: 0;
+                padding: 0;
+                background: white;
             }
 
-            .wristband-print-card-spreadsheet .card-header {
+            /* 2x2 Grid Layout - Centered on page */
+            .wristband-print-grid {
+                display: grid;
+                grid-template-columns: 3in 3in;
+                grid-template-rows: 5in 5in;
+                gap: 0.5in 0.5in;
+                width: 6.5in;
+                /* 2 cards × 3in + 1 gap × 0.5in */
+                height: 10.5in;
+                /* 2 cards × 5in + 1 gap × 0.5in */
+                /* Center on page: (11 - 6.5) / 2 = 2.25in horizontal, (8.5 - 10.5) / 2 = -1in vertical */
+                margin: -1in auto 0;
+                margin-left: 2.25in;
+                margin-right: 2.25in;
+                page-break-inside: avoid;
+            }
+
+            /* Individual Wristband Card - 3in × 5in portrait */
+            .wristband-print-card {
+                width: 3in;
+                height: 5in;
+                border: 2px solid black;
+                background: white;
+                overflow: hidden;
+                page-break-inside: avoid;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Card header styling */
+            .wristband-print-card .print-card-header {
                 background: black;
                 color: white;
                 padding: 4px 8px;
                 font-weight: bold;
-                font-size: 10pt;
+                font-size: 9pt;
                 text-align: center;
+                display: flex;
+                justify-content: space-between;
                 border-bottom: 2px solid black;
+                flex-shrink: 0;
             }
 
-            .wristband-print-card-spreadsheet table {
+            /* Card content area */
+            .wristband-print-card .print-card-content {
+                flex: 1;
+                overflow: hidden;
+            }
+
+            /* Table styling for print */
+            .wristband-print-card table {
                 width: 100%;
                 border-collapse: collapse;
-                font-size: 7pt;
+                font-size: 6pt;
+                height: 100%;
             }
 
-            .wristband-print-card-spreadsheet th {
-                background: #e5e7eb;
-                border: 1px solid black;
-                padding: 2px 4px;
-                font-weight: 600;
+            .wristband-print-card td {
+                border: 1px solid #666;
+                padding: 1px 2px;
+                vertical-align: middle;
             }
 
-            .wristband-print-card-spreadsheet td {
-                border: 1px solid #999;
-                padding: 2px 4px;
-                height: 16px;
-            }
-
-            .wristband-print-card-spreadsheet td:first-child {
-                font-weight: 600;
+            .wristband-print-card td:first-child {
+                font-weight: bold;
                 text-align: center;
-                width: 30px;
+                width: 25px;
+                font-size: 5pt;
             }
+        }
+        }
 
-            .wristband-print-card-spreadsheet.green tbody tr:nth-child(odd) {
-                background-color: #d1fae5;
-            }
+        .wristband-print-card-spreadsheet.orange tbody tr:nth-child(odd) {
+            background-color: #fed7aa;
+        }
 
-            .wristband-print-card-spreadsheet.green tbody tr:nth-child(even) {
-                background-color: #a7f3d0;
-            }
-
-            .wristband-print-card-spreadsheet.orange tbody tr:nth-child(odd) {
-                background-color: #fed7aa;
-            }
-
-            .wristband-print-card-spreadsheet.orange tbody tr:nth-child(even) {
-                background-color: #fdba74;
-            }
+        .wristband-print-card-spreadsheet.orange tbody tr:nth-child(even) {
+            background-color: #fdba74;
+        }
         }
     </style>
 </head>
@@ -6136,7 +6175,36 @@
                                         renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId)
                                     )}
                                 </div>
-                            )}
+                            )}\n                        </div>
+                    </div>
+
+                    {/* Print Layout (hidden on screen, shown when printing) */}
+                    <div className="wristband-print-container" style={{ display: 'none' }}>
+                        <div className="wristband-print-grid">
+                            {/* Render 4 identical copies of the active card */}
+                            {[1, 2, 3, 4].map(copyNum => (
+                                <div key={copyNum} className="wristband-print-card">
+                                    {activeCard.type.startsWith('rooski') ? (
+                                        renderRooskiGrid(
+                                            getSlotsForCard(selectedCardId).slice(0, 16),
+                                            `${activeCard.opp || 'OPPONENT'} - ${selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v${activeCard.iter || '1'})`,
+                                            activeCard.type === 'rooski-skill' ? 'skill' : 'oline'
+                                        )
+                                    ) : (
+                                        <>
+                                            {/* Header */}
+                                            <div className="print-card-header">
+                                                <span>{activeCard.opp || 'OPPONENT'}</span>
+                                                <span>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
+                                            </div>
+                                            {/* Content */}
+                                            <div className="print-card-content">
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId)}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
