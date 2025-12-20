@@ -5690,6 +5690,24 @@
                                         const play = cellData.play;
                                         const isClickable = !isModular && selectedPlayId && !play;
 
+                                        // Calculate color background for this row
+                                        let cellBackground = 'inherit';
+                                        if (card.color && card.color !== 'none') {
+                                            const colorBase = card.color;
+                                            // Alternate shades every 12 rows
+                                            const shadeIndex = Math.floor(rowIndex / 12) % 3;
+                                            const shades = ['light', 'medium', 'dark'];
+                                            const shade = shades[shadeIndex];
+                                            const colorMap = {
+                                                'green-light': '#d1fae5', 'green-medium': '#a7f3d0', 'green-dark': '#6ee7b7',
+                                                'orange-light': '#fed7aa', 'orange-medium': '#fdba74', 'orange-dark': '#fb923c',
+                                                'red-light': '#fecaca', 'red-medium': '#fca5a5', 'red-dark': '#f87171',
+                                                'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd', 'blue-dark': '#60a5fa',
+                                                'yellow-light': '#fef08a', 'yellow-medium': '#fde047', 'yellow-dark': '#facc15'
+                                            };
+                                            cellBackground = colorMap[`${colorBase}-${shade}`] || 'inherit';
+                                        }
+
                                         return (
                                             <React.Fragment key={`${colIndex}-${cellData.slot}`}>
                                                 <td
@@ -5697,7 +5715,7 @@
                                                         fontWeight: 'bold',
                                                         width: '45px',
                                                         cursor: isClickable ? 'pointer' : 'default',
-                                                        background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'inherit',
+                                                        background: isClickable ? 'rgba(56, 189, 248, 0.2)' : cellBackground,
                                                         padding: '0 2px',
                                                         border: '1px solid #333',
                                                         height: `${rowHeight}px`,
@@ -5717,7 +5735,7 @@
                                                 <td
                                                     style={{
                                                         cursor: isClickable ? 'pointer' : 'default',
-                                                        background: isClickable ? 'rgba(56, 189, 248, 0.2)' : (cellData.type === 'tempo' ? '#ffedd5' : 'inherit'),
+                                                        background: isClickable ? 'rgba(56, 189, 248, 0.2)' : (cellData.type === 'tempo' ? '#ffedd5' : cellBackground),
                                                         padding: '0 2px',
                                                         border: '1px solid #333',
                                                         height: `${rowHeight}px`,
