@@ -5704,15 +5704,19 @@
                 if (!play) return null;
 
                 // Determine which data to use based on type
-                // type: 'standard' (fallback), 'skill' (prioritize rooskiSkillData), 'oline' (prioritize rooskiOlineData)
-                let data = play.diagramData;
+                let data = null;
                 if (type === 'skill' && play.rooskiSkillData) {
-                    data = play.rooskiSkillData;
+                    // rooskiSkillData is an array of elements, wrap it in the expected structure
+                    data = { elements: play.rooskiSkillData };
                 } else if (type === 'oline' && play.rooskiOlineData) {
-                    data = play.rooskiOlineData;
+                    // rooskiOlineData is an array of elements, wrap it in the expected structure
+                    data = { elements: play.rooskiOlineData };
+                } else if (play.diagramData) {
+                    // diagramData should already have the { elements: [...] } structure
+                    data = play.diagramData;
                 }
 
-                if (!data) return null;
+                if (!data || !data.elements || data.elements.length === 0) return null;
 
                 return (
                     <svg
@@ -5845,7 +5849,14 @@
                                                 </div>
 
                                                 {/* Diagram */}
-                                                <div style={{ width: '100%', height: '80%' }}>
+                                                <div style={{
+                                                    width: '100%',
+                                                    height: '80%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    overflow: 'hidden'
+                                                }}>
                                                     {play && renderPlayThumbnail(play, type)}
                                                 </div>
 
