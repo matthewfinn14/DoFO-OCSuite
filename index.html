@@ -4072,7 +4072,11 @@
                 image: null,
                 diagramData: null, // New: Diagram elements
                 rooskiOlineData: null, // O-Line Rooski
+                rooskiMode: 'diagram', // 'diagram' or 'image'
+                rooskiImage: null,
                 rooskiSkillData: null, // Skill Rooski
+                rooskiSkillMode: 'diagram', // 'diagram' or 'image'
+                rooskiSkillImage: null,
                 scenarios: [], // Array of Detailed Scenarios
                 activeScenarioId: null, // ID of scenario being edited
                 wristbandSlot: '',
@@ -4355,45 +4359,17 @@
                     <form onSubmit={handleSubmit}>
 
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                            <div>
-                                {/* REQUESTED ORDER: Formation, Formation Tag, Color, Action, Play Name, Tag 1, Tag 2 */}
-
-                                {/* LEGACY TOP FIELDS - Only show if NO Syntax is configured */}
-                                {(!playSyntax || playSyntax.length === 0) && (
-                                    <>
-                                        <div className="form-group">
-                                            <label className="form-label">Formation</label>
-                                            <input
-                                                className="form-input"
-                                                value={formData.formation}
-                                                onChange={e => setFormData({ ...formData, formation: e.target.value })}
-                                                placeholder="e.g. Gun Trips Right"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Play Name</label>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <input
-                                                    className="form-input"
-                                                    value={formData.name}
-                                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                                    placeholder="e.g. TRIBE / Spider 2 Y Banana"
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* DYNAMIC PLAY SYNTAX OR FALLBACK LEGACY FIELDS */}
-                                {playSyntax && playSyntax.length > 0 ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', gridColumn: '1 / -1', background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                        <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                                            Play Components
-                                        </div>
+                        {/* NEW TOP SECTION: PLAY CALL */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            {playSyntax && playSyntax.length > 0 ? (
+                                <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                                    <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <Icon name="ClipboardList" size={20} style={{ color: 'var(--accent)' }} />
+                                        PLAY CALL
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
                                         {playSyntax.map(comp => (
-                                            <div key={comp.id} className="form-group">
+                                            <div key={comp.id} className="form-group" style={{ margin: 0 }}>
                                                 <label className="form-label">{comp.label}</label>
                                                 <input
                                                     className="form-input"
@@ -4419,9 +4395,34 @@
                                             </div>
                                         ))}
                                     </div>
-                                ) : (
-                                    <>
-                                        <div className="form-group">
+                                </div>
+                            ) : (
+                                <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                                    <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <Icon name="ClipboardList" size={20} style={{ color: 'var(--accent)' }} />
+                                        PLAY CALL
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label">Formation</label>
+                                            <input
+                                                className="form-input"
+                                                value={formData.formation}
+                                                onChange={e => setFormData({ ...formData, formation: e.target.value })}
+                                                placeholder="e.g. Gun Trips Right"
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label">Play Name</label>
+                                            <input
+                                                className="form-input"
+                                                value={formData.name}
+                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                placeholder="e.g. TRIBE / Spider 2 Y Banana"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
                                             <label className="form-label">Formation Tag</label>
                                             <input
                                                 className="form-input"
@@ -4430,7 +4431,7 @@
                                                 placeholder="e.g. Bunch, Stack"
                                             />
                                         </div>
-                                        <div className="form-group">
+                                        <div className="form-group" style={{ margin: 0 }}>
                                             <label className="form-label">Color (RB/Protection)</label>
                                             <input
                                                 className="form-input"
@@ -4439,7 +4440,7 @@
                                                 placeholder="e.g. Slide Right / Blue"
                                             />
                                         </div>
-                                        <div className="form-group">
+                                        <div className="form-group" style={{ margin: 0 }}>
                                             <label className="form-label">Action (Shift/Motion/PA)</label>
                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                 <input
@@ -4459,7 +4460,7 @@
                                             </div>
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                            <div className="form-group">
+                                            <div className="form-group" style={{ margin: 0 }}>
                                                 <label className="form-label">Tag 1</label>
                                                 <input
                                                     className="form-input"
@@ -4468,7 +4469,7 @@
                                                     placeholder="e.g. Alert"
                                                 />
                                             </div>
-                                            <div className="form-group">
+                                            <div className="form-group" style={{ margin: 0 }}>
                                                 <label className="form-label">Tag 2</label>
                                                 <input
                                                     className="form-input"
@@ -4478,332 +4479,315 @@
                                                 />
                                             </div>
                                         </div>
-                                    </>
-                                )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
-                                {/* Hash Preference */}
-                                <div className="form-group">
-                                    <label className="form-label">Hash Preference</label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                        {HASH_PREFERENCES.map(pref => (
-                                            <button
-                                                key={pref}
-                                                type="button"
-                                                className={`btn ${formData.hashPreference === pref ? 'btn-primary' : 'btn-secondary'}`}
-                                                onClick={() => setFormData({ ...formData, hashPreference: pref })}
-                                                style={{ flex: '1 1 auto', minWidth: '80px' }}
-                                            >
-                                                {pref}
-                                            </button>
-                                        ))}
+                        {/* SECOND SECTION: SIDE-BY-SIDE DIAGRAMS */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                            {/* Rooski O-Line Diagram */}
+                            <div className="form-group" style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                    <label className="form-label" style={{ margin: 0, fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.025em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="Layout" size={16} style={{ color: 'var(--accent)' }} />
+                                        Rooski O-Line Diagram
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'diagram' }))}
+                                            style={{
+                                                background: 'none', border: 'none',
+                                                color: (formData.rooskiMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)',
+                                                fontWeight: (formData.rooskiMode || 'diagram') === 'diagram' ? 'bold' : 'normal',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Diagram
+                                        </button>
+                                        <span style={{ color: 'var(--border)' }}>|</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'image' }))}
+                                            style={{
+                                                background: 'none', border: 'none',
+                                                color: formData.rooskiMode === 'image' ? 'var(--accent)' : 'var(--text-secondary)',
+                                                fontWeight: formData.rooskiMode === 'image' ? 'bold' : 'normal',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Image
+                                        </button>
                                     </div>
                                 </div>
 
-                                {/* Mirror Play */}
-                                <div className="form-group">
-                                    <label className="form-label">Mirror Play</label>
-                                    <input
-                                        className="form-input"
-                                        value={formData.mirrorPlay || ''}
-                                        onChange={e => setFormData({ ...formData, mirrorPlay: e.target.value })}
-                                        placeholder="e.g. 877 BLUE 4T TRIBE"
-                                    />
-                                    <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>Enter the opposite/mirror version of this play</small>
-                                </div>
-
-                                {/* Look-A-Like Sequence */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
-                                    <div className="form-group">
-                                        <label className="form-label">Look-A-Like / Group</label>
-                                        <input
-                                            className="form-input"
-                                            value={formData.sequenceName || ''}
-                                            onChange={e => setFormData({ ...formData, sequenceName: e.target.value })}
-                                            placeholder="e.g. Red Group"
-                                        />
-                                        <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>Group visually similar plays together</small>
+                                {formData.rooskiMode === 'image' ? (
+                                    <div style={{
+                                        border: '2px dashed var(--border)', borderRadius: 'var(--radius)', padding: '1rem',
+                                        textAlign: 'center', background: 'var(--bg-input)', position: 'relative',
+                                        minHeight: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        {formData.rooskiImage ? (
+                                            <>
+                                                <img src={formData.rooskiImage} alt="Rooski" style={{ maxWidth: '100%', maxHeight: '200px', marginBottom: '1rem', borderRadius: '4px' }} />
+                                                <button type="button" className="btn btn-secondary" onClick={() => setFormData({ ...formData, rooskiImage: null })}>Remove</button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)' }}><Icon name="Image" size={32} style={{ opacity: 0.5 }} /></div>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Upload JPG/PNG</div>
+                                                <input type="file" accept="image/*" onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => setFormData(prev => ({ ...prev, rooskiImage: reader.result }));
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
+                                            </>
+                                        )}
                                     </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Sequence #</label>
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            value={formData.sequenceOrder || ''}
-                                            onChange={e => setFormData({ ...formData, sequenceOrder: e.target.value })}
-                                            placeholder="#"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Mini Script Assignment */}
-                                {availableMiniScripts && availableMiniScripts.length > 0 && (
-                                    <div className="form-group">
-                                        <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Assign to Mini Scripts</label>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                                            {availableMiniScripts.map(script => (
-                                                <label key={script.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '4px 8px', background: formData.assignedScriptIds.includes(script.id) ? 'var(--primary-light)' : 'transparent', borderRadius: '4px', border: formData.assignedScriptIds.includes(script.id) ? '1px solid var(--primary)' : '1px solid transparent' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.assignedScriptIds.includes(script.id)}
-                                                        onChange={(e) => {
-                                                            const isChecked = e.target.checked;
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                assignedScriptIds: isChecked
-                                                                    ? [...prev.assignedScriptIds, script.id]
-                                                                    : prev.assignedScriptIds.filter(id => id !== script.id)
-                                                            }));
-                                                        }}
-                                                    />
-                                                    <span style={{ fontSize: '0.85rem' }}>{script.header || 'Untitled Script'}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Player Assignment Notes */}
-                                <div className="form-group">
-                                    <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Player Assignment Notes</label>
-                                    <div style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', padding: '1rem', background: 'var(--bg-input)', borderRadius: '8px', border: '1px solid var(--border)', display: 'grid' }}>
-                                        {['QB', 'RB', 'X', 'Z', 'Y', 'F', 'OL'].map(pos => (
-                                            <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <span style={{ width: '30px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{pos}</span>
-                                                <input
-                                                    className="form-input"
-                                                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
-                                                    placeholder={`Notes for ${pos}...`}
-                                                    value={formData.playerNotes?.[pos] || ''}
-                                                    onChange={(e) => setFormData(prev => ({
-                                                        ...prev,
-                                                        playerNotes: { ...prev.playerNotes, [pos]: e.target.value }
-                                                    }))}
-                                                />
+                                ) : (
+                                    <div style={{
+                                        border: formData.rooskiOlineData ? '2px solid #10b981' : '2px dashed var(--border)',
+                                        borderRadius: 'var(--radius)', padding: '1rem', textAlign: 'center', minHeight: '200px',
+                                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                                        background: 'var(--bg-input)', position: 'relative', overflow: 'hidden'
+                                    }}>
+                                        {formData.rooskiOlineData ? (
+                                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid var(--border)', background: 'white', position: 'relative' }}>
+                                                    <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
+                                                        <g opacity="0.1">
+                                                            <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
+                                                            <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
+                                                        </g>
+                                                        {formData.rooskiOlineData.map(el => <circle key={el.id} cx={el.points[0].x} cy={el.points[0].y} r="5" fill={el.color} />)}
+                                                    </svg>
+                                                </div>
+                                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveDiagramMode('rooski-oline')}><Icon name="Edit3" size={14} style={{ marginRight: '4px' }} /> Edit</button>
                                             </div>
-                                        ))}
+                                        ) : (
+                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-oline')}><Icon name="PlusCircle" size={16} style={{ marginRight: '6px' }} /> Create O-Line</button>
+                                        )}
                                     </div>
-                                </div>
+                                )}
+                                {formData.rooskiOlineData && formData.rooskiMode !== 'image' && (
+                                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button type="button" onClick={() => setFormData({ ...formData, rooskiOlineData: null })} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Icon name="Trash" size={12} style={{ marginRight: '4px' }} /> Remove</button>
+                                    </div>
+                                )}
                             </div>
 
-
-
-                            {/* Call Sheet Fields */}
-                            {/* Call Sheet Tags Merged into Situational Tags */}
-
-
-                            {/* Close Left Column, Open Right Column */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-                                {/* Play Category (Moved Here) */}
-
-
-                                <div className="form-group">
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                        <label className="form-label" style={{ margin: 0 }}>Rooski O-Line Diagram</label>
-                                        <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem' }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'diagram' }))}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: (formData.rooskiMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)',
-                                                    fontWeight: (formData.rooskiMode || 'diagram') === 'diagram' ? 'bold' : 'normal',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                Diagram
-                                            </button>
-                                            <span style={{ color: 'var(--border)' }}>|</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'image' }))}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: formData.rooskiMode === 'image' ? 'var(--accent)' : 'var(--text-secondary)',
-                                                    fontWeight: formData.rooskiMode === 'image' ? 'bold' : 'normal',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                Image
-                                            </button>
-                                        </div>
+                            {/* Rooski Skill Diagram */}
+                            <div className="form-group" style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                    <label className="form-label" style={{ margin: 0, fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.025em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="Users" size={16} style={{ color: 'var(--accent)' }} />
+                                        Rooski Skill Diagram
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, rooskiSkillMode: 'diagram' }))}
+                                            style={{
+                                                background: 'none', border: 'none',
+                                                color: (formData.rooskiSkillMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)',
+                                                fontWeight: (formData.rooskiSkillMode || 'diagram') === 'diagram' ? 'bold' : 'normal',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Diagram
+                                        </button>
+                                        <span style={{ color: 'var(--border)' }}>|</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, rooskiSkillMode: 'image' }))}
+                                            style={{
+                                                background: 'none', border: 'none',
+                                                color: formData.rooskiSkillMode === 'image' ? 'var(--accent)' : 'var(--text-secondary)',
+                                                fontWeight: formData.rooskiSkillMode === 'image' ? 'bold' : 'normal',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Image
+                                        </button>
                                     </div>
-
-                                    {formData.rooskiMode === 'image' ? (
-                                        <div style={{
-                                            border: '2px dashed var(--border)',
-                                            borderRadius: 'var(--radius)',
-                                            padding: '1rem',
-                                            textAlign: 'center',
-                                            background: 'var(--bg-input)',
-                                            position: 'relative',
-                                            minHeight: '200px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                            {formData.rooskiImage ? (
-                                                <>
-                                                    <img src={formData.rooskiImage} alt="Rooski" style={{ maxWidth: '100%', maxHeight: '200px', marginBottom: '1rem', borderRadius: '4px' }} />
-                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-secondary"
-                                                            onClick={() => setFormData({ ...formData, rooskiImage: null })}
-                                                        >
-                                                            Remove
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                                                        <Icon name="Image" size={32} style={{ opacity: 0.5 }} />
-                                                    </div>
-                                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Upload JPG/PNG</div>
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={(e) => {
-                                                            const file = e.target.files[0];
-                                                            if (file) {
-                                                                const reader = new FileReader();
-                                                                reader.onloadend = () => {
-                                                                    setFormData(prev => ({ ...prev, rooskiImage: reader.result }));
-                                                                };
-                                                                reader.readAsDataURL(file);
-                                                            }
-                                                        }}
-                                                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
-                                                    />
-                                                </>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div style={{
-                                            border: formData.rooskiOlineData ? '2px solid #10b981' : '2px dashed var(--border)',
-                                            borderRadius: 'var(--radius)',
-                                            padding: '1rem',
-                                            textAlign: 'center',
-                                            minHeight: '200px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            background: 'var(--bg-input)',
-                                            position: 'relative',
-                                            overflow: 'hidden',
-                                            transition: 'all 0.2s'
-                                        }}>
-                                            {formData.rooskiOlineData ? (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                    {/* Mini Preview */}
-                                                    <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid var(--border)', background: 'white', position: 'relative' }}>
-                                                        <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
-                                                            <g opacity="0.1">
-                                                                <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
-                                                                <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
-                                                            </g>
-                                                            {formData.rooskiOlineData.map(el => (
-                                                                // Simplified rendering
-                                                                <circle key={el.id} cx={el.points[0].x} cy={el.points[0].y} r="5" fill={el.color} />
-                                                            ))}
-                                                        </svg>
-                                                    </div>
-                                                    <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-oline')} style={{ fontSize: '0.8rem' }}>
-                                                        <Icon name="Edit3" size={14} style={{ marginRight: '4px' }} /> Edit
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-oline')}>
-                                                        <Icon name="PlusCircle" size={16} style={{ marginRight: '6px' }} /> Create O-Line
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {formData.rooskiOlineData && formData.rooskiMode !== 'image' && (
-                                        <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, rooskiOlineData: null })}
-                                                style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                            >
-                                                <Icon name="Trash" size={12} style={{ marginRight: '4px' }} /> Remove
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
 
-                                {/* Rooski Skill Diagram */}
-                                <div className="form-group">
-                                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span>Rooski Skill Diagram</span>
-                                        {formData.rooskiSkillData && (
-                                            <span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>✓ Active</span>
+                                {formData.rooskiSkillMode === 'image' ? (
+                                    <div style={{
+                                        border: '2px dashed var(--border)', borderRadius: 'var(--radius)', padding: '1rem',
+                                        textAlign: 'center', background: 'var(--bg-input)', position: 'relative',
+                                        minHeight: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        {formData.rooskiSkillImage ? (
+                                            <>
+                                                <img src={formData.rooskiSkillImage} alt="Rooski Skill" style={{ maxWidth: '100%', maxHeight: '200px', marginBottom: '1rem', borderRadius: '4px' }} />
+                                                <button type="button" className="btn btn-secondary" onClick={() => setFormData({ ...formData, rooskiSkillImage: null })}>Remove</button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)' }}><Icon name="Image" size={32} style={{ opacity: 0.5 }} /></div>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Upload JPG/PNG</div>
+                                                <input type="file" accept="image/*" onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => setFormData(prev => ({ ...prev, rooskiSkillImage: reader.result }));
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
+                                            </>
                                         )}
-                                    </label>
+                                    </div>
+                                ) : (
                                     <div style={{
                                         border: formData.rooskiSkillData ? '2px solid #3b82f6' : '2px dashed var(--border)',
-                                        borderRadius: 'var(--radius)',
-                                        padding: '1rem',
-                                        textAlign: 'center',
-                                        minHeight: '200px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        background: 'var(--bg-input)',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                        transition: 'all 0.2s'
+                                        borderRadius: 'var(--radius)', padding: '1rem', textAlign: 'center', minHeight: '200px',
+                                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                                        background: 'var(--bg-input)', position: 'relative', overflow: 'hidden'
                                     }}>
                                         {formData.rooskiSkillData ? (
                                             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                {/* Mini Preview */}
                                                 <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid var(--border)', background: 'white', position: 'relative' }}>
                                                     <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
-                                                        {formData.rooskiSkillData.map(el => (
-                                                            <circle key={el.id} cx={el.points[0].x} cy={el.points[0].y} r="5" fill={el.color} />
-                                                        ))}
+                                                        {formData.rooskiSkillData.map(el => <circle key={el.id} cx={el.points[0].x} cy={el.points[0].y} r="5" fill={el.color} />)}
                                                     </svg>
                                                 </div>
-                                                <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-skill')} style={{ fontSize: '0.8rem' }}>
-                                                    <Icon name="Edit3" size={14} style={{ marginRight: '4px' }} /> Edit
-                                                </button>
+                                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveDiagramMode('rooski-skill')}><Icon name="Edit3" size={14} style={{ marginRight: '4px' }} /> Edit</button>
                                             </div>
                                         ) : (
-                                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                                <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-skill')}>
-                                                    <Icon name="PlusCircle" size={16} style={{ marginRight: '6px' }} /> Create Skill
-                                                </button>
-                                            </div>
+                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-skill')}><Icon name="PlusCircle" size={16} style={{ marginRight: '6px' }} /> Create Skill</button>
                                         )}
                                     </div>
-                                    {formData.rooskiSkillData && (
-                                        <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, rooskiSkillData: null })}
-                                                style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                            >
-                                                <Icon name="Trash" size={12} style={{ marginRight: '4px' }} /> Remove
-                                            </button>
+                                )}
+                                {formData.rooskiSkillData && formData.rooskiSkillMode !== 'image' && (
+                                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button type="button" onClick={() => setFormData({ ...formData, rooskiSkillData: null })} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Icon name="Trash" size={12} style={{ marginRight: '4px' }} /> Remove</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* THIRD SECTION: METADATA AND NOTES */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            {/* Left: Metadata */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    {/* Hash Preference */}
+                                    <div className="form-group">
+                                        <label className="form-label">Hash Preference</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {HASH_PREFERENCES.map(pref => (
+                                                <button
+                                                    key={pref} type="button"
+                                                    className={`btn ${formData.hashPreference === pref ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => setFormData({ ...formData, hashPreference: pref })}
+                                                    style={{ flex: '1 1 auto', minWidth: '80px' }}
+                                                >
+                                                    {pref}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Mirror Play */}
+                                    <div className="form-group">
+                                        <label className="form-label">Mirror Play</label>
+                                        <input
+                                            className="form-input"
+                                            value={formData.mirrorPlay || ''}
+                                            onChange={e => setFormData({ ...formData, mirrorPlay: e.target.value })}
+                                            placeholder="e.g. 877 BLUE 4T TRIBE"
+                                        />
+                                    </div>
+
+                                    {/* Look-A-Like Sequence */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Look-A-Like / Group</label>
+                                            <input
+                                                className="form-input"
+                                                value={formData.sequenceName || ''}
+                                                onChange={e => setFormData({ ...formData, sequenceName: e.target.value })}
+                                                placeholder="e.g. Red Group"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Sequence #</label>
+                                            <input
+                                                type="number" className="form-input"
+                                                value={formData.sequenceOrder || ''}
+                                                onChange={e => setFormData({ ...formData, sequenceOrder: e.target.value })}
+                                                placeholder="#"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Mini Script Assignment */}
+                                    {availableMiniScripts && availableMiniScripts.length > 0 && (
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                            <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Assign to Mini Scripts</label>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                                                {availableMiniScripts.map(script => (
+                                                    <label key={script.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '4px 8px', background: formData.assignedScriptIds.includes(script.id) ? 'var(--primary-light)' : 'transparent', borderRadius: '4px', border: formData.assignedScriptIds.includes(script.id) ? '1px solid var(--primary)' : '1px solid transparent' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={formData.assignedScriptIds.includes(script.id)}
+                                                            onChange={(e) => {
+                                                                const isChecked = e.target.checked;
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    assignedScriptIds: isChecked
+                                                                        ? [...prev.assignedScriptIds, script.id]
+                                                                        : prev.assignedScriptIds.filter(id => id !== script.id)
+                                                                }));
+                                                            }}
+                                                        />
+                                                        <span style={{ fontSize: '0.85rem' }}>{script.header || 'Untitled Script'}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-
+                            {/* Right: Player Assignment Notes */}
+                            <div>
+                                <div className="form-group" style={{ height: '100%' }}>
+                                    <div style={{ height: '100%', padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+                                        <label className="form-label" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>Player Assignment Notes</label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem', flex: 1 }}>
+                                            {['QB', 'RB', 'X', 'Z', 'Y', 'F', 'OL'].map(pos => (
+                                                <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    <span style={{ width: '35px', fontWeight: 'bold', fontSize: '1rem', color: 'var(--text-secondary)' }}>{pos}</span>
+                                                    <input
+                                                        className="form-input"
+                                                        style={{ padding: '0.5rem 0.75rem' }}
+                                                        placeholder={`Notes for ${pos}...`}
+                                                        value={formData.playerNotes?.[pos] || ''}
+                                                        onChange={(e) => setFormData(prev => ({
+                                                            ...prev,
+                                                            playerNotes: { ...prev.playerNotes, [pos]: e.target.value }
+                                                        }))}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Related Drills Section */}
-                        <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: '#1e293b' }}>Related Drills</h3>
+                        <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                            <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Icon name="Activity" size={18} style={{ color: 'var(--accent)' }} />
+                                Related Drills
+                            </h3>
 
                             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                                 <select
@@ -4838,9 +4822,9 @@
                             {formData.relatedDrills && formData.relatedDrills.length > 0 ? (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.5rem' }}>
                                     {formData.relatedDrills.map((drill, idx) => (
-                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', background: '#f1f5f9', borderRadius: '6px', fontSize: '0.9rem' }}>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <Icon name="Link" size={12} />
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.9rem', background: 'var(--bg-input)', borderRadius: '8px', fontSize: '0.9rem', border: '1px solid var(--border)' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-primary)' }}>
+                                                <Icon name="Link" size={14} style={{ color: 'var(--accent)' }} />
                                                 {drill.title}
                                             </span>
                                             <button
@@ -5224,30 +5208,50 @@
             );
         };
 
-        const WristbandBuilder = ({ plays, onUpdatePlay, wbSettings, setWbSettings }) => {
+        const WristbandBuilder = ({ plays, weeks, onUpdatePlay, wbSettings, setWbSettings }) => {
             const { currentUser } = useAuth();
-            const [mode, setMode] = useState('text'); // 'text' (100-299) or 'rooski' (300+)
+            const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
+            const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
             const [selectedPlayId, setSelectedPlayId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
             const [confirmModal, setConfirmModal] = useState(null); // { action: 'wb1'|'wb2'|'both', message: string }
             const [quickAddSlot, setQuickAddSlot] = useState(null);
             const [quickAddValue, setQuickAddValue] = useState('');
             const [quickAddSuggestions, setQuickAddSuggestions] = useState([]);
+            const [selectedDay, setSelectedDay] = useState('Monday');
 
             // Layout constants
             const rowHeight = 11;
             const fontSize = 0.55;
 
-            // Header customization state - Accessed via wbSettings prop
-            const wb1Opponent = wbSettings.wb1Opp;
-            const wb1Iteration = wbSettings.wb1Iter;
-            const wb2Opponent = wbSettings.wb2Opp;
-            const wb2Iteration = wbSettings.wb2Iter;
+            // Header customization helpers
+            const updateCard = (cardId, updates) => {
+                setWbSettings(prev => ({
+                    ...prev,
+                    [cardId]: { ...prev[cardId], ...updates }
+                }));
+            };
 
-            const setWb1Opponent = (val) => setWbSettings(prev => ({ ...prev, wb1Opp: val }));
-            const setWb1Iteration = (val) => setWbSettings(prev => ({ ...prev, wb1Iter: val }));
-            const setWb2Opponent = (val) => setWbSettings(prev => ({ ...prev, wb2Opp: val }));
-            const setWb2Iteration = (val) => setWbSettings(prev => ({ ...prev, wb2Iter: val }));
+            // Migration effect: Convert old flat settings to new nested structure
+            useEffect(() => {
+                if (!wbSettings.card1) {
+                    // It's the old structure or empty
+                    const newWb = {
+                        card1: { type: 'standard', opp: wbSettings.wb1Opp || '', iter: wbSettings.wb1Iter || '1', rows: [] },
+                        card2: { type: 'standard', opp: wbSettings.wb2Opp || '', iter: wbSettings.wb2Iter || '1', rows: [] },
+                        card3: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        version: 'v2'
+                    };
+                    setWbSettings(newWb);
+                }
+            }, []);
+
+            // Auto-sync to Firestore (debounced or just when changed)
+            useEffect(() => {
+                if (currentUser && wbSettings.version === 'v2') {
+                    syncToFirestore(currentUser.uid, 'wbSettings', wbSettings);
+                }
+            }, [wbSettings, currentUser]);
 
             // Quick add state
 
@@ -5278,27 +5282,76 @@
                 }
             };
 
-            const handleClearSlot = (play) => {
-                onUpdatePlay({ ...play, wristbandSlot: '' });
+            const handleUpdateRow = (cardId, rowId, updates) => {
+                const card = wbSettings[cardId];
+                const newRows = card.rows.map(r => r.id === rowId ? { ...r, ...updates } : r);
+                updateCard(cardId, { rows: newRows });
             };
 
-            const handleClearWB1 = () => {
-                setConfirmModal({
-                    action: 'wb1',
-                    message: 'Clear all plays from WB1 (100s)? This cannot be undone.'
-                });
+            const handleRemoveRow = (cardId, rowId) => {
+                const card = wbSettings[cardId];
+                const newRows = card.rows.filter(r => r.id !== rowId);
+                updateCard(cardId, { rows: newRows });
             };
 
-            const handleClearWB2 = () => {
+            const handleMoveRow = (cardId, rowId, direction) => {
+                const card = wbSettings[cardId];
+                const index = card.rows.findIndex(r => r.id === rowId);
+                if (index === -1) return;
+                const newIndex = index + direction;
+                if (newIndex < 0 || newIndex >= card.rows.length) return;
+
+                const newRows = [...card.rows];
+                const [moved] = newRows.splice(index, 1);
+                newRows.splice(newIndex, 0, moved);
+                updateCard(cardId, { rows: newRows });
+            };
+
+            const handleAddPlayRow = (cardId, play) => {
+                const card = wbSettings[cardId];
+                const newRow = {
+                    id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'play',
+                    playId: play.id,
+                    playName: play.name
+                };
+                updateCard(cardId, { rows: [...card.rows, newRow] });
+            };
+
+            const handleAddScriptRows = (cardId, segment) => {
+                const card = wbSettings[cardId];
+                const newRows = (segment.script || []).filter(s => s.playId).map(s => ({
+                    id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'play',
+                    playId: s.playId,
+                    playName: s.playName || plays.find(p => p.id === s.playId)?.name || 'Unknown'
+                }));
+                updateCard(cardId, { rows: [...card.rows, ...newRows] });
+            };
+
+            const handleAddTempoRow = (cardId, tempoType) => {
+                const card = wbSettings[cardId];
+                const protocol = VALHALLA_CONSTANTS.PRACTICE_TEMPO_PROTOCOLS.find(p => p.id === tempoType);
+                const newRow = {
+                    id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'tempo',
+                    tempoType: tempoType,
+                    label: protocol ? protocol.code : tempoType
+                };
+                updateCard(cardId, { rows: [...card.rows, newRow] });
+            };
+
+            const handleClearCard = (cardId) => {
+                const cardName = cardId === 'card1' ? 'WB1 (100s)' : (cardId === 'card2' ? 'WB2 (200s)' : 'WB3 (300s)');
                 setConfirmModal({
-                    action: 'wb2',
-                    message: 'Clear all plays from WB2 (200s)? This cannot be undone.'
+                    action: cardId,
+                    message: `Clear all plays from ${cardName}? This cannot be undone.`
                 });
             };
 
             const handleClearBoth = () => {
                 setConfirmModal({
-                    action: 'both',
+                    action: 'all',
                     message: 'Clear ALL wristband assignments? This cannot be undone.'
                 });
             };
@@ -5306,24 +5359,30 @@
             const confirmClear = () => {
                 if (!confirmModal) return;
 
-                if (confirmModal.action === 'wb1') {
+                if (confirmModal.action === 'all') {
+                    // Clear all play linkings
                     plays.forEach(play => {
-                        if (play.wristbandSlot && play.wristbandSlot >= 101 && play.wristbandSlot <= 148) {
+                        if (play.wristbandSlot) onUpdatePlay({ ...play, wristbandSlot: '' });
+                    });
+                    // Clear all modular rows
+                    setWbSettings(prev => ({
+                        card1: { ...prev.card1, rows: [] },
+                        card2: { ...prev.card2, rows: [] },
+                        card3: { ...prev.card3, rows: [] }
+                    }));
+                } else {
+                    const cardId = confirmModal.action;
+                    const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : 301);
+                    const end = start + 47; // Assuming 48 slots max
+
+                    plays.forEach(play => {
+                        const slot = Number(play.wristbandSlot);
+                        if (slot >= start && slot <= end) {
                             onUpdatePlay({ ...play, wristbandSlot: '' });
                         }
                     });
-                } else if (confirmModal.action === 'wb2') {
-                    plays.forEach(play => {
-                        if (play.wristbandSlot && play.wristbandSlot >= 201 && play.wristbandSlot <= 248) {
-                            onUpdatePlay({ ...play, wristbandSlot: '' });
-                        }
-                    });
-                } else if (confirmModal.action === 'both') {
-                    plays.forEach(play => {
-                        if (play.wristbandSlot) {
-                            onUpdatePlay({ ...play, wristbandSlot: '' });
-                        }
-                    });
+
+                    updateCard(cardId, { rows: [] });
                 }
 
                 setConfirmModal(null);
@@ -5453,190 +5512,150 @@
                 });
             };
 
-            const renderSpreadsheetTable = (slots, rangeClass) => {
-                // Group slots into pairs for two-column layout
-                const rows = [];
-                for (let i = 0; i < slots.length; i += 2) {
-                    rows.push([slots[i], slots[i + 1]]);
+            const renderSpreadsheetTable = (slots, rangeClass, cardId) => {
+                const card = wbSettings[cardId];
+                const isModular = card.type === 'modular';
+
+                // Determine row source
+                let displayRows = [];
+                if (isModular) {
+                    // Modular uses the sequence of rows defined in the card
+                    displayRows = card.rows.map((row, idx) => ({
+                        slot: slots[0] + idx,
+                        type: row.type,
+                        text: row.type === 'play' ? row.playName : row.label,
+                        playId: row.playId,
+                        rowId: row.id
+                    }));
+                } else {
+                    // Standard uses the absolute slots
+                    displayRows = slots.map(slot => {
+                        const play = slotMap[slot];
+                        return {
+                            slot: slot,
+                            type: 'play',
+                            text: play ? `${play.name}${play.formation ? ' - ' + play.formation : ''}` : '',
+                            play: play
+                        };
+                    });
+                }
+
+                // Split into two columns (24 rows each for a 48-slot card)
+                const midpoint = Math.ceil(displayRows.length / 2);
+                const col1 = displayRows.slice(0, midpoint);
+                const col2 = displayRows.slice(midpoint);
+
+                // Ensure columns have equal length for rendering
+                const rowCount = Math.max(col1.length, col2.length, 24);
+                const tableRows = [];
+                for (let i = 0; i < rowCount; i++) {
+                    tableRows.push([col1[i] || null, col2[i] || null]);
                 }
 
                 return (
                     <table className="wristband-spreadsheet-table">
                         <tbody>
-                            {rows.map((rowSlots, rowIndex) => {
-                                return (
-                                    <tr key={rowIndex} className={rangeClass}>
-                                        {rowSlots.map((slot, colIndex) => {
+                            {tableRows.map((rowGroup, rowIndex) => (
+                                <tr key={rowIndex} className={rangeClass}>
+                                    {rowGroup.map((cellData, colIndex) => {
+                                        if (!cellData && !isModular) {
+                                            // Handle empty slots in standard mode if needed, but usually slots are fixed
+                                            const slot = slots[rowIndex + (colIndex * midpoint)];
                                             if (!slot) return null;
-                                            const play = slotMap[slot];
-                                            const isClickable = selectedPlayId && !play;
-                                            const playText = play ? `${play.name}${play.formation ? ' - ' + play.formation : ''}` : '';
+                                            cellData = { slot: slot, type: 'play', text: '', play: null };
+                                        }
+                                        if (!cellData) return <React.Fragment key={colIndex}><td /><td /></React.Fragment>;
 
-                                            return (
-                                                <React.Fragment key={slot}>
-                                                    <td
-                                                        style={{
-                                                            fontWeight: 'bold',
-                                                            width: '50px',
-                                                            cursor: isClickable ? 'pointer' : 'default',
-                                                            background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'inherit',
-                                                            padding: '0 2px',
-                                                            border: '1px solid #333',
-                                                            height: `${rowHeight}px`,
-                                                            maxHeight: `${rowHeight}px`,
-                                                            fontSize: `${fontSize}rem`,
-                                                            verticalAlign: 'middle',
-                                                            color: '#000',
-                                                            overflow: 'hidden',
-                                                            whiteSpace: 'nowrap',
-                                                            lineHeight: `${rowHeight}px`,
-                                                            boxSizing: 'border-box'
-                                                        }}
-                                                        onClick={() => handleAssignSlot(slot)}
-                                                    >
-                                                        {slot}
-                                                    </td>
-                                                    <td
-                                                        style={{
-                                                            cursor: isClickable ? 'pointer' : 'default',
-                                                            background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'inherit',
-                                                            padding: '0 2px',
-                                                            border: '1px solid #333',
-                                                            height: `${rowHeight}px`,
-                                                            maxHeight: `${rowHeight}px`,
-                                                            fontSize: `${fontSize}rem`,
-                                                            verticalAlign: 'middle',
-                                                            color: '#000',
-                                                            overflow: 'hidden',
-                                                            whiteSpace: 'nowrap',
-                                                            lineHeight: `${rowHeight}px`,
-                                                            boxSizing: 'border-box'
-                                                        }}
-                                                        onClick={() => handleAssignSlot(slot)}
-                                                    >
-                                                        {quickAddSlot === slot ? (
-                                                            // Quick Add Mode
-                                                            <div style={{ position: 'relative', width: '100%', height: '100%' }} onClick={(e) => e.stopPropagation()}>
-                                                                <input
-                                                                    type="text"
-                                                                    value={quickAddValue}
-                                                                    onChange={(e) => handleQuickAddChange(e.target.value)}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter') handleQuickAddSubmit(slot);
-                                                                        if (e.key === 'Escape') handleQuickAddCancel();
-                                                                    }}
-                                                                    onBlur={() => setTimeout(() => handleQuickAddCancel(), 200)}
-                                                                    autoFocus
-                                                                    placeholder="Type play name..."
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        height: '100%',
-                                                                        fontSize: `${fontSize}rem`,
-                                                                        padding: '0 2px',
-                                                                        border: 'none',
-                                                                        outline: 'none',
-                                                                        background: 'white'
-                                                                    }}
-                                                                />
-                                                                {quickAddSuggestions.length > 0 && (
-                                                                    <div style={{
-                                                                        position: 'absolute',
-                                                                        top: '100%',
-                                                                        left: 0,
-                                                                        width: '200px',
-                                                                        background: 'white',
-                                                                        border: '1px solid #ccc',
-                                                                        zIndex: 1000,
-                                                                        maxHeight: '150px',
-                                                                        overflowY: 'auto',
-                                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                                                    }}>
-                                                                        {quickAddSuggestions.map(p => (
-                                                                            <div
-                                                                                key={p.id}
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleQuickAddSelectSuggestion(p, slot);
-                                                                                }}
-                                                                                style={{
-                                                                                    padding: '4px 8px',
-                                                                                    cursor: 'pointer',
-                                                                                    fontSize: '0.85rem',
-                                                                                    borderBottom: '1px solid #eee'
-                                                                                }}
-                                                                                onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
-                                                                                onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                                                                            >
-                                                                                {p.name}
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ) : play ? (
-                                                            // Existing Play Mode
-                                                            <div style={{
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'space-between',
-                                                                height: '100%',
-                                                                gap: '4px'
-                                                            }}>
-                                                                <span style={{
-                                                                    overflow: 'hidden',
-                                                                    textOverflow: 'ellipsis',
-                                                                    whiteSpace: 'nowrap',
-                                                                    flex: 1
-                                                                }}>
-                                                                    {playText}
-                                                                </span>
+                                        const play = cellData.play;
+                                        const isClickable = !isModular && selectedPlayId && !play;
+
+                                        return (
+                                            <React.Fragment key={`${colIndex}-${cellData.slot}`}>
+                                                <td
+                                                    style={{
+                                                        fontWeight: 'bold',
+                                                        width: '45px',
+                                                        cursor: isClickable ? 'pointer' : 'default',
+                                                        background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'inherit',
+                                                        padding: '0 2px',
+                                                        border: '1px solid #333',
+                                                        height: `${rowHeight}px`,
+                                                        maxHeight: `${rowHeight}px`,
+                                                        fontSize: `${fontSize}rem`,
+                                                        verticalAlign: 'middle',
+                                                        color: '#000',
+                                                        overflow: 'hidden',
+                                                        whiteSpace: 'nowrap',
+                                                        lineHeight: `${rowHeight}px`,
+                                                        boxSizing: 'border-box'
+                                                    }}
+                                                    onClick={() => !isModular && handleAssignSlot(cellData.slot)}
+                                                >
+                                                    {cellData.slot}
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        cursor: isClickable ? 'pointer' : 'default',
+                                                        background: isClickable ? 'rgba(56, 189, 248, 0.2)' : (cellData.type === 'tempo' ? '#ffedd5' : 'inherit'),
+                                                        padding: '0 2px',
+                                                        border: '1px solid #333',
+                                                        height: `${rowHeight}px`,
+                                                        maxHeight: `${rowHeight}px`,
+                                                        fontSize: `${fontSize}rem`,
+                                                        verticalAlign: 'middle',
+                                                        fontWeight: cellData.type === 'tempo' ? 'bold' : 'normal',
+                                                        color: '#000',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        lineHeight: `${rowHeight}px`,
+                                                        boxSizing: 'border-box'
+                                                    }}
+                                                    onClick={() => !isModular && handleAssignSlot(cellData.slot)}
+                                                >
+                                                    {quickAddSlot === cellData.slot ? (
+                                                        <div style={{ position: 'relative', width: '100%', height: '100%' }} onClick={(e) => e.stopPropagation()}>
+                                                            <input
+                                                                type="text"
+                                                                value={quickAddValue}
+                                                                onChange={(e) => handleQuickAddChange(e.target.value)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') handleQuickAddSubmit(cellData.slot);
+                                                                    if (e.key === 'Escape') handleQuickAddCancel();
+                                                                }}
+                                                                onBlur={() => setTimeout(() => handleQuickAddCancel(), 200)}
+                                                                autoFocus
+                                                                style={{ width: '100%', height: '100%', fontSize: `${fontSize}rem`, border: 'none', background: 'white' }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <span>{cellData.text}</span>
+                                                            {!isModular && !play && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleQuickAddStart(cellData.slot); }}
+                                                                    style={{ fontSize: '0.5rem', color: '#999', background: 'none', border: 'none' }}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            )}
+                                                            {!isModular && play && (
                                                                 <button
                                                                     className="wristband-clear-btn"
-                                                                    onClick={(e) => { e.stopPropagation(); handleClearSlot(play); }}
-                                                                    title="Clear slot"
-                                                                    style={{
-                                                                        fontSize: '0.7rem',
-                                                                        padding: '0 3px',
-                                                                        lineHeight: '1',
-                                                                        height: '10px',
-                                                                        minWidth: '12px',
-                                                                        flexShrink: 0
-                                                                    }}
+                                                                    onClick={(e) => { e.stopPropagation(); onUpdatePlay({ ...play, wristbandSlot: '' }); }}
+                                                                    style={{ fontSize: '0.6rem', padding: '0 2px', height: '10px' }}
                                                                 >
-                                                                    ✕
+                                                                    ×
                                                                 </button>
-                                                            </div>
-                                                        ) : (
-                                                            // Empty Slot - Show Quick Add Button
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleQuickAddStart(slot);
-                                                                }}
-                                                                style={{
-                                                                    fontSize: `${fontSize * 0.9}rem`,
-                                                                    color: '#999',
-                                                                    background: 'transparent',
-                                                                    border: 'none',
-                                                                    cursor: 'pointer',
-                                                                    padding: 0,
-                                                                    width: '100%',
-                                                                    height: '100%',
-                                                                    textAlign: 'left',
-                                                                    paddingLeft: '2px'
-                                                                }}
-                                                                title="Quick add play"
-                                                            >
-                                                                + quick add
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </React.Fragment>
-                                            );
-                                        })}
-                                    </tr>
-                                );
-                            })}
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 );
@@ -5817,366 +5836,305 @@
                 );
             };
 
-            const slots300 = [];
-            for (let i = 301; i <= 316; i++) slots300.push(i);
+            // Card-specific slots
+            const getSlotsForCard = (cardId) => {
+                const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : 301);
+                const slots = [];
+                for (let i = start; i <= start + 47; i++) slots.push(i);
+                return slots;
+            };
 
-            const slots400 = [];
-            for (let i = 401; i <= 416; i++) slots400.push(i);
+            const daySegmentsWithScripts = useMemo(() => {
+                const plan = weeks[selectedDay] || {};
+                return (plan.segments || []).filter(s => s.hasScript);
+            }, [weeks, selectedDay]);
+
+            const activeCard = wbSettings[selectedCardId];
 
             return (
                 <div style={{ display: 'flex', height: 'calc(100vh - 100px)', gap: '2rem' }}>
-                    {/* Left: Play Picker */}
-                    <div style={{ width: '300px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
-                        <h3 style={{ marginBottom: '1rem' }}>Available Plays</h3>
-                        <input
-                            className="form-input"
-                            placeholder="Search plays..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            style={{ marginBottom: '1rem' }}
-                        />
-                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            {filteredPlays.map(play => (
-                                <div
-                                    key={play.id}
-                                    onClick={() => setSelectedPlayId(play.id)}
-                                    style={{
-                                        padding: '0.35rem 0.5rem',
-                                        borderRadius: '4px',
-                                        border: '1px solid',
-                                        borderColor: selectedPlayId === play.id ? 'var(--accent)' : 'var(--border)',
-                                        backgroundColor: selectedPlayId === play.id ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-panel)',
-                                        cursor: 'pointer',
-                                        opacity: play.wristbandSlot ? 0.5 : 1
-                                    }}
-                                >
-                                    <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
-                                        {play.name} {play.wristbandSlot ? `(${play.wristbandSlot})` : ''}
-                                    </div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                                        {play.formation}
-                                    </div>
-                                </div>
-                            ))}
+                    {/* Left: Sidebar (Plays or Scripts) */}
+                    <div style={{ width: '320px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <button
+                                className={`btn ${sidebarMode === 'plays' ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => setSidebarMode('plays')}
+                                style={{ flex: 1, fontSize: '0.8rem' }}
+                            >
+                                Plays
+                            </button>
+                            <button
+                                className={`btn ${sidebarMode === 'scripts' ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => setSidebarMode('scripts')}
+                                style={{ flex: 1, fontSize: '0.8rem' }}
+                            >
+                                Scripts
+                            </button>
                         </div>
-                    </div>
 
-                    {/* Right: Spreadsheet Tables */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <h2 style={{ margin: 0 }}>Wristband Builder</h2>
-                                {/* Mode Switcher */}
-                                <div style={{ display: 'flex', background: 'var(--bg-panel)', borderRadius: '6px', padding: '2px', border: '1px solid var(--border)' }}>
-                                    {[
-                                        { id: 'text', label: 'Standard' },
-                                        { id: 'rooski-skill-300', label: 'Skill (300)' },
-                                        { id: 'rooski-ol-300', label: 'OL (300)' },
-                                        { id: 'rooski-skill-400', label: 'Skill (400)' },
-                                        { id: 'rooski-ol-400', label: 'OL (400)' }
-                                    ].map(m => (
-                                        <button
-                                            key={m.id}
-                                            onClick={() => setMode(m.id)}
+                        {sidebarMode === 'plays' ? (
+                            <>
+                                <input
+                                    className="form-input"
+                                    placeholder="Search plays..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    style={{ marginBottom: '1rem' }}
+                                />
+                                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    {filteredPlays.map(play => (
+                                        <div
+                                            key={play.id}
+                                            onClick={() => {
+                                                if (activeCard.type === 'modular') {
+                                                    handleAddPlayRow(selectedCardId, play);
+                                                } else {
+                                                    setSelectedPlayId(play.id);
+                                                }
+                                            }}
                                             style={{
-                                                padding: '4px 8px',
-                                                border: 'none',
-                                                background: mode === m.id ? 'var(--accent)' : 'transparent',
-                                                color: mode === m.id ? 'white' : 'var(--text-secondary)',
+                                                padding: '0.35rem 0.5rem',
                                                 borderRadius: '4px',
+                                                border: '1px solid',
+                                                borderColor: selectedPlayId === play.id ? 'var(--accent)' : 'var(--border)',
+                                                backgroundColor: selectedPlayId === play.id ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-panel)',
                                                 cursor: 'pointer',
-                                                fontSize: '0.8rem',
-                                                fontWeight: 'bold',
-                                                transition: 'all 0.2s',
-                                                whiteSpace: 'nowrap'
+                                                opacity: play.wristbandSlot ? 0.5 : 1
                                             }}
                                         >
-                                            {m.label}
-                                        </button>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>{play.name}</span>
+                                                {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>}
+                                            </div>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                                                {play.formation}
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
-                            </div>
+                            </>
+                        ) : (
+                            <>
+                                <select
+                                    className="form-input"
+                                    value={selectedDay}
+                                    onChange={e => setSelectedDay(e.target.value)}
+                                    style={{ marginBottom: '1rem' }}
+                                >
+                                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => (
+                                        <option key={d} value={d}>{d}</option>
+                                    ))}
+                                </select>
+                                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <div style={{ padding: '0.5rem', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '4px', marginBottom: '0.5rem' }}>
+                                        <h4 style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Tempo Protocols</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem' }}>
+                                            {VALHALLA_CONSTANTS.PRACTICE_TEMPO_PROTOCOLS.map(p => (
+                                                <button
+                                                    key={p.id}
+                                                    onClick={() => handleAddTempoRow(selectedCardId, p.id)}
+                                                    className="btn btn-secondary"
+                                                    style={{ fontSize: '0.7rem', padding: '4px' }}
+                                                >
+                                                    + {p.code}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                <button
-                                    className="btn btn-danger"
-                                    onClick={handleClearWB1}
-                                    title="Clear all WB1 (100s) assignments"
-                                >
-                                    Clear WB1
-                                </button>
-                                <button
-                                    className="btn btn-danger"
-                                    onClick={handleClearWB2}
-                                    title="Clear all WB2 (200s) assignments"
-                                >
-                                    Clear WB2
-                                </button>
-                                <button
-                                    className="btn btn-danger"
-                                    onClick={handleClearBoth}
-                                    title="Clear all wristband assignments"
-                                    style={{ fontWeight: 'bold' }}
-                                >
-                                    Clear Both
-                                </button>
-                                <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 0.25rem' }}></div>
-                                <button className="btn btn-secondary" onClick={handleExportToClipboard}>
-                                    <Icon name="Clipboard" size={16} style={{ marginRight: '6px' }} />
-                                    Copy Data
-                                </button>
-                                <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print</button>
-                            </div>
-                        </div>
-
-                        {selectedPlayId && (
-                            <div style={{
-                                padding: '0.75rem',
-                                background: 'rgba(56, 189, 248, 0.1)',
-                                border: '1px solid var(--accent)',
-                                borderRadius: '4px',
-                                marginBottom: '1rem',
-                                fontSize: '0.9rem'
-                            }}>
-                                <strong>Selected:</strong> {plays.find(p => p.id === selectedPlayId)?.name} - Click any empty slot to assign
-                            </div>
+                                    <h4 style={{ fontSize: '0.8rem', margin: '0.5rem 0' }}>Practice Segments</h4>
+                                    {daySegmentsWithScripts.map((seg, idx) => (
+                                        <div
+                                            key={seg.id || idx}
+                                            onClick={() => handleAddScriptRows(selectedCardId, seg)}
+                                            style={{
+                                                padding: '0.5rem',
+                                                borderRadius: '4px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-panel)',
+                                                cursor: 'pointer'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                                        >
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>{seg.type}</div>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                                                {seg.duration} min • {seg.script?.filter(s => s.playId).length || 0} plays
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {daySegmentsWithScripts.length === 0 && (
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
+                                            No scripts found for {selectedDay}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         )}
-
-                        <div className="wristband-spreadsheet-container" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
-                            {/* Conditional Rendering based on Mode */}
-                            {mode === 'text' ? (
-                                <>
-                                    {/* WB1 - 100s */}
-                                    <div style={{
-                                        maxWidth: '800px',
-                                        margin: '0 auto',
-                                        border: '2px solid #333',
-                                        borderRadius: '8px',
-                                        padding: '1rem',
-                                        background: 'white',
-                                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                        display: 'block',
-                                        pageBreakInside: 'avoid'
-                                    }}>
-                                        {/* WB1 Header with Inputs */}
-                                        <div style={{
-
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            marginBottom: '0.5rem',
-                                            paddingBottom: '0.25rem',
-                                            borderBottom: '2px solid #059669'
-                                        }}>
-                                            <input
-                                                type="text"
-                                                placeholder="OPPONENT"
-                                                value={wb1Opponent}
-                                                onChange={(e) => setWb1Opponent(e.target.value)}
-                                                className="wristband-header-input"
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '0.2rem 0.4rem',
-                                                    fontSize: '0.9rem',
-                                                    fontWeight: 'bold',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: '3px',
-                                                    textAlign: 'left',
-                                                    textTransform: 'uppercase'
-                                                }}
-                                            />
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
-                                                <input
-                                                    type="number"
-                                                    placeholder="1"
-                                                    value={wb1Iteration}
-                                                    onChange={(e) => setWb1Iteration(e.target.value)}
-                                                    className="wristband-header-input"
-                                                    style={{
-                                                        width: '40px',
-                                                        padding: '0.2rem',
-                                                        fontSize: '0.9rem',
-                                                        fontWeight: 'bold',
-                                                        border: '1px solid #ddd',
-                                                        borderRadius: '3px',
-                                                        textAlign: 'center'
-                                                    }}
-                                                />
-                                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#059669' }}>WB1</span>
-                                            </div>
-                                        </div>
-
-                                        {renderSpreadsheetTable(slots100, 'wb-100s')}
-                                    </div>
-
-                                    {/* WB2 - 200s (Orange) - 3x5" Card Preview */}
-                                    <div style={{
-                                        maxWidth: '800px',
-                                        margin: '0 auto',
-                                        border: '2px solid #333',
-                                        borderRadius: '8px',
-                                        padding: '1rem',
-                                        background: 'white',
-                                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                        aspectRatio: '5 / 3'
-                                    }}>
-                                        {/* Header Row - Part of Printable Card */}
-                                        <div style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            marginBottom: '0.5rem',
-                                            paddingBottom: '0.25rem',
-                                            borderBottom: '2px solid #ea580c'
-                                        }}>
-                                            <input
-                                                type="text"
-                                                placeholder="OPPONENT"
-                                                value={wb2Opponent}
-                                                onChange={(e) => setWb2Opponent(e.target.value)}
-                                                className="wristband-header-input"
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '0.2rem 0.4rem',
-                                                    fontSize: '0.9rem',
-                                                    fontWeight: 'bold',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: '3px',
-                                                    textAlign: 'left',
-                                                    textTransform: 'uppercase'
-                                                }}
-                                            />
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
-                                                <input
-                                                    type="number"
-                                                    placeholder="1"
-                                                    value={wb2Iteration}
-                                                    onChange={(e) => setWb2Iteration(e.target.value)}
-                                                    className="wristband-header-input"
-                                                    style={{
-                                                        width: '40px',
-                                                        padding: '0.2rem',
-                                                        fontSize: '0.9rem',
-                                                        fontWeight: 'bold',
-                                                        border: '1px solid #ddd',
-                                                        borderRadius: '3px',
-                                                        textAlign: 'center'
-                                                    }}
-                                                />
-                                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#ea580c' }}>WB2</span>
-                                            </div>
-                                        </div>
-
-                                        {renderSpreadsheetTable(slots200, 'wb-200s')}
-                                    </div>
-                                </>
-                            ) : mode === 'rooski-skill-300' ? (
-                                <div style={{
-                                    width: '5in',
-                                    height: '3in',
-                                    margin: '0 auto',
-                                    background: 'white',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                    pageBreakInside: 'avoid'
-                                }}>
-                                    {renderRooskiGrid(slots300, 'ROOSKI SKILL (301-316)', 'skill')}
-                                </div>
-                            ) : mode === 'rooski-ol-300' ? (
-                                <div style={{
-                                    width: '5in',
-                                    height: '3in',
-                                    margin: '0 auto',
-                                    background: 'white',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                    pageBreakInside: 'avoid'
-                                }}>
-                                    {renderRooskiGrid(slots300, 'ROOSKI OL (301-316)', 'oline')}
-                                </div>
-                            ) : mode === 'rooski-skill-400' ? (
-                                <div style={{
-                                    width: '5in',
-                                    height: '3in',
-                                    margin: '0 auto',
-                                    background: 'white',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                    pageBreakInside: 'avoid'
-                                }}>
-                                    {renderRooskiGrid(slots400, 'ROOSKI SKILL (401-416)', 'skill')}
-                                </div>
-                            ) : mode === 'rooski-ol-400' ? (
-                                <div style={{
-                                    width: '5in',
-                                    height: '3in',
-                                    margin: '0 auto',
-                                    background: 'white',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                    pageBreakInside: 'avoid'
-                                }}>
-                                    {renderRooskiGrid(slots400, 'ROOSKI OL (401-416)', 'oline')}
-                                </div>
-                            ) : null}
-                        </div>
                     </div>
 
-                    {/* Print Layout (hidden on screen) */}
-                    <div className="wristband-print-container" style={{ display: 'none' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '5in 5in', gridTemplateRows: '3in 3in', gap: '0.25in' }}>
-                            {/* Top Left: WB1 Green */}
-                            <WristbandPrintCardSpreadsheet title="WB1" slots={slots100} slotMap={slotMap} colorClass="green" />
-                            {/* Top Right: WB1 Green (Duplicate) */}
-                            <WristbandPrintCardSpreadsheet title="WB1" slots={slots100} slotMap={slotMap} colorClass="green" />
-                            {/* Bottom Left: WB2 Orange */}
-                            <WristbandPrintCardSpreadsheet title="WB2" slots={slots200} slotMap={slotMap} colorClass="orange" />
-                            {/* Bottom Right: WB2 Orange (Duplicate) */}
-                            <WristbandPrintCardSpreadsheet title="WB2" slots={slots200} slotMap={slotMap} colorClass="orange" />
-                        </div>
-                    </div>
-
-                    {/* Confirmation Modal */}
-                    {
-                        confirmModal && (
-                            <div style={{
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 9999
-                            }}>
-                                <div style={{
-                                    backgroundColor: 'var(--bg-panel)',
-                                    padding: '2rem',
-                                    borderRadius: 'var(--radius)',
-                                    border: '1px solid var(--border)',
-                                    maxWidth: '400px',
-                                    width: '90%'
-                                }}>
-                                    <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Confirm Action</h3>
-                                    <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>{confirmModal.message}</p>
-                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                        <button
-                                            className="btn btn-secondary"
-                                            onClick={cancelClear}
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            className="btn btn-danger"
-                                            onClick={confirmClear}
-                                        >
-                                            Clear
-                                        </button>
-                                    </div>
-                                </div>
+                    {/* Right: Main Content */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        {/* Header Tabs */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                {['card1', 'card2', 'card3'].map(id => (
+                                    <button
+                                        key={id}
+                                        onClick={() => setSelectedCardId(id)}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            borderRadius: '6px 6px 0 0',
+                                            border: '1px solid var(--border)',
+                                            borderBottom: selectedCardId === id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                                            background: selectedCardId === id ? 'var(--bg-panel)' : 'transparent',
+                                            color: selectedCardId === id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {id === 'card1' ? '100s' : (id === 'card2' ? '200s' : '300s')}
+                                    </button>
+                                ))}
                             </div>
-                        )
-                    }
-                </div >
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="btn btn-secondary" onClick={handleExportToClipboard}>Copy Data</button>
+                                <button className="btn btn-secondary" onClick={() => window.print()}>Print</button>
+                                <button className="btn btn-danger" onClick={() => handleClearCard(selectedCardId)}>Clear Card</button>
+                                <button className="btn btn-danger" onClick={handleClearBoth} style={{ fontWeight: 'bold' }}>Clear All</button>
+                            </div>
+                        </div>
+
+                        {/* Card Settings Bar */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1.5rem',
+                            padding: '0.75rem',
+                            background: 'var(--bg-panel)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '4px',
+                            marginBottom: '1rem'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Layout:</label>
+                                <select
+                                    className="form-input"
+                                    style={{ width: 'auto', padding: '4px 8px' }}
+                                    value={activeCard.type}
+                                    onChange={e => updateCard(selectedCardId, { type: e.target.value })}
+                                >
+                                    <option value="standard">Standard (Traditional)</option>
+                                    <option value="modular">Modular (Script/Tempo)</option>
+                                    <option value="rooski-skill">Rooski Skill</option>
+                                    <option value="rooski-oline">Rooski O-Line</option>
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
+                                <input
+                                    className="form-input"
+                                    style={{ width: '120px', padding: '4px 8px' }}
+                                    value={activeCard.opp}
+                                    onChange={e => updateCard(selectedCardId, { opp: e.target.value })}
+                                    placeholder="Opponent"
+                                />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iter:</label>
+                                <input
+                                    className="form-input"
+                                    style={{ width: '50px', padding: '4px 8px' }}
+                                    value={activeCard.iter}
+                                    onChange={e => updateCard(selectedCardId, { iter: e.target.value })}
+                                    placeholder="1"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Rendering Logic */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+                            {activeCard.type === 'modular' ? (
+                                <div style={{ display: 'flex', gap: '2rem' }}>
+                                    {/* Modular Editor List */}
+                                    <div style={{ flex: 1 }}>
+                                        <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Row Sequence</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {activeCard.rows.map((row, idx) => (
+                                                <div
+                                                    key={row.id}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.75rem',
+                                                        padding: '0.5rem',
+                                                        background: 'var(--bg-panel)',
+                                                        border: '1px solid var(--border)',
+                                                        borderRadius: '4px'
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', width: '20px' }}>{idx + 1}</span>
+                                                    <div style={{
+                                                        width: '12px',
+                                                        height: '12px',
+                                                        borderRadius: '50%',
+                                                        background: row.type === 'play' ? 'var(--accent)' : 'var(--warning)'
+                                                    }}></div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
+                                                            {row.type === 'play' ? row.playName : row.label}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                                                            {row.type === 'play' ? 'Play' : 'Tempo Protocol'}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                        <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => handleMoveRow(selectedCardId, row.id, -1)}>↑</button>
+                                                        <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => handleMoveRow(selectedCardId, row.id, 1)}>↓</button>
+                                                        <button className="btn btn-danger" style={{ padding: '2px 6px' }} onClick={() => handleRemoveRow(selectedCardId, row.id)}>×</button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {activeCard.rows.length === 0 && (
+                                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', border: '2px dashed var(--border)' }}>
+                                                    Drag scripts/plays or add tempos to build your sequence.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Split Preview */}
+                                    <div style={{ width: '400px' }}>
+                                        <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Preview</h3>
+                                        <div style={{
+                                            background: 'white',
+                                            padding: '1rem',
+                                            border: '2px solid #333',
+                                            borderRadius: '4px',
+                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                        }}>
+                                            {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId)}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ maxWidth: '800px', margin: '0 auto', background: 'white', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
+                                        <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
+                                        <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
+                                    </div>
+                                    {activeCard.type.startsWith('rooski') ? (
+                                        renderRooskiGrid(getSlotsForCard(selectedCardId).slice(0, 16), activeCard.type === 'rooski-skill' ? 'Skill' : 'O-Line', activeCard.type === 'rooski-skill' ? 'skill' : 'oline')
+                                    ) : (
+                                        renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId)
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             );
+
         };
 
         // New print card component for spreadsheet style
@@ -10369,6 +10327,14 @@
         const PRESET_COLORS = ['#38bdf8', '#3b82f6', '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#000000', '#4b5563'];
 
         const VALHALLA_CONSTANTS = {
+            PRACTICE_TEMPO_PROTOCOLS: [
+                { id: 'REGULAR', label: 'Regular', color: '#64748b', code: 'R' },
+                { id: 'SCRAMBLE', label: 'Scramble', color: '#2563eb', code: 'SC' },
+                { id: 'SUGAR', label: 'Sugar Huddle', color: '#7c3aed', code: 'S' },
+                { id: '4MIN', label: '4-Min Huddle', color: '#16a34a', code: '4M' },
+                { id: 'NOHUDDLE', label: 'No-Huddle', color: '#d97706', code: 'NH' },
+                { id: 'BLUR', label: 'Blur Tempo', color: '#dc2626', code: 'B' }
+            ],
             PRACTICE_TEMPLATES: [
                 {
                     name: "Monday - Base Install",
@@ -34864,23 +34830,46 @@
                 return saved ? JSON.parse(saved) : [];
             });
 
-            // Flattened WB Settings for easier passing
-            const [wbSettings, setWbSettings] = useState(() => ({
-                wb1Opp: localStorage.getItem('hc_wb1_opponent') || '',
-                wb1Iter: localStorage.getItem('hc_wb1_iteration') || '',
-                wb2Opp: localStorage.getItem('hc_wb2_opponent') || '',
-                wb2Iter: localStorage.getItem('hc_wb2_iteration') || ''
-            }));
+            // Multi-Card Wristband Settings
+            const [wbSettings, setWbSettings] = useState(() => {
+                const saved = localStorage.getItem('hc_wb_settings_v3');
+                if (saved) return JSON.parse(saved);
 
-            // Sync WB Settings changes to individual LS keys (to maintain compatibility with other reads)
+                // Migration from legacy flat keys
+                return {
+                    card1: {
+                        type: 'standard',
+                        opp: localStorage.getItem('hc_wb1_opponent') || '',
+                        iter: localStorage.getItem('hc_wb1_iteration') || '',
+                        rows: []
+                    },
+                    card2: {
+                        type: 'standard',
+                        opp: localStorage.getItem('hc_wb2_opponent') || '',
+                        iter: localStorage.getItem('hc_wb2_iteration') || '',
+                        rows: []
+                    },
+                    card3: {
+                        type: 'rooski-skill',
+                        opp: '',
+                        iter: '',
+                        rows: []
+                    }
+                };
+            });
+
+            // Sync WB Settings changes
             useEffect(() => {
-                localStorage.setItem('hc_wb1_opponent', wbSettings.wb1Opp);
-                localStorage.setItem('hc_wb1_iteration', wbSettings.wb1Iter);
-                localStorage.setItem('hc_wb2_opponent', wbSettings.wb2Opp);
-                localStorage.setItem('hc_wb2_iteration', wbSettings.wb2Iter);
+                localStorage.setItem('hc_wb_settings_v3', JSON.stringify(wbSettings));
+
+                // Maintain legacy keys for external consumption if any
+                localStorage.setItem('hc_wb1_opponent', wbSettings.card1.opp);
+                localStorage.setItem('hc_wb1_iteration', wbSettings.card1.iter);
+                localStorage.setItem('hc_wb2_opponent', wbSettings.card2.opp);
+                localStorage.setItem('hc_wb2_iteration', wbSettings.card2.iter);
 
                 if (authUser) {
-                    syncToFirestore(authUser.uid, 'wbSettings', {
+                    syncToFirestore(authUser.uid, 'wbSettingsV3', {
                         ...wbSettings,
                         sheetUrl: localStorage.getItem('hc_wristband_sheet_url')
                     });
@@ -36864,6 +36853,9 @@
                                     <button className={`nav-item ${view === 'player-profiles' ? 'active' : ''}`} onClick={() => setView('player-profiles')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="User" size={16} style={{ marginRight: '8px' }} /> Player Profiles
                                     </button>
+                                    <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
+                                    </button>
                                 </CollapsibleCategory>
                             )}
 
@@ -36966,11 +36958,11 @@
                                 <CollapsibleCategory title="Scheme and Skills" icon="BookOpen" defaultOpen={false}>
                                     {currentPermissions.playbook.view && (
                                         <>
-                                            <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Book" size={16} style={{ marginRight: '8px' }} /> Playbook
-                                            </button>
                                             <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                                 <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
+                                            </button>
+                                            <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Book" size={16} style={{ marginRight: '8px' }} /> Playbook
                                             </button>
                                         </>
                                     )}
@@ -36994,9 +36986,6 @@
                             {/* PROGRAM MANAGEMENT CATEGORY */}
                             {visibleFeatures.program?.enabled && (
                                 <CollapsibleCategory title="Program Mgmt" icon="Briefcase" defaultOpen={false}>
-                                    <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
-                                    </button>
                                     <button className={`nav-item ${view === 'staff-tasks' ? 'active' : ''}`} onClick={() => setView('staff-tasks')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="ClipboardList" size={16} style={{ marginRight: '8px' }} /> Staff Tasks
                                     </button>
@@ -37634,7 +37623,7 @@
 
                         {view === 'formations' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} />}
 
-                        {view === 'wristband' && <WristbandBuilder plays={plays} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} />}
 
                         {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
