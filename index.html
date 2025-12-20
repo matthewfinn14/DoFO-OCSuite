@@ -5661,10 +5661,18 @@
                     });
                 }
 
-                // Split into two columns (24 rows each for a 48-slot card)
-                const midpoint = Math.ceil(displayRows.length / 2);
-                const col1 = displayRows.slice(0, midpoint);
-                const col2 = displayRows.slice(midpoint);
+                // Split into two columns: odd coordinates on left, even on right
+                const col1 = []; // Odd coordinates (101, 103, 105, ...)
+                const col2 = []; // Even coordinates (102, 104, 106, ...)
+
+                displayRows.forEach(row => {
+                    const slotNum = parseInt(row.slot);
+                    if (slotNum % 2 === 1) {
+                        col1.push(row);
+                    } else {
+                        col2.push(row);
+                    }
+                });
 
                 // Ensure columns have equal length for rendering
                 const rowCount = Math.max(col1.length, col2.length, 24);
@@ -5694,8 +5702,8 @@
                                         let cellBackground = 'inherit';
                                         if (card.color && card.color !== 'none') {
                                             const colorBase = card.color;
-                                            // Alternate shades every 12 rows
-                                            const shadeIndex = Math.floor(rowIndex / 12) % 3;
+                                            // Alternate shades every row: light, medium, dark, light, medium, dark...
+                                            const shadeIndex = rowIndex % 3;
                                             const shades = ['light', 'medium', 'dark'];
                                             const shade = shades[shadeIndex];
                                             const colorMap = {
@@ -5726,7 +5734,8 @@
                                                         overflow: 'hidden',
                                                         whiteSpace: 'nowrap',
                                                         lineHeight: `${rowHeight}px`,
-                                                        boxSizing: 'border-box'
+                                                        boxSizing: 'border-box',
+                                                        textAlign: colIndex === 1 ? 'center' : 'left'
                                                     }}
                                                     onClick={() => !isModular && handleAssignSlot(cellData.slot)}
                                                 >
@@ -6368,14 +6377,21 @@
                                             padding: '1rem',
                                             border: '2px solid #333',
                                             borderRadius: '4px',
-                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                            width: '500px',
+                                            aspectRatio: '5/3'
                                         }}>
+                                            {/* Header */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '2px solid #333' }}>
+                                                <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.9rem' }}>{activeCard.opp || 'OPPONENT'}</span>
+                                                <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Card {selectedCardId === 'card1' ? '1' : (selectedCardId === 'card2' ? '2' : '3')}{activeCard.iter ? ` - Iter ${activeCard.iter}` : ''}</span>
+                                            </div>
                                             {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId)}
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div style={{ maxWidth: '800px', margin: '0 auto', background: 'white', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                                <div style={{ maxWidth: '800px', width: '500px', margin: '0 auto', background: 'white', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
                                         <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
                                         <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
