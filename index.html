@@ -527,6 +527,33 @@
             background-color: #fdba74;
         }
 
+        /* Alternating row colors for 400s (purple) */
+        .wristband-spreadsheet-table tbody tr.wb-400s:nth-child(odd) {
+            background-color: #e9d5ff;
+        }
+
+        .wristband-spreadsheet-table tbody tr.wb-400s:nth-child(even) {
+            background-color: #d8b4fe;
+        }
+
+        /* Alternating row colors for 500s (teal) */
+        .wristband-spreadsheet-table tbody tr.wb-500s:nth-child(odd) {
+            background-color: #99f6e4;
+        }
+
+        .wristband-spreadsheet-table tbody tr.wb-500s:nth-child(even) {
+            background-color: #5eead4;
+        }
+
+        /* Alternating row colors for 600s (pink) */
+        .wristband-spreadsheet-table tbody tr.wb-600s:nth-child(odd) {
+            background-color: #fbcfe8;
+        }
+
+        .wristband-spreadsheet-table tbody tr.wb-600s:nth-child(even) {
+            background-color: #f9a8d4;
+        }
+
         .wristband-spreadsheet-table tbody tr:hover {
             outline: 2px solid var(--accent);
             outline-offset: -1px;
@@ -603,10 +630,10 @@
                 page-break-inside: avoid;
             }
 
-            /* Individual Wristband Card - 3in × 5in portrait */
+            /* Individual Wristband Card - 5in × 3in landscape */
             .wristband-print-card {
-                width: 3in;
-                height: 5in;
+                width: 5in;
+                height: 3in;
                 border: 2px solid black;
                 background: white;
                 overflow: hidden;
@@ -674,6 +701,33 @@
 
             .wristband-color-yellow-medium {
                 background: #fde047 !important;
+            }
+
+            /* Purple shades - alternating */
+            .wristband-color-purple-light {
+                background: #e9d5ff !important;
+            }
+
+            .wristband-color-purple-medium {
+                background: #d8b4fe !important;
+            }
+
+            /* Teal shades - alternating */
+            .wristband-color-teal-light {
+                background: #99f6e4 !important;
+            }
+
+            .wristband-color-teal-medium {
+                background: #5eead4 !important;
+            }
+
+            /* Pink shades - alternating */
+            .wristband-color-pink-light {
+                background: #fbcfe8 !important;
+            }
+
+            .wristband-color-pink-medium {
+                background: #f9a8d4 !important;
             }
 
             /* Card content area */
@@ -5325,15 +5379,27 @@
                         card1: { type: 'standard', opp: wbSettings.wb1Opp || '', iter: wbSettings.wb1Iter || '1', rows: [] },
                         card2: { type: 'standard', opp: wbSettings.wb2Opp || '', iter: wbSettings.wb2Iter || '1', rows: [] },
                         card3: { type: 'standard', opp: '', iter: '1', rows: [] },
-                        version: 'v2'
+                        card4: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        card5: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        card6: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        version: 'v3'
                     };
                     setWbSettings(newWb);
+                } else if (!wbSettings.card4) {
+                    // Migrate from v2 to v3 (add new cards)
+                    setWbSettings(prev => ({
+                        ...prev,
+                        card4: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        card5: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        card6: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        version: 'v3'
+                    }));
                 }
             }, []);
 
             // Auto-sync to Firestore (debounced or just when changed)
             useEffect(() => {
-                if (currentUser && wbSettings.version === 'v2') {
+                if (currentUser && (wbSettings.version === 'v2' || wbSettings.version === 'v3')) {
                     syncToFirestore(currentUser.uid, 'wbSettings', wbSettings);
                 }
             }, [wbSettings, currentUser]);
@@ -5427,7 +5493,7 @@
             };
 
             const handleClearCard = (cardId) => {
-                const cardName = cardId === 'card1' ? 'WB1 (100s)' : (cardId === 'card2' ? 'WB2 (200s)' : 'WB3 (300s)');
+                const cardName = cardId === 'card1' ? 'WB1 (100s)' : (cardId === 'card2' ? 'WB2 (200s)' : (cardId === 'card3' ? 'WB3 (300s)' : (cardId === 'card4' ? 'WB4 (400s)' : (cardId === 'card5' ? 'WB5 (500s)' : 'WB6 (600s)'))));
                 setConfirmModal({
                     action: cardId,
                     message: `Clear all plays from ${cardName}? This cannot be undone.`
@@ -5453,11 +5519,14 @@
                     setWbSettings(prev => ({
                         card1: { ...prev.card1, rows: [] },
                         card2: { ...prev.card2, rows: [] },
-                        card3: { ...prev.card3, rows: [] }
+                        card3: { ...prev.card3, rows: [] },
+                        card4: { ...prev.card4, rows: [] },
+                        card5: { ...prev.card5, rows: [] },
+                        card6: { ...prev.card6, rows: [] }
                     }));
                 } else {
                     const cardId = confirmModal.action;
-                    const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : 301);
+                    const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
                     const end = start + 47; // Assuming 48 slots max
 
                     plays.forEach(play => {
@@ -5691,7 +5760,10 @@
                                                 'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
                                                 'red-light': '#fecaca', 'red-medium': '#fca5a5',
                                                 'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
-                                                'yellow-light': '#fef08a', 'yellow-medium': '#fde047'
+                                                'yellow-light': '#fef08a', 'yellow-medium': '#fde047',
+                                                'purple-light': '#e9d5ff', 'purple-medium': '#d8b4fe',
+                                                'teal-light': '#99f6e4', 'teal-medium': '#5eead4',
+                                                'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
                                             };
                                             cellBackground = colorMap[`${colorBase}-${shade}`] || 'inherit';
                                         }
@@ -6020,7 +6092,7 @@
 
                 if (card.type === 'rooski') {
                     // Rooski uses 16 slots: X01-X16 where X is the series number
-                    const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : 3);
+                    const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : (cardId === 'card3' ? 3 : (cardId === 'card4' ? 4 : (cardId === 'card5' ? 5 : 6))));
                     const slots = [];
                     for (let i = 1; i <= 16; i++) {
                         slots.push(`${series}${String(i).padStart(2, '0')}`);
@@ -6029,7 +6101,7 @@
                 }
 
                 // Standard/Modular use 48 slots
-                const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : 301);
+                const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
                 const slots = [];
                 for (let i = start; i <= start + 47; i++) slots.push(i);
                 return slots;
@@ -6169,7 +6241,7 @@
                         {/* Header Tabs */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                {['card1', 'card2', 'card3'].map(id => (
+                                {['card1', 'card2', 'card3', 'card4', 'card5', 'card6'].map(id => (
                                     <button
                                         key={id}
                                         onClick={() => setSelectedCardId(id)}
@@ -6184,7 +6256,7 @@
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        {id === 'card1' ? '100s' : (id === 'card2' ? '200s' : '300s')}
+                                        {id === 'card1' ? '100s' : (id === 'card2' ? '200s' : (id === 'card3' ? '300s' : (id === 'card4' ? '400s' : (id === 'card5' ? '500s' : '600s'))))}
                                     </button>
                                 ))}
                             </div>
@@ -6255,6 +6327,9 @@
                                         <option value="red">Red (alternating shades)</option>
                                         <option value="blue">Blue (alternating shades)</option>
                                         <option value="yellow">Yellow (alternating shades)</option>
+                                        <option value="purple">Purple (alternating shades)</option>
+                                        <option value="teal">Teal (alternating shades)</option>
+                                        <option value="pink">Pink (alternating shades)</option>
                                     </select>
                                 </div>
                             )}
@@ -6358,23 +6433,23 @@
                                             border: '2px solid #333',
                                             borderRadius: '4px',
                                             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                            width: '500px',
+                                            width: '600px',
                                             aspectRatio: '5/3'
                                         }}>
                                             {/* Header */}
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '2px solid #333' }}>
                                                 <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.9rem' }}>{activeCard.opp || 'OPPONENT'}</span>
-                                                <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Card {selectedCardId === 'card1' ? '1' : (selectedCardId === 'card2' ? '2' : '3')}{activeCard.iter ? ` - Iter ${activeCard.iter}` : ''}</span>
+                                                <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Card {selectedCardId === 'card1' ? '1' : (selectedCardId === 'card2' ? '2' : (selectedCardId === 'card3' ? '3' : (selectedCardId === 'card4' ? '4' : (selectedCardId === 'card5' ? '5' : '6'))))}{activeCard.iter ? ` - Iter ${activeCard.iter}` : ''}</span>
                                             </div>
                                             {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId)}
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div style={{ maxWidth: '800px', width: '500px', margin: '0 auto', background: 'white', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
                                         <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
-                                        <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
+                                        <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
                                     </div>
                                     {activeCard.type === 'rooski' ? (
                                         <div style={{
@@ -6450,7 +6525,7 @@
                                                 {/* Header */}
                                                 <div className="print-card-header">
                                                     <span>{activeCard.opp || 'OPPONENT'}</span>
-                                                    <span>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : '300s')} (v{activeCard.iter || '1'})</span>
+                                                    <span>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
                                                 </div>
                                                 {/* Content */}
                                                 <div className="print-card-content">
