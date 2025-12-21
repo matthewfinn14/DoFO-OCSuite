@@ -34866,6 +34866,7 @@
 
             const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
             const [view, setView] = useState('landing'); // Default to My Tasks
+            const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage('hc-sidebar-collapsed', false);
             const [editingPlay, setEditingPlay] = useState(null);
 
             // -- SCHOOL INITIALIZATION CHECK --
@@ -37091,29 +37092,53 @@
                     )}
 
 
-                    <div className="sidebar">
-                        <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem' }}>
-                            <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '1rem', letterSpacing: '-1px' }}>DoFO</h1>
-
-                            {schoolName && (
-                                <div style={{ animation: 'fadeIn 0.5s ease', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {teamLogo && (
-                                        <img
-                                            src={teamLogo}
-                                            alt="School Logo"
-                                            style={{ maxHeight: '60px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px', alignSelf: 'flex-start' }}
-                                        />
-                                    )}
-                                    <h2 style={{ fontSize: '1.2rem', fontWeight: '700', lineHeight: '1.2', color: 'var(--text-primary)' }}>
-                                        {schoolName}
-                                    </h2>
-                                </div>
+                    <div className="sidebar" style={{ width: sidebarCollapsed ? '60px' : '280px', transition: 'width 0.3s ease', overflow: 'hidden' }}>
+                        <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            {!sidebarCollapsed && (
+                                <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '1rem', letterSpacing: '-1px' }}>DoFO</h1>
                             )}
-
-                            {/* School Switcher */}
-                            <SchoolSwitcher userId={authUser.uid} currentSchoolId={localStorage.getItem('hc_school_id')} />
-
+                            <button
+                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                style={{
+                                    background: 'rgba(56, 189, 248, 0.1)',
+                                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                                    borderRadius: '4px',
+                                    padding: '0.5rem',
+                                    cursor: 'pointer',
+                                    color: 'var(--accent)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginLeft: sidebarCollapsed ? '0' : 'auto',
+                                    marginBottom: sidebarCollapsed ? '0' : '1rem'
+                                }}
+                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            >
+                                {sidebarCollapsed ? '→' : '←'}
+                            </button>
                         </div>
+
+                        {!sidebarCollapsed && (
+                            <div>
+                                {schoolName && (
+                                    <div style={{ animation: 'fadeIn 0.5s ease', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {teamLogo && (
+                                            <img
+                                                src={teamLogo}
+                                                alt="School Logo"
+                                                style={{ maxHeight: '60px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px', alignSelf: 'flex-start' }}
+                                            />
+                                        )}
+                                        <h2 style={{ fontSize: '1.2rem', fontWeight: '700', lineHeight: '1.2', color: 'var(--text-primary)' }}>
+                                            {schoolName}
+                                        </h2>
+                                    </div>
+                                )}
+
+                                {/* School Switcher */}
+                                <SchoolSwitcher userId={authUser.uid} currentSchoolId={localStorage.getItem('hc_school_id')} />
+                            </div>
+                        )}
                         <nav style={{ flex: 1, overflowY: 'auto' }}>
 
                             {/* SEASON CATEGORY */}
