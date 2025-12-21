@@ -5348,7 +5348,7 @@
             );
         };
 
-        const WristbandBuilder = ({ plays, weeks, onUpdatePlay, wbSettings, setWbSettings }) => {
+        const WristbandBuilder = ({ plays, weeks, gamePlan, onUpdatePlay, wbSettings, setWbSettings }) => {
             const { currentUser } = useAuth();
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
@@ -5470,13 +5470,13 @@
                 updateCard(cardId, { rows: [...card.rows, newRow] });
             };
 
-            const handleAddScriptRows = (cardId, segment) => {
+            const handleAddScriptRows = (cardId, miniScript) => {
                 const card = wbSettings[cardId];
-                const newRows = (segment.script || []).filter(s => s.playId).map(s => ({
+                const newRows = (miniScript.playIds || []).map(playId => ({
                     id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     type: 'play',
-                    playId: s.playId,
-                    playName: s.playName || plays.find(p => p.id === s.playId)?.name || 'Unknown'
+                    playId: playId,
+                    playName: plays.find(p => p.id === playId)?.name || 'Unknown'
                 }));
                 updateCard(cardId, { rows: [...card.rows, ...newRows] });
             };
@@ -6108,10 +6108,9 @@
                 return slots;
             };
 
-            const daySegmentsWithScripts = useMemo(() => {
-                const plan = weeks[selectedDay] || {};
-                return (plan.segments || []).filter(s => s.hasScript);
-            }, [weeks, selectedDay]);
+            const miniScripts = useMemo(() => {
+                return (gamePlan?.miniScripts || []);
+            }, [gamePlan]);
 
             const activeCard = wbSettings[selectedCardId];
 
@@ -6179,16 +6178,6 @@
                             </>
                         ) : (
                             <>
-                                <select
-                                    className="form-input"
-                                    value={selectedDay}
-                                    onChange={e => setSelectedDay(e.target.value)}
-                                    style={{ marginBottom: '1rem' }}
-                                >
-                                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => (
-                                        <option key={d} value={d}>{d}</option>
-                                    ))}
-                                </select>
                                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     <div style={{ padding: '0.5rem', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '4px', marginBottom: '0.5rem' }}>
                                         <h4 style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Tempo Protocols</h4>
@@ -6206,11 +6195,11 @@
                                         </div>
                                     </div>
 
-                                    <h4 style={{ fontSize: '0.8rem', margin: '0.5rem 0' }}>Practice Segments</h4>
-                                    {daySegmentsWithScripts.map((seg, idx) => (
+                                    <h4 style={{ fontSize: '0.8rem', margin: '0.5rem 0' }}>Mini Scripts</h4>
+                                    {miniScripts.map((script, idx) => (
                                         <div
-                                            key={seg.id || idx}
-                                            onClick={() => handleAddScriptRows(selectedCardId, seg)}
+                                            key={script.id || idx}
+                                            onClick={() => handleAddScriptRows(selectedCardId, script)}
                                             style={{
                                                 padding: '0.5rem',
                                                 borderRadius: '4px',
@@ -6221,15 +6210,15 @@
                                             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
                                             onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                                         >
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>{seg.type}</div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>{script.name}</div>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                                                {seg.duration} min • {seg.script?.filter(s => s.playId).length || 0} plays
+                                                {script.playIds?.length || 0} plays
                                             </div>
                                         </div>
                                     ))}
-                                    {daySegmentsWithScripts.length === 0 && (
+                                    {miniScripts.length === 0 && (
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
-                                            No scripts found for {selectedDay}
+                                            No mini scripts found in game plan
                                         </div>
                                     )}
                                 </div>
@@ -38045,7 +38034,7 @@
 
                         {view === 'formations' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} />}
 
-                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan || { sets: [], miniScripts: [] }} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} />}
 
                         {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
