@@ -5266,7 +5266,7 @@
             );
         };
 
-        const WristbandBuilder = ({ plays, weeks, gamePlan, onUpdatePlay, wbSettings, setWbSettings }) => {
+        const WristbandBuilder = ({ plays, weeks, gamePlan, onUpdatePlay, wbSettings, setWbSettings, onNavigate }) => {
             const { currentUser } = useAuth();
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
@@ -6311,7 +6311,7 @@
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button className="btn btn-secondary" onClick={handleExportToClipboard}>Copy Data</button>
-                                <button className="btn btn-secondary" onClick={() => window.print()}>Print</button>
+                                <button className="btn btn-secondary" onClick={() => onNavigate && onNavigate('print-hub')}>Print</button>
                                 <button className="btn btn-danger" onClick={() => handleClearCard(selectedCardId)}>Clear Card</button>
                                 <button className="btn btn-danger" onClick={handleClearBoth} style={{ fontWeight: 'bold' }}>Clear All</button>
                             </div>
@@ -7079,82 +7079,321 @@
                             <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Scripts</button>
                         </div>
 
-                        <div className="script-grid-container" style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem', alignContent: 'start' }}>
+                        <div className="script-grid-container" style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'grid', gridTemplateColumns: '1fr', gap: '2rem', alignContent: 'start' }}>
                             {scriptedSegments.length === 0 && (
                                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
                                     No scripted segments for this day. Go to the "Plans" tab to enable scripting for segments.
                                 </div>
                             )}
                             {scriptedSegments.map(seg => (
-                                <div key={seg.id} style={{ border: '2px solid black', breakInside: 'avoid', pageBreakInside: 'avoid', backgroundColor: 'white' }}>
+                                <div key={seg.id} style={{ border: '1px solid var(--border)', borderRadius: '8px', breakInside: 'avoid', pageBreakInside: 'avoid', backgroundColor: 'var(--bg-panel)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                                     <div style={{
-                                        backgroundColor: '#e2e8f0',
-                                        padding: '0.5rem',
-                                        borderBottom: '2px solid black',
+                                        backgroundColor: 'var(--bg-body)',
+                                        padding: '0.75rem',
+                                        borderBottom: '1px solid var(--border)',
                                         fontWeight: 'bold',
                                         display: 'flex',
                                         justifyContent: 'space-between',
-                                        alignItems: 'center'
+                                        alignItems: 'center',
+                                        borderRadius: '8px 8px 0 0'
                                     }}>
                                         <div>
-                                            <span style={{ marginRight: '1rem' }}>{seg.startTime || ''}</span>
+                                            <span style={{ marginRight: '1rem', color: 'var(--accent)' }}>{seg.startTime || ''}</span>
                                             <span style={{ textTransform: 'uppercase' }}>{seg.type}</span>
                                         </div>
                                         <div>
                                             {/* Display "SIT." based on focus item if present, else just duration */}
                                             {seg.situation && <span style={{ marginRight: '1rem', fontStyle: 'italic', fontSize: '0.9em' }}>{seg.situation}</span>}
-                                            <span style={{ fontSize: '0.9em' }}>{seg.duration} MIN</span>
+                                            <span style={{ fontSize: '0.9em', backgroundColor: 'var(--bg-panel)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)' }}>{seg.duration} MIN</span>
                                         </div>
                                     </div>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                                        <thead>
-                                            <tr style={{ borderBottom: '1px solid black', backgroundColor: '#f8fafc' }}>
-                                                <th style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc', width: '30px' }}>#</th>
-                                                <th style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc', width: '30px' }}>H</th>
-                                                {seg.type === 'Take-Off' && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>YARD</th>}
-                                                {seg.type !== 'Take-Off' && seg.type !== 'Ghost Script' && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>SIT.</th>}
-                                                <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', width: '30px' }}>T</th>
-                                                <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>PLAY / CALL</th>
-                                                {isOffenseSegment(seg.type) && <th style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>DEFENSE</th>}
-                                                <th style={{ textAlign: 'left', padding: '4px' }}>NOTES</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {/* Ensure slots are populated even if just enabled but not opened in modal yet */}
-                                            {ensureScriptSlots(seg.script, parseInt(seg.duration || 0), seg.type).map((slot, idx) => (
-                                                <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                                                    <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>{idx + 1}</td>
-                                                    <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.hash}</td>
-                                                    {seg.type === 'Take-Off' && <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.yardLine}</td>}
-                                                    {seg.type !== 'Take-Off' && seg.type !== 'Ghost Script' && <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', whiteSpace: 'nowrap' }}>{slot.situation}</td>}
-                                                    <td style={{ textAlign: 'center', padding: '4px', borderRight: '1px solid #ccc', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                                                        {slot.tempo === 'NOHUDDLE' && <span style={{ color: '#d97706' }}>NH</span>}
-                                                        {slot.tempo === 'BLUR' && <span style={{ color: '#dc2626' }}>BLUR</span>}
-                                                        {slot.tempo === 'SUGAR' && <span style={{ color: '#7c3aed' }}>SUGAR</span>}
-                                                        {slot.tempo === 'REGULAR' && <span style={{ color: '#64748b' }}>H</span>}
-                                                        {slot.tempo === 'SCRAMBLE' && <span style={{ color: '#2563eb' }}>SCR</span>}
-                                                        {slot.tempo === '4MIN' && <span style={{ color: '#059669' }}>4M</span>}
-                                                        {/* Support legacy/shorthand */}
-                                                        {slot.tempo === 'Huddle' && <span style={{ color: '#64748b' }}>H</span>}
-                                                        {slot.tempo === 'No-Huddle' && <span style={{ color: '#d97706' }}>NH</span>}
-                                                        {slot.tempo === 'No Huddle' && <span style={{ color: '#d97706' }}>NH</span>}
-                                                        {slot.tempo === 'Tempo' && <span style={{ color: '#dc2626' }}>T</span>}
-                                                        {slot.tempo === 'Sugar' && <span style={{ color: '#7c3aed' }}>S</span>}
-                                                        {slot.tempo === 'Sugar Huddle' && <span style={{ color: '#7c3aed' }}>S</span>}
-                                                        {slot.tempo === 'Blur Tempo' && <span style={{ color: '#dc2626' }}>B</span>}
-                                                    </td>
-                                                    <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>
-                                                        {(() => {
-                                                            const play = plays.find(p => p.id === slot.playId) || plays.find(p => p.name === slot.playName);
-                                                            return play ? `${play.name}${play.wristbandSlot ? ` (${play.wristbandSlot})` : ''}` : slot.playName;
-                                                        })()}
-                                                    </td>
-                                                    {isOffenseSegment(seg.type) && <td style={{ textAlign: 'left', padding: '4px', borderRight: '1px solid #ccc' }}>{slot.defense}</td>}
-                                                    <td style={{ textAlign: 'left', padding: '4px' }}>{slot.notes}</td>
-                                                </tr>
+
+                                    <div style={{ padding: '0.5rem' }}>
+                                        <datalist id={`play-options-${seg.id}`}>
+                                            {plays.map(p => (
+                                                <option key={p.id} value={p.name}>{p.formation}</option>
                                             ))}
-                                        </tbody>
-                                    </table>
+                                        </datalist>
+
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '2px solid var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                                                    <th style={{ textAlign: 'center', padding: '8px 4px', width: '30px', color: 'var(--text-secondary)' }}>#</th>
+                                                    <th style={{ textAlign: 'left', padding: '8px 4px', width: '70px' }}>Hash</th>
+                                                    {seg.type === 'Take-Off' ? (
+                                                        <>
+                                                            <th style={{ textAlign: 'left', padding: '8px 4px', width: '80px' }}>Yard</th>
+                                                            <th style={{ textAlign: 'left', padding: '8px 4px', width: '100px' }}>Dn/Dist</th>
+                                                        </>
+                                                    ) : (
+                                                        <th style={{ textAlign: 'left', padding: '8px 4px', width: '150px' }}>Situation</th>
+                                                    )}
+                                                    <th style={{ textAlign: 'left', padding: '8px 4px', width: '100px' }}>Tempo</th>
+                                                    <th style={{ textAlign: 'left', padding: '8px 4px' }}>Play Call</th>
+                                                    {isOffenseSegment(seg.type) && <th style={{ textAlign: 'left', padding: '8px 4px' }}>Defense</th>}
+                                                    <th style={{ textAlign: 'left', padding: '8px 4px' }}>Notes</th>
+                                                    {!isLocked && <th style={{ textAlign: 'center', padding: '8px 4px', width: '60px' }}>Actions</th>}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {/* Ensure slots are populated even if just enabled but not opened in modal yet */}
+                                                {ensureScriptSlots(seg.script, parseInt(seg.duration || 0), seg.type).map((slot, idx) => (
+                                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                        <td style={{ textAlign: 'center', padding: '4px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{idx + 1}</td>
+                                                        <td style={{ padding: '4px' }}>
+                                                            {isLocked ? slot.hash : (
+                                                                <select
+                                                                    className="form-input"
+                                                                    style={{ padding: '4px', width: '100%' }}
+                                                                    value={slot.hash}
+                                                                    onChange={e => {
+                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, hash: e.target.value } : s);
+                                                                        updateSegment(seg.id, 'script', newScript);
+                                                                    }}
+                                                                >
+                                                                    <option value=""></option>
+                                                                    <option value="L">L</option>
+                                                                    <option value="M">M</option>
+                                                                    <option value="R">R</option>
+                                                                </select>
+                                                            )}
+                                                        </td>
+
+                                                        {seg.type === 'Take-Off' ? (
+                                                            <>
+                                                                <td style={{ padding: '4px' }}>
+                                                                    <input
+                                                                        className="form-input"
+                                                                        style={{ padding: '4px', width: '100%', backgroundColor: 'var(--bg-body)', cursor: 'not-allowed' }}
+                                                                        value={slot.yardLine || slot.situation || ''}
+                                                                        readOnly
+                                                                        disabled
+                                                                    />
+                                                                </td>
+                                                                <td style={{ padding: '4px' }}>
+                                                                    <input
+                                                                        className="form-input"
+                                                                        style={{ padding: '4px', width: '100%' }}
+                                                                        value={slot.downDistance || ''}
+                                                                        onChange={e => {
+                                                                            const newScript = seg.script.map(s => s.id === slot.id ? { ...s, downDistance: e.target.value } : s);
+                                                                            updateSegment(seg.id, 'script', newScript);
+                                                                        }}
+                                                                        placeholder="Dn/Dst"
+                                                                        disabled={isLocked}
+                                                                    />
+                                                                </td>
+                                                            </>
+                                                        ) : (
+                                                            <td style={{ padding: '4px' }}>
+                                                                {(() => {
+                                                                    const segmentFocus = seg.situation || '';
+                                                                    if (isLocked) return slot.situation;
+
+                                                                    if (segmentFocus.toLowerCase().includes('3rd')) {
+                                                                        return (
+                                                                            <select
+                                                                                className="form-input"
+                                                                                style={{ padding: '4px', width: '100%' }}
+                                                                                value={slot.situation}
+                                                                                onChange={e => {
+                                                                                    const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
+                                                                                    updateSegment(seg.id, 'script', newScript);
+                                                                                }}
+                                                                            >
+                                                                                <option value="">--</option>
+                                                                                <option value="S">S (Short)</option>
+                                                                                <option value="M">M (Medium)</option>
+                                                                                <option value="L">L (Long)</option>
+                                                                                <option value="XL">XL (Extra Long)</option>
+                                                                            </select>
+                                                                        );
+                                                                    }
+                                                                    return (
+                                                                        <input
+                                                                            className="form-input"
+                                                                            style={{ padding: '4px', width: '100%' }}
+                                                                            value={slot.situation}
+                                                                            onChange={e => {
+                                                                                const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
+                                                                                updateSegment(seg.id, 'script', newScript);
+                                                                            }}
+                                                                            placeholder="Situation"
+                                                                        />
+                                                                    );
+                                                                })()}
+                                                            </td>
+                                                        )}
+
+                                                        <td style={{ padding: '4px' }}>
+                                                            {isLocked ? (
+                                                                <span style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                                                                    {slot.tempo === 'NOHUDDLE' && <span style={{ color: '#d97706' }}>NH</span>}
+                                                                    {slot.tempo === 'BLUR' && <span style={{ color: '#dc2626' }}>BLUR</span>}
+                                                                    {slot.tempo === 'SUGAR' && <span style={{ color: '#7c3aed' }}>SUGAR</span>}
+                                                                    {slot.tempo === 'REGULAR' && <span style={{ color: '#64748b' }}>H</span>}
+                                                                    {slot.tempo === 'SCRAMBLE' && <span style={{ color: '#2563eb' }}>SCR</span>}
+                                                                    {slot.tempo === '4MIN' && <span style={{ color: '#059669' }}>4M</span>}
+                                                                    {!['NOHUDDLE', 'BLUR', 'SUGAR', 'REGULAR', 'SCRAMBLE', '4MIN'].includes(slot.tempo) && slot.tempo}
+                                                                </span>
+                                                            ) : (
+                                                                <select
+                                                                    className="form-input"
+                                                                    style={{ padding: '4px', width: '100%', fontSize: '0.8rem' }}
+                                                                    value={slot.tempo || ''}
+                                                                    onChange={e => {
+                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, tempo: e.target.value } : s);
+                                                                        updateSegment(seg.id, 'script', newScript);
+                                                                    }}
+                                                                >
+                                                                    <option value="">-</option>
+                                                                    <option value="REGULAR">Huddle</option>
+                                                                    <option value="NOHUDDLE">No-Huddle</option>
+                                                                    <option value="BLUR">Blur Tempo</option>
+                                                                    <option value="SUGAR">Sugar Huddle</option>
+                                                                    <option value="SCRAMBLE">Scramble</option>
+                                                                    <option value="4MIN">4-Min Huddle</option>
+                                                                </select>
+                                                            )}
+                                                        </td>
+
+                                                        <td style={{ padding: '4px' }}>
+                                                            {isLocked ? slot.playName : (
+                                                                <input
+                                                                    className="form-input"
+                                                                    list={`play-options-${seg.id}`}
+                                                                    style={{ padding: '4px', width: '100%', fontWeight: 'bold' }}
+                                                                    value={slot.playName || ''}
+                                                                    onChange={e => {
+                                                                        const val = e.target.value;
+                                                                        const foundPlay = plays.find(p => p.name === val);
+                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, playName: val, playId: foundPlay ? foundPlay.id : '' } : s);
+                                                                        updateSegment(seg.id, 'script', newScript);
+                                                                    }}
+                                                                    placeholder="Play Call..."
+                                                                />
+                                                            )}
+                                                        </td>
+
+                                                        {isOffenseSegment(seg.type) && (
+                                                            <td style={{ padding: '4px' }}>
+                                                                {isLocked ? slot.defense : (
+                                                                    <input
+                                                                        className="form-input"
+                                                                        style={{ padding: '4px', width: '100%' }}
+                                                                        value={slot.defense || ''}
+                                                                        onChange={e => {
+                                                                            const newScript = seg.script.map(s => s.id === slot.id ? { ...s, defense: e.target.value } : s);
+                                                                            updateSegment(seg.id, 'script', newScript);
+                                                                        }}
+                                                                        placeholder="Defense"
+                                                                    />
+                                                                )}
+                                                            </td>
+                                                        )}
+
+                                                        <td style={{ padding: '4px' }}>
+                                                            {isLocked ? slot.notes : (
+                                                                <input
+                                                                    className="form-input"
+                                                                    style={{ padding: '4px', width: '100%' }}
+                                                                    value={slot.notes || ''}
+                                                                    onChange={e => {
+                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, notes: e.target.value } : s);
+                                                                        updateSegment(seg.id, 'script', newScript);
+                                                                    }}
+                                                                    placeholder="Notes"
+                                                                />
+                                                            )}
+                                                        </td>
+
+                                                        {!isLocked && (
+                                                            <td style={{ padding: '4px', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                                                                <button
+                                                                    className="btn btn-secondary"
+                                                                    style={{ padding: '2px 6px', marginRight: '4px', fontSize: '0.8rem', color: 'var(--accent)' }}
+                                                                    title="Insert row below"
+                                                                    onClick={() => {
+                                                                        const PATTERN_A = ['L', 'LM', 'RM', 'R', 'R', 'RM', 'LM', 'L'];
+                                                                        const PATTERN_B = ['R', 'RM', 'LM', 'L', 'L', 'LM', 'RM', 'R'];
+                                                                        let pattern = PATTERN_A;
+                                                                        if (seg.script.length > 0 && seg.script[0].hash === 'R') pattern = PATTERN_B;
+
+                                                                        let scriptItem = {
+                                                                            id: Date.now().toString() + Math.random(),
+                                                                            playId: '',
+                                                                            playName: '',
+                                                                            hash: pattern[idx % 8]
+                                                                        };
+                                                                        if (seg.type === 'Take-Off') {
+                                                                            const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
+                                                                            scriptItem.yardLine = yardlines[idx % 8] || '';
+                                                                            scriptItem.downDistance = '';
+                                                                        } else {
+                                                                            scriptItem.situation = '';
+                                                                        }
+                                                                        const newScript = [...seg.script];
+                                                                        newScript.splice(idx + 1, 0, scriptItem); // Insert AFTER
+                                                                        updateSegment(seg.id, 'script', newScript);
+                                                                    }}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-secondary"
+                                                                    style={{ padding: '2px 6px', fontSize: '0.8rem', color: '#ef4444' }}
+                                                                    title="Delete row"
+                                                                    onClick={() => {
+                                                                        if (confirm('Delete this play?')) {
+                                                                            const newScript = seg.script.filter(s => s.id !== slot.id);
+                                                                            updateSegment(seg.id, 'script', newScript);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    ×
+                                                                </button>
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                ))}
+
+                                                {/* Add Row at End Button (if not locked) */}
+                                                {!isLocked && (
+                                                    <tr>
+                                                        <td colSpan={isOffenseSegment(seg.type) ? "9" : "8"} style={{ padding: '8px', textAlign: 'center', backgroundColor: 'var(--bg-body)' }}>
+                                                            <button
+                                                                className="btn btn-secondary"
+                                                                style={{ width: '100%', borderStyle: 'dashed' }}
+                                                                onClick={() => {
+                                                                    const PATTERN_A = ['L', 'LM', 'RM', 'R', 'R', 'RM', 'LM', 'L'];
+                                                                    const PATTERN_B = ['R', 'RM', 'LM', 'L', 'L', 'LM', 'RM', 'R'];
+                                                                    let pattern = PATTERN_A;
+                                                                    if (seg.script.length > 0 && seg.script[0].hash === 'R') pattern = PATTERN_B;
+
+                                                                    let scriptItem = {
+                                                                        id: Date.now().toString() + Math.random(),
+                                                                        playId: '',
+                                                                        playName: '',
+                                                                        hash: pattern[seg.script.length % 8]
+                                                                    };
+                                                                    if (seg.type === 'Take-Off') {
+                                                                        const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
+                                                                        scriptItem.yardLine = yardlines[seg.script.length % 8] || '';
+                                                                        scriptItem.downDistance = '';
+                                                                    } else {
+                                                                        scriptItem.situation = '';
+                                                                    }
+                                                                    updateSegment(seg.id, 'script', [...seg.script, scriptItem]);
+                                                                }}
+                                                            >
+                                                                + Add Play Row
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -7180,9 +7419,10 @@
                     <div className="practice-flex-container" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                         {/* Left: Schedule View */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                                 <h2>{selectedDay} Schedule</h2>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    {/* Template & Global Admin */}
                                     {!isLocked && (
                                         <div style={{ display: 'flex', gap: '0.25rem' }}>
                                             <select
@@ -7192,7 +7432,7 @@
                                                     loadTemplate(e.target.value);
                                                     e.target.value = ""; // Reset
                                                 }}
-                                                value=""
+                                                defaultValue=""
                                             >
                                                 <option value="" disabled>Load Template...</option>
                                                 {allTemplates.map(t => (
@@ -7208,26 +7448,45 @@
                                                     title="Save Current Plan as Global Template"
                                                     style={{ padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                                                 >
-                                                    <Icon name="Globe" size={14} /> <span>Save Global</span>
+                                                    <Icon name="Globe" size={14} />
                                                 </button>
                                             )}
                                         </div>
                                     )}
-                                    <label>Start Time:</label>
-                                    <input
-                                        type="time"
-                                        className="form-input"
-                                        style={{ width: 'auto' }}
-                                        value={plan.startTime}
-                                        onChange={e => updateCurrentPlan({ ...plan, startTime: e.target.value })}
-                                        disabled={isLocked}
-                                    />
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+
+                                    {/* 2-Platoon Toggle */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--bg-panel)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={plan.isTwoPlatoon || false}
+                                            onChange={e => updateCurrentPlan({ ...plan, isTwoPlatoon: e.target.checked })}
+                                            id="two-platoon-check"
+                                            style={{ cursor: 'pointer' }}
+                                        />
+                                        <label htmlFor="two-platoon-check" style={{ fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none', fontWeight: 'bold' }}>2-Platoon</label>
+                                    </div>
+
+                                    {/* Time Control */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'var(--bg-panel)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Start:</label>
+                                        <input
+                                            type="time"
+                                            className="form-input"
+                                            style={{ width: 'auto', padding: '0', border: 'none', background: 'transparent' }}
+                                            value={plan.startTime}
+                                            onChange={e => updateCurrentPlan({ ...plan, startTime: e.target.value })}
+                                            disabled={isLocked}
+                                        />
+                                    </div>
+
+                                    {/* Filters: Staff & Notes */}
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <select
                                             className="form-select"
                                             style={{ width: 'auto', padding: '0.25rem 0.5rem' }}
                                             value={selectedCoachFilter}
                                             onChange={e => setSelectedCoachFilter(e.target.value)}
+                                            title="Filter Schedule by Coach"
                                         >
                                             <option value="ALL">All Staff</option>
                                             {staff && staff.map(s => (
@@ -7235,78 +7494,68 @@
                                             ))}
                                         </select>
 
-                                        {/* "Include Play Cards" Checkbox - Only for Scout Offense/Defense */}
-                                        {(() => {
-                                            const coach = staff?.find(s => s.id === selectedCoachFilter);
-                                            // Show if coach has Scout Offense or Defense duties
-                                            // Or if no specific coach selected (shows for everyone potentially, or hide it? Let's hide if ALL)
-                                            if (selectedCoachFilter === 'ALL') return null;
-
-                                            const isScoutOffense = coach?.duties?.some(d => d.includes('Scout Offense') || d.includes('Scout Offensive'));
-                                            const isDefense = coach?.duties?.some(d => d.includes('Defensive') || d.includes('Defense'));
-
-                                            // Also check position groups if duties aren't explicit
-                                            const isDefensePos = coach?.positions?.defense;
-
-                                            if (isScoutOffense || isDefense || isDefensePos) {
-                                                return (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'var(--bg-panel)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={includePlayCards}
-                                                            onChange={e => setIncludePlayCards(e.target.checked)}
-                                                            id="print-cards-check"
-                                                            style={{ cursor: 'pointer' }}
-                                                        />
-                                                        <label htmlFor="print-cards-check" style={{ fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none' }}>Include Play Cards</label>
-                                                    </div>
-                                                );
-                                            }
-                                            return null;
-                                        })()}
-
-                                        <button className="btn btn-secondary" onClick={() => {
-                                            // Print Logic
-                                            if (typeof includePlayCards !== 'undefined' && includePlayCards) {
-                                                // Find all segments visible to this coach
-                                                const visibleSegments = plan.segments.filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter);
-
-                                                // Collect unique URLs
-                                                const urlsToOpen = new Set();
-                                                visibleSegments.forEach(seg => {
-                                                    if (scoutCardUrls[seg.id]) {
-                                                        urlsToOpen.add(scoutCardUrls[seg.id]);
-                                                    }
-                                                });
-
-                                                if (plan.warmupScoutCard && scoutCardUrls['WARMUP'] && (selectedCoachFilter === 'ALL' || plan.warmupStaffId === selectedCoachFilter)) {
-                                                    urlsToOpen.add(scoutCardUrls['WARMUP']);
-                                                }
-
-                                                // Open each in new tab
-                                                urlsToOpen.forEach(url => window.open(url, '_blank'));
-                                            }
-                                            window.print();
-                                        }}>🖨️ Print</button>
+                                        <select
+                                            className="form-select"
+                                            style={{ width: 'auto', padding: '0.25rem 0.5rem' }}
+                                            value={selectedNotesCoach}
+                                            onChange={e => setSelectedNotesCoach(e.target.value)}
+                                            title="View Notes For"
+                                        >
+                                            <option value="ALL_COACHES">All Notes</option>
+                                            <optgroup label="Coaches">
+                                                {staff && staff.map(s => (
+                                                    <option key={`note-${s.id}`} value={s.id}>{s.name} Notes</option>
+                                                ))}
+                                            </optgroup>
+                                        </select>
                                     </div>
+
+                                    {/* "Include Play Cards" Checkbox - Only for Scout Offense/Defense */}
+                                    {(() => {
+                                        const coach = staff?.find(s => s.id === selectedCoachFilter);
+                                        if (selectedCoachFilter === 'ALL') return null;
+
+                                        const isScoutOffense = coach?.duties?.some(d => d.includes('Scout Offense') || d.includes('Scout Offensive'));
+                                        const isDefense = coach?.duties?.some(d => d.includes('Defensive') || d.includes('Defense'));
+                                        const isDefensePos = coach?.positions?.defense;
+
+                                        if (isScoutOffense || isDefense || isDefensePos) {
+                                            return (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'var(--bg-panel)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={includePlayCards}
+                                                        onChange={e => setIncludePlayCards(e.target.checked)}
+                                                        id="print-cards-check"
+                                                        style={{ cursor: 'pointer' }}
+                                                    />
+                                                    <label htmlFor="print-cards-check" style={{ fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none' }}>Cards</label>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+
+                                    <button className="btn btn-secondary" onClick={() => {
+                                        if (typeof includePlayCards !== 'undefined' && includePlayCards) {
+                                            const visibleSegments = plan.segments.filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter);
+                                            const urlsToOpen = new Set();
+                                            visibleSegments.forEach(seg => {
+                                                if (scoutCardUrls[seg.id]) {
+                                                    urlsToOpen.add(scoutCardUrls[seg.id]);
+                                                }
+                                            });
+                                            if (plan.warmupScoutCard && scoutCardUrls['WARMUP'] && (selectedCoachFilter === 'ALL' || plan.warmupStaffId === selectedCoachFilter)) {
+                                                urlsToOpen.add(scoutCardUrls['WARMUP']);
+                                            }
+                                            urlsToOpen.forEach(url => window.open(url, '_blank'));
+                                        }
+                                        window.print();
+                                    }} title="Print Schedule">🖨️</button>
                                 </div>
                             </div>
 
-                            {/* Coach Notes Selector */}
-                            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <label style={{ fontWeight: 'bold' }}>Notes for:</label>
-                                <select
-                                    className="form-select"
-                                    style={{ width: 'auto' }}
-                                    value={selectedNotesCoach}
-                                    onChange={e => setSelectedNotesCoach(e.target.value)}
-                                >
-                                    <option value="ALL_COACHES">All Coaches</option>
-                                    {staff && staff.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+
 
                             {/* Pre-Practice Notes */}
                             <div style={{ marginBottom: '1rem' }}>
@@ -7328,7 +7577,14 @@
                                         <th style={{ padding: '0.5rem' }}>Time</th>
                                         <th style={{ padding: '0.5rem' }}>Dur</th>
                                         <th style={{ padding: '0.5rem' }}>Type</th>
-                                        <th style={{ padding: '0.5rem' }}>Focus</th>
+                                        {plan.isTwoPlatoon ? (
+                                            <>
+                                                <th style={{ padding: '0.5rem' }}>Offense Focus</th>
+                                                <th style={{ padding: '0.5rem' }}>Defense Focus</th>
+                                            </>
+                                        ) : (
+                                            <th style={{ padding: '0.5rem' }}>Focus</th>
+                                        )}
                                         <th style={{ padding: '0.5rem' }}>Contact</th>
                                         <th style={{ padding: '0.5rem' }}>Notes</th>
                                         <th style={{ padding: '0.5rem' }}>Script</th>
@@ -7361,7 +7617,34 @@
                                             />
                                         </td>
                                         <td style={{ padding: '0.5rem', fontStyle: 'italic' }}>Warmup</td>
-                                        <td style={{ padding: '0.5rem' }}>
+                                        {plan.isTwoPlatoon ? (
+                                            <>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <select
+                                                        className="form-select"
+                                                        value={plan.warmupOffenseFocus || plan.warmupFocus || ''}
+                                                        onChange={e => updateCurrentPlan({ ...plan, warmupOffenseFocus: e.target.value })}
+                                                        onClick={e => e.stopPropagation()}
+                                                        style={{ width: '100%', fontSize: '0.85rem' }}
+                                                    >
+                                                        <option value="">-- Offense --</option>
+                                                        {focusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                    </select>
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <select
+                                                        className="form-select"
+                                                        value={plan.warmupDefenseFocus || ''}
+                                                        onChange={e => updateCurrentPlan({ ...plan, warmupDefenseFocus: e.target.value })}
+                                                        onClick={e => e.stopPropagation()}
+                                                        style={{ width: '100%', fontSize: '0.85rem' }}
+                                                    >
+                                                        <option value="">-- Defense --</option>
+                                                        {focusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                    </select>
+                                                </td>
+                                            </>
+                                        ) : (
                                             <td style={{ padding: '0.5rem' }}>
                                                 {customInputState?.id === 'WARMUP' ? (
                                                     <input
@@ -7406,7 +7689,7 @@
                                                     </select>
                                                 )}
                                             </td>
-                                        </td>
+                                        )}
                                         <td style={{ padding: '0.5rem' }}>
                                             <select
                                                 className="form-select"
@@ -7477,7 +7760,7 @@
                                                             updateCurrentPlan({ ...plan, warmupHasScript: e.target.checked });
                                                             if (e.target.checked) {
                                                                 setSelectedSegmentId('WARMUP');
-                                                                setShowScriptView(true);
+                                                                // setShowScriptView(true); // Removed auto-popout
                                                             }
                                                         }}
                                                         onClick={e => e.stopPropagation()}
@@ -7650,7 +7933,40 @@
                                                         </select>
                                                     )}
                                                 </td>
-                                                <td style={{ padding: '0.5rem' }}>
+                                                {plan.isTwoPlatoon ? (
+                                                    <>
+                                                        <td style={{ padding: '0.5rem' }}>
+                                                            <span className="print-only-text">{seg.offenseFocus || seg.situation}</span>
+                                                            {!isLocked && (
+                                                                <select
+                                                                    className="form-select no-print"
+                                                                    style={{ padding: '0.25rem' }}
+                                                                    value={seg.offenseFocus || seg.situation || ''}
+                                                                    onChange={e => updateSegment(seg.id, 'offenseFocus', e.target.value)}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                >
+                                                                    <option value="">-- Offense --</option>
+                                                                    {focusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                                </select>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ padding: '0.5rem' }}>
+                                                            <span className="print-only-text">{seg.defenseFocus}</span>
+                                                            {!isLocked && (
+                                                                <select
+                                                                    className="form-select no-print"
+                                                                    style={{ padding: '0.25rem' }}
+                                                                    value={seg.defenseFocus || ''}
+                                                                    onChange={e => updateSegment(seg.id, 'defenseFocus', e.target.value)}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                >
+                                                                    <option value="">-- Defense --</option>
+                                                                    {focusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                                </select>
+                                                            )}
+                                                        </td>
+                                                    </>
+                                                ) : (
                                                     <td style={{ padding: '0.5rem' }}>
                                                         <span className="print-only-text">{seg.situation}</span>
                                                         {!isLocked && (
@@ -7698,7 +8014,7 @@
                                                             )
                                                         )}
                                                     </td>
-                                                </td>
+                                                )}
                                                 <td style={{ padding: '0.5rem' }}>
                                                     <span className="print-only-text">{seg.contactLevel}</span>
                                                     {!isLocked && (
@@ -7808,7 +8124,7 @@
                                                                         });
 
                                                                         setSelectedSegmentId(seg.id);
-                                                                        setShowScriptView(true);
+                                                                        // setShowScriptView(true); // Removed auto-popout
                                                                     } else {
                                                                         // Should not happen as unchecked state renders button, but for safety:
                                                                         updateSegment(seg.id, 'hasScript', false);
@@ -7979,24 +8295,26 @@
                         </div>
 
 
-                    </div>
+                    </div >
 
                     {/* Script View Modal - Moved outside flex container */}
-                    {showScriptView && (
-                        <div
-                            style={{
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                width: '100vw',
-                                height: '100vh',
-                                backgroundColor: 'rgba(0,0,0,0.5)',
-                                zIndex: 999,
-                                backdropFilter: 'blur(2px)'
-                            }}
-                            onClick={() => setShowScriptView(false)}
-                        />
-                    )}
+                    {
+                        showScriptView && (
+                            <div
+                                style={{
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100vw',
+                                    height: '100vh',
+                                    backgroundColor: 'rgba(0,0,0,0.5)',
+                                    zIndex: 999,
+                                    backdropFilter: 'blur(2px)'
+                                }}
+                                onClick={() => setShowScriptView(false)}
+                            />
+                        )
+                    }
                     <div className="script-view-panel" style={{
                         display: showScriptView ? 'flex' : 'none',
                         flexDirection: 'column',
@@ -8466,7 +8784,7 @@
                             ))}
                         </div>
                     </div>
-                </div>
+                </div >
             );
         };
 
@@ -19556,7 +19874,7 @@
             );
         };
 
-        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, onImportData, onExportData, onImportDefaultData, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isSiteAdmin = false, currentSchoolId, programLevels, onUpdateProgramLevels }) => {
+        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isSiteAdmin = false, currentSchoolId, programLevels, onUpdateProgramLevels }) => {
 
 
             const handleImageUpload = (e) => {
@@ -20551,43 +20869,8 @@
                             </div>
 
                             <div className="card">
-                                <h3>Data Management</h3>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Backup your data or move it to another device.</p>
-
-
-
+                                <h3>Account</h3>
                                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                    {currentPlanStatus !== 'FREE' ? (
-                                        <>
-                                            <button className="btn btn-secondary" onClick={() => window.print()}>
-                                                <Icon name="Printer" size={16} /> Print Cards
-                                            </button>
-                                            <button className="btn btn-primary" onClick={onExportData}>
-                                                <Icon name="Download" size={16} /> Download Backup (JSON)
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button className="btn" style={{ background: '#e2e8f0', color: '#94a3b8', cursor: 'pointer' }} onClick={() => alert("Printing is a Premium feature. Please upgrade to unlock.")}>
-                                                <Icon name="Lock" size={16} /> Print Cards
-                                            </button>
-                                            <button className="btn" style={{ background: '#e2e8f0', color: '#94a3b8', cursor: 'pointer' }} onClick={() => alert("Data Export is a Premium feature. Please upgrade to unlock.")}>
-                                                <Icon name="Lock" size={16} /> Download Backup
-                                            </button>
-                                        </>
-                                    )}
-                                    <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-                                        📤 Import Data
-                                        <input
-                                            type="file"
-                                            accept=".json"
-                                            style={{ display: 'none' }}
-                                            onChange={onImportData}
-                                        />
-                                    </label>
-                                    <button className="btn" style={{ background: '#059669', color: 'white' }} onClick={onImportDefaultData}>
-                                        🔄 Load 2025 Roster/Staff
-                                    </button>
                                     <button className="btn" style={{ background: '#ef4444', color: 'white' }} onClick={logout}>
                                         <Icon name="LogOut" size={16} /> Log Out
                                     </button>
@@ -20622,30 +20905,35 @@
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     {[
                                         {
-                                            key: 'gameWeek', label: 'Game Week', items: [
-                                                { key: 'overview', label: 'Overview' },
-                                                { key: 'depthCharts', label: 'Depth Charts' },
+                                            key: 'staffMeeting', label: 'Staff Meeting', items: [
+                                                { key: 'meetingHome', label: 'Meeting Home' },
                                                 { key: 'scouting', label: 'Scouting' },
-                                                { key: 'gamePlan', label: 'Game Plan' },
-                                                { key: 'addPlay', label: 'Add a New Play' },
+                                                { key: 'weekOverview', label: 'Week Overview' },
                                                 { key: 'practice', label: 'Practice Plans' },
-                                                { key: 'wristband', label: 'Wristband Builder' },
-                                                { key: 'practiceScripts', label: 'Practice Scripts' },
                                                 { key: 'pregame', label: 'Pre-game Timeline' },
                                                 { key: 'grading', label: 'Game Grade Outs' }
                                             ]
                                         },
                                         {
-                                            key: 'scheme', label: 'Scheme and Skills', items: [
+                                            key: 'gameWeek', label: 'Offense, Defense & Special Teams', items: [
+                                                { key: 'offenseSetup', label: 'Offense Setup' },
+                                                { key: 'defenseSetup', label: 'Defense Setup' },
+                                                { key: 'stSetup', label: 'Special Teams Setup' },
+                                                { key: 'depthCharts', label: 'Depth Charts' },
                                                 { key: 'playbook', label: 'Playbook' },
                                                 { key: 'formations', label: 'Formations' },
-                                                { key: 'drillLibrary', label: 'Drill Library' }
+                                                { key: 'glossary', label: 'Glossary' },
+                                                { key: 'drillLibrary', label: 'Drill Library' },
+                                                { key: 'gamePlan', label: 'Game Plan' },
+                                                { key: 'addPlay', label: 'Add a New Play' },
+                                                { key: 'wristband', label: 'Wristband Builder' },
+                                                { key: 'practiceScripts', label: 'Practice Scripts' },
+                                                { key: 'dumbCallsheet', label: 'Dumb Call Sheet' }
                                             ]
                                         },
                                         {
                                             key: 'program', label: 'Program Management', items: [
-                                                { key: 'roster', label: 'Manage Roster' },
-                                                { key: 'taskAssigner', label: 'Task Assigner' },
+                                                { key: 'staffTasks', label: 'Staff Tasks' },
                                                 { key: 'calendar', label: 'Annual Calendar' },
                                                 { key: 'budget', label: 'Budget & Wishlist' },
                                                 { key: 'onboarding', label: 'Onboarding' },
@@ -20675,7 +20963,8 @@
                                                 { key: 'valhalla', label: 'Quest for Valhalla' },
                                                 { key: 'valhallaEvents', label: 'Valhalla Events' },
                                                 { key: 'testingRecords', label: 'Program Records' },
-                                                { key: 'selfAssessment', label: 'Self-Assessment' }
+                                                { key: 'selfAssessment', label: 'Self-Assessment' },
+                                                { key: 'multiSport', label: 'Multi-Sport Tracking' }
                                             ]
                                         }
                                     ].map(category => (
@@ -21054,14 +21343,15 @@
                 };
 
                 // Iterate through layout sections and use their titles as headers
-                layout.sections.forEach(section => {
+                // Safe navigation added to prevent crashes if layout data is missing
+                (layout?.sections || []).forEach(section => {
                     // Add section header if title exists
                     if (section.title) {
                         derivedSections.push({ type: 'header', label: section.title });
                     }
 
                     // Add all cells from this section
-                    section.rows.forEach(cell => {
+                    (section.rows || []).forEach(cell => {
                         const meta = getMeta(cell.setId);
 
                         // Use the cell's header as the label
@@ -36321,101 +36611,34 @@
 
             const [visibleFeatures, setVisibleFeatures] = useState(() => {
                 const saved = localStorage.getItem('hc-visible-features');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    // Migrate old format to new format if needed
-                    if (parsed.gameWeek !== undefined && typeof parsed.gameWeek === 'boolean') {
-                        // Old format detected, convert to new
-                        return {
-                            gameWeek: {
-                                enabled: parsed.gameWeek || true,
-                                items: {
-                                    overview: true,
-                                    depthCharts: true,
-                                    scouting: true,
-                                    gamePlan: true,
-                                    addPlay: true,
-                                    practice: true,
-                                    wristband: true,
-                                    practiceScripts: true,
-                                    pregame: true,
-                                    grading: true
-                                }
-                            },
-                            scheme: {
-                                enabled: parsed.scheme || true,
-                                items: {
-                                    playbook: true,
-                                    formations: true,
-                                    drillLibrary: true
-                                }
-                            },
-                            program: {
-                                enabled: parsed.program || true,
-                                items: {
-                                    roster: true,
-                                    taskAssigner: true,
-                                    calendar: true,
-                                    budget: true,
-                                    onboarding: true,
-                                    equipmentCheckout: true,
-                                    jerseyLottery: true,
-                                    equipmentInventory: true,
-                                    equipmentWishlist: true
-                                }
-                            },
-                            apps: {
-                                enabled: parsed.apps || true,
-                                items: {
-                                    playerApp: true,
-                                    attendanceApp: true,
-                                    coachApp: true,
-                                    callsheet: true,
-                                    simulator: true,
-                                    pressbox: true,
-                                    specialTeams: true
-                                }
-                            },
-                            development: {
-                                enabled: parsed.development || true,
-                                items: {
-                                    testing: true,
-                                    ironman: true,
-                                    ratings: true,
-                                    summerComp: true,
-                                    valhalla: true,
-                                    valhallaEvents: true,
-                                    testingRecords: true,
-                                    selfAssessment: true
-                                }
-                            }
-                        };
-                    }
-                    return parsed;
-                }
-                // Default structure
-                return {
-                    gameWeek: {
+                const DEFAULT_FEATURES = {
+                    staffMeeting: {
                         enabled: true,
                         items: {
-                            overview: true,
-                            depthCharts: true,
+                            meetingHome: true,
                             scouting: true,
-                            gamePlan: true,
-                            addPlay: true,
+                            weekOverview: true,
                             practice: true,
-                            wristband: true,
-                            practiceScripts: true,
                             pregame: true,
                             grading: true
                         }
                     },
-                    scheme: {
+                    gameWeek: { // Now "Offense, Defense & Special Teams"
                         enabled: true,
                         items: {
+                            offenseSetup: true,
+                            defenseSetup: true,
+                            stSetup: true,
+                            depthCharts: true,
                             playbook: true,
                             formations: true,
-                            drillLibrary: true
+                            glossary: true,
+                            drillLibrary: true,
+                            gamePlan: true,
+                            addPlay: true,
+                            wristband: true,
+                            practiceScripts: true,
+                            dumbCallsheet: true
                         }
                     },
                     program: {
@@ -36454,10 +36677,73 @@
                             valhalla: true,
                             valhallaEvents: true,
                             testingRecords: true,
-                            selfAssessment: true
+                            selfAssessment: true,
+                            multiSport: true
                         }
                     }
                 };
+
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+
+                        // MIGRATION LOGIC:
+                        // 1. If 'scheme' exists, migrate its items to 'gameWeek' if not already there
+                        // 2. Ensure ALL keys from DEFAULT_FEATURES exist in the result (deep merge)
+
+                        const merged = { ...DEFAULT_FEATURES };
+
+                        // Helper to safely merge category
+                        const mergeCategory = (catName, legacySource = null) => {
+                            const parsedCat = parsed[catName] || {};
+                            const defaultCat = DEFAULT_FEATURES[catName];
+
+                            // If user explicitly disabled the category in parsed, keep it disabled.
+                            // However, if it was undefined (new category), default to enabled (true).
+                            const isEnabled = parsedCat.enabled !== undefined ? parsedCat.enabled : defaultCat.enabled;
+
+                            const mergedItems = { ...defaultCat.items };
+
+                            // Merge existing items from parsed
+                            if (parsedCat.items) {
+                                Object.keys(parsedCat.items).forEach(key => {
+                                    mergedItems[key] = parsedCat.items[key];
+                                });
+                            }
+
+                            // Migrate legacy items if applicable
+                            if (legacySource && parsed[legacySource] && parsed[legacySource].items) {
+                                // Specific migration for scheme -> gameWeek
+                                if (catName === 'gameWeek') {
+                                    // Map scheme items to new keys if needed, or just copy if names match
+                                    if (parsed[legacySource].items.playbook !== undefined) mergedItems.playbook = parsed[legacySource].items.playbook;
+                                    if (parsed[legacySource].items.formations !== undefined) mergedItems.formations = parsed[legacySource].items.formations;
+                                    if (parsed[legacySource].items.drillLibrary !== undefined) mergedItems.drillLibrary = parsed[legacySource].items.drillLibrary;
+                                    // Glossary was not tracked in scheme permissions previously? If so, default true is fine.
+                                }
+                            }
+
+                            return {
+                                enabled: isEnabled,
+                                items: mergedItems
+                            };
+                        };
+
+                        return {
+                            staffMeeting: mergeCategory('staffMeeting'), // New category
+                            gameWeek: mergeCategory('gameWeek', 'scheme'), // Merge scheme into gameWeek
+                            program: mergeCategory('program'),
+                            apps: mergeCategory('apps'),
+                            development: mergeCategory('development')
+                        };
+
+                    } catch (e) {
+                        console.error("Error parsing visible features, resetting to default", e);
+                        return DEFAULT_FEATURES;
+                    }
+                }
+
+                return DEFAULT_FEATURES;
             });
 
             useEffect(() => {
@@ -37762,55 +38048,6 @@
                 setView('playbook');
             };
 
-            const handleExportData = () => {
-                const data = {
-                    plays,
-                    practicePlans,
-                    pregamePlan,
-                    roster,
-                    depthChart,
-                    gameLog,
-                    teamLogo,
-                    ratings,
-                    metrics,
-                    exportDate: new Date().toISOString()
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `hc-dashboard-backup-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            };
-
-            const handleImportData = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        if (data.plays) setPlays(data.plays);
-                        if (data.practicePlans) setPracticePlans(data.practicePlans);
-                        if (data.pregamePlan) setPregamePlan(data.pregamePlan);
-                        if (data.roster) setRoster(data.roster);
-                        if (data.depthChart) setDepthChart(data.depthChart);
-                        if (data.gameLog) setGameLog(data.gameLog);
-                        if (data.teamLogo) setTeamLogo(data.teamLogo);
-                        if (data.ratings) setRatings(data.ratings);
-                        if (data.metrics) setMetrics(data.metrics);
-                        alert('Data imported successfully!');
-                    } catch (error) {
-                        alert('Error importing data: ' + error.message);
-                    }
-                };
-                reader.readAsText(file);
-            };
-
             // Filter Logic for Playbook View
             const [playbookFilters, setPlaybookFilters] = useState({
                 formation: '',
@@ -37822,14 +38059,6 @@
             // Batch Delete State
             const [selectedPlays, setSelectedPlays] = useState([]);
             const [lastSelectedPlayId, setLastSelectedPlayId] = useState(null);
-
-            const handleImportDefaultData = () => {
-                if (window.confirm('This will OVERWRITE your current roster and staff list with the 2025 default data. Are you sure?')) {
-                    setRoster(DEFAULT_ROSTER_2025);
-                    setStaff(DEFAULT_STAFF_2025);
-                    alert('Loaded 2025 Roster and Staff.');
-                }
-            };
 
             const handleProgressSeason = () => {
                 const gradeProgression = {
@@ -38737,32 +38966,44 @@
 
                             {/* STAFF MEETING CATEGORY */}
                             {/* STAFF MEETING CATEGORY */}
-                            <CollapsibleCategory title="Staff Meeting" icon="Clipboard" defaultOpen={false}>
+                            {visibleFeatures.staffMeeting?.enabled && (
+                                <CollapsibleCategory title="Staff Meeting" icon="Clipboard" defaultOpen={false}>
 
-                                {/* END LEVEL FILTER */}
-                                <button className={`nav-item ${view === 'staff-meeting' ? 'active' : ''}`} onClick={() => setView('staff-meeting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="LayoutDashboard" size={16} style={{ marginRight: '8px' }} /> Meeting Home
-                                </button>
-                                {currentPermissions.callsheet.view && (
-                                    <button className={`nav-item ${view === 'scouting' ? 'active' : ''}`} onClick={() => setView('scouting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Search" size={16} style={{ marginRight: '8px' }} /> Scouting
-                                    </button>
-                                )}
-                                <button className={`nav-item ${view === 'game-week-overview' ? 'active' : ''}`} onClick={() => setView('game-week-overview')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="Eye" size={16} style={{ marginRight: '8px' }} /> Week Overview
-                                </button>
-                                {currentPermissions.install.view && (
-                                    <button className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Megaphone" size={16} style={{ marginRight: '8px' }} /> Practice Plans
-                                    </button>
-                                )}
-                                <button className={`nav-item ${view === 'pregame' ? 'active' : ''}`} onClick={() => setView('pregame')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                    <Icon name="Clock" size={16} style={{ marginRight: '8px' }} /> Pre-game Timeline
-                                </button>
+                                    {/* END LEVEL FILTER */}
+                                    {visibleFeatures.staffMeeting?.items?.meetingHome && (
+                                        <button className={`nav-item ${view === 'staff-meeting' ? 'active' : ''}`} onClick={() => setView('staff-meeting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="LayoutDashboard" size={16} style={{ marginRight: '8px' }} /> Meeting Home
+                                        </button>
+                                    )}
+                                    {currentPermissions.callsheet.view && visibleFeatures.staffMeeting?.items?.scouting && (
+                                        <button className={`nav-item ${view === 'scouting' ? 'active' : ''}`} onClick={() => setView('scouting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Search" size={16} style={{ marginRight: '8px' }} /> Scouting
+                                        </button>
+                                    )}
+                                    {visibleFeatures.staffMeeting?.items?.weekOverview && (
+                                        <button className={`nav-item ${view === 'game-week-overview' ? 'active' : ''}`} onClick={() => setView('game-week-overview')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Eye" size={16} style={{ marginRight: '8px' }} /> Week Overview
+                                        </button>
+                                    )}
+                                    {currentPermissions.install.view && visibleFeatures.staffMeeting?.items?.practice && (
+                                        <button className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Megaphone" size={16} style={{ marginRight: '8px' }} /> Practice Plans
+                                        </button>
+                                    )}
+                                    {visibleFeatures.staffMeeting?.items?.pregame && (
+                                        <button className={`nav-item ${view === 'pregame' ? 'active' : ''}`} onClick={() => setView('pregame')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Clock" size={16} style={{ marginRight: '8px' }} /> Pre-game Timeline
+                                        </button>
+                                    )}
+                                    {visibleFeatures.staffMeeting?.items?.grading && (
+                                        <button className={`nav-item ${view === 'grading' ? 'active' : ''}`} onClick={() => setView('grading')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Award" size={16} style={{ marginRight: '8px' }} /> Game Grade Outs
+                                        </button>
+                                    )}
 
-                            </CollapsibleCategory>
+                                </CollapsibleCategory>
+                            )}
 
-                            {/* DEPTH CHARTS CATEGORY (Moved from Players) */}
                             {/* GAME WEEK CATEGORY */}
                             {visibleFeatures.gameWeek?.enabled && (
                                 <CollapsibleCategory title="OFFENSE" icon="Zap" defaultOpen={false}>
@@ -38770,11 +39011,13 @@
 
 
 
-                                    <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
-                                    </button>
+                                    {visibleFeatures.gameWeek?.items?.offenseSetup && (
+                                        <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
+                                        </button>
+                                    )}
 
-                                    {currentPermissions.depth.view && (
+                                    {currentPermissions.depth.view && visibleFeatures.gameWeek?.items?.depthCharts && (
                                         <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
                                             {(selectedLevel === 'ALL' || selectedLevel === 'Varsity') && (
                                                 <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
@@ -38821,54 +39064,66 @@
                                         </CollapsibleCategory>
                                     )}
 
-                                    <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Book" size={16} style={{ marginRight: '8px' }} /> Playbook
-                                    </button>
-                                    <button className={`nav-item ${view === 'formations-offense' ? 'active' : ''}`} onClick={() => setView('formations-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
-                                    </button>
-                                    <button className={`nav-item ${view === 'glossary-offense' ? 'active' : ''}`} onClick={() => setView('glossary-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
-                                    </button>
-                                    <button className={`nav-item ${view === 'drill-library-offense' ? 'active' : ''}`} onClick={() => setView('drill-library-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
-                                    </button>
+                                    {visibleFeatures.gameWeek?.items?.playbook && (
+                                        <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Book" size={16} style={{ marginRight: '8px' }} /> Playbook
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.formations && (
+                                        <button className={`nav-item ${view === 'formations-offense' ? 'active' : ''}`} onClick={() => setView('formations-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.glossary && (
+                                        <button className={`nav-item ${view === 'glossary-offense' ? 'active' : ''}`} onClick={() => setView('glossary-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.drillLibrary && (
+                                        <button className={`nav-item ${view === 'drill-library-offense' ? 'active' : ''}`} onClick={() => setView('drill-library-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                        </button>
+                                    )}
 
                                     {currentPermissions.callsheet.view && (
                                         <>
-                                            <button className={`nav-item ${view === 'game-plan' ? 'active' : ''}`} onClick={() => setView('game-plan')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Clipboard" size={16} style={{ marginRight: '8px' }} /> Game Plan
-                                            </button>
-                                            <button
-                                                className={`nav-item ${view === 'new-play' ? 'active' : ''}`}
-                                                onClick={() => { setEditingPlay(null); setView('new-play'); }}
-                                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--accent)', fontWeight: '500' }}
-                                            >
-                                                <Icon name="PlusCircle" size={16} style={{ marginRight: '8px' }} /> Add a New Play
-                                            </button>
+                                            {visibleFeatures.gameWeek?.items?.gamePlan && (
+                                                <button className={`nav-item ${view === 'game-plan' ? 'active' : ''}`} onClick={() => setView('game-plan')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                    <Icon name="Clipboard" size={16} style={{ marginRight: '8px' }} /> Game Plan
+                                                </button>
+                                            )}
+                                            {visibleFeatures.gameWeek?.items?.addPlay && (
+                                                <button
+                                                    className={`nav-item ${view === 'new-play' ? 'active' : ''}`}
+                                                    onClick={() => { setEditingPlay(null); setView('new-play'); }}
+                                                    style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--accent)', fontWeight: '500' }}
+                                                >
+                                                    <Icon name="PlusCircle" size={16} style={{ marginRight: '8px' }} /> Add a New Play
+                                                </button>
+                                            )}
                                         </>
                                     )}
 
-                                    {currentPermissions.install.view && (
+                                    {currentPermissions.install.view && visibleFeatures.gameWeek?.items?.wristband && (
                                         <button className={`nav-item ${view === 'wristband' ? 'active' : ''}`} onClick={() => setView('wristband')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="Watch" size={16} style={{ marginRight: '8px' }} /> Wristband Builder
                                         </button>
                                     )}
 
-                                    {currentPermissions.scripts.view && (
+                                    {currentPermissions.scripts.view && visibleFeatures.gameWeek?.items?.practiceScripts && (
                                         <button className={`nav-item ${view === 'practice-scripts' ? 'active' : ''}`} onClick={() => setView('practice-scripts')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="FileText" size={16} style={{ marginRight: '8px' }} /> Practice Scripts
                                         </button>
                                     )}
 
                                     {/* New "Dumb" Call Sheet - Visible to all with game week access for now */}
-                                    <button className={`nav-item ${view === 'dumb-callsheet' ? 'active' : ''}`} onClick={() => setView('dumb-callsheet')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="FileText" size={16} style={{ marginRight: '8px' }} /> Dumb Call Sheet
-                                    </button>
+                                    {visibleFeatures.gameWeek?.items?.dumbCallsheet && (
+                                        <button className={`nav-item ${view === 'dumb-callsheet' ? 'active' : ''}`} onClick={() => setView('dumb-callsheet')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="FileText" size={16} style={{ marginRight: '8px' }} /> Dumb Call Sheet
+                                        </button>
+                                    )}
 
-                                    <button className={`nav-item ${view === 'grading' ? 'active' : ''}`} onClick={() => setView('grading')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Award" size={16} style={{ marginRight: '8px' }} /> Game Grade Outs
-                                    </button>
+                                    {/* Grading - removed from here as it is now in Staff Meeting */}
 
                                 </CollapsibleCategory>
                             )}
@@ -38876,12 +39131,14 @@
                             {/* DEFENSE CATEGORY */}
                             {visibleFeatures.gameWeek?.enabled && (
                                 <CollapsibleCategory title="DEFENSE" icon="Shield" defaultOpen={false}>
-                                    <button className={`nav-item ${view === 'defense-setup' ? 'active' : ''}`} onClick={() => setView('defense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Defense Setup
-                                    </button>
+                                    {visibleFeatures.gameWeek?.items?.defenseSetup && (
+                                        <button className={`nav-item ${view === 'defense-setup' ? 'active' : ''}`} onClick={() => setView('defense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Defense Setup
+                                        </button>
+                                    )}
 
                                     {/* Defense Depth Charts */}
-                                    {currentPermissions.depth.view && (
+                                    {currentPermissions.depth.view && visibleFeatures.gameWeek?.items?.depthCharts && (
                                         <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
                                             <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
                                                 <button key="V_DEFENSE" className={`nav-item ${view === 'depth' && depthChartType === 'V_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('V_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
@@ -38916,27 +39173,35 @@
                                         </CollapsibleCategory>
                                     )}
 
-                                    <button className={`nav-item ${view === 'formations-defense' ? 'active' : ''}`} onClick={() => setView('formations-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
-                                    </button>
-                                    <button className={`nav-item ${view === 'glossary-defense' ? 'active' : ''}`} onClick={() => setView('glossary-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
-                                    </button>
-                                    <button className={`nav-item ${view === 'drill-library-defense' ? 'active' : ''}`} onClick={() => setView('drill-library-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
-                                    </button>
+                                    {visibleFeatures.gameWeek?.items?.formations && (
+                                        <button className={`nav-item ${view === 'formations-defense' ? 'active' : ''}`} onClick={() => setView('formations-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.glossary && (
+                                        <button className={`nav-item ${view === 'glossary-defense' ? 'active' : ''}`} onClick={() => setView('glossary-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.drillLibrary && (
+                                        <button className={`nav-item ${view === 'drill-library-defense' ? 'active' : ''}`} onClick={() => setView('drill-library-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                        </button>
+                                    )}
                                 </CollapsibleCategory>
                             )}
 
                             {/* SPECIAL TEAMS CATEGORY */}
                             {visibleFeatures.gameWeek?.enabled && (
                                 <CollapsibleCategory title="SPECIAL TEAMS" icon="Compass" defaultOpen={false}>
-                                    <button className={`nav-item ${view === 'st-setup' ? 'active' : ''}`} onClick={() => setView('st-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Special Teams Setup
-                                    </button>
+                                    {visibleFeatures.gameWeek?.items?.stSetup && (
+                                        <button className={`nav-item ${view === 'st-setup' ? 'active' : ''}`} onClick={() => setView('st-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Special Teams Setup
+                                        </button>
+                                    )}
 
                                     {/* Special Teams Depth Charts */}
-                                    {currentPermissions.depth.view && (
+                                    {currentPermissions.depth.view && visibleFeatures.gameWeek?.items?.depthCharts && (
                                         <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
                                             <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
                                                 {['KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
@@ -38962,112 +39227,137 @@
                                         </CollapsibleCategory>
                                     )}
 
-                                    <button className={`nav-item ${view === 'formations-st' ? 'active' : ''}`} onClick={() => setView('formations-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
-                                    </button>
-                                    <button className={`nav-item ${view === 'glossary-st' ? 'active' : ''}`} onClick={() => setView('glossary-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
-                                    </button>
-                                    <button className={`nav-item ${view === 'drill-library-st' ? 'active' : ''}`} onClick={() => setView('drill-library-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
-                                    </button>
+                                    {visibleFeatures.gameWeek?.items?.formations && (
+                                        <button className={`nav-item ${view === 'formations-st' ? 'active' : ''}`} onClick={() => setView('formations-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.glossary && (
+                                        <button className={`nav-item ${view === 'glossary-st' ? 'active' : ''}`} onClick={() => setView('glossary-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.drillLibrary && (
+                                        <button className={`nav-item ${view === 'drill-library-st' ? 'active' : ''}`} onClick={() => setView('drill-library-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                        </button>
+                                    )}
                                 </CollapsibleCategory>
                             )}
 
 
 
-                            {/* SCHEME AND SKILLS CATEGORY */}
-
-
-                            {/* PRACTICE CATEGORY */}
-                            {/* PRACTICE CATEGORY */}
                             {/* PROGRAM MANAGEMENT CATEGORY */}
                             {visibleFeatures.program?.enabled && (
                                 <CollapsibleCategory title="Program Mgmt" icon="Briefcase" defaultOpen={false}>
-                                    <button className={`nav-item ${view === 'staff-tasks' ? 'active' : ''}`} onClick={() => setView('staff-tasks')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="ClipboardList" size={16} style={{ marginRight: '8px' }} /> Staff Tasks
-                                    </button>
-                                    <button className={`nav-item ${view === 'calendar' ? 'active' : ''}`} onClick={() => setView('calendar')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Calendar" size={16} style={{ marginRight: '8px' }} /> Annual Calendar
-                                    </button>
-                                    <button className={`nav-item ${view === 'budget' ? 'active' : ''}`} onClick={() => setView('budget')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="DollarSign" size={16} style={{ marginRight: '8px' }} /> Budget & Wishlist
-                                    </button>
-                                    <button className={`nav-item ${view === 'onboarding' ? 'active' : ''}`} onClick={() => setView('onboarding')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="UserPlus" size={16} style={{ marginRight: '8px' }} /> Onboarding
-                                    </button>
+                                    {visibleFeatures.program?.items?.staffTasks && (
+                                        <button className={`nav-item ${view === 'staff-tasks' ? 'active' : ''}`} onClick={() => setView('staff-tasks')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="ClipboardList" size={16} style={{ marginRight: '8px' }} /> Staff Tasks
+                                        </button>
+                                    )}
+                                    {visibleFeatures.program?.items?.calendar && (
+                                        <button className={`nav-item ${view === 'calendar' ? 'active' : ''}`} onClick={() => setView('calendar')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Calendar" size={16} style={{ marginRight: '8px' }} /> Annual Calendar
+                                        </button>
+                                    )}
+                                    {visibleFeatures.program?.items?.budget && (
+                                        <button className={`nav-item ${view === 'budget' ? 'active' : ''}`} onClick={() => setView('budget')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="DollarSign" size={16} style={{ marginRight: '8px' }} /> Budget & Wishlist
+                                        </button>
+                                    )}
+                                    {visibleFeatures.program?.items?.onboarding && (
+                                        <button className={`nav-item ${view === 'onboarding' ? 'active' : ''}`} onClick={() => setView('onboarding')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="UserPlus" size={16} style={{ marginRight: '8px' }} /> Onboarding
+                                        </button>
+                                    )}
                                     <CollapsibleCategory title="Equipment & Inv." icon="Package" defaultOpen={false} nested={true}>
-                                        <button className={`nav-item ${view === 'equipment-checkout' ? 'active' : ''}`} onClick={() => setView('equipment-checkout')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Checkout Form
-                                        </button>
-                                        <button className={`nav-item ${view === 'equipment-lottery' ? 'active' : ''}`} onClick={() => setView('equipment-lottery')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Jersey Lottery
-                                        </button>
-                                        <button className={`nav-item ${view === 'equipment-inventory' ? 'active' : ''}`} onClick={() => setView('equipment-inventory')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Current Inventory
-                                        </button>
-                                        <button className={`nav-item ${view === 'equipment-wishlist' ? 'active' : ''}`} onClick={() => setView('equipment-wishlist')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="ShoppingCart" size={16} style={{ marginRight: '8px' }} /> Wishlist / Needs
-                                        </button>
+                                        {visibleFeatures.program?.items?.equipmentCheckout && (
+                                            <button className={`nav-item ${view === 'equipment-checkout' ? 'active' : ''}`} onClick={() => setView('equipment-checkout')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Checkout Form
+                                            </button>
+                                        )}
+                                        {visibleFeatures.program?.items?.jerseyLottery && (
+                                            <button className={`nav-item ${view === 'equipment-lottery' ? 'active' : ''}`} onClick={() => setView('equipment-lottery')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Jersey Lottery
+                                            </button>
+                                        )}
+                                        {visibleFeatures.program?.items?.equipmentInventory && (
+                                            <button className={`nav-item ${view === 'equipment-inventory' ? 'active' : ''}`} onClick={() => setView('equipment-inventory')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Current Inventory
+                                            </button>
+                                        )}
+                                        {visibleFeatures.program?.items?.equipmentWishlist && (
+                                            <button className={`nav-item ${view === 'equipment-wishlist' ? 'active' : ''}`} onClick={() => setView('equipment-wishlist')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="ShoppingCart" size={16} style={{ marginRight: '8px' }} /> Wishlist / Needs
+                                            </button>
+                                        )}
                                     </CollapsibleCategory>
 
                                 </CollapsibleCategory>
                             )}
 
-
-
-
-
-
-
                             {/* MOBILE/TABLET APPS CATEGORY */}
                             {visibleFeatures.apps?.enabled && (
                                 <CollapsibleCategory title="Mobile/Tablet App" icon="Smartphone" defaultOpen={false}>
-                                    <button
-                                        className={`nav-item ${view === 'player-app' ? 'active' : ''}`}
-                                        onClick={() => setView('player-app')}
-                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                    >
-                                        <Icon name="Smartphone" size={16} style={{ marginRight: '8px' }} /> Player App Preview
-                                    </button>
-                                    <button
-                                        className={`nav-item ${view === 'attendance-app' ? 'active' : ''}`}
-                                        onClick={() => setView('attendance-app')}
-                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                    >
-                                        <Icon name="UserCheck" size={16} style={{ marginRight: '8px' }} /> Attendance App
-                                    </button>
-                                    <button
-                                        className={`nav-item ${view === 'coach-app' ? 'active' : ''}`}
-                                        onClick={() => setView('coach-app')}
-                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                    >
-                                        <Icon name="Clipboard" size={16} style={{ marginRight: '8px' }} /> Practice Coach App
-                                    </button>
+                                    {visibleFeatures.apps?.items?.playerApp && (
+                                        <button
+                                            className={`nav-item ${view === 'player-app' ? 'active' : ''}`}
+                                            onClick={() => setView('player-app')}
+                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                        >
+                                            <Icon name="Smartphone" size={16} style={{ marginRight: '8px' }} /> Player App Preview
+                                        </button>
+                                    )}
+                                    {visibleFeatures.apps?.items?.attendanceApp && (
+                                        <button
+                                            className={`nav-item ${view === 'attendance-app' ? 'active' : ''}`}
+                                            onClick={() => setView('attendance-app')}
+                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                        >
+                                            <Icon name="UserCheck" size={16} style={{ marginRight: '8px' }} /> Attendance App
+                                        </button>
+                                    )}
+                                    {visibleFeatures.apps?.items?.coachApp && (
+                                        <button
+                                            className={`nav-item ${view === 'coach-app' ? 'active' : ''}`}
+                                            onClick={() => setView('coach-app')}
+                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                        >
+                                            <Icon name="Clipboard" size={16} style={{ marginRight: '8px' }} /> Practice Coach App
+                                        </button>
+                                    )}
 
                                     {/* ATHLETIC DEVELOPMENT CATEGORY */}
                                     <div>
-                                        <button
-                                            className={`nav-item ${view === 'callsheet' ? 'active' : ''}`}
-                                            onClick={() => setView('callsheet')}
-                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                        >
-                                            <Icon name="FileText" size={16} style={{ marginRight: '8px' }} /> Smart Call Sheet
-                                        </button>
-                                        <button
-                                            className={`nav-item ${view === 'simulator' ? 'active' : ''}`}
-                                            onClick={() => setView('simulator')}
-                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                        >
-                                            <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Play-Calling Simulator
-                                        </button>
-                                        <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="Monitor" size={16} style={{ marginRight: '8px' }} /> Pressbox
-                                        </button>
+                                        {visibleFeatures.apps?.items?.callsheet && (
+                                            <button
+                                                className={`nav-item ${view === 'callsheet' ? 'active' : ''}`}
+                                                onClick={() => setView('callsheet')}
+                                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                            >
+                                                <Icon name="FileText" size={16} style={{ marginRight: '8px' }} /> Smart Call Sheet
+                                            </button>
+                                        )}
+                                        {visibleFeatures.apps?.items?.simulator && (
+                                            <button
+                                                className={`nav-item ${view === 'simulator' ? 'active' : ''}`}
+                                                onClick={() => setView('simulator')}
+                                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                            >
+                                                <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Play-Calling Simulator
+                                            </button>
+                                        )}
+                                        {visibleFeatures.apps?.items?.pressbox && (
+                                            <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Monitor" size={16} style={{ marginRight: '8px' }} /> Pressbox
+                                            </button>
+                                        )}
 
-                                        <button className={`nav-item ${view === 'special-teams' ? 'active' : ''}`} onClick={() => setView('special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="Target" size={16} style={{ marginRight: '8px' }} /> Special Teams
-                                        </button>
+                                        {visibleFeatures.apps?.items?.specialTeams && (
+                                            <button className={`nav-item ${view === 'special-teams' ? 'active' : ''}`} onClick={() => setView('special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Target" size={16} style={{ marginRight: '8px' }} /> Special Teams
+                                            </button>
+                                        )}
                                     </div>
 
                                 </CollapsibleCategory>
@@ -39095,39 +39385,55 @@
                                 </button>
                             )}
 
-
-
                             {/* ATHLETIC DEVELOPMENT CATEGORY */}
                             {visibleFeatures.development?.enabled && (
                                 <CollapsibleCategory title="Player Development" icon="Activity" defaultOpen={false}>
-                                    <button className={`nav-item ${view === 'testing' ? 'active' : ''}`} onClick={() => setView('testing')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Timer" size={16} style={{ marginRight: '8px' }} /> Combine / Testing
-                                    </button>
+                                    {visibleFeatures.development?.items?.testing && (
+                                        <button className={`nav-item ${view === 'testing' ? 'active' : ''}`} onClick={() => setView('testing')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Timer" size={16} style={{ marginRight: '8px' }} /> Combine / Testing
+                                        </button>
+                                    )}
 
-                                    <button className={`nav-item ${view === 'ironman' ? 'active' : ''}`} onClick={() => setView('ironman')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Dumbbell" size={16} style={{ marginRight: '8px' }} /> Iron Man
-                                    </button>
-                                    <button className={`nav-item ${view === 'ratings' ? 'active' : ''}`} onClick={() => setView('ratings')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Madden Ratings
-                                    </button>
-                                    <button className={`nav-item ${view === 'summer-comp' ? 'active' : ''}`} onClick={() => setView('summer-comp')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Summer Competition
-                                    </button>
-                                    <button className={`nav-item ${view === 'valhalla' ? 'active' : ''}`} onClick={() => setView('valhalla')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', color: '#ffd700', fontWeight: 'bold' }}>
-                                        <Icon name="Swords" size={16} style={{ marginRight: '8px' }} /> Quest for Valhalla
-                                    </button>
-                                    <button className={`nav-item ${view === 'valhalla-events' ? 'active' : ''}`} onClick={() => setView('valhalla-events')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Calendar" size={16} style={{ marginRight: '8px' }} /> Valhalla Events
-                                    </button>
-                                    <button className={`nav-item ${view === 'testing-records' ? 'active' : ''}`} onClick={() => setView('testing-records')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Program Records
-                                    </button>
-                                    <button className={`nav-item ${view === 'self-assessment' ? 'active' : ''}`} onClick={() => setView('self-assessment')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Self-Assessment
-                                    </button>
-                                    <button className={`nav-item ${view === 'multi-sport' ? 'active' : ''}`} onClick={() => setView('multi-sport')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Activity" size={16} style={{ marginRight: '8px' }} /> Multi-Sport Tracking
-                                    </button>
+                                    {visibleFeatures.development?.items?.ironman && (
+                                        <button className={`nav-item ${view === 'ironman' ? 'active' : ''}`} onClick={() => setView('ironman')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Dumbbell" size={16} style={{ marginRight: '8px' }} /> Iron Man
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.ratings && (
+                                        <button className={`nav-item ${view === 'ratings' ? 'active' : ''}`} onClick={() => setView('ratings')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Madden Ratings
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.summerComp && (
+                                        <button className={`nav-item ${view === 'summer-comp' ? 'active' : ''}`} onClick={() => setView('summer-comp')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Summer Competition
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.valhalla && (
+                                        <button className={`nav-item ${view === 'valhalla' ? 'active' : ''}`} onClick={() => setView('valhalla')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', color: '#ffd700', fontWeight: 'bold' }}>
+                                            <Icon name="Swords" size={16} style={{ marginRight: '8px' }} /> Quest for Valhalla
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.valhallaEvents && (
+                                        <button className={`nav-item ${view === 'valhalla-events' ? 'active' : ''}`} onClick={() => setView('valhalla-events')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Calendar" size={16} style={{ marginRight: '8px' }} /> Valhalla Events
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.testingRecords && (
+                                        <button className={`nav-item ${view === 'testing-records' ? 'active' : ''}`} onClick={() => setView('testing-records')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Program Records
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.selfAssessment && (
+                                        <button className={`nav-item ${view === 'self-assessment' ? 'active' : ''}`} onClick={() => setView('self-assessment')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Self-Assessment
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.multiSport && (
+                                        <button className={`nav-item ${view === 'multi-sport' ? 'active' : ''}`} onClick={() => setView('multi-sport')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Activity" size={16} style={{ marginRight: '8px' }} /> Multi-Sport Tracking
+                                        </button>
+                                    )}
                                 </CollapsibleCategory>
                             )}
 
@@ -39652,7 +39958,7 @@
                         {view === 'formations-defense' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="DEFENSE" />}
                         {view === 'formations-st' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="SPECIAL_TEAMS" />}
 
-                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan || { sets: [], miniScripts: [] }} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan || { sets: [], miniScripts: [] }} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} />}
                         {view === 'game-plan' && <OffensiveGamePlan
                             plays={plays}
                             gamePlan={currentWeek.offensiveGamePlan || { sets: [] }}
@@ -39867,7 +40173,7 @@
                                 onUpdateLottery={setLotteryData}
                             />
                         )}
-                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} onImportData={handleImportData} onExportData={handleExportData} onImportDefaultData={handleImportDefaultData} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} renderSyncManager={renderDataSyncManager} isSiteAdmin={isSiteAdmin} siteAdmins={siteAdmins} schoolData={{ id: localStorage.getItem('hc_school_id'), ...JSON.parse(JSON.stringify(window.db ? {} : {})) /* Hack: appData isn't in state directly, relying on props */ }} currentSchoolId={localStorage.getItem('hc_school_id')} programLevels={programLevels} onUpdateProgramLevels={setProgramLevels} />}
+                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} renderSyncManager={renderDataSyncManager} isSiteAdmin={isSiteAdmin} siteAdmins={siteAdmins} schoolData={{ id: localStorage.getItem('hc_school_id'), ...JSON.parse(JSON.stringify(window.db ? {} : {})) /* Hack: appData isn't in state directly, relying on props */ }} currentSchoolId={localStorage.getItem('hc_school_id')} programLevels={programLevels} onUpdateProgramLevels={setProgramLevels} />}
 
                         {view === 'help' && <UserGuide />}
 
