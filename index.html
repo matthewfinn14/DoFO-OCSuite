@@ -5791,6 +5791,136 @@
                 );
             };
 
+            // Audible wristband: Coordinate in left column, two play columns on right
+            const renderAudibleTable = (slots, rangeClass, cardId, title = '') => {
+                const card = wbSettings[cardId];
+
+                // Get all plays for the slots
+                const displayRows = slots.map(slot => {
+                    const play = slotMap[slot];
+                    return {
+                        slot: slot,
+                        text: play ? `${play.name}${play.formation ? ' - ' + play.formation : ''}` : '',
+                        play: play
+                    };
+                });
+
+                // Group rows: each row shows coordinate + 2 plays
+                const tableRows = [];
+                for (let i = 0; i < displayRows.length; i += 2) {
+                    const row1 = displayRows[i];
+                    const row2 = displayRows[i + 1] || { slot: '', text: '', play: null };
+                    tableRows.push({ coordinate: row1.slot, play1: row1, play2: row2 });
+                }
+
+                // Ensure minimum rows for consistent layout
+                while (tableRows.length < 24) {
+                    tableRows.push({ coordinate: '', play1: { slot: '', text: '', play: null }, play2: { slot: '', text: '', play: null } });
+                }
+
+                return (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
+                        {/* Header */}
+                        <div style={{
+                            background: 'black',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: '10pt',
+                            padding: '0 2px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <span style={{ textTransform: 'uppercase' }}>AUDIBLE</span>
+                            <span>{title}</span>
+                        </div>
+                        {/* Table */}
+                        <table className="wristband-spreadsheet-table">
+                            <tbody>
+                                {tableRows.map((row, rowIndex) => {
+                                    // Calculate color background for this row
+                                    let cellBackground = 'inherit';
+                                    if (card.color && card.color !== 'none') {
+                                        const colorBase = card.color;
+                                        const shadeIndex = rowIndex % 2;
+                                        const shades = ['light', 'medium'];
+                                        const shade = shades[shadeIndex];
+                                        const colorMap = {
+                                            'green-light': '#d1fae5', 'green-medium': '#a7f3d0',
+                                            'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
+                                            'red-light': '#fecaca', 'red-medium': '#fca5a5',
+                                            'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
+                                            'yellow-light': '#fef08a', 'yellow-medium': '#fde047',
+                                            'purple-light': '#e9d5ff', 'purple-medium': '#d8b4fe',
+                                            'teal-light': '#99f6e4', 'teal-medium': '#5eead4',
+                                            'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
+                                        };
+                                        cellBackground = colorMap[`${colorBase}-${shade}`] || 'inherit';
+                                    }
+
+                                    return (
+                                        <tr key={rowIndex} className={rangeClass}>
+                                            {/* Coordinate Column */}
+                                            <td style={{
+                                                fontWeight: 'bold',
+                                                width: '45px',
+                                                background: cellBackground,
+                                                padding: '0 2px',
+                                                border: '1px solid #333',
+                                                height: `${rowHeight}px`,
+                                                fontSize: `${fontSize}rem`,
+                                                verticalAlign: 'middle',
+                                                color: '#000',
+                                                textAlign: 'center',
+                                                lineHeight: `${rowHeight}px`
+                                            }}>
+                                                {row.coordinate}
+                                            </td>
+                                            {/* Play 1 Column */}
+                                            <td style={{
+                                                background: cellBackground,
+                                                padding: '0 2px',
+                                                border: '1px solid #333',
+                                                height: `${rowHeight}px`,
+                                                fontSize: `${fontSize}rem`,
+                                                verticalAlign: 'middle',
+                                                color: '#000',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                lineHeight: `${rowHeight}px`,
+                                                cursor: selectedPlayId && !row.play1.play ? 'pointer' : 'default'
+                                            }}
+                                                onClick={() => row.play1.slot && handleAssignSlot(row.play1.slot)}>
+                                                {row.play1.text}
+                                            </td>
+                                            {/* Play 2 Column */}
+                                            <td style={{
+                                                background: cellBackground,
+                                                padding: '0 2px',
+                                                border: '1px solid #333',
+                                                height: `${rowHeight}px`,
+                                                fontSize: `${fontSize}rem`,
+                                                verticalAlign: 'middle',
+                                                color: '#000',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                lineHeight: `${rowHeight}px`,
+                                                cursor: selectedPlayId && !row.play2.play ? 'pointer' : 'default'
+                                            }}
+                                                onClick={() => row.play2.slot && handleAssignSlot(row.play2.slot)}>
+                                                {row.play2.text}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            };
+
             const renderPlayThumbnail = (play, type = 'standard') => {
                 if (!play) return null;
 
@@ -6209,6 +6339,7 @@
                                     <option value="standard">Standard (Traditional)</option>
                                     <option value="modular">Modular (Script/Tempo)</option>
                                     <option value="rooski">Rooski (16-slot grid)</option>
+                                    <option value="audible">Audible (Coordinate + 2 Plays)</option>
                                 </select>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -6231,7 +6362,7 @@
                                     placeholder="1"
                                 />
                             </div>
-                            {activeCard.type === 'standard' && (
+                            {(activeCard.type === 'standard' || activeCard.type === 'audible') && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Color:</label>
                                     <select
@@ -6383,6 +6514,8 @@
                                                 activeCard.rooskiView || 'skill'
                                             )}
                                         </div>
+                                    ) : activeCard.type === 'audible' ? (
+                                        renderAudibleTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
                                     ) : (
                                         renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
                                     )}
@@ -6448,7 +6581,10 @@
                                                 </div>
                                                 {/* Content */}
                                                 <div className="print-card-content">
-                                                    {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')}
+                                                    {activeCard.type === 'audible'
+                                                        ? renderAudibleTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
+                                                        : renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
+                                                    }
                                                 </div>
                                             </>
                                         </div>
@@ -30699,6 +30835,19 @@
 
             const renderInteriorConfig = (box, sectionIdx, boxIdx) => (
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '8px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ width: '100%' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Box Notes / Situation Detail</div>
+                        <textarea
+                            value={box.notes || ''}
+                            onChange={(e) => {
+                                const newLayouts = { ...gamePlanLayouts };
+                                newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].notes = e.target.value;
+                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                            }}
+                            placeholder="Add situation details, notes, or instructions here..."
+                            style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', minHeight: '60px', resize: 'vertical', fontFamily: 'inherit' }}
+                        />
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Box Type</div>
@@ -30771,72 +30920,83 @@
                 const protocolList = box.customTempos || PLAY_PROTOCOLS;
 
                 return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'white', borderRadius: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'white', borderRadius: '4px', height: '100%' }}>
                         {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
 
-                        {rows.map((row, rowIdx) => (
-                            <React.Fragment key={row.id || rowIdx}>
-                                <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
-                                    <PlaySlot
-                                        playId={row.content}
-                                        isLocked={isLocked}
-                                        onUpdate={(pid) => {
-                                            const newLayouts = { ...gamePlanLayouts };
-                                            newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].content = pid;
-                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                        }}
-                                    />
-                                </div>
-
-                                {rowIdx < rows.length - 1 && (
-                                    <div style={{ margin: '4px auto', width: 'fit-content' }}>
-                                        <select
-                                            disabled={isLocked}
-                                            value={tempos[rowIdx] || 'REGULAR'}
-                                            onChange={(e) => {
+                        <div style={{ flex: 1 }}>
+                            {rows.map((row, rowIdx) => (
+                                <React.Fragment key={row.id || rowIdx}>
+                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
+                                        <PlaySlot
+                                            playId={row.content}
+                                            isLocked={isLocked}
+                                            onUpdate={(pid) => {
                                                 const newLayouts = { ...gamePlanLayouts };
-                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                                                if (!b.tempos) b.tempos = {};
-                                                b.tempos[rowIdx] = e.target.value;
+                                                newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].content = pid;
                                                 if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                             }}
-                                            style={{
-                                                fontSize: '0.65rem',
-                                                fontWeight: 'bold',
-                                                padding: '2px 4px',
-                                                borderRadius: '12px',
-                                                border: '1px solid #e2e8f0',
-                                                background: '#f1f5f9',
-                                                cursor: !isLocked ? 'pointer' : 'default',
-                                                color: protocolList.find(p => p.id === (tempos[rowIdx] || 'REGULAR'))?.color || '#64748b',
-                                                appearance: 'none',
-                                                textAlign: 'center',
-                                                minWidth: '100px'
-                                            }}
-                                        >
-                                            {protocolList.map(proto => (
-                                                <option key={proto.id} value={proto.id}>{proto.label}</option>
-                                            ))}
-                                        </select>
+                                        />
                                     </div>
-                                )}
-                            </React.Fragment>
-                        ))}
-                        {!isLocked && (
-                            <button
-                                className="btn-sm"
-                                style={{ marginTop: '4px', width: '100%', border: '1px dashed #cbd5e1', color: '#64748b', padding: '4px' }}
-                                onClick={() => {
-                                    const newLayouts = { ...gamePlanLayouts };
-                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                                    if (!b.rows) b.rows = [];
-                                    b.rows.push({ content: null, id: `slot_${Date.now()}` });
-                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                }}
-                            >
-                                + Add Play Slot
-                            </button>
+
+                                    {rowIdx < rows.length - 1 && (
+                                        <div style={{ margin: '4px auto', width: 'fit-content' }}>
+                                            <select
+                                                disabled={isLocked}
+                                                value={tempos[rowIdx] || 'REGULAR'}
+                                                onChange={(e) => {
+                                                    const newLayouts = { ...gamePlanLayouts };
+                                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                    if (!b.tempos) b.tempos = {};
+                                                    b.tempos[rowIdx] = e.target.value;
+                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                }}
+                                                style={{
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 'bold',
+                                                    padding: '2px 4px',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid #e2e8f0',
+                                                    background: '#f1f5f9',
+                                                    cursor: !isLocked ? 'pointer' : 'default',
+                                                    color: protocolList.find(p => p.id === (tempos[rowIdx] || 'REGULAR'))?.color || '#64748b',
+                                                    appearance: 'none',
+                                                    textAlign: 'center',
+                                                    minWidth: '100px'
+                                                }}
+                                            >
+                                                {protocolList.map(proto => (
+                                                    <option key={proto.id} value={proto.id}>{proto.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                            {!isLocked && (
+                                <button
+                                    className="btn-sm"
+                                    style={{ marginTop: '4px', width: '100%', border: '1px dashed #cbd5e1', color: '#64748b', padding: '4px' }}
+                                    onClick={() => {
+                                        const newLayouts = { ...gamePlanLayouts };
+                                        const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                        if (!b.rows) b.rows = [];
+                                        b.rows.push({ content: null, id: `slot_${Date.now()}` });
+                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                    }}
+                                >
+                                    + Add Play Slot
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Custom Note Section Display */}
+                        {box.notes && (
+                            <div style={{ marginTop: '8px', padding: '6px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.8rem', color: '#92400e', fontStyle: 'italic' }}>
+                                <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem', display: 'block', marginBottom: '2px' }}>Notes:</span>
+                                {box.notes}
+                            </div>
                         )}
+
 
                         {isEditing && (
                             <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '12px', marginTop: '12px' }}>
@@ -30911,7 +31071,7 @@
                 const assignedPlays = allPlays.filter(p => p.type !== 'GAP');
 
                 return (
-                    <div style={{ padding: '8px' }}>
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', height: '100%' }}>
                         {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(60px, auto) repeat(4, 1fr)', gap: '4px', marginBottom: '8px' }}>
@@ -30953,7 +31113,7 @@
                         </div>
 
                         <div
-                            style={{ minHeight: '60px', cursor: isLocked ? 'default' : 'pointer', background: '#f8fafc', borderRadius: '4px', padding: '6px', border: '1px dashed #e2e8f0' }}
+                            style={{ minHeight: '60px', cursor: isLocked ? 'default' : 'pointer', background: '#f8fafc', borderRadius: '4px', padding: '6px', border: '1px dashed #e2e8f0', flex: 1 }}
                             onClick={() => !isLocked && !isEditing && openPlaySelector(box.setId)}
                             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
                             onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
@@ -30967,6 +31127,14 @@
                                 {assignedPlays.length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', paddingTop: '10px' }}>Click to select plays</div>}
                             </div>
                         </div>
+
+                        {/* Custom Note Section Display */}
+                        {box.notes && (
+                            <div style={{ marginTop: '8px', padding: '6px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.8rem', color: '#92400e', fontStyle: 'italic' }}>
+                                <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem', display: 'block', marginBottom: '2px' }}>Notes:</span>
+                                {box.notes}
+                            </div>
+                        )}
                     </div>
                 );
             };
@@ -31053,6 +31221,11 @@
                                 {box.type === 'script' ? '📜' : '🔢'}
                             </div>
                             <div style={{ marginTop: '0.5rem' }}>{summaryText}</div>
+                            {box.notes && (
+                                <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: '#64748b', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', maxHeight: '2.4em' }}>
+                                    "{box.notes}"
+                                </div>
+                            )}
                             <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '0.5rem' }}>Double-click to edit</div>
                         </div>
 
