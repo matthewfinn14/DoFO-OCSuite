@@ -23994,7 +23994,7 @@
                                 </div>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     <button onClick={() => setSelectedCardForPrint(null)} className="btn btn-secondary">
-                                        <Icon name="ArrowLeft" /> Change Card
+                                        <Icon name="ChevronLeft" /> Change Card
                                     </button>
                                     <button onClick={() => window.print()} className="btn btn-primary">
                                         <Icon name="Printer" /> Print
@@ -30036,7 +30036,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked }) => {
+        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion }) => {
 
             const [viewMode, setViewMode] = useState('call-sheet'); // 'call-sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
@@ -30154,6 +30154,37 @@
                     }
                     return { type: 'GAP', _index: idx, _raw: item };
                 });
+            };
+
+            const handleGridCellUpdate = (setId, index, playId) => {
+                let set = gamePlan.sets?.find(s => s.id === setId);
+                if (!set && setId.startsWith('ms_')) {
+                    set = gamePlan.miniScripts?.find(s => s.id === setId);
+                }
+                const rawIds = set ? [...set.playIds] : [];
+                // Pad if needed
+                while (rawIds.length <= index) {
+                    rawIds.push('GAP');
+                }
+
+                rawIds[index] = playId || 'GAP';
+
+                if (setId.startsWith('ms_')) {
+                    const newMiniScripts = (gamePlan.miniScripts || []).map(s =>
+                        s.id === setId ? { ...s, playIds: rawIds } : s
+                    );
+                    onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
+                } else {
+                    const existingSet = gamePlan.sets?.find(s => s.id === setId);
+                    let newSets;
+                    if (existingSet) {
+                        newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: rawIds } : s);
+                    } else {
+                        // Implicit create
+                        newSets = [...(gamePlan.sets || []), { id: setId, name: setId, playIds: rawIds }];
+                    }
+                    onUpdateGamePlan({ ...gamePlan, sets: newSets });
+                }
             };
 
             const handleGridMove = (fromIndex, toIndex) => {
@@ -30750,7 +30781,7 @@
                 if (onUpdateLayouts) onUpdateLayouts(newLayouts);
             };
 
-            const handleAddBoxToSection = (sectionIdx) => {
+            const handleAddBoxToSection = (sectionIdx, type = 'grid') => {
                 const newLayouts = { ...gamePlanLayouts };
                 const sheet = { ...newLayouts.CALL_SHEET };
                 const section = { ...sheet.sections[sectionIdx] };
@@ -30760,16 +30791,21 @@
 
                 // Create new Box
                 const newBox = {
-                    header: 'New Box',
+                    header: type === 'script' ? 'New Script' : 'New Grid Box',
                     color: '#3b82f6',
                     setId: `box_${Date.now()}`,
-                    type: 'grid', // Default type
+                    type: type,
                     colSpan: 1,
-                    hidden: false,
-                    gridHeadings: ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'],
-                    gridRowLabels: ['Group 1', 'Group 2', 'Group 3', 'Group 4'],
-                    cornerLabel: 'Group/Type'
+                    hidden: false
                 };
+
+                if (type === 'grid') {
+                    newBox.gridHeadings = ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                    newBox.gridRowLabels = ['Group 1', 'Group 2', 'Group 3', 'Group 4'];
+                    newBox.cornerLabel = 'Group/Type';
+                } else if (type === 'script') {
+                    newBox.rows = [{ content: null, contentRight: null, id: `slot_${Date.now()}` }];
+                }
 
                 section.boxes.push(newBox);
 
@@ -30795,6 +30831,72 @@
             const PlaySlot = ({ playId, onUpdate, isLocked, placeholder = "+" }) => {
                 const play = plays.find(p => p.id === playId);
                 const [isHovered, setIsHovered] = useState(false);
+                const [searchTerm, setSearchTerm] = useState('');
+                const [showDropdown, setShowDropdown] = useState(false);
+                const [selectedIndex, setSelectedIndex] = useState(0);
+                const dropdownRef = useRef(null);
+                const inputRef = useRef(null);
+
+                // Derived state for filtered results
+                const filteredResults = useMemo(() => {
+                    if (!searchTerm || isLocked) return [];
+                    const lower = searchTerm.toLowerCase();
+
+                    // Search Criteria: Name, Formulation, Concept, Wristband Slot
+                    return plays.filter(p => {
+                        const matchName = p.name.toLowerCase().includes(lower);
+                        const matchFormation = (p.formation || '').toLowerCase().includes(lower);
+                        const matchConcept = (p.concept || '').toLowerCase().includes(lower);
+                        const matchWB = (p.wristbandSlot || '').toLowerCase().includes(lower);
+
+                        return matchName || matchFormation || matchConcept || matchWB;
+                    }).slice(0, 10); // Limit results
+                }, [searchTerm, plays, isLocked]);
+
+                // Close dropdown when clicking outside
+                useEffect(() => {
+                    const handleClickOutside = (event) => {
+                        if (dropdownRef.current && !dropdownRef.current.contains(event.target) && !inputRef.current.contains(event.target)) {
+                            setShowDropdown(false);
+                        }
+                    };
+                    document.addEventListener("mousedown", handleClickOutside);
+                    return () => document.removeEventListener("mousedown", handleClickOutside);
+                }, []);
+
+                useEffect(() => {
+                    if (showDropdown && filteredResults.length > 0) {
+                        setSelectedIndex(0);
+                    }
+                }, [showDropdown, filteredResults.length]);
+
+                const handleKeyDown = (e) => {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setSelectedIndex(prev => Math.min(prev + 1, filteredResults.length - 1));
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setSelectedIndex(prev => Math.max(prev - 1, 0));
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (showDropdown && filteredResults.length > 0) {
+                            // Select from dropdown
+                            onUpdate(filteredResults[selectedIndex].id);
+                            setShowDropdown(false);
+                            setSearchTerm('');
+                        } else {
+                            // Quick Add New
+                            if (onQuickAddPlay) {
+                                const newPlay = onQuickAddPlay(searchTerm);
+                                onUpdate(newPlay.id);
+                                setShowDropdown(false);
+                                setSearchTerm('');
+                            }
+                        }
+                    } else if (e.key === 'Escape') {
+                        setShowDropdown(false);
+                    }
+                };
 
                 return (
                     <div
@@ -30807,26 +30909,84 @@
                         }}
                     >
                         {play ? (
-                            <div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>
-                                <span style={{ fontWeight: 'bold' }}>{play.name}</span>
-                                <span style={{ fontSize: '0.75em', color: '#64748b', marginLeft: '6px' }}>{play.formation}</span>
+                            <div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{play.name}</span>
+                                {(!play.formation || !play.name.toLowerCase().includes(play.formation.toLowerCase())) && (
+                                    <span style={{ fontSize: '0.85em', color: '#334155', marginLeft: '6px' }}>{play.formation}</span>
+                                )}
+                                {play.wristbandSlot && <span style={{ fontSize: '0.8em', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '3px', marginLeft: '6px', fontWeight: 'bold' }}>{play.wristbandSlot}</span>}
                                 {!isLocked && <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px', fontSize: '1.2em', lineHeight: '1' }} onClick={() => onUpdate(null)}>×</button>}
                             </div>
                         ) : (
                             !isLocked && (
-                                <input
-                                    placeholder={placeholder}
-                                    style={{ width: '100%', border: 'none', fontSize: '0.9rem', background: 'transparent', outline: 'none' }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            if (onQuickAddPlay) {
-                                                const newPlay = onQuickAddPlay(e.target.value);
-                                                onUpdate(newPlay.id);
-                                                e.target.value = '';
-                                            }
-                                        }
-                                    }}
-                                />
+                                <div style={{ position: 'relative', width: '100%' }}>
+                                    <input
+                                        ref={inputRef}
+                                        placeholder={placeholder}
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setShowDropdown(true);
+                                        }}
+                                        onFocus={() => setShowDropdown(true)}
+                                        onKeyDown={handleKeyDown}
+                                        style={{ width: '100%', border: 'none', fontSize: '0.9rem', background: 'transparent', outline: 'none' }}
+                                    />
+                                    {showDropdown && searchTerm && (
+                                        <div
+                                            ref={dropdownRef}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                width: '300px', // Wider than input
+                                                maxHeight: '200px',
+                                                overflowY: 'auto',
+                                                background: 'white',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                                zIndex: 1000,
+                                                marginTop: '4px'
+                                            }}
+                                        >
+                                            {filteredResults.map((p, idx) => (
+                                                <div
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        onUpdate(p.id);
+                                                        setShowDropdown(false);
+                                                        setSearchTerm('');
+                                                    }}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        fontSize: '0.85rem',
+                                                        cursor: 'pointer',
+                                                        background: idx === selectedIndex ? '#f1f5f9' : 'white',
+                                                        borderBottom: '1px solid #f1f5f9',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                                    }}
+                                                    onMouseEnter={() => setSelectedIndex(idx)}
+                                                >
+                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <span style={{ fontWeight: 'bold' }}>{p.name}</span>
+                                                        <span style={{ fontSize: '0.7em', color: '#64748b' }}>{p.formation} :: {p.concept}</span>
+                                                    </div>
+                                                    {p.wristbandSlot && (
+                                                        <div style={{ fontSize: '0.7em', background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '12px', fontWeight: 'bold' }}>
+                                                            {p.wristbandSlot}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {filteredResults.length === 0 && (
+                                                <div style={{ padding: '8px', fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>
+                                                    Press Enter to create "{searchTerm}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             )
                         )}
                     </div>
@@ -30872,6 +31032,7 @@
                                     newLayouts.CALL_SHEET.sections[sectionIdx].boxes.splice(boxIdx, 1);
                                     if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                     setEditingHeader(null);
+                                    setEditingBox(null);
                                 }
                             }}
                             style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.7rem', padding: '6px', borderRadius: '4px', border: '1px solid #fca5a5' }}
@@ -30897,7 +31058,7 @@
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }} onClick={() => setEditingBox(null)}>
                         <div style={{
-                            width: '90%', maxWidth: '800px', maxHeight: '90vh',
+                            width: '95%', maxWidth: '1200px', maxHeight: '90vh',
                             background: 'white', borderRadius: '8px',
                             display: 'flex', flexDirection: 'column',
                             overflow: 'hidden'
@@ -30924,18 +31085,62 @@
                         {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
 
                         <div style={{ flex: 1 }}>
+                            {/* Header Row */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr', gap: '4px', marginBottom: '4px' }}>
+                                <div></div>
+                                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center', textTransform: 'uppercase' }}>LEFT HASH</div>
+                                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center', textTransform: 'uppercase' }}>RIGHT HASH</div>
+                            </div>
+
                             {rows.map((row, rowIdx) => (
                                 <React.Fragment key={row.id || rowIdx}>
-                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
-                                        <PlaySlot
-                                            playId={row.content}
-                                            isLocked={isLocked}
-                                            onUpdate={(pid) => {
-                                                const newLayouts = { ...gamePlanLayouts };
-                                                newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].content = pid;
-                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                            }}
-                                        />
+                                    <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr', gap: '4px', alignItems: 'stretch' }}>
+
+                                        {/* Editable Label Column */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <input
+                                                value={row.label || (rowIdx + 1).toString()}
+                                                onChange={(e) => {
+                                                    const newLayouts = { ...gamePlanLayouts };
+                                                    const targetRow = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx];
+                                                    targetRow.label = e.target.value;
+                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                }}
+                                                style={{
+                                                    width: '100%', textAlign: 'center', fontWeight: 'bold',
+                                                    border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.9rem',
+                                                    padding: '8px 4px', borderRadius: '4px', background: !isLocked ? 'white' : 'transparent',
+                                                    height: '100%'
+                                                }}
+                                                disabled={isLocked}
+                                            />
+                                        </div>
+
+                                        {/* Left Play Slot */}
+                                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
+                                            <PlaySlot
+                                                playId={row.content}
+                                                isLocked={isLocked}
+                                                onUpdate={(pid) => {
+                                                    const newLayouts = { ...gamePlanLayouts };
+                                                    newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].content = pid;
+                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                }}
+                                            />
+                                        </div>
+
+                                        {/* Right Play Slot */}
+                                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
+                                            <PlaySlot
+                                                playId={row.contentRight}
+                                                isLocked={isLocked}
+                                                onUpdate={(pid) => {
+                                                    const newLayouts = { ...gamePlanLayouts };
+                                                    newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].contentRight = pid;
+                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                }}
+                                            />
+                                        </div>
                                     </div>
 
                                     {rowIdx < rows.length - 1 && (
@@ -30980,7 +31185,7 @@
                                         const newLayouts = { ...gamePlanLayouts };
                                         const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
                                         if (!b.rows) b.rows = [];
-                                        b.rows.push({ content: null, id: `slot_${Date.now()}` });
+                                        b.rows.push({ content: null, contentRight: null, id: `slot_${Date.now()}` });
                                         if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                     }}
                                 >
@@ -31074,7 +31279,7 @@
                     <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', height: '100%' }}>
                         {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(60px, auto) repeat(4, 1fr)', gap: '4px', marginBottom: '8px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '50px repeat(4, 1fr)', gap: '1px', marginBottom: '8px' }}>
                             <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {isEditing ? (
                                     <input
@@ -31112,21 +31317,68 @@
                             ))}
                         </div>
 
-                        <div
-                            style={{ minHeight: '60px', cursor: isLocked ? 'default' : 'pointer', background: '#f8fafc', borderRadius: '4px', padding: '6px', border: '1px dashed #e2e8f0', flex: 1 }}
-                            onClick={() => !isLocked && !isEditing && openPlaySelector(box.setId)}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
-                        >
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                                {assignedPlays.map((p, idx) => (
-                                    <div key={idx} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1e293b' }}>
-                                        • {p.name}
-                                    </div>
-                                ))}
-                                {assignedPlays.length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', paddingTop: '10px' }}>Click to select plays</div>}
+                        {isEditing ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: '50px repeat(4, 1fr)', gap: '1px', background: '#e2e8f0', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                {/* Render 5 Rows */}
+                                {Array.from({ length: 5 }).map((_, rIdx) => {
+                                    const rowStartIdx = rIdx * 4;
+                                    const rowPlays = allPlays.slice(rowStartIdx, rowStartIdx + 4);
+
+                                    return (
+                                        <React.Fragment key={rIdx}>
+                                            {/* Row Label */}
+                                            <div style={{ background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', borderRight: '1px solid #e2e8f0' }}>
+                                                <input
+                                                    value={(box.rowLabels && box.rowLabels[rIdx]) || ''}
+                                                    onChange={(e) => {
+                                                        const newLayouts = { ...gamePlanLayouts };
+                                                        const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                        if (!b.rowLabels) b.rowLabels = [];
+                                                        b.rowLabels[rIdx] = e.target.value;
+                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                    }}
+                                                    placeholder={(rIdx + 1).toString()}
+                                                    style={{ width: '100%', fontSize: '0.65rem', padding: '2px', textAlign: 'center', border: '1px solid transparent', background: 'transparent', fontWeight: 'bold', color: '#64748b' }}
+                                                    onFocus={e => e.target.style.borderColor = '#ddd'}
+                                                    onBlur={e => e.target.style.borderColor = 'transparent'}
+                                                />
+                                            </div>
+
+                                            {/* Row Plays (4 columns) */}
+                                            {rowPlays.map((p, colIdx) => {
+                                                const globalIdx = rowStartIdx + colIdx;
+                                                return (
+                                                    <div key={colIdx} style={{ background: 'white', minHeight: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                                                        <PlaySlot
+                                                            playId={p?.type === 'GAP' ? null : p?.id}
+                                                            isLocked={isLocked}
+                                                            placeholder="+"
+                                                            onUpdate={(pid) => handleGridCellUpdate(box.setId, globalIdx, pid)}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </React.Fragment>
+                                    );
+                                })}
                             </div>
-                        </div>
+                        ) : (
+                            <div
+                                style={{ minHeight: '60px', cursor: isLocked ? 'default' : 'pointer', background: '#f8fafc', borderRadius: '4px', padding: '6px', border: '1px dashed #e2e8f0', flex: 1 }}
+                                onClick={() => !isLocked && openPlaySelector(box.setId)}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                            >
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                    {assignedPlays.map((p, idx) => (
+                                        <div key={idx} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1e293b' }}>
+                                            • {p.name}
+                                        </div>
+                                    ))}
+                                    {assignedPlays.length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', paddingTop: '10px' }}>Click to select plays</div>}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Custom Note Section Display */}
                         {box.notes && (
@@ -31138,6 +31390,109 @@
                     </div>
                 );
             };
+
+            const renderGridSection = (section, sectionIdx) => {
+                const headings = section.gridHeadings || ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                const allPlays = getGridPlays(section.id);
+                // For a full section grid (20 slots = 5 rows x 4 cols) -> logic uses slice 0-19 implicitly if length 5
+                const assignedPlays = allPlays;
+
+                return (
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', height: '100%', background: 'white', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '50px repeat(4, 1fr)', gap: '1px', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {!isLocked ? (
+                                    <input
+                                        value={section.cornerLabel || ''}
+                                        onChange={(e) => {
+                                            const newLayouts = { ...gamePlanLayouts };
+                                            newLayouts.CALL_SHEET.sections[sectionIdx].cornerLabel = e.target.value;
+                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                        }}
+                                        style={{ width: '100%', fontSize: '0.6rem', border: 'none', background: 'transparent', textAlign: 'center', color: '#94a3b8' }}
+                                        placeholder="Label..."
+                                    />
+                                ) : (
+                                    section.cornerLabel || ''
+                                )}
+                            </div>
+                            {headings.map((h, hIdx) => (
+                                <div key={hIdx} style={{ textAlign: 'center' }}>
+                                    {!isLocked ? (
+                                        <input
+                                            value={h}
+                                            onChange={(e) => {
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const newSections = [...newLayouts.CALL_SHEET.sections];
+                                                const newHeadings = [...(newSections[sectionIdx].gridHeadings || ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'])];
+                                                newHeadings[hIdx] = e.target.value;
+                                                newSections[sectionIdx] = { ...newSections[sectionIdx], gridHeadings: newHeadings };
+                                                newLayouts.CALL_SHEET = { ...newLayouts.CALL_SHEET, sections: newSections };
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            }}
+                                            style={{ width: '100%', fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center', border: 'none', background: 'transparent' }}
+                                        />
+                                    ) : (
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b' }}>{h}</div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                            {Array.from({ length: 5 }).map((_, rIdx) => {
+                                const startIdx = rIdx * 4;
+                                const rowPlays = allPlays.slice(startIdx, startIdx + 4);
+                                const rowLabel = (section.rowLabels || ['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5'])[rIdx];
+
+                                return (
+                                    <div key={rIdx} style={{ display: 'grid', gridTemplateColumns: '50px repeat(4, 1fr)', gap: '1px', flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', borderRadius: '4px' }}>
+                                            {!isLocked ? (
+                                                <input
+                                                    value={rowLabel || ''}
+                                                    onChange={(e) => {
+                                                        const newLayouts = { ...gamePlanLayouts };
+                                                        const newSections = [...newLayouts.CALL_SHEET.sections];
+                                                        const newLabels = [...(newSections[sectionIdx].rowLabels || ['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5'])];
+                                                        newLabels[rIdx] = e.target.value;
+                                                        newSections[sectionIdx] = { ...newSections[sectionIdx], rowLabels: newLabels };
+                                                        newLayouts.CALL_SHEET = { ...newLayouts.CALL_SHEET, sections: newSections };
+                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                    }}
+                                                    style={{ width: '100%', fontSize: '0.65rem', fontWeight: '600', color: '#475569', textAlign: 'center', border: 'none', background: 'transparent', padding: '0' }}
+                                                />
+                                            ) : (
+                                                <span style={{ fontSize: '0.65rem', fontWeight: '600', color: '#475569' }}>{rowLabel}</span>
+                                            )}
+                                        </div>
+                                        {rowPlays.map((play, cIdx) => (
+                                            <div key={cIdx} style={{ position: 'relative', height: '100%', minHeight: '50px' }}>
+                                                <PlaySlot
+                                                    playId={play.type === 'GAP' ? null : play.id}
+                                                    onUpdate={(newPlayId) => {
+                                                        handleGridCellUpdate(section.id, startIdx + cIdx, newPlayId);
+                                                    }}
+                                                    isLocked={isLocked}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderScriptSection = (section, sectionIdx) => {
+                return (
+                    <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1rem' }}>
+                        <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>Script Section (Use Modular + Script Box for now)</div>
+                    </div>
+                );
+            };
+            const renderFieldPositionSection = (section, sectionIdx) => renderGridSection(section, sectionIdx);
 
             const renderBox = (box, sectionIdx, boxIdx) => {
                 const isEditing = editingHeader && editingHeader.sectionIdx === sectionIdx && editingHeader.rowIdx === boxIdx;
@@ -31239,11 +31594,70 @@
                 const miniScripts = gamePlan.miniScripts || [];
 
                 return (
-                    <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', paddingRight: '1rem', background: 'white', padding: '1rem', borderRadius: '8px' }}>
+                    <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', background: 'white', borderRadius: '8px', position: 'relative' }}>
                         {/* CONTROL BAR */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem', gap: '0.5rem', alignItems: 'center' }}>
+                        <div style={{ position: 'sticky', top: 0, zIndex: 40, backgroundColor: 'white', padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', alignItems: 'center' }}>
                             {!isLocked && (
                                 <>
+                                    {/* Layout Versions Dropdown */}
+                                    <div style={{ position: 'relative', display: 'inline-block', marginRight: '0.5rem' }}>
+                                        <button
+                                            className="btn btn-sm"
+                                            onClick={(e) => {
+                                                const menu = e.currentTarget.nextElementSibling;
+                                                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                                            }}
+                                            onBlur={(e) => {
+                                                // Small delay to allow clicking items
+                                                setTimeout(() => {
+                                                    if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = 'none';
+                                                }, 200);
+                                            }}
+                                            style={{ fontSize: '0.75rem', background: '#e5e7eb', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                            <Icon name="Save" size={14} /> Layout Versions
+                                        </button>
+                                        <div style={{ display: 'none', position: 'absolute', top: '100%', right: 0, zIndex: 50, background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minWidth: '200px', padding: '0.5rem' }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem', paddingBottom: '0.25rem', borderBottom: '1px solid #e2e8f0' }}>SAVED LAYOUTS</div>
+
+                                            <button
+                                                className="btn btn-xs btn-primary"
+                                                style={{ width: '100%', marginBottom: '0.5rem', fontSize: '0.75rem' }}
+                                                onMouseDown={() => {
+                                                    const name = prompt("Name this layout version:");
+                                                    if (name && onSaveLayoutVersion) onSaveLayoutVersion(name);
+                                                }}
+                                            >
+                                                + Save Current Layout
+                                            </button>
+
+                                            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                                {Object.keys(layoutVersions).length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.25rem' }}>No saved layouts</div>}
+                                                {Object.keys(layoutVersions).map(versionName => (
+                                                    <div key={versionName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.25rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#334155' }}>{versionName}</span>
+                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                            <button
+                                                                title="Load"
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', padding: '2px' }}
+                                                                onMouseDown={() => onLoadLayoutVersion && onLoadLayoutVersion(versionName)}
+                                                            >
+                                                                <Icon name="Download" size={12} />
+                                                            </button>
+                                                            <button
+                                                                title="Delete"
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px' }}
+                                                                onMouseDown={() => onDeleteLayoutVersion && onDeleteLayoutVersion(versionName)}
+                                                            >
+                                                                <Icon name="Trash2" size={12} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {confirmResetLayout ? (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 'bold' }}>Reset?</span>
@@ -31287,7 +31701,7 @@
                                             onBlur={() => setIsCreatingScript(false)}
                                         />
                                     ) : (
-                                        <button onClick={() => setIsCreatingScript(true)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--primary)' }}>
+                                        <button onClick={() => setIsCreatingScript(true)} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--accent)', color: 'white' }}>
                                             + Add Script
                                         </button>
                                     )}
@@ -31302,6 +31716,7 @@
                                         sheet.sections.push({
                                             id: `section_${Date.now()}`,
                                             title: 'New Section',
+                                            type: 'unconfigured',
                                             color: '#1e293b',
                                             boxes: []
                                         });
@@ -31322,263 +31737,350 @@
 
                         {/* PLAYER TOUCHES SUMMARY */}
 
-                        {layout.sections.map((section, idx) => (
-                            <div
-                                key={idx}
-                                draggable={!isLocked}
-                                onDragStart={(e) => handleSectionDragStart(e, idx)}
-                                onDragOver={handleSectionDragOver}
-                                onDrop={(e) => handleSectionDrop(e, idx)}
-                                style={{
-                                    marginBottom: '2rem',
-                                    cursor: !isLocked ? 'grab' : 'default',
-                                    opacity: draggedSection?.sectionIdx === idx ? 0.5 : 1,
-                                    border: draggedSection && draggedSection.sectionIdx !== idx ? '2px dashed #cbd5e1' : 'none',
-                                    borderRadius: '8px',
-                                    padding: draggedSection ? '0.5rem' : '0',
-                                    transition: 'opacity 0.2s, border 0.2s'
-                                }}
-                            >
-                                {/* Section Header */}
-                                {section.title && (
-                                    <div
-                                        style={{ marginBottom: '1rem', borderBottom: '2px solid #ddd', paddingBottom: '0.25rem', position: 'relative' }}
-                                        onDragOver={(e) => {
-                                            if (isLocked) return;
-                                            e.preventDefault();
-                                            e.dataTransfer.dropEffect = 'move';
-                                        }}
-                                        onDrop={(e) => {
-                                            if (isLocked || !draggedCell) return;
-                                            e.preventDefault();
-
-                                            // If dropped on the same section, do nothing (or maybe move to top?)
-                                            if (draggedCell.sectionIdx === idx) return;
-
-                                            // Move dragged item to this section
-                                            const newLayouts = { ...gamePlanLayouts };
-                                            const sheet = { ...newLayouts.CALL_SHEET };
-                                            sheet.sections = [...sheet.sections];
-
-                                            // Source
-                                            const sourceBoxes = [...sheet.sections[draggedCell.sectionIdx].boxes];
-                                            const itemToMove = sourceBoxes[draggedCell.rowIdx];
-                                            sourceBoxes.splice(draggedCell.rowIdx, 1);
-                                            sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], boxes: sourceBoxes };
-
-                                            // Target (Append to this section)
-                                            const targetBoxes = [...sheet.sections[idx].boxes, itemToMove];
-                                            sheet.sections[idx] = { ...sheet.sections[idx], boxes: targetBoxes };
-
-                                            newLayouts.CALL_SHEET = sheet;
-                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                            setDraggedCell(null);
-                                        }}
-                                    >
-                                        {/* Editable Title with Drag Handle */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            {!isLocked && (
-                                                <span
-                                                    style={{
-                                                        cursor: 'grab',
-                                                        fontSize: '1.2rem',
-                                                        opacity: 0.5,
-                                                        userSelect: 'none',
-                                                        lineHeight: 1
-                                                    }}
-                                                    title="Drag to reorder section"
-                                                >
-                                                    ⋮⋮
-                                                </span>
-                                            )}
-                                            <h3
-                                                style={{ fontSize: '1.1rem', fontWeight: 'bold', color: section.headerColor || '#1e293b', margin: 0, cursor: !isLocked ? 'pointer' : 'default', textTransform: 'uppercase', display: 'inline-block' }}
-                                                onClick={() => !isLocked && setEditingHeader({ sectionIdx: idx, isSectionTitle: true })}
-                                            >
-                                                {section.title}
-                                            </h3>
-                                        </div>
-
-                                        {/* Section Edit Menu */}
-                                        {editingHeader && editingHeader.sectionIdx === idx && editingHeader.isSectionTitle && (
-                                            <div style={{
-                                                position: 'absolute', top: '100%', left: 0, width: '250px', zIndex: 1000,
-                                                background: 'white', border: '1px solid #ccc', borderRadius: '4px',
-                                                boxShadow: '0 4px 10px rgba(0,0,0,0.2)', padding: '0.75rem',
-                                                display: 'flex', flexDirection: 'column', gap: '8px', color: '#1e293b',
-                                                marginTop: '4px'
+                        <div style={{ padding: '1rem' }}>
+                            {(layout?.sections || []).map((section, idx) => (
+                                <div
+                                    key={idx}
+                                    draggable={!isLocked}
+                                    onDragStart={(e) => handleSectionDragStart(e, idx)}
+                                    onDragOver={handleSectionDragOver}
+                                    onDrop={(e) => handleSectionDrop(e, idx)}
+                                    style={{
+                                        marginBottom: '2rem',
+                                        cursor: !isLocked ? 'grab' : 'default',
+                                        opacity: draggedSection?.sectionIdx === idx ? 0.5 : 1,
+                                        border: draggedSection && draggedSection.sectionIdx !== idx ? '2px dashed #cbd5e1' : 'none',
+                                        borderRadius: '8px',
+                                        padding: draggedSection ? '0.5rem' : '0',
+                                        transition: 'opacity 0.2s, border 0.2s'
+                                    }}
+                                >
+                                    {/* Section Header */}
+                                    {section.title && (
+                                        <div
+                                            style={{ marginBottom: '1rem', borderBottom: '2px solid #ddd', paddingBottom: '0.25rem', position: 'relative' }}
+                                            onDragOver={(e) => {
+                                                if (isLocked) return;
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'move';
                                             }}
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Edit Section</div>
+                                            onDrop={(e) => {
+                                                if (isLocked || !draggedCell) return;
+                                                e.preventDefault();
 
-                                                {/* Rename */}
-                                                <input
-                                                    autoFocus
-                                                    defaultValue={section.title}
-                                                    placeholder="Section Name..."
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            const newLayouts = { ...gamePlanLayouts };
-                                                            newLayouts.CALL_SHEET.sections[idx].title = e.target.value;
-                                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                            setEditingHeader(null);
-                                                        }
-                                                    }}
-                                                    style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '6px', fontSize: '0.9rem', color: '#0f172a' }}
-                                                />
+                                                // If dropped on the same section, do nothing (or maybe move to top?)
+                                                if (draggedCell.sectionIdx === idx) return;
 
-                                                {/* Color Picker */}
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Header Color</label>
-                                                    <input
-                                                        type="color"
-                                                        value={section.headerColor || '#1e293b'}
-                                                        onChange={(e) => {
-                                                            const newLayouts = { ...gamePlanLayouts };
-                                                            newLayouts.CALL_SHEET.sections[idx].headerColor = e.target.value;
-                                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                // Move dragged item to this section
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const sheet = { ...newLayouts.CALL_SHEET };
+                                                sheet.sections = [...sheet.sections];
+
+                                                // Source
+                                                const sourceBoxes = [...sheet.sections[draggedCell.sectionIdx].boxes];
+                                                const itemToMove = sourceBoxes[draggedCell.rowIdx];
+                                                sourceBoxes.splice(draggedCell.rowIdx, 1);
+                                                sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], boxes: sourceBoxes };
+
+                                                // Target (Append to this section)
+                                                const targetBoxes = [...sheet.sections[idx].boxes, itemToMove];
+                                                sheet.sections[idx] = { ...sheet.sections[idx], boxes: targetBoxes };
+
+                                                newLayouts.CALL_SHEET = sheet;
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                setDraggedCell(null);
+                                            }}
+                                        >
+                                            {/* Editable Title with Drag Handle */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {!isLocked && (
+                                                    <span
+                                                        style={{
+                                                            cursor: 'grab',
+                                                            fontSize: '1.2rem',
+                                                            opacity: 0.5,
+                                                            userSelect: 'none',
+                                                            lineHeight: 1
                                                         }}
-                                                        style={{ width: '100%', height: '32px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer' }}
-                                                    />
-                                                </div>
-
-                                                {/* Delete Section */}
-                                                {idx > 0 && (
+                                                        title="Drag to reorder section"
+                                                    >
+                                                        ⋮⋮
+                                                    </span>
+                                                )}
+                                                <h3
+                                                    style={{ fontSize: '1.1rem', fontWeight: 'bold', color: section.headerColor || '#1e293b', margin: 0, cursor: !isLocked ? 'pointer' : 'default', textTransform: 'uppercase', display: 'inline-block' }}
+                                                    onClick={() => !isLocked && setEditingHeader({ sectionIdx: idx, isSectionTitle: true })}
+                                                >
+                                                    {section.title}
+                                                </h3>
+                                                {!isLocked && (
                                                     <button
-                                                        className="btn-sm"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            if (window.confirm('Delete this section? All boxes will move to the section above.')) {
-                                                                const newLayouts = { ...gamePlanLayouts };
-                                                                const sheet = { ...newLayouts.CALL_SHEET };
-                                                                sheet.sections = [...sheet.sections];
-
-                                                                // Move all boxes from this section to the previous section
-                                                                const currentSectionBoxes = [...sheet.sections[idx].boxes];
-                                                                const previousSectionBoxes = [...sheet.sections[idx - 1].boxes];
-                                                                sheet.sections[idx - 1] = {
-                                                                    ...sheet.sections[idx - 1],
-                                                                    boxes: [...previousSectionBoxes, ...currentSectionBoxes]
-                                                                };
-
-                                                                // Remove this section
-                                                                sheet.sections.splice(idx, 1);
-
-                                                                newLayouts.CALL_SHEET = sheet;
-                                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                            }
-                                                            setEditingHeader(null);
+                                                            setEditingHeader({ sectionIdx: idx, isSectionTitle: true });
                                                         }}
                                                         style={{
-                                                            background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5',
-                                                            width: '100%', fontSize: '0.8rem', padding: '6px', cursor: 'pointer',
-                                                            borderRadius: '4px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px'
+                                                            background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8',
+                                                            padding: '4px', display: 'flex', alignItems: 'center'
                                                         }}
+                                                        title="Edit Section"
                                                     >
-                                                        <Icon name="Trash2" size={12} /> Delete Section
+                                                        <Icon name="Edit2" size={14} />
                                                     </button>
                                                 )}
+                                            </div>
 
-                                                <div style={{ textAlign: 'right', marginTop: '4px' }}>
-                                                    <span
-                                                        style={{ fontSize: '0.75rem', color: '#64748b', cursor: 'pointer', textDecoration: 'underline' }}
-                                                        onClick={() => setEditingHeader(null)}
-                                                    >
-                                                        Close
-                                                    </span>
+                                            {/* Section Edit Menu */}
+                                            {editingHeader && editingHeader.sectionIdx === idx && editingHeader.isSectionTitle && (
+                                                <div style={{
+                                                    position: 'absolute', top: '100%', left: 0, width: '250px', zIndex: 1000,
+                                                    background: 'white', border: '1px solid #ccc', borderRadius: '4px',
+                                                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)', padding: '0.75rem',
+                                                    display: 'flex', flexDirection: 'column', gap: '8px', color: '#1e293b',
+                                                    marginTop: '4px'
+                                                }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Edit Section</div>
+
+                                                    {/* Rename */}
+                                                    <input
+                                                        autoFocus
+                                                        defaultValue={section.title}
+                                                        placeholder="Section Name..."
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                const newLayouts = { ...gamePlanLayouts };
+                                                                newLayouts.CALL_SHEET.sections[idx].title = e.target.value;
+                                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                                setEditingHeader(null);
+                                                            }
+                                                        }}
+                                                        style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '6px', fontSize: '0.9rem', color: '#0f172a' }}
+                                                    />
+
+                                                    {/* Layout Type */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Layout Type</label>
+                                                        <select
+                                                            value={section.type === 'grid' || section.type === 'field_position' ? 'grid' : 'modular'}
+                                                            onChange={(e) => {
+                                                                const newLayouts = { ...gamePlanLayouts };
+                                                                const newType = e.target.value;
+                                                                newLayouts.CALL_SHEET.sections[idx].type = newType;
+
+                                                                if (newType === 'grid') {
+                                                                    if (!newLayouts.CALL_SHEET.sections[idx].gridHeadings) {
+                                                                        newLayouts.CALL_SHEET.sections[idx].gridHeadings = ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                                                                    }
+                                                                    if (!newLayouts.CALL_SHEET.sections[idx].rowLabels) {
+                                                                        newLayouts.CALL_SHEET.sections[idx].rowLabels = ['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5'];
+                                                                    }
+                                                                } else {
+                                                                    // Ensure boxes array exists if switching to modular
+                                                                    if (!newLayouts.CALL_SHEET.sections[idx].boxes) {
+                                                                        newLayouts.CALL_SHEET.sections[idx].boxes = [];
+                                                                    }
+                                                                }
+
+                                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                            }}
+                                                            style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '6px', fontSize: '0.9rem', color: '#0f172a', background: 'white' }}
+                                                        >
+                                                            <option value="modular">Modular Container</option>
+                                                            <option value="grid">Stand-alone Grid</option>
+                                                        </select>
+                                                    </div>
+
+                                                    {/* Color Picker */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Header Color</label>
+                                                        <input
+                                                            type="color"
+                                                            value={section.headerColor || '#1e293b'}
+                                                            onChange={(e) => {
+                                                                const newLayouts = { ...gamePlanLayouts };
+                                                                newLayouts.CALL_SHEET.sections[idx].headerColor = e.target.value;
+                                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                            }}
+                                                            style={{ width: '100%', height: '32px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer' }}
+                                                        />
+                                                    </div>
+
+                                                    {/* Delete Section */}
+                                                    {idx >= 0 && (
+                                                        <button
+                                                            className="btn-sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (window.confirm('Delete this section? All boxes will move to the section above.')) {
+                                                                    const newLayouts = { ...gamePlanLayouts };
+                                                                    const sheet = { ...newLayouts.CALL_SHEET };
+                                                                    sheet.sections = [...sheet.sections];
+
+                                                                    // Move all boxes from this section to the previous section
+                                                                    // If idx is 0, we can't move to previous. Just delete? Or warn?
+                                                                    // If idx > 0
+                                                                    if (idx > 0) {
+                                                                        const currentSectionBoxes = [...sheet.sections[idx].boxes];
+                                                                        const previousSectionBoxes = [...sheet.sections[idx - 1].boxes];
+                                                                        sheet.sections[idx - 1] = {
+                                                                            ...sheet.sections[idx - 1],
+                                                                            boxes: [...previousSectionBoxes, ...currentSectionBoxes]
+                                                                        };
+                                                                    } else {
+                                                                        // Index 0, just delete? Or maybe move to next? 
+                                                                        // Let's just delete for now, user confirmed.
+                                                                    }
+
+                                                                    // Remove this section
+                                                                    sheet.sections.splice(idx, 1);
+
+                                                                    newLayouts.CALL_SHEET = sheet;
+                                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                                }
+                                                                setEditingHeader(null);
+                                                            }}
+                                                            style={{
+                                                                background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5',
+                                                                width: '100%', fontSize: '0.8rem', padding: '6px', cursor: 'pointer',
+                                                                borderRadius: '4px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px'
+                                                            }}
+                                                        >
+                                                            <Icon name="Trash2" size={12} /> Delete Section
+                                                        </button>
+                                                    )}
+
+                                                    <div style={{ textAlign: 'right', marginTop: '4px' }}>
+                                                        <span
+                                                            style={{ fontSize: '0.75rem', color: '#64748b', cursor: 'pointer', textDecoration: 'underline' }}
+                                                            onClick={() => setEditingHeader(null)}
+                                                        >
+                                                            Close
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Content based on Type */}
+                                    {section.type === 'unconfigured' ? (
+                                        <div style={{
+                                            border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '3rem',
+                                            background: '#f8fafc',
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem'
+                                        }}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.5rem' }}>Configuration Required</h3>
+                                                <p style={{ color: '#94a3b8' }}>Select a layout type for this section.</p>
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                                {/* OPTION 1: Stand-alone Grid */}
+                                                <div
+                                                    onClick={() => {
+                                                        const newLayouts = { ...gamePlanLayouts };
+                                                        newLayouts.CALL_SHEET.sections[idx].type = 'grid';
+                                                        newLayouts.CALL_SHEET.sections[idx].gridHeadings = ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                                                        newLayouts.CALL_SHEET.sections[idx].rowLabels = ['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5'];
+                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                    }}
+                                                    style={{
+                                                        background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '2rem',
+                                                        cursor: 'pointer', width: '220px', textAlign: 'center', transition: 'all 0.2s',
+                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                                >
+                                                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>▦</div>
+                                                    <div style={{ fontWeight: 'bold', color: '#334155', marginBottom: '0.5rem' }}>Stand-alone Grid</div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.4' }}>
+                                                        A single 5x4 "Strike 'Em Out" grid. Best for Field Zone or specialized situational sheets.
+                                                    </div>
+                                                </div>
+
+                                                {/* OPTION 2: Modular Section */}
+                                                <div
+                                                    onClick={() => {
+                                                        const newLayouts = { ...gamePlanLayouts };
+                                                        newLayouts.CALL_SHEET.sections[idx].type = 'modular'; // 'modular' triggers default box container layout
+                                                        newLayouts.CALL_SHEET.sections[idx].boxes = [];
+                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                    }}
+                                                    style={{
+                                                        background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '2rem',
+                                                        cursor: 'pointer', width: '220px', textAlign: 'center', transition: 'all 0.2s',
+                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                                >
+                                                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>▣</div>
+                                                    <div style={{ fontWeight: 'bold', color: '#334155', marginBottom: '0.5rem' }}>Modular Container</div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.4' }}>
+                                                        A flexible container. Add multiple Script Boxes, Grid Boxes, or mix and match.
+                                                    </div>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
+                                        </div>
+                                    ) : section.type === 'script' ? (
+                                        renderScriptSection(section, idx)
+                                    ) : section.type === 'grid' ? (
+                                        renderGridSection(section, idx)
+                                    ) : section.type === 'field_position' ? (
+                                        renderFieldPositionSection(section, idx)
+                                    ) : section.type === 'standard' ? (
+                                        renderStandardSection(section, idx)
+                                    ) : (
+                                        /* Default/Grid Layout */
+                                        <div
+                                            style={{
+                                                display: 'grid', gridTemplateColumns: `repeat(4, 1fr)`, gap: '4px',
+                                                minHeight: '100px', // Ensure empty sections are drop targets
+                                                border: isLocked ? 'none' : '1px dashed #cbd5e1', // Visual cue
+                                                borderRadius: '8px',
+                                                padding: '4px'
+                                            }}
+                                            onDragOver={(e) => {
+                                                if (isLocked) return;
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'move';
+                                            }}
+                                            onDrop={(e) => {
+                                                // This handles drop on empty space in section
+                                                if (isLocked || !draggedCell) return;
+                                                e.preventDefault();
+                                                e.stopPropagation();
 
-                                {/* Content based on Type */}
-                                {section.type === 'unconfigured' ? (
-                                    <div
-                                        onClick={() => setConfiguringSection({ idx })}
-                                        style={{
-                                            border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '2rem',
-                                            textAlign: 'center', cursor: 'pointer', background: '#f8fafc',
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                                        onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
-                                    >
-                                        <div style={{ fontSize: '2rem' }}>⚙️</div>
-                                        <div style={{ fontWeight: 'bold', color: '#64748b' }}>Configure Box</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Click to select layout type</div>
-                                    </div>
-                                ) : section.type === 'script' ? (
-                                    renderScriptSection(section, idx)
-                                ) : section.type === 'field_position' ? (
-                                    renderFieldPositionSection(section, idx)
-                                ) : section.type === 'standard' ? (
-                                    renderStandardSection(section, idx)
-                                ) : (
-                                    /* Default/Grid Layout */
-                                    <div
-                                        style={{
-                                            display: 'grid', gridTemplateColumns: `repeat(${Math.min(section.cols || 1, 4)}, 1fr)`, gap: '4px',
-                                            minHeight: '100px', // Ensure empty sections are drop targets
-                                            border: isLocked ? 'none' : '1px dashed #cbd5e1', // Visual cue
-                                            borderRadius: '8px',
-                                            padding: '4px'
-                                        }}
-                                        onDragOver={(e) => {
-                                            if (isLocked) return;
-                                            e.preventDefault();
-                                            e.dataTransfer.dropEffect = 'move';
-                                        }}
-                                        onDrop={(e) => {
-                                            // This handles drop on empty space in section
-                                            if (isLocked || !draggedCell) return;
-                                            e.preventDefault();
-                                            e.stopPropagation();
+                                                if (draggedCell.sectionIdx === idx) return; // Same section, no-op if dropped on container (append? already there)
 
-                                            if (draggedCell.sectionIdx === idx) return; // Same section, no-op if dropped on container (append? already there)
+                                                // Move dragged item to this section (Append)
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const sheet = { ...newLayouts.CALL_SHEET };
+                                                sheet.sections = [...sheet.sections];
 
-                                            // Move dragged item to this section (Append)
-                                            const newLayouts = { ...gamePlanLayouts };
-                                            const sheet = { ...newLayouts.CALL_SHEET };
-                                            sheet.sections = [...sheet.sections];
+                                                const sourceBoxes = [...sheet.sections[draggedCell.sectionIdx].boxes];
+                                                const itemToMove = sourceBoxes[draggedCell.rowIdx];
+                                                sourceBoxes.splice(draggedCell.rowIdx, 1);
+                                                sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], boxes: sourceBoxes };
 
-                                            const sourceBoxes = [...sheet.sections[draggedCell.sectionIdx].boxes];
-                                            const itemToMove = sourceBoxes[draggedCell.rowIdx];
-                                            sourceBoxes.splice(draggedCell.rowIdx, 1);
-                                            sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], boxes: sourceBoxes };
+                                                const targetBoxes = [...sheet.sections[idx].boxes, itemToMove];
+                                                sheet.sections[idx] = { ...sheet.sections[idx], boxes: targetBoxes };
 
-                                            const targetBoxes = [...sheet.sections[idx].boxes, itemToMove];
-                                            sheet.sections[idx] = { ...sheet.sections[idx], boxes: targetBoxes };
-
-                                            newLayouts.CALL_SHEET = sheet;
-                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                            setDraggedCell(null);
-                                        }}
-                                    >
-                                        {(section.boxes || []).map((box, boxIdx) => renderBox(box, idx, boxIdx))}
-                                        {!isLocked && (
-                                            <div
-                                                onClick={() => handleAddBoxToSection(idx)}
-                                                style={{
-                                                    border: '2px dashed #cbd5e1', borderRadius: '4px',
-                                                    minHeight: '150px',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    cursor: 'pointer', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 'bold',
-                                                    transition: 'all 0.2s', background: '#f8fafc'
-                                                }}
-                                                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
-                                                onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#94a3b8'; }}
-                                            >
-                                                + Add Box
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                        }
+                                                newLayouts.CALL_SHEET = sheet;
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                setDraggedCell(null);
+                                            }}
+                                        >
+                                            {(section.boxes || []).map((box, boxIdx) => renderBox(box, idx, boxIdx))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                            }
+                        </div>
                     </div>
                 );
             };
@@ -31922,22 +32424,20 @@
                     section.cols = 1;
                     // Ensure rows exist
                     if (!section.rows) section.rows = [];
+                } else if (type === 'grid') {
+                    // Grid Section defaults
+                    if (!section.gridHeadings) section.gridHeadings = ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                    if (!section.rowLabels) section.rowLabels = ['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5'];
                 } else if (type === 'field_position') {
-                    // Field Position defaults
-                    section.cols = 5; // Label + 4 columns
-                    section.columnHeaders = ['Fastball', 'Curveball', 'Changeup', 'Strike Out'];
-                    section.rowLabels = ['Group 1', 'Group 2'];
-                    section.gridData = {}; // Map "r-c" -> playId
-                    section.rows = []; // Not used in this mode primarily
+                    // Field Position defaults -> Treat as Grid Section for now as per user request for "Strike Em Out" grid
+                    if (!section.gridHeadings) section.gridHeadings = ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                    if (!section.rowLabels) section.rowLabels = ['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5'];
+                    section.type = 'grid'; // Force to grid type internally to reuse logic
+                } else if (type === 'standard') {
                 } else if (type === 'standard') {
                     // Standard defaults (Spreadsheet)
                     section.cols = 1; // It renders as a list
                     if (!section.rows) section.rows = [];
-                } else if (type === 'grid') {
-                    // Situational Grid defaults
-                    section.cols = 4;
-                    if (!section.rows) section.rows = [];
-                    // Optionally add one initial box?
                 }
 
                 sheet.sections[sectionIdx] = section;
@@ -36819,6 +37319,29 @@
             // Layout Persistence
             const [dumbCallSheetData, setDumbCallSheetData] = useLocalStorage('dumbCallSheetData', {});
             const [gamePlanLayouts, setGamePlanLayouts] = useLocalStorage('gamePlanLayouts', GAME_PLAN_LAYOUTS);
+            const [layoutVersions, setLayoutVersions] = useLocalStorage('gamePlanLayoutVersions', {});
+
+            const saveLayoutVersion = (name) => {
+                if (!name) return;
+                const newVersions = { ...layoutVersions, [name]: gamePlanLayouts };
+                setLayoutVersions(newVersions);
+                alert(`Layout version "${name}" saved!`);
+            };
+
+            const deleteLayoutVersion = (name) => {
+                if (!confirm(`Delete layout version "${name}"?`)) return;
+                const newVersions = { ...layoutVersions };
+                delete newVersions[name];
+                setLayoutVersions(newVersions);
+            };
+
+            const loadLayoutVersion = (name) => {
+                const version = layoutVersions[name];
+                if (!version) return;
+                if (confirm(`Load layout version "${name}"? This will overwrite your current layout structure.`)) {
+                    setGamePlanLayouts(version);
+                }
+            };
 
             // Force update layout cols if they don't match constant (Migration for 4-col change)
             useEffect(() => {
@@ -38247,7 +38770,10 @@
 
 
 
-                                    {/* Moved Buttons */}
+                                    <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
+                                    </button>
+
                                     {currentPermissions.depth.view && (
                                         <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
                                             {(selectedLevel === 'ALL' || selectedLevel === 'Varsity') && (
@@ -38295,23 +38821,18 @@
                                         </CollapsibleCategory>
                                     )}
 
-                                    <CollapsibleCategory title="Scheme Setup" icon="BookOpen" defaultOpen={false} nested={true}>
-                                        <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Setup
-                                        </button>
-                                        <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Playbook
-                                        </button>
-                                        <button className={`nav-item ${view === 'formations-offense' ? 'active' : ''}`} onClick={() => setView('formations-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Formations
-                                        </button>
-                                        <button className={`nav-item ${view === 'glossary-offense' ? 'active' : ''}`} onClick={() => setView('glossary-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Glossary
-                                        </button>
-                                        <button className={`nav-item ${view === 'drill-library-offense' ? 'active' : ''}`} onClick={() => setView('drill-library-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Drill Library
-                                        </button>
-                                    </CollapsibleCategory>
+                                    <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Book" size={16} style={{ marginRight: '8px' }} /> Playbook
+                                    </button>
+                                    <button className={`nav-item ${view === 'formations-offense' ? 'active' : ''}`} onClick={() => setView('formations-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                    </button>
+                                    <button className={`nav-item ${view === 'glossary-offense' ? 'active' : ''}`} onClick={() => setView('glossary-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="AlignJustify" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                    </button>
+                                    <button className={`nav-item ${view === 'drill-library-offense' ? 'active' : ''}`} onClick={() => setView('drill-library-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                    </button>
 
                                     {currentPermissions.callsheet.view && (
                                         <>
@@ -38355,6 +38876,10 @@
                             {/* DEFENSE CATEGORY */}
                             {visibleFeatures.gameWeek?.enabled && (
                                 <CollapsibleCategory title="DEFENSE" icon="Shield" defaultOpen={false}>
+                                    <button className={`nav-item ${view === 'defense-setup' ? 'active' : ''}`} onClick={() => setView('defense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Defense Setup
+                                    </button>
+
                                     {/* Defense Depth Charts */}
                                     {currentPermissions.depth.view && (
                                         <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
@@ -38391,26 +38916,25 @@
                                         </CollapsibleCategory>
                                     )}
 
-                                    <CollapsibleCategory title="Scheme Setup" icon="BookOpen" defaultOpen={false} nested={true}>
-                                        <button className={`nav-item ${view === 'defense-setup' ? 'active' : ''}`} onClick={() => setView('defense-setup')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Setup
-                                        </button>
-                                        <button className={`nav-item ${view === 'formations-defense' ? 'active' : ''}`} onClick={() => setView('formations-defense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Formations
-                                        </button>
-                                        <button className={`nav-item ${view === 'glossary-defense' ? 'active' : ''}`} onClick={() => setView('glossary-defense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Glossary
-                                        </button>
-                                        <button className={`nav-item ${view === 'drill-library-defense' ? 'active' : ''}`} onClick={() => setView('drill-library-defense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Drill Library
-                                        </button>
-                                    </CollapsibleCategory>
+                                    <button className={`nav-item ${view === 'formations-defense' ? 'active' : ''}`} onClick={() => setView('formations-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                    </button>
+                                    <button className={`nav-item ${view === 'glossary-defense' ? 'active' : ''}`} onClick={() => setView('glossary-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="AlignJustify" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                    </button>
+                                    <button className={`nav-item ${view === 'drill-library-defense' ? 'active' : ''}`} onClick={() => setView('drill-library-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                    </button>
                                 </CollapsibleCategory>
                             )}
 
                             {/* SPECIAL TEAMS CATEGORY */}
                             {visibleFeatures.gameWeek?.enabled && (
                                 <CollapsibleCategory title="SPECIAL TEAMS" icon="Compass" defaultOpen={false}>
+                                    <button className={`nav-item ${view === 'st-setup' ? 'active' : ''}`} onClick={() => setView('st-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Special Teams Setup
+                                    </button>
+
                                     {/* Special Teams Depth Charts */}
                                     {currentPermissions.depth.view && (
                                         <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
@@ -38438,20 +38962,15 @@
                                         </CollapsibleCategory>
                                     )}
 
-                                    <CollapsibleCategory title="Scheme Setup" icon="BookOpen" defaultOpen={false} nested={true}>
-                                        <button className={`nav-item ${view === 'st-setup' ? 'active' : ''}`} onClick={() => setView('st-setup')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Setup
-                                        </button>
-                                        <button className={`nav-item ${view === 'formations-st' ? 'active' : ''}`} onClick={() => setView('formations-st')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Formations
-                                        </button>
-                                        <button className={`nav-item ${view === 'glossary-st' ? 'active' : ''}`} onClick={() => setView('glossary-st')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Glossary
-                                        </button>
-                                        <button className={`nav-item ${view === 'drill-library-st' ? 'active' : ''}`} onClick={() => setView('drill-library-st')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            Drill Library
-                                        </button>
-                                    </CollapsibleCategory>
+                                    <button className={`nav-item ${view === 'formations-st' ? 'active' : ''}`} onClick={() => setView('formations-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                    </button>
+                                    <button className={`nav-item ${view === 'glossary-st' ? 'active' : ''}`} onClick={() => setView('glossary-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="AlignJustify" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                    </button>
+                                    <button className={`nav-item ${view === 'drill-library-st' ? 'active' : ''}`} onClick={() => setView('drill-library-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                    </button>
                                 </CollapsibleCategory>
                             )}
 
@@ -39134,7 +39653,20 @@
                         {view === 'formations-st' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="SPECIAL_TEAMS" />}
 
                         {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan || { sets: [], miniScripts: [] }} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan || { sets: [] }} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handleUpdatePlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} />}
+                        {view === 'game-plan' && <OffensiveGamePlan
+                            plays={plays}
+                            gamePlan={currentWeek.offensiveGamePlan || { sets: [] }}
+                            onUpdateGamePlan={setGamePlan}
+                            onQuickAddPlay={handleQuickAddPlay}
+                            onUpdatePlay={handleUpdatePlay}
+                            gamePlanLayouts={gamePlanLayouts}
+                            onUpdateLayouts={setGamePlanLayouts}
+                            isLocked={currentWeek.isLocked}
+                            layoutVersions={layoutVersions}
+                            onSaveLayoutVersion={saveLayoutVersion}
+                            onDeleteLayoutVersion={deleteLayoutVersion}
+                            onLoadLayoutVersion={loadLayoutVersion}
+                        />}
 
                         {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
                         {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
