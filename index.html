@@ -6902,8 +6902,11 @@
                 }
 
                 const updatedSegments = plan.segments.map((seg, index) => {
-                    // Format as 12-hour time (e.g. 3:40 PM)
-                    const segStartTime = currentTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                    // Format as 12-hour time without AM/PM (e.g. 3:40)
+                    let hours = currentTime.getHours();
+                    const minutes = currentTime.getMinutes();
+                    hours = hours % 12 || 12; // Convert to 12-hour format
+                    const segStartTime = `${hours}:${minutes.toString().padStart(2, '0')}`;
 
                     // Add duration for next segment
                     currentTime.setMinutes(currentTime.getMinutes() + parseInt(seg.duration || 0));
@@ -7698,7 +7701,7 @@
                                                         onClick={e => e.stopPropagation()}
                                                     >
                                                         <option value="">-- Select Focus --</option>
-                                                        {['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', ...customFocusItems].map(f => (
+                                                        {['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', ...customFocusItems].map(f => (
                                                             <option key={f} value={f}>{f}</option>
                                                         ))}
                                                         <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
@@ -7963,7 +7966,7 @@
                                                             onClick={e => e.stopPropagation()}
                                                         >
                                                             <option value="">-- Select Type --</option>
-                                                            {['Competition', 'FUNDI', '7-on-7', 'Team', 'Team Stationary', 'Circuit', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Inside Run', 'Field Goal', 'Conditioning', 'Take-Off', 'Ghost Script', 'One-on-Ones', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Specials'].map(t => (
+                                                            {['Competition', 'Take-Off', 'Fundi', '7-on-7', 'Inside Run', 'Team', 'Team Stationary', 'Circuit', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Conditioning', 'Ghost Script', 'One-on-Ones'].map(t => (
                                                                 <option key={t} value={t}>{t}</option>
                                                             ))}
                                                         </select>
