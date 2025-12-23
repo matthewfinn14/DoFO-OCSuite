@@ -7608,7 +7608,13 @@
                                     >
                                         <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>0</td>
                                         <td style={{ padding: '0.5rem' }}>
-                                            {plan.startTime ? new Date(`2000-01-01T${plan.startTime}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : ''}
+                                            {plan.startTime ? (() => {
+                                                const date = new Date(`2000-01-01T${plan.startTime}`);
+                                                let hours = date.getHours();
+                                                const minutes = date.getMinutes();
+                                                hours = hours % 12 || 12;
+                                                return `${hours}:${minutes.toString().padStart(2, '0')}`;
+                                            })() : ''}
                                         </td>
                                         <td style={{ padding: '0.5rem' }}>
                                             <input
