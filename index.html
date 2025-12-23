@@ -6682,7 +6682,7 @@
                 ...globalTemplates
             ];
 
-            const focusItems = ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', ...(customFocusItems || [])];
+            const focusItems = ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Onside', 'Hands Team', ...(customFocusItems || [])];
 
             // Helper function to migrate old notes format to new format
             const isOffenseSegment = (type) => {
@@ -7707,7 +7707,7 @@
                                                         onClick={e => e.stopPropagation()}
                                                     >
                                                         <option value="">-- Select Focus --</option>
-                                                        {['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', ...customFocusItems].map(f => (
+                                                        {['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Onside', 'Hands Team', ...customFocusItems].map(f => (
                                                             <option key={f} value={f}>{f}</option>
                                                         ))}
                                                         <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
@@ -7972,7 +7972,7 @@
                                                             onClick={e => e.stopPropagation()}
                                                         >
                                                             <option value="">-- Select Type --</option>
-                                                            {['Competition', 'Take-Off', 'Fundi', '7-on-7', 'Inside Run', 'Team', 'Team Stationary', 'Circuit', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Conditioning', 'Ghost Script', 'One-on-Ones'].map(t => (
+                                                            {['Competition', 'Take-Off', 'Fundi', '7-on-7', 'Inside Run', 'Team', 'Team Stationary', 'Circuit', 'Specials', 'Conditioning', 'Ghost Script', 'One-on-Ones'].map(t => (
                                                                 <option key={t} value={t}>{t}</option>
                                                             ))}
                                                         </select>
