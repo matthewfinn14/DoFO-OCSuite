@@ -6642,6 +6642,195 @@
             );
         };
 
+        // --- HELPER FUNCTIONS & COMPONENTS ---
+        const isOffenseSegment = (type) => {
+            const offenseTypes = ['Team O', '7-on-7', 'Inside Run', 'Competition', 'O FUNDI', 'Take-Off', 'Goal Line', 'Short Yardage'];
+            return offenseTypes.includes(type);
+        };
+
+        const migrateSegmentNotes = (segment) => {
+            if (!segment.notes) {
+                return { ...segment, notes: {} };
+            }
+            if (typeof segment.notes === 'string') {
+                return {
+                    ...segment,
+                    notes: segment.notes ? { 'ALL_COACHES': segment.notes } : {}
+                };
+            }
+            return segment;
+        };
+
+        // --- NOTES MODAL COMPONENT (Re-implemented as top-level) ---
+        const NotesModal = ({ plan, updateCurrentPlan, staff, segmentId, onClose }) => {
+            if (!segmentId) return null;
+
+            const segment = segmentId === 'WARMUP'
+                ? { id: 'WARMUP', notes: plan.warmupNotes || {} }
+                : plan.segments.find(s => s.id == segmentId);
+
+            if (!segment) return null;
+
+            const migrated = segmentId === 'WARMUP'
+                ? { notes: plan.warmupNotes || {} }
+                : migrateSegmentNotes(segment);
+
+            // Helper to update notes
+            const handleUpdateNotes = (staffId, value) => {
+                const newNotes = { ...migrated.notes, [staffId]: value };
+
+                if (segmentId === 'WARMUP') {
+                    updateCurrentPlan({ ...plan, warmupNotes: newNotes });
+                } else {
+                    // Update segment in plan
+                    const updatedSegments = plan.segments.map(s =>
+                        s.id === segmentId ? { ...s, notes: newNotes } : s
+                    );
+                    updateCurrentPlan({ ...plan, segments: updatedSegments });
+                }
+            };
+
+            // Get staff
+            const allStaff = staff || [];
+            const coaches = allStaff.filter(s => {
+                const r = (s.role || '').toLowerCase();
+                return r.includes('coach') || s.type === 'Coach' || (!s.role && !s.type);
+            });
+            const managers = allStaff.filter(s => {
+                const r = (s.role || '').toLowerCase();
+                return r.includes('manager') || r === 'trainer' || r === 'stats';
+            });
+
+            return (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(2px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 10000, padding: '2rem'
+                    }}
+                    onClick={onClose}
+                >
+                    <div
+                        style={{
+                            backgroundColor: 'var(--bg-panel)',
+                            borderRadius: 'var(--radius)',
+                            border: '1px solid var(--border)',
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                            width: '100%', maxWidth: '900px', maxHeight: '85vh',
+                            display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div style={{
+                            padding: '1.25rem 1.5rem',
+                            borderBottom: '1px solid var(--border)',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: 'var(--bg-main)'
+                        }}>
+                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Icon name="FileText" size={18} />
+                                {segmentId === 'WARMUP' ? 'Warmup Notes' : `Segment Notes: ${segment.type} (${segment.duration}m)`}
+                            </h3>
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    background: 'transparent', border: 'none', color: 'var(--text-secondary)',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    padding: '4px', borderRadius: '4px'
+                                }}
+                            >
+                                <Icon name="X" size={20} />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg-app)' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border)' }}>
+                                <thead>
+                                    <tr style={{ background: 'var(--bg-main)', borderBottom: '2px solid var(--border)' }}>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', width: '30%', borderRight: '1px solid var(--border)' }}>Staff Member</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left' }}>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {/* Global Note */}
+                                    <tr style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
+                                        <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                            ALL COACHES
+                                        </td>
+                                        <td style={{ padding: '0.75rem' }}>
+                                            <textarea
+                                                className="form-input"
+                                                rows={2}
+                                                value={migrated.notes['ALL_COACHES'] || ''}
+                                                onChange={(e) => handleUpdateNotes('ALL_COACHES', e.target.value)}
+                                                placeholder="Enter notes visible to everyone..."
+                                                style={{ width: '100%', resize: 'vertical', border: '1px solid #eee' }}
+                                            />
+                                        </td>
+                                    </tr>
+
+                                    {/* Coaches */}
+                                    {coaches.length > 0 && (
+                                        <>
+                                            <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
+                                                <td colSpan={2} style={{ padding: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>COACHES</td>
+                                            </tr>
+                                            {coaches.map(coach => (
+                                                <tr key={coach.id} style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
+                                                    <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 500 }}>
+                                                        {coach.name}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        <textarea
+                                                            className="form-input"
+                                                            rows={1}
+                                                            value={migrated.notes[coach.id] || ''}
+                                                            onChange={(e) => handleUpdateNotes(coach.id, e.target.value)}
+                                                            placeholder=""
+                                                            style={{ width: '100%', resize: 'vertical', border: '1px solid #eee' }}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </>
+                                    )}
+
+                                    {/* Managers */}
+                                    {managers.length > 0 && (
+                                        <>
+                                            <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
+                                                <td colSpan={2} style={{ padding: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>STAFF & MANAGERS</td>
+                                            </tr>
+                                            {managers.map(mgr => (
+                                                <tr key={mgr.id} style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
+                                                    <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 500 }}>
+                                                        {mgr.name}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        <textarea
+                                                            className="form-input"
+                                                            rows={1}
+                                                            value={migrated.notes[mgr.id] || ''}
+                                                            onChange={(e) => handleUpdateNotes(mgr.id, e.target.value)}
+                                                            placeholder=""
+                                                            style={{ width: '100%', resize: 'vertical', border: '1px solid #eee' }}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
@@ -6654,6 +6843,8 @@
             const [includePlayCards, setIncludePlayCards] = useState(false);
             const [customInputState, setCustomInputState] = useState(null); // { id: string, field: string }
             const [globalTemplates, setGlobalTemplates] = useState([]);
+            const [notesModalSegmentId, setNotesModalSegmentId] = useState(null); // Track which segment's notes modal is open
+            console.log('PracticeScriptBuilder render. notesModalSegmentId:', notesModalSegmentId);
 
             // Fetch global practice templates from Firestore
             useEffect(() => {
@@ -6684,20 +6875,7 @@
 
             const focusItems = ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Onside', 'Hands Team', ...(customFocusItems || [])];
 
-            // Helper function to migrate old notes format to new format
-            const isOffenseSegment = (type) => {
-                const offenseTypes = ['Team O', '7-on-7', 'Inside Run', 'Competition', 'O FUNDI', 'Take-Off', 'Goal Line', 'Short Yardage'];
-                return offenseTypes.includes(type);
-            };
-            const migrateSegmentNotes = (segment) => {
-                if (typeof segment.notes === 'string') {
-                    return {
-                        ...segment,
-                        notes: segment.notes ? { 'ALL_COACHES': segment.notes } : {}
-                    };
-                }
-                return segment;
-            };
+
 
             const saveAsGlobalTemplate = async () => {
                 const name = prompt("Enter a name for this Global Template:");
@@ -7048,6 +7226,12 @@
                     segments: plan.segments.filter(s => s.id !== id)
                 });
             };
+
+
+
+
+
+
 
             const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -7734,15 +7918,40 @@
                                             </select>
                                         </td>
                                         <td style={{ padding: '0.5rem' }}>
-                                            <input
-                                                key={`warmup-notes-${selectedNotesCoach}`}
-                                                className="form-input"
-                                                style={{ padding: '0.25rem' }}
-                                                value={plan.warmupNotes?.[selectedNotesCoach] || ''}
-                                                onChange={e => updateSegmentNotes('WARMUP', selectedNotesCoach, e.target.value)}
-                                                onClick={e => e.stopPropagation()}
-                                                placeholder={selectedNotesCoach === 'ALL_COACHES' ? 'Notes...' : `Notes...`}
-                                            />
+                                            {(() => {
+                                                const warmupNotes = plan.warmupNotes || {};
+                                                const hasAnyNotes = Object.keys(warmupNotes).some(key => warmupNotes[key]);
+                                                const allNotes = warmupNotes['ALL_COACHES'];
+
+                                                return (
+                                                    <button
+                                                        className="form-input"
+                                                        style={{
+                                                            padding: '0.25rem 0.5rem',
+                                                            textAlign: 'left',
+                                                            cursor: 'pointer',
+                                                            width: '100%',
+                                                            backgroundColor: hasAnyNotes ? 'var(--bg-input)' : 'transparent',
+                                                            border: hasAnyNotes ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                                            color: hasAnyNotes ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                            fontStyle: hasAnyNotes ? 'normal' : 'italic',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setNotesModalSegmentId('WARMUP');
+                                                        }}
+                                                        onMouseDown={(e) => e.stopPropagation()}
+                                                    >
+                                                        {hasAnyNotes
+                                                            ? (allNotes || Object.values(warmupNotes).find(n => n) || 'Click to view notes...')
+                                                            : 'Click to add notes...'
+                                                        }
+                                                    </button>
+                                                );
+                                            })()}
                                         </td>
                                         <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                             {plan.warmupHasScript ? (
@@ -8085,30 +8294,34 @@
                                                     {(() => {
                                                         const migrated = migrateSegmentNotes(seg);
                                                         const allNotes = migrated.notes['ALL_COACHES'];
-                                                        const coachNotes = selectedNotesCoach !== 'ALL_COACHES' ? migrated.notes[selectedNotesCoach] : null;
+                                                        const hasAnyNotes = Object.keys(migrated.notes).some(key => migrated.notes[key]);
 
-                                                        // Interactive Input for editing
                                                         return (
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                                {/* Display All Coaches Notes (ReadOnly in this context if we are specific coach? Or just displayed above) */}
-                                                                {selectedNotesCoach !== 'ALL_COACHES' && allNotes && (
-                                                                    <div style={{ fontSize: '0.85rem', paddingBottom: '0.25rem', borderBottom: '1px dashed var(--border)' }}>
-                                                                        <span style={{ fontWeight: 'bold', fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>ALL:</span>
-                                                                        {allNotes}
-                                                                    </div>
-                                                                )}
-
-                                                                <input
-                                                                    key={`seg-${seg.id}-notes-${selectedNotesCoach}`}
-                                                                    className="form-input"
-                                                                    style={{ padding: '0.25rem' }}
-                                                                    value={migrated.notes[selectedNotesCoach] || ''}
-                                                                    onChange={e => updateSegmentNotes(seg.id, selectedNotesCoach, e.target.value)}
-                                                                    onClick={e => e.stopPropagation()}
-                                                                    placeholder={selectedNotesCoach === 'ALL_COACHES' ? 'Notes for all coaches...' : `Notes for ${staff?.find(s => s.id === selectedNotesCoach)?.name || 'this coach'}...`}
-                                                                    disabled={isLocked}
-                                                                />
-                                                            </div>
+                                                            <button
+                                                                className="form-input"
+                                                                style={{
+                                                                    padding: '0.25rem 0.5rem',
+                                                                    textAlign: 'left',
+                                                                    cursor: 'pointer',
+                                                                    backgroundColor: hasAnyNotes ? 'var(--bg-input)' : 'transparent',
+                                                                    border: hasAnyNotes ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                                                    color: hasAnyNotes ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                                    fontStyle: hasAnyNotes ? 'normal' : 'italic',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    whiteSpace: 'nowrap'
+                                                                }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setNotesModalSegmentId(seg.id);
+                                                                }}
+                                                                onMouseDown={(e) => e.stopPropagation()}
+                                                            >
+                                                                {hasAnyNotes
+                                                                    ? (allNotes || Object.values(migrated.notes).find(n => n) || 'Click to view notes...')
+                                                                    : 'Click to add notes...'
+                                                                }
+                                                            </button>
                                                         );
                                                     })()}
                                                 </td>
@@ -8248,580 +8461,91 @@
                                         ))}
                                     {/* Shake it up Segment - Static unnumbered */}
                                     <tr>
-                                        <td colSpan="9" style={{ padding: '0.5rem' }}>
+                                        <td colSpan={12} style={{ padding: '0' }}>
                                             <div style={{
-                                                border: '1px dashed var(--border)',
+                                                border: '2px dashed var(--border)',
                                                 borderRadius: 'var(--radius)',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                                justifyContent: 'center',
                                                 padding: '0.5rem',
-                                                color: 'inherit'
+                                                color: 'var(--text-secondary)',
+                                                fontStyle: 'italic',
+                                                marginTop: '1rem',
+                                                marginBottom: '1rem',
+                                                background: 'var(--bg-app)'
                                             }}>
-                                                <div style={{ fontWeight: 'bold', marginRight: '1rem', color: 'var(--accent)' }}>-</div>
-                                                <div style={{ flex: 1, fontStyle: 'italic' }}>Shake it up</div>
+                                                <div style={{ marginRight: '1rem', color: 'var(--accent)' }}>---</div>
+                                                <div style={{ fontWeight: 'bold' }}>Shake it up</div>
+                                                <div style={{ marginLeft: '1rem', color: 'var(--accent)' }}>---</div>
                                             </div>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
 
-                            {!isLocked && (
-                                <div style={{ marginTop: '1rem' }}>
-                                    <button className="btn btn-primary" onClick={addSegment}>+ Add Segment</button>
-                                </div>
-                            )}
+
+                            {/* Add Segment Button */}
+                            <div style={{ padding: '1rem', textAlign: 'center', marginTop: '1rem' }}>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={addSegment}
+                                    disabled={isLocked}
+                                >
+                                    + Add Segment
+                                </button>
+                            </div>
 
                             {/* Post Practice Notes Section */}
                             <div style={{ marginTop: '2rem', borderTop: '2px solid var(--border)', paddingTop: '1rem' }}>
-                                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>Post Practice Notes:</label>
+                                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>Post Practice Notes</label>
                                 <div className="print-only-text screen-hidden" style={{ minHeight: '100px', whiteSpace: 'pre-wrap', border: '1px solid #ddd', padding: '0.5rem', borderRadius: '4px' }}>
                                     {plan.postPracticeNotes}
                                 </div>
                                 <textarea
                                     className="form-input no-print"
-                                    style={{ width: '100%', minHeight: '100px', fontFamily: 'inherit' }}
+                                    style={{ width: '100%', minHeight: '100px' }}
                                     value={plan.postPracticeNotes || ''}
                                     onChange={e => updateCurrentPlan({ ...plan, postPracticeNotes: e.target.value })}
-                                    placeholder="Post-practice thoughts, injuries, adjustments for tomorrow..."
+                                    placeholder="Post-practice thoughts or ideas for tomorrow..."
                                     disabled={isLocked}
                                 />
                             </div>
-                        </div>
-
-                        {/* Print Only: Scripts View (Page 2) */}
-                        <div className="print-only-scripts" style={{ display: 'none' }}>
-                            <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }}>
-                                <h2 style={{ textAlign: 'center', marginBottom: '1rem', borderBottom: '2px solid black', paddingBottom: '0.5rem' }}>PRACTICE SCRIPTS</h2>
-                                {plan.segments.filter(s => s.hasScript && s.script && s.script.length > 0).map(seg => (
-                                    <div key={seg.id} style={{ marginBottom: '2rem' }}>
-                                        <div style={{
-                                            backgroundColor: '#f1f5f9',
-                                            padding: '0.5rem',
-                                            borderTop: '2px solid black',
-                                            borderBottom: '1px solid black',
-                                            fontWeight: 'bold',
-                                            display: 'flex',
-                                            justifyContent: 'space-between'
-                                        }}>
-                                            <span>{seg.startTime} - {seg.type}</span>
-                                            {/* Show Coach Notes for this segment in script view too? User didn't ask, but helpful. */}
-                                            {/* Just showing duration for now */}
-                                            <span>{seg.duration} min</span>
-                                        </div>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: '1px solid black' }}>
-                                                    <th style={{ textAlign: 'left', padding: '2px' }}>#</th>
-                                                    <th style={{ textAlign: 'left', padding: '2px' }}>Hash</th>
-                                                    {seg.type === 'Ghost Script' || seg.type === 'Take-Off' ? null : <th style={{ textAlign: 'left', padding: '2px' }}>Sit</th>}
-                                                    {seg.type === 'Take-Off' && <th style={{ textAlign: 'left', padding: '2px' }}>YL</th>}
-                                                    <th style={{ textAlign: 'left', padding: '2px' }}>Play</th>
-                                                    <th style={{ textAlign: 'left', padding: '2px' }}>Notes</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {ensureScriptSlots(seg.script, parseInt(seg.duration || 0), seg.type).map((slot, idx) => (
-                                                    <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                                                        <td style={{ padding: '2px', width: '30px' }}>{idx + 1}</td>
-                                                        <td style={{ padding: '2px', width: '40px' }}>{slot.hash}</td>
-                                                        {seg.type === 'Ghost Script' || seg.type === 'Take-Off' ? null : <td style={{ padding: '2px', width: '80px' }}>{slot.situation}</td>}
-                                                        {seg.type === 'Take-Off' && <td style={{ padding: '2px', width: '50px' }}>{slot.yardLine}</td>}
-                                                        <td style={{ padding: '2px', fontWeight: 'bold' }}>{slot.playName}</td>
-                                                        <td style={{ padding: '2px', fontStyle: 'italic', color: '#555' }}>
-                                                            {/* Script item specific notes if we had them, but playName usually covers it. */}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                        </div></div>
+                    {/* Print Only: Scripts View (Page 2) */}
+                    <div className="print-only-scripts" style={{ display: 'none' }}>
+                        <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }}>
+                            <h2 style={{ textAlign: 'center', marginBottom: '1rem', borderBottom: '2px solid black', paddingBottom: '0.5rem' }}>PRACTICE SCRIPTS</h2>
+                            {plan.segments.filter(s => s.hasScript && s.script && s.script.length > 0).map(seg => (
+                                <div key={seg.id} style={{ marginBottom: '2rem', pageBreakInside: 'avoid' }}>
+                                    <div style={{
+                                        borderBottom: '1px solid black',
+                                        marginBottom: '0.5rem',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        justifyContent: 'space-between'
+                                    }}>
+                                        <span>{seg.startTime} - {seg.type} ({seg.duration}m)</span>
+                                        {/* Show Coach Notes for this segment if helpful. */}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-
-                    </div >
-
-                    {/* Script View Modal - Moved outside flex container */}
-                    {
-                        showScriptView && (
-                            <div
-                                style={{
-                                    position: 'fixed',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100vw',
-                                    height: '100vh',
-                                    backgroundColor: 'rgba(0,0,0,0.5)',
-                                    zIndex: 999,
-                                    backdropFilter: 'blur(2px)'
-                                }}
-                                onClick={() => setShowScriptView(false)}
-                            />
-                        )
-                    }
-                    <div className="script-view-panel" style={{
-                        display: showScriptView ? 'flex' : 'none',
-                        flexDirection: 'column',
-                        position: 'fixed',
-                        zIndex: 1000,
-                        backgroundColor: 'var(--bg-panel)',
-                        padding: '2rem',
-                        overflow: 'hidden',
-                        ...(isFullScreen ? {
-                            top: 0,
-                            left: 0,
-                            width: '100vw',
-                            height: '100vh',
-                            borderRadius: 0,
-                            border: 'none'
-                        } : {
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: '90%',
-                            height: '90%',
-                            maxWidth: '1200px',
-                            borderRadius: '12px',
-                            border: '1px solid var(--border)',
-                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-                        })
-                    }}>
-                        {(() => {
-                            const activeSegment = selectedSegmentId === 'WARMUP'
-                                ? { id: 'WARMUP', type: 'Warmup', notes: plan.warmupNotes, script: plan.warmupScript || [], staffId: plan.warmupStaffId, hasScript: plan.warmupHasScript }
-                                : plan.segments.find(s => s.id === selectedSegmentId);
-
-                            const showScript = selectedSegmentId && activeSegment && activeSegment.hasScript;
-
-                            return showScript ? (
-                                <>
-                                    <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <h3>Scripting: {activeSegment.type}</h3>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button
-                                                className="btn btn-secondary"
-                                                onClick={() => setIsFullScreen(!isFullScreen)}
-                                                title={isFullScreen ? "Exit Full Screen" : "Expand to Full Screen"}
-                                            >
-                                                {isFullScreen ? '↙ Collapse' : '↗ Expand'}
-                                            </button>
-                                            <button
-                                                className="btn btn-secondary"
-                                                style={{ color: '#ef4444' }}
-                                                onClick={() => {
-                                                    setShowScriptView(false);
-                                                    setIsFullScreen(false);
-                                                    setSelectedSegmentId(null);
-                                                }}
-                                                title="Close Script View"
-                                            >
-                                                ✖ Close
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                                        <datalist id="play-options">
-                                            {plays.map(p => (
-                                                <option key={p.id} value={p.name}>{p.formation}</option>
-                                            ))}
-                                        </datalist>
-
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
-                                                    <th style={{ padding: '0.5rem', width: '50px' }}>#</th>
-                                                    <th style={{ padding: '0.5rem', width: '60px' }}>Hash</th>
-                                                    {activeSegment.type === 'Take-Off' ? (
-                                                        <>
-                                                            <th style={{ padding: '0.5rem', width: '80px' }}>Yard Line</th>
-                                                            <th style={{ padding: '0.5rem', width: '100px' }}>Down/Dist</th>
-                                                        </>
-                                                    ) : (
-                                                        <th style={{ padding: '0.5rem', width: '150px' }}>Situation</th>
-                                                    )}
-                                                    <th style={{ padding: '0.5rem', width: '90px' }}>Tempo</th>
-                                                    <th style={{ padding: '0.5rem' }}>Play Call</th>
-                                                    {isOffenseSegment(activeSegment.type) && <th style={{ padding: '0.5rem' }}>Defense</th>}
-                                                    <th style={{ padding: '0.5rem', width: '60px' }}>Insert</th>
-                                                    <th style={{ padding: '0.5rem', width: '40px' }}></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {activeSegment.script.map((item, index) => (
-                                                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                        <td style={{ padding: '0.5rem' }}>{index + 1}</td>
-                                                        <td style={{ padding: '0.5rem' }}>
-                                                            <select
-                                                                className="form-input"
-                                                                style={{ padding: '0.25rem' }}
-                                                                value={item.hash}
-                                                                onChange={e => {
-                                                                    const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, hash: e.target.value } : s);
-                                                                    updateSegment(selectedSegmentId, 'script', newScript);
-                                                                }}
-                                                            >
-                                                                <option value=""></option>
-                                                                <option value="L">L</option>
-                                                                <option value="M">M</option>
-                                                                <option value="R">R</option>
-                                                            </select>
-                                                        </td>
-                                                        {activeSegment.type === 'Take-Off' ? (
-                                                            <>
-                                                                {/* Yard Line - auto-populated and read-only */}
-                                                                <td style={{ padding: '0.5rem' }}>
-                                                                    <input
-                                                                        className="form-input"
-                                                                        style={{ padding: '0.25rem', backgroundColor: 'var(--bg-panel)', cursor: 'not-allowed' }}
-                                                                        value={item.yardLine || item.situation || ''}
-                                                                        readOnly
-                                                                        title="Auto-populated yard line"
-                                                                    />
-                                                                </td>
-                                                                {/* Down/Distance - editable */}
-                                                                <td style={{ padding: '0.5rem' }}>
-                                                                    <input
-                                                                        className="form-input"
-                                                                        style={{ padding: '0.25rem' }}
-                                                                        value={item.downDistance || ''}
-                                                                        onChange={e => {
-                                                                            const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, downDistance: e.target.value } : s);
-                                                                            updateSegment(selectedSegmentId, 'script', newScript);
-                                                                        }}
-                                                                        placeholder="e.g. 3 & 5"
-                                                                    />
-                                                                </td>
-                                                            </>
-                                                        ) : (
-                                                            <td style={{ padding: '0.5rem' }}>
-                                                                {(() => {
-                                                                    // Determine the segment focus
-                                                                    const segmentFocus = activeSegment.situation || '';
-
-                                                                    // 3rd Down focus: use S/M/L/XL options
-                                                                    if (segmentFocus.toLowerCase().includes('3rd')) {
-                                                                        return (
-                                                                            <select
-                                                                                className="form-input"
-                                                                                style={{ padding: '0.25rem' }}
-                                                                                value={item.situation}
-                                                                                onChange={e => {
-                                                                                    const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, situation: e.target.value } : s);
-                                                                                    updateSegment(selectedSegmentId, 'script', newScript);
-                                                                                }}
-                                                                            >
-                                                                                <option value="">--</option>
-                                                                                <option value="S">S (Short)</option>
-                                                                                <option value="M">M (Medium)</option>
-                                                                                <option value="L">L (Long)</option>
-                                                                                <option value="XL">XL (Extra Long)</option>
-                                                                            </select>
-                                                                        );
-                                                                    }
-
-                                                                    // Red Zone or Gold Zone: full down and distance input
-                                                                    if (segmentFocus.toLowerCase().includes('red zone') ||
-                                                                        segmentFocus.toLowerCase().includes('gold zone')) {
-                                                                        return (
-                                                                            <input
-                                                                                className="form-input"
-                                                                                style={{ padding: '0.25rem' }}
-                                                                                value={item.situation}
-                                                                                onChange={e => {
-                                                                                    const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, situation: e.target.value } : s);
-                                                                                    updateSegment(selectedSegmentId, 'script', newScript);
-                                                                                }}
-                                                                                placeholder="e.g. 1st & 10"
-                                                                            />
-                                                                        );
-                                                                    }
-
-                                                                    // Default: regular text input
-                                                                    return (
-                                                                        <input
-                                                                            className="form-input"
-                                                                            style={{ padding: '0.25rem' }}
-                                                                            value={item.situation}
-                                                                            onChange={e => {
-                                                                                const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, situation: e.target.value } : s);
-                                                                                updateSegment(selectedSegmentId, 'script', newScript);
-                                                                            }}
-                                                                            placeholder="e.g. 3rd & 5"
-                                                                        />
-                                                                    );
-                                                                })()}
-                                                            </td>
-                                                        )}
-                                                        <td style={{ padding: '0.5rem' }}>
-                                                            <select
-                                                                className="form-input"
-                                                                style={{ padding: '0.25rem' }}
-                                                                value={item.tempo || ''}
-                                                                onChange={e => {
-                                                                    const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, tempo: e.target.value } : s);
-                                                                    updateSegment(selectedSegmentId, 'script', newScript);
-                                                                }}
-                                                            >
-                                                                <option value="">-</option>
-                                                                <option value="REGULAR">Huddle</option>
-                                                                <option value="NOHUDDLE">No-Huddle</option>
-                                                                <option value="BLUR">Blur Tempo</option>
-                                                                <option value="SUGAR">Sugar Huddle</option>
-                                                                <option value="SCRAMBLE">Scramble</option>
-                                                                <option value="4MIN">4-Min Huddle</option>
-                                                            </select>
-                                                        </td>
-                                                        <td style={{ padding: '0.5rem' }}>
-                                                            <input
-                                                                className="form-input"
-                                                                list="play-options"
-                                                                style={{ padding: '0.25rem', width: '100%', fontWeight: 'bold' }}
-                                                                value={item.playName || ''}
-                                                                onChange={e => {
-                                                                    const val = e.target.value;
-                                                                    // Try to find play ID from name
-                                                                    const foundPlay = plays.find(p => p.name === val);
-                                                                    const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, playName: val, playId: foundPlay ? foundPlay.id : '' } : s);
-                                                                    updateSegment(selectedSegmentId, 'script', newScript);
-                                                                }}
-                                                                placeholder="Search play..."
-                                                            />
-                                                        </td>
-                                                        {isOffenseSegment(activeSegment.type) && (
-                                                            <td style={{ padding: '0.5rem' }}>
-                                                                <input
-                                                                    className="form-input"
-                                                                    style={{ padding: '0.25rem' }}
-                                                                    value={item.defense || ''}
-                                                                    onChange={e => {
-                                                                        const newScript = activeSegment.script.map(s => s.id === item.id ? { ...s, defense: e.target.value } : s);
-                                                                        updateSegment(selectedSegmentId, 'script', newScript);
-                                                                    }}
-                                                                    placeholder="Front / Coverage"
-                                                                />
-                                                            </td>
-                                                        )}
-                                                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                                                            <button
-                                                                className="btn"
-                                                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: 'var(--accent)' }}
-                                                                onClick={() => {
-                                                                    const PATTERN_A = ['L', 'LM', 'RM', 'R', 'R', 'RM', 'LM', 'L'];
-                                                                    const PATTERN_B = ['R', 'RM', 'LM', 'L', 'L', 'LM', 'RM', 'R'];
-                                                                    let pattern = PATTERN_A;
-                                                                    if (activeSegment.script.length > 0 && activeSegment.script[0].hash === 'R') pattern = PATTERN_B;
-
-                                                                    // Insert empty slot
-                                                                    let scriptItem = {
-                                                                        id: Date.now().toString(),
-                                                                        playId: '',
-                                                                        playName: '',
-                                                                        hash: pattern[index % 8]
-                                                                    };
-
-                                                                    if (activeSegment.type === 'Take-Off') {
-                                                                        const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
-                                                                        scriptItem.yardLine = yardlines[index] || '';
-                                                                        scriptItem.downDistance = '';
-                                                                    } else {
-                                                                        scriptItem.situation = '';
-                                                                    }
-
-                                                                    const newScript = [...activeSegment.script];
-                                                                    newScript.splice(index, 0, scriptItem);
-                                                                    updateSegment(selectedSegmentId, 'script', newScript);
-                                                                }}
-                                                            >
-                                                                ↑
-                                                            </button>
-                                                        </td>
-                                                        <td style={{ padding: '0.5rem' }}>
-                                                            <button
-                                                                className="btn"
-                                                                style={{ padding: '0.25rem', color: '#ef4444' }}
-                                                                onClick={() => {
-                                                                    const newScript = activeSegment.script.filter(s => s.id !== item.id);
-                                                                    updateSegment(selectedSegmentId, 'script', newScript);
-                                                                }}
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-
-                                                {/* Insert at End Row */}
-                                                {activeSegment.script.length > 0 && (
-                                                    <tr style={{ borderTop: '2px solid var(--border)' }}>
-                                                        <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>{activeSegment.script.length + 1}</td>
-                                                        <td colSpan="3" style={{ padding: '0.5rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
-                                                            Insert play at end
-                                                        </td>
-                                                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                                                            <button
-                                                                className="btn btn-primary"
-                                                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                                                                onClick={() => {
-                                                                    const PATTERN_A = ['L', 'LM', 'RM', 'R', 'R', 'RM', 'LM', 'L'];
-                                                                    const PATTERN_B = ['R', 'RM', 'LM', 'L', 'L', 'LM', 'RM', 'R'];
-                                                                    let pattern = PATTERN_A;
-                                                                    if (activeSegment.script.length > 0 && activeSegment.script[0].hash === 'R') pattern = PATTERN_B;
-
-                                                                    // Add empty slot at end
-                                                                    let scriptItem = {
-                                                                        id: Date.now().toString(),
-                                                                        playId: '',
-                                                                        playName: '',
-                                                                        hash: pattern[activeSegment.script.length % 8]
-                                                                    };
-
-                                                                    if (activeSegment.type === 'Take-Off') {
-                                                                        const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
-                                                                        scriptItem.yardLine = yardlines[activeSegment.script.length % yardlines.length] || '';
-                                                                        scriptItem.downDistance = '';
-                                                                    } else {
-                                                                        scriptItem.situation = '';
-                                                                    }
-
-                                                                    updateSegment(selectedSegmentId, 'script', [...activeSegment.script, scriptItem]);
-                                                                }}
-                                                            >
-                                                                +
-                                                            </button>
-                                                        </td>
-                                                        <td></td>
-                                                    </tr>
-                                                )}
-
-                                                {activeSegment.script.length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={activeSegment.type === 'Take-Off' ? "7" : "6"} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                            No plays scripted yet. Use + button to add or just wait for auto-fill.
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </>
-                            ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {selectedSegmentId && !activeSegment?.hasScript ? (
-                                        <>
-                                            <div>Script editor disabled for this segment</div>
-                                            <div style={{ fontSize: '0.9rem' }}>Check the "Script" box to enable scripting</div>
-                                        </>
-                                    ) : (
-                                        <div>Select a segment to script plays</div>
-                                    )}
-                                </div>
-                            );
-                        })()}
-                    </div>
-
-                    {/* Hidden Print Container */}
-                    <div className="practice-print-container" style={{ display: 'none' }}>
-                        {/* Page 1: Schedule */}
-                        <div className="practice-print-header">
-                            <h1>{selectedDay} Practice Plan</h1>
-                            <div className="practice-print-meta">
-                                <span>Date: {plan.date}</span>
-                                <span>Start: {plan.startTime}</span>
-                            </div>
-                        </div>
-
-                        <table className="practice-schedule-table">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Dur</th>
-                                    <th>Type</th>
-                                    <th>Focus</th>
-                                    <th>Notes</th>
-                                    <th>Staff</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {plan.prePracticeNotes && (
-                                    <tr>
-                                        <td colSpan="5" style={{ padding: '1rem', fontStyle: 'italic', background: '#f8fafc' }}>
-                                            <strong>Pre-Practice Notes:</strong><br />
-                                            {plan.prePracticeNotes}
-                                        </td>
-                                    </tr>
-                                )}
-                                <tr>
-                                    <td>{plan.startTime ? new Date(`2000-01-01T${plan.startTime}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</td>
-                                    <td>{plan.warmupDuration}</td>
-                                    <td>Warmup</td>
-                                    <td>{plan.warmupSituation || ''}</td>
-                                    <td>{plan.warmupNotes ? (
-                                        Object.entries(plan.warmupNotes)
-                                            .filter(([coachId, note]) => selectedCoachFilter === 'ALL' || coachId === selectedCoachFilter)
-                                            .map(([coachId, note]) => note)
-                                            .join(' | ')
-                                    ) : ''}</td>
-                                    <td>{staff && staff.find(s => s.id === plan.warmupStaffId)?.name || ''}</td>
-                                </tr>
-                                {plan.segments
-                                    .filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter)
-                                    .map(seg => (
-                                        <tr key={seg.id}>
-                                            <td>{seg.startTime}</td>
-                                            <td>{seg.duration}</td>
-                                            <td>{seg.type}</td>
-                                            <td>{seg.situation || ''}</td>
-                                            <td>{(() => {
-                                                const migrated = migrateSegmentNotes(seg);
-                                                const notes = migrated.notes;
-                                                const allCoachesNotes = notes['ALL_COACHES'] || '';
-                                                const coachNotes = selectedCoachFilter !== 'ALL' ? (notes[selectedCoachFilter] || '') : '';
-
-                                                // Combine notes: All Coaches first, then coach-specific
-                                                const combined = [];
-                                                if (allCoachesNotes) combined.push(`[All] ${allCoachesNotes}`);
-                                                if (coachNotes) combined.push(coachNotes);
-                                                return combined.join(' | ');
-                                            })()}</td>
-                                            <td>{staff && staff.find(s => s.id === seg.staffId)?.name || ''}</td>
-                                        </tr>
-                                    ))}
-                            </tbody>
-                        </table>
-
-                        <div className="practice-page-break"></div>
-
-                        {/* Page 2+: Scripts */}
-                        <div className="practice-print-header">
-                            <h1>Scripts</h1>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            {plan.segments.filter(s => s.script && s.script.length > 0).map(seg => (
-                                <div key={seg.id} className="script-segment-container">
-                                    <div className="script-segment-header">
-                                        <span>{seg.type}</span>
-                                        <span>{seg.duration}m</span>
-                                    </div>
-                                    <table className="script-table">
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                                         <thead>
                                             <tr>
-                                                <th style={{ width: '10%' }}>#</th>
-                                                <th style={{ width: '15%' }}>Hash</th>
-                                                <th style={{ width: '25%' }}>Sit</th>
-                                                <th style={{ width: '50%' }}>Play</th>
+                                                <th style={{ textAlign: 'left', padding: '2px', width: '30px' }}>#</th>
+                                                <th style={{ textAlign: 'left', padding: '2px' }}>Hash</th>
+                                                {seg.type === 'Ghost Script' || seg.type === 'Take-Off' ? null : <th style={{ textAlign: 'left', padding: '2px' }}>Situation</th>}
+                                                {seg.type === 'Take-Off' && <th style={{ textAlign: 'left', padding: '2px' }}>YL</th>}
+                                                <th style={{ textAlign: 'left', padding: '2px' }}>Play</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {seg.script.map((item, idx) => (
-                                                <tr key={item.id}>
-                                                    <td>{idx + 1}</td>
-                                                    <td>{item.hash}</td>
-                                                    <td>{item.situation}</td>
-                                                    <td>{item.playName}</td>
+                                            {seg.script.map((slot, idx) => (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
+                                                    <td style={{ padding: '2px', width: '30px' }}>{idx + 1}</td>
+                                                    <td style={{ padding: '2px', width: '40px' }}>{slot.hash}</td>
+                                                    {seg.type === 'Ghost Script' || seg.type === 'Take-Off' ? null : <td style={{ padding: '2px' }}>{slot.situation}</td>}
+                                                    {seg.type === 'Take-Off' && <td style={{ padding: '2px', width: '50px' }}>{slot.yardLine}</td>}
+                                                    <td style={{ padding: '2px', fontWeight: 'bold' }}>{slot.playName}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -8830,11 +8554,229 @@
                             ))}
                         </div>
                     </div>
+
+                    {/* Script View Modal */}
+                    {showScriptView && selectedSegmentId && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                            display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(2px)'
+                        }}>
+                            <div style={{
+                                width: '95%', maxWidth: '1400px', height: '90vh',
+                                backgroundColor: 'var(--bg-panel)', borderRadius: 'var(--radius)',
+                                display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+                            }}>
+                                {/* Modal Header */}
+                                <div style={{
+                                    padding: '1rem', borderBottom: '1px solid var(--border)',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    backgroundColor: 'var(--bg-main)'
+                                }}>
+                                    <h3 style={{ margin: 0 }}>Scripting: {plan.segments.find(s => s.id === selectedSegmentId)?.type}</h3>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => setShowScriptView(false)}
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Modal Content */}
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+                                    {(() => {
+                                        const activeSegment = plan.segments.find(s => s.id === selectedSegmentId);
+                                        if (!activeSegment) return <div>Segment not found</div>;
+
+                                        const updateScript = (newScript) => {
+                                            updateSegment(selectedSegmentId, 'script', newScript);
+                                        };
+
+                                        return (
+                                            <div>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                    <thead>
+                                                        <tr style={{ background: 'var(--bg-main)', position: 'sticky', top: 0, zIndex: 10 }}>
+                                                            <th style={{ padding: '0.5rem', width: '40px' }}>#</th>
+                                                            <th style={{ padding: '0.5rem', width: '80px' }}>Hash</th>
+                                                            {activeSegment.type !== 'Take-Off' && <th style={{ padding: '0.5rem', width: '150px' }}>Situation</th>}
+                                                            {activeSegment.type === 'Take-Off' && <th style={{ padding: '0.5rem', width: '80px' }}>YL</th>}
+                                                            <th style={{ padding: '0.5rem' }}>Play</th>
+                                                            <th style={{ padding: '0.5rem', width: '60px' }}>Calc</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {activeSegment.script && activeSegment.script.map((item, index) => (
+                                                            <tr key={index} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                                <td style={{ padding: '0.5rem' }}>{index + 1}</td>
+                                                                <td style={{ padding: '0.5rem' }}>
+                                                                    <select
+                                                                        className="form-input"
+                                                                        value={item.hash}
+                                                                        onChange={e => {
+                                                                            const newScript = [...activeSegment.script];
+                                                                            newScript[index] = { ...item, hash: e.target.value };
+                                                                            updateScript(newScript);
+                                                                        }}
+                                                                    >
+                                                                        <option value="L">L</option>
+                                                                        <option value="R">R</option>
+                                                                        <option value="M">M</option>
+                                                                    </select>
+                                                                </td>
+                                                                {activeSegment.type !== 'Take-Off' && (
+                                                                    <td style={{ padding: '0.5rem' }}>
+                                                                        <input
+                                                                            className="form-input"
+                                                                            value={item.situation || ''}
+                                                                            onChange={e => {
+                                                                                const newScript = [...activeSegment.script];
+                                                                                newScript[index] = { ...item, situation: e.target.value };
+                                                                                updateScript(newScript);
+                                                                            }}
+                                                                        />
+                                                                    </td>
+                                                                )}
+                                                                {activeSegment.type === 'Take-Off' && (
+                                                                    <td style={{ padding: '0.5rem' }}>
+                                                                        <input
+                                                                            className="form-input"
+                                                                            value={item.yardLine || ''}
+                                                                            onChange={e => {
+                                                                                const newScript = [...activeSegment.script];
+                                                                                newScript[index] = { ...item, yardLine: e.target.value };
+                                                                                updateScript(newScript);
+                                                                            }}
+                                                                        />
+                                                                    </td>
+                                                                )}
+                                                                <td style={{ padding: '0.5rem' }}>
+                                                                    <input
+                                                                        className="form-input"
+                                                                        value={item.playName || ''}
+                                                                        onChange={e => {
+                                                                            const newScript = [...activeSegment.script];
+                                                                            newScript[index] = { ...item, playName: e.target.value };
+                                                                            updateScript(newScript);
+                                                                        }}
+                                                                        list="plays-list"
+                                                                    />
+                                                                </td>
+                                                                <td style={{ padding: '0.5rem' }}>
+                                                                    <button
+                                                                        className="btn"
+                                                                        style={{ color: '#ef4444' }}
+                                                                        onClick={() => {
+                                                                            const newScript = activeSegment.script.filter((_, i) => i !== index);
+                                                                            updateScript(newScript);
+                                                                        }}
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                                <div style={{ marginTop: '1rem' }}>
+                                                    <button
+                                                        className="btn btn-primary"
+                                                        onClick={() => {
+                                                            const newScript = [...(activeSegment.script || []), { hash: 'L', situation: '', playName: '', playId: '' }];
+                                                            updateScript(newScript);
+                                                        }}
+                                                    >
+                                                        + Add Play
+                                                    </button>
+                                                </div>
+                                                <datalist id="plays-list">
+                                                    {plays.map(p => (
+                                                        <option key={p.id} value={p.name} />
+                                                    ))}
+                                                </datalist>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Hidden Print Container */}
+                    <div className="print-only-container" style={{ display: 'none' }}>
+                        <h1>{plan.name || selectedDay + ' Practice'}</h1>
+                        <div style={{ marginBottom: '1rem', borderBottom: '2px solid black' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span><strong>Date:</strong> {new Date().toLocaleDateString()}</span>
+                                <span><strong>Kickoff:</strong> {plan.kickoff || 'TBD'}</span>
+                            </div>
+                            <div style={{ marginTop: '0.5rem' }}>
+                                <strong>Warmup:</strong> {plan.warmupDuration}m ({plan.warmupStartTime} - {plan.startTime})
+                            </div>
+                            {plan.warmupNotes && Object.values(plan.warmupNotes).some(n => n) && (
+                                <div style={{ marginTop: '0.5rem', fontStyle: 'italic' }}>
+                                    <strong>Warmup Notes:</strong> {Object.values(plan.warmupNotes).join(' | ')}
+                                </div>
+                            )}
+                        </div>
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid black' }}>
+                                    <th style={{ textAlign: 'left' }}>Time</th>
+                                    <th style={{ textAlign: 'left' }}>Dur</th>
+                                    <th style={{ textAlign: 'left' }}>Segment</th>
+                                    <th style={{ textAlign: 'left' }}>Detail</th>
+                                    <th style={{ textAlign: 'left' }}>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {plan.segments.map(seg => (
+                                    <tr key={seg.id} style={{ borderBottom: '1px solid #ddd' }}>
+                                        <td>{seg.startTime}</td>
+                                        <td>{seg.duration}</td>
+                                        <td>{seg.type}</td>
+                                        <td>{seg.situation}</td>
+                                        <td>
+                                            {(() => {
+                                                const migrated = migrateSegmentNotes(seg);
+                                                const notes = Object.values(migrated.notes).filter(n => n).join(' | ');
+                                                return notes;
+                                            })()}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        {plan.postPracticeNotes && (
+                            <div style={{ marginTop: '2rem', borderTop: '1px solid black', paddingTop: '1rem' }}>
+                                <strong>Post Practice Notes:</strong>
+                                <p>{plan.postPracticeNotes}</p>
+                            </div>
+                        )}
+                    </div>
+
+
+                    {/* Notes Modal */}
+                    {
+                        notesModalSegmentId && (
+                            <NotesModal
+                                plan={plan}
+                                updateCurrentPlan={updateCurrentPlan}
+                                staff={staff}
+                                segmentId={notesModalSegmentId}
+                                onClose={() => setNotesModalSegmentId(null)}
+                            />
+                        )
+                    }
                 </div >
+
             );
         };
-
-        // --- VALHALLA SYSTEM CONSTANTS ---
 
 
         const GamedayDashboard = ({ plays }) => {
@@ -8930,6 +8872,9 @@
 
             // Helper function to migrate old notes format to new format
             const migrateSegmentNotes = (segment) => {
+                if (!segment.notes) {
+                    return { ...segment, notes: {} };
+                }
                 if (typeof segment.notes === 'string') {
                     return {
                         ...segment,
@@ -9246,6 +9191,14 @@
                             </table>
                         </div>
                     </div>
+
+                    {/* Notes Modal */}
+                    {notesModalSegmentId && (
+                        <NotesModal
+                            segmentId={notesModalSegmentId}
+                            onClose={() => setNotesModalSegmentId(null)}
+                        />
+                    )}
                 </div>
             );
         };
@@ -40277,7 +40230,7 @@
                                 background: 'rgba(0,0,0,0.85)', zIndex: 10001,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
-                                <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem' }}>
+                                <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
                                     <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
                                         {inviteData.type === 'domain_match' ? '🏫' : '📩'}
                                     </div>
@@ -40303,8 +40256,6 @@
                                         onClick={() => {
                                             if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
                                                 setInviteData(null);
-                                                // Trigger School Setup Wizard (Orphaned User State)
-                                                // We need to ensure we don't loop back to domain matching, so maybe force wizard
                                                 setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
                                             }
                                         }}
@@ -40314,7 +40265,7 @@
                                 </div>
                             </div>
                         )}
-                    </main>
+                    </main >
                 </div >
             );
         };
