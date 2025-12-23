@@ -608,11 +608,23 @@ button {
 }
 
 /* Utility for print-only text */
+.print-only-text {
+  display: none;
+}
+
 .screen-hidden {
   display: none;
 }
 
 @media print {
+  .print-only-text {
+    display: inline;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
   .screen-hidden {
     display: inline;
   }
