@@ -30864,18 +30864,18 @@
                 sheet.sections = [...sheet.sections];
 
                 // Get source and target arrays
-                const sourceRows = [...sheet.sections[draggedCell.sectionIdx].rows];
-                const targetRows = draggedCell.sectionIdx === targetSectionIdx ? sourceRows : [...sheet.sections[targetSectionIdx].rows];
+                // FIX: Use .boxes instead of .rows
+                const sourceBoxes = [...(sheet.sections[draggedCell.sectionIdx].boxes || [])]; const targetBoxes = draggedCell.sectionIdx === targetSectionIdx ? sourceBoxes : [...(sheet.sections[targetSectionIdx].boxes || [])];
 
-                const itemToMove = sourceRows[draggedCell.rowIdx];
+                const itemToMove = sourceBoxes[draggedCell.rowIdx];
                 if (!itemToMove) return; // Safety check
 
                 // Verify index to prevent duplication if state is stale
-                const realSourceIdx = sourceRows.findIndex(r => r.setId === itemToMove.setId);
+                const realSourceIdx = sourceBoxes.findIndex(r => r.setId === itemToMove.setId);
                 if (realSourceIdx === -1) return; // Item not found? Abort.
 
                 // Remove from source
-                sourceRows.splice(realSourceIdx, 1);
+                sourceBoxes.splice(realSourceIdx, 1);
 
                 // Insert into target
                 if (draggedCell.sectionIdx === targetSectionIdx) {
@@ -30884,38 +30884,34 @@
                     // But wait, standard behavior:
                     // [A, B, C]. Drag A (0) to C (2).
                     // Remove A. [B, C].
-                    // Insert at 2. [B, C, A].
-                    // Visual Drop Target was Index 2 (C).
-                    // C is at Index 1 now.
-                    // We insert at 2. Which is After C.
-                    // This logic holds if we use the ORIGINAL targetRowIdx.
+                    // Visual Drop Target was Index 2 (C). C is now at Index 1.
+                    // We want to insert AFTER C. So Index 2.
 
-                    // But if we removed from AFTER target?
-                    // [A, B, C]. Drag C (2) to A (0).
-                    // Remove C. [A, B].
-                    // Insert at 0. [C, A, B].
-                    // Correct.
+                    // Simple logic:
+                    let insertionIdx = targetRowIdx;
 
-                    // What if we verified 'targetRowIdx' is still valid?
-                    // targetRows.length is now N-1.
-                    // targetRowIdx could be N (append).
+                    // Checkbounds
+                    if (insertionIdx > sourceBoxes.length) insertionIdx = sourceBoxes.length;
 
-                    // Just use splicing at targetRowIdx.
-                    // However, we must ensure we don't insert undefined.
-                    if (itemToMove) {
-                        sourceRows.splice(targetRowIdx, 0, itemToMove);
-                    }
+                    sourceBoxes.splice(insertionIdx, 0, itemToMove);
+
+                    // Assign back
+                    sheet.sections[draggedCell.sectionIdx].boxes = sourceBoxes;
+
                 } else {
                     // DIFFERENT LIST
-                    targetRows.splice(targetRowIdx, 0, itemToMove);
+                    // Insert into target list at specific index
+                    let insertionIdx = targetRowIdx;
+                    if (insertionIdx > targetBoxes.length) insertionIdx = targetBoxes.length; // Safety
+
+                    targetBoxes.splice(insertionIdx, 0, itemToMove);
+
+                    // Update both sections
+                    sheet.sections[draggedCell.sectionIdx].boxes = sourceBoxes;
+                    sheet.sections[targetSectionIdx].boxes = targetBoxes;
                 }
 
-                // Update sections
-                sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], rows: sourceRows };
-                if (draggedCell.sectionIdx !== targetSectionIdx) {
-                    sheet.sections[targetSectionIdx] = { ...sheet.sections[targetSectionIdx], rows: targetRows };
-                }
-
+                // Update State
                 newLayouts.CALL_SHEET = sheet;
                 if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                 setDraggedCell(null);
@@ -37876,19 +37872,6 @@
             const [calendarData, setCalendarData] = useLocalStorage('oc-dashboard-annual-calendar', VALHALLA_CONSTANTS.ANNUAL_CALENDAR_DEFAULTS);
 
 
-            /*
-            const [dutyAssignments, setDutyAssignments] = useState(() => {
-                try {
-                    const saved = localStorage.getItem('oc-dashboard-duties');
-                        return (saved && saved !== "null") ? JSON.parse(saved) : { };
-                } catch (e) { return { }; }
-            });
-    
-            // Save duties to localStorage
-            useEffect(() => {
-                            localStorage.setItem('oc-dashboard-duties', JSON.stringify(dutyAssignments));
-            }, [dutyAssignments]);
-                        */
 
             // Save plays to localStorage whenever it changes
             useEffect(() => {
@@ -38390,9 +38373,9 @@
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </div >
                         )}
-                    </div>
+                    </div >
                 );
             };
 
