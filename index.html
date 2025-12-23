@@ -7576,6 +7576,7 @@
                                         <th style={{ padding: '0.5rem' }}>#</th>
                                         <th style={{ padding: '0.5rem' }}>Time</th>
                                         <th style={{ padding: '0.5rem' }}>Dur</th>
+                                        <th style={{ padding: '0.5rem' }}>Phase</th>
                                         <th style={{ padding: '0.5rem' }}>Type</th>
                                         {plan.isTwoPlatoon ? (
                                             <>
@@ -7615,6 +7616,21 @@
                                                 onChange={e => updateCurrentPlan({ ...plan, warmupDuration: parseInt(e.target.value) || 0 })}
                                                 onClick={e => e.stopPropagation()}
                                             />
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            <select
+                                                className="form-select"
+                                                value={plan.warmupPhase || 'ALL'}
+                                                onChange={e => updateCurrentPlan({ ...plan, warmupPhase: e.target.value })}
+                                                onClick={e => e.stopPropagation()}
+                                                style={{ width: '70px', padding: '0.25rem', fontSize: '0.85rem' }}
+                                            >
+                                                <option value="ALL">ALL</option>
+                                                <option value="O">O</option>
+                                                <option value="D">D</option>
+                                                <option value="K">K</option>
+                                                <option value="C">C</option>
+                                            </select>
                                         </td>
                                         <td style={{ padding: '0.5rem', fontStyle: 'italic' }}>Warmup</td>
                                         {plan.isTwoPlatoon ? (
@@ -7699,11 +7715,12 @@
                                                 onClick={e => e.stopPropagation()}
                                             >
                                                 <option value="">--</option>
+                                                <option value="Install">Install</option>
+                                                <option value="On-Air">On-Air</option>
+                                                <option value="Shields/Bags">Shields/Bags</option>
                                                 <option value="Touch">Touch</option>
-                                                <option value="Thud">Thud</option>
-                                                <option value="Bird-Dog">Bird-Dog</option>
-                                                <option value="ON AIR">ON AIR</option>
                                                 <option value="Slight Resist">Slight Resist</option>
+                                                <option value="Thud">Thud</option>
                                                 <option value="Live">Live</option>
                                             </select>
                                         </td>
@@ -7852,6 +7869,7 @@
                                                                     type: 'Competition',
                                                                     duration: 5,
                                                                     startTime: '',
+                                                                    phase: 'ALL',
                                                                     hasScript: false,
                                                                     script: [],
                                                                     notes: user?.role === 'HC' ? { 'ALL_COACHES': '' } : {}
@@ -7879,6 +7897,24 @@
                                                             onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value))}
                                                             onClick={e => e.stopPropagation()}
                                                         />
+                                                    )}
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <span className="print-only-text">{seg.phase || 'ALL'}</span>
+                                                    {!isLocked && (
+                                                        <select
+                                                            className="form-select no-print"
+                                                            style={{ width: '70px', padding: '0.25rem', fontSize: '0.85rem' }}
+                                                            value={seg.phase || 'ALL'}
+                                                            onChange={e => updateSegment(seg.id, 'phase', e.target.value)}
+                                                            onClick={e => e.stopPropagation()}
+                                                        >
+                                                            <option value="ALL">ALL</option>
+                                                            <option value="O">O</option>
+                                                            <option value="D">D</option>
+                                                            <option value="K">K</option>
+                                                            <option value="C">C</option>
+                                                        </select>
                                                     )}
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
@@ -7927,7 +7963,7 @@
                                                             onClick={e => e.stopPropagation()}
                                                         >
                                                             <option value="">-- Select Type --</option>
-                                                            {['Competition', 'O FUNDI', 'D FUNDI', '7-on-7', 'Def. 7-on-7', 'Team O', 'Team D', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Inside Run', 'Field Goal', 'Conditioning', 'Take-Off', 'Ghost Script', 'One-on-Ones', 'Tackling', 'Turnover', 'Specials'].map(t => (
+                                                            {['Competition', 'FUNDI', '7-on-7', 'Team', 'Team Stationary', 'Circuit', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Inside Run', 'Field Goal', 'Conditioning', 'Take-Off', 'Ghost Script', 'One-on-Ones', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Specials'].map(t => (
                                                                 <option key={t} value={t}>{t}</option>
                                                             ))}
                                                         </select>
@@ -8026,11 +8062,12 @@
                                                             onClick={e => e.stopPropagation()}
                                                         >
                                                             <option value="">--</option>
+                                                            <option value="Install">Install</option>
+                                                            <option value="On-Air">On-Air</option>
+                                                            <option value="Shields/Bags">Shields/Bags</option>
                                                             <option value="Touch">Touch</option>
-                                                            <option value="Thud">Thud</option>
-                                                            <option value="Bird-Dog">Bird-Dog</option>
-                                                            <option value="ON AIR">ON AIR</option>
                                                             <option value="Slight Resist">Slight Resist</option>
+                                                            <option value="Thud">Thud</option>
                                                             <option value="Live">Live</option>
                                                         </select>
                                                     )}
