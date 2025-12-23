@@ -6926,7 +6926,7 @@
                 if (JSON.stringify(updatedSegments) !== JSON.stringify(plan.segments)) {
                     updateCurrentPlan({ ...plan, segments: updatedSegments });
                 }
-            }, [plan?.startTime, plan?.warmupDuration, plan?.segments.map(s => s.duration).join(',')]);
+            }, [plan?.startTime, plan?.warmupDuration, plan?.segments.map(s => s.duration).join(','), plan?.segments.length]);
 
 
 
