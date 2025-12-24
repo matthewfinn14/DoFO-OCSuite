@@ -2097,6 +2097,7 @@
 
                 // -- Legacy / Others --
                 case "X": return <svg {...commonProps}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
+                case "ArrowLeft": return <svg {...commonProps}><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>;
                 case "ChevronDown": return <svg {...commonProps}><path d="m6 9 6 6 6-6" /></svg>;
                 case "ChevronRight": return <svg {...commonProps}><path d="m9 18 6-6-6-6" /></svg>;
                 case "ChevronUp": return <svg {...commonProps}><path d="m18 15-6-6-6 6" /></svg>;
@@ -5600,7 +5601,8 @@
                             const wristbandSlot = play?.wristbandSlot || '';
                             const displayText = wristbandSlot ? `[${wristbandSlot}] ${playName}` : playName;
                             return {
-                                slot: slots[0] + idx,
+                                slot: slots[0] + idx, // This linear slot might not match the 3-column grouping perfectly if we just use idx, but it's consistent with existing logic. 
+                                // Actually for 3-col grouping (A/B/C), if rows are linear, we chunk them.
                                 type: row.type,
                                 text: displayText,
                                 playId: row.playId,
@@ -5628,6 +5630,122 @@
                         };
                     });
                 }
+
+                if (isModular) {
+                    // ---------------------------------------------------------
+                    // MODULAR / SCRIPT LAYOUT: 1 Coord Column + 3 Play Columns
+                    // ---------------------------------------------------------
+                    const chunks = [];
+                    const chunkSize = 3;
+                    for (let i = 0; i < displayRows.length; i += chunkSize) {
+                        chunks.push(displayRows.slice(i, i + chunkSize));
+                    }
+                    // Ensure at least some empty rows if empty
+                    if (chunks.length === 0) chunks.push([null, null, null]);
+
+                    return (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
+                            {/* Header */}
+                            <div style={{
+                                background: 'black',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: '10pt',
+                                padding: '2px 4px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <span style={{ textTransform: 'uppercase' }}>SCRIPT</span>
+                                <span>{title}</span>
+                            </div>
+
+                            {/* Column Headers */}
+                            <div style={{ display: 'flex', borderBottom: '1px solid #000', background: '#e5e5e5', fontSize: '9pt', fontWeight: 'bold', textAlign: 'center' }}>
+                                <div style={{ width: '30px', borderRight: '1px solid #000' }}>#</div>
+                                <div style={{ flex: 1, borderRight: '1px solid #000' }}>A</div>
+                                <div style={{ flex: 1, borderRight: '1px solid #000' }}>B</div>
+                                <div style={{ flex: 1 }}>C</div>
+                            </div>
+
+                            {/* Table */}
+                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <table className="wristband-spreadsheet-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                                    <colgroup>
+                                        <col style={{ width: '30px' }} />
+                                        <col style={{ width: '33%' }} />
+                                        <col style={{ width: '33%' }} />
+                                        <col style={{ width: '33%' }} />
+                                    </colgroup>
+                                    <tbody>
+                                        {chunks.map((chunk, rowIndex) => {
+                                            const startSlot = chunk[0]?.slot || (displayRows.length > 0 ? displayRows[displayRows.length - 1].slot + 1 : slots[0] + (rowIndex * 3));
+
+                                            // Determine background shade
+                                            let rowBackground = 'inherit';
+                                            if (card.color && card.color !== 'none') {
+                                                const shades = ['light', 'medium'];
+                                                const shade = shades[rowIndex % 2];
+                                                const colorMap = {
+                                                    'green-light': '#d1fae5', 'green-medium': '#a7f3d0',
+                                                    'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
+                                                    'red-light': '#fecaca', 'red-medium': '#fca5a5',
+                                                    'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
+                                                    'yellow-light': '#fef08a', 'yellow-medium': '#fde047',
+                                                    'purple-light': '#e9d5ff', 'purple-medium': '#d8b4fe',
+                                                    'teal-light': '#99f6e4', 'teal-medium': '#5eead4',
+                                                    'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
+                                                };
+                                                rowBackground = colorMap[`${card.color}-${shade}`] || 'inherit';
+                                            }
+
+                                            return (
+                                                <tr key={rowIndex} className={rangeClass} style={{ height: `${rowHeight}px` }}>
+                                                    {/* Coord Cell */}
+                                                    <td style={{
+                                                        border: '1px solid #333',
+                                                        textAlign: 'center',
+                                                        fontWeight: 'bold',
+                                                        fontSize: `${fontSize}rem`,
+                                                        background: rowBackground
+                                                    }}>
+                                                        {startSlot}
+                                                    </td>
+
+                                                    {/* Play Cells */}
+                                                    {[0, 1, 2].map(colIdx => {
+                                                        const cellData = chunk[colIdx];
+                                                        const bgColor = cellData && cellData.type === 'tempo' ? '#ffedd5' : rowBackground;
+
+                                                        return (
+                                                            <td key={colIdx} style={{
+                                                                border: '1px solid #333',
+                                                                padding: '0 2px',
+                                                                fontSize: `${fontSize}rem`,
+                                                                verticalAlign: 'middle',
+                                                                overflow: 'hidden',
+                                                                whiteSpace: 'nowrap',
+                                                                textOverflow: 'ellipsis',
+                                                                fontWeight: cellData && cellData.type === 'tempo' ? 'bold' : 'normal',
+                                                                background: bgColor
+                                                            }}>
+                                                                {cellData ? cellData.text : ''}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // ---------------------------------------------------------
+                // STANDARD / TRADITIONAL LAYOUT (Original Logic)
+                // ---------------------------------------------------------
 
                 // Split into two columns: odd coordinates on left, even on right
                 const col1 = []; // Odd coordinates (101, 103, 105, ...)
@@ -5662,7 +5780,7 @@
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         }}>
-                            <span style={{ textTransform: 'uppercase' }}>{isModular ? 'SCRIPT' : 'TRADITIONAL'}</span>
+                            <span style={{ textTransform: 'uppercase' }}>TRADITIONAL</span>
                             <span>{title}</span>
                         </div>
                         {/* Table */}
@@ -5680,7 +5798,6 @@
                                             let cellBackground = 'inherit';
                                             if (card.color && card.color !== 'none') {
                                                 const colorBase = card.color;
-                                                // Alternate between two tones every row: light, medium, light, medium...
                                                 const shadeIndex = rowIndex % 2;
                                                 const shades = ['light', 'medium'];
                                                 const shade = shades[shadeIndex];
@@ -6176,7 +6293,7 @@
             return (
                 <div style={{ display: 'flex', height: 'calc(100vh - 100px)', gap: '2rem' }}>
                     {/* Left: Sidebar (Plays or Scripts) */}
-                    <div style={{ width: '320px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
+                    <div style={{ width: '250px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
                         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                             <button
                                 className={`btn ${sidebarMode === 'plays' ? 'btn-primary' : 'btn-secondary'}`}
@@ -6228,9 +6345,7 @@
                                                 <span>{play.name}</span>
                                                 {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>}
                                             </div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                                                {play.formation}
-                                            </div>
+
                                         </div>
                                     ))}
                                 </div>
@@ -6337,7 +6452,6 @@
                                     onChange={e => updateCard(selectedCardId, { type: e.target.value })}
                                 >
                                     <option value="standard">Standard (Traditional)</option>
-                                    <option value="modular">Modular (Script/Tempo)</option>
                                     <option value="rooski">Rooski (16-slot grid)</option>
                                     <option value="audible">Audible (Coordinate + 2 Plays)</option>
                                 </select>
@@ -6347,7 +6461,6 @@
                                 <input
                                     className="form-input"
                                     style={{ width: '120px', padding: '4px 8px' }}
-                                    value={activeCard.opp}
                                     onChange={e => updateCard(selectedCardId, { opp: e.target.value })}
                                     placeholder="Opponent"
                                 />
@@ -6355,7 +6468,6 @@
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iter:</label>
                                 <input
-                                    className="form-input"
                                     style={{ width: '50px', padding: '4px 8px' }}
                                     value={activeCard.iter}
                                     onChange={e => updateCard(selectedCardId, { iter: e.target.value })}
@@ -6426,56 +6538,75 @@
                         {/* Rendering Logic */}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                             {activeCard.type === 'modular' ? (
-                                <div style={{ display: 'flex', gap: '2rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                     {/* Modular Editor List */}
                                     <div style={{ flex: 1 }}>
-                                        <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Row Sequence</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                            {activeCard.rows.map((row, idx) => (
-                                                <div
-                                                    key={row.id}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.75rem',
-                                                        padding: '0.5rem',
-                                                        background: 'var(--bg-panel)',
-                                                        border: '1px solid var(--border)',
-                                                        borderRadius: '4px'
-                                                    }}
-                                                >
-                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', width: '20px' }}>{idx + 1}</span>
-                                                    <div style={{
-                                                        width: '12px',
-                                                        height: '12px',
-                                                        borderRadius: '50%',
-                                                        background: row.type === 'play' ? 'var(--accent)' : 'var(--warning)'
-                                                    }}></div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
-                                                            {row.type === 'play' ? row.playName : row.label}
+                                            {/* Header */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 1fr', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                                <div style={{ textAlign: 'center' }}>Coord</div>
+                                                <div>Column A</div>
+                                                <div>Column B</div>
+                                                <div>Column C</div>
+                                            </div>
+
+                                            {/* Rows of 3 */}
+                                            {(() => {
+                                                const rows = [];
+                                                const chunkSize = 3;
+                                                const startCoord = activeCard.id === 'card1' ? 101 : (activeCard.id === 'card2' ? 201 : 301); // Simplified base logic, ideally relies on getSlotsForCard
+
+                                                for (let i = 0; i < activeCard.rows.length; i += chunkSize) {
+                                                    const chunk = activeCard.rows.slice(i, i + chunkSize);
+                                                    const rowStartCoord = startCoord + (i / 3);
+                                                    rows.push(
+                                                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 1fr', gap: '0.5rem', alignItems: 'start' }}>
+                                                            {/* Coordinate */}
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                                                {rowStartCoord}
+                                                            </div>
+                                                            {/* Play Slots */}
+                                                            {[0, 1, 2].map(offset => {
+                                                                const item = chunk[offset];
+                                                                if (!item) return <div key={offset} style={{ background: 'var(--bg-panel)', border: '1px dashed var(--border)', borderRadius: '4px', height: '100%', minHeight: '40px' }}></div>;
+
+                                                                return (
+                                                                    <div key={offset} style={{
+                                                                        position: 'relative',
+                                                                        background: 'var(--bg-panel)',
+                                                                        border: '1px solid var(--border)',
+                                                                        borderRadius: '4px',
+                                                                        padding: '0.25rem',
+                                                                        fontSize: '0.7rem'
+                                                                    }}>
+                                                                        <div style={{ fontWeight: 'bold', marginBottom: '2px', lineHeight: '1.2' }}>{item.type === 'play' ? item.playName : item.label}</div>
+                                                                        {/* Controls */}
+                                                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                                                                            <button
+                                                                                className="btn btn-danger"
+                                                                                style={{ padding: '0px 4px', fontSize: '0.6rem', height: '16px', lineHeight: '14px' }}
+                                                                                onClick={() => handleRemoveRow(selectedCardId, item.id)}
+                                                                            >×</button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
-                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                                                            {row.type === 'play' ? 'Play' : 'Tempo Protocol'}
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                        <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => handleMoveRow(selectedCardId, row.id, -1)}>↑</button>
-                                                        <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => handleMoveRow(selectedCardId, row.id, 1)}>↓</button>
-                                                        <button className="btn btn-danger" style={{ padding: '2px 6px' }} onClick={() => handleRemoveRow(selectedCardId, row.id)}>×</button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                    );
+                                                }
+                                                return rows;
+                                            })()}
+
                                             {activeCard.rows.length === 0 && (
                                                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', border: '2px dashed var(--border)' }}>
-                                                    Drag scripts/plays or add tempos to build your sequence.
+                                                    Drag scripts/plays or add tempos to build your sequence. Starts at Column A.
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Split Preview */}
-                                    <div style={{ width: '400px' }}>
+                                    <div style={{ width: '100%' }}>
                                         <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Preview</h3>
                                         <div style={{
                                             background: 'white',
@@ -6483,7 +6614,9 @@
                                             border: '2px solid #333',
                                             borderRadius: '4px',
                                             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                            width: '600px',
+                                            width: '100%',
+                                            maxWidth: '600px',
+                                            margin: '0 auto',
                                             aspectRatio: '5/3'
                                         }}>
                                             {/* Header */}
@@ -6503,10 +6636,9 @@
                                     </div>
                                     {activeCard.type === 'rooski' ? (
                                         <div style={{
-                                            width: '600px',
-                                            height: '360px',
-                                            margin: '0 auto',
-                                            aspectRatio: '5 / 3'
+                                            width: '100%',
+                                            aspectRatio: '5 / 3',
+                                            margin: '0 auto'
                                         }}>
                                             {renderRooskiGrid(
                                                 getSlotsForCard(selectedCardId),
@@ -6757,7 +6889,7 @@
                                 <tbody>
                                     {/* Global Note */}
                                     <tr style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
-                                        <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                        <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 'bold', color: '#0f172a' }}>
                                             ALL COACHES
                                         </td>
                                         <td style={{ padding: '0.75rem' }}>
@@ -6767,7 +6899,7 @@
                                                 value={migrated.notes['ALL_COACHES'] || ''}
                                                 onChange={(e) => handleUpdateNotes('ALL_COACHES', e.target.value)}
                                                 placeholder="Enter notes visible to everyone..."
-                                                style={{ width: '100%', resize: 'vertical', border: '1px solid #eee' }}
+                                                style={{ width: '100%', resize: 'vertical', border: '1px solid #ccc', backgroundColor: '#fff', color: '#0f172a', fontFamily: 'inherit' }}
                                             />
                                         </td>
                                     </tr>
@@ -6780,7 +6912,7 @@
                                             </tr>
                                             {coaches.map(coach => (
                                                 <tr key={coach.id} style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
-                                                    <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 500 }}>
+                                                    <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 500, color: '#0f172a' }}>
                                                         {coach.name}
                                                     </td>
                                                     <td style={{ padding: '0.75rem' }}>
@@ -6790,7 +6922,7 @@
                                                             value={migrated.notes[coach.id] || ''}
                                                             onChange={(e) => handleUpdateNotes(coach.id, e.target.value)}
                                                             placeholder=""
-                                                            style={{ width: '100%', resize: 'vertical', border: '1px solid #eee' }}
+                                                            style={{ width: '100%', resize: 'vertical', border: '1px solid #ccc', backgroundColor: '#fff', color: '#0f172a', fontFamily: 'inherit' }}
                                                         />
                                                     </td>
                                                 </tr>
@@ -6806,7 +6938,7 @@
                                             </tr>
                                             {managers.map(mgr => (
                                                 <tr key={mgr.id} style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
-                                                    <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 500 }}>
+                                                    <td style={{ padding: '0.75rem', borderRight: '1px solid var(--border)', fontWeight: 500, color: '#0f172a' }}>
                                                         {mgr.name}
                                                     </td>
                                                     <td style={{ padding: '0.75rem' }}>
@@ -6816,7 +6948,7 @@
                                                             value={migrated.notes[mgr.id] || ''}
                                                             onChange={(e) => handleUpdateNotes(mgr.id, e.target.value)}
                                                             placeholder=""
-                                                            style={{ width: '100%', resize: 'vertical', border: '1px solid #eee' }}
+                                                            style={{ width: '100%', resize: 'vertical', border: '1px solid #ccc', backgroundColor: '#fff', color: '#0f172a', fontFamily: 'inherit' }}
                                                         />
                                                     </td>
                                                 </tr>
@@ -8485,6 +8617,7 @@
                             </table>
 
 
+
                             {/* Add Segment Button */}
                             <div style={{ padding: '1rem', textAlign: 'center', marginTop: '1rem' }}>
                                 <button
@@ -8511,7 +8644,9 @@
                                     disabled={isLocked}
                                 />
                             </div>
-                        </div></div>
+                        </div> {/* Close Right Column */}
+                    </div> {/* Close Practice Flex Container */}
+
                     {/* Print Only: Scripts View (Page 2) */}
                     <div className="print-only-scripts" style={{ display: 'none' }}>
                         <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }}>
@@ -8521,11 +8656,10 @@
                                     <div style={{
                                         borderBottom: '1px solid black',
                                         marginBottom: '0.5rem',
-                                        fontWeight: 'bold',
-                                        display: 'flex',
-                                        justifyContent: 'space-between'
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                                     }}>
-                                        <span>{seg.startTime} - {seg.type} ({seg.duration}m)</span>
+                                        <h3 style={{ margin: 0 }}>{seg.name}</h3>
+                                        <div style={{ fontStyle: 'italic' }}>{seg.duration} min</div>
                                         {/* Show Coach Notes for this segment if helpful. */}
                                     </div>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
@@ -8869,6 +9003,7 @@
             const [kickoffTime, setKickoffTime] = useState(plan?.kickoffTime || '19:00');
             const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
             const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
+            const [notesModalSegmentId, setNotesModalSegmentId] = useState(null);
 
             // Helper function to migrate old notes format to new format
             const migrateSegmentNotes = (segment) => {
@@ -8997,6 +9132,16 @@
                         </div>
                     </div>
 
+                    {/* Notes Modal */}
+                    {notesModalSegmentId && (
+                        <NotesModal
+                            segment={plan.segments.find(s => s.id === notesModalSegmentId)}
+                            staff={staff}
+                            onClose={() => setNotesModalSegmentId(null)}
+                            onUpdateNotes={(segmentId, coachId, note) => updateSegmentNotes(segmentId, coachId, note)}
+                        />
+                    )}
+
                     {/* Coach Filter */}
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -9074,18 +9219,42 @@
                                                 />
                                             </td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                <input
-                                                    key={`pregame-${segment.id}-notes-${selectedNotesCoach}`}
-                                                    type="text"
-                                                    className="form-input"
-                                                    value={(() => {
-                                                        const migrated = migrateSegmentNotes(segment);
-                                                        return migrated.notes[selectedNotesCoach] || '';
-                                                    })()}
-                                                    onChange={e => updateSegmentNotes(segment.id, selectedNotesCoach, e.target.value)}
-                                                    placeholder={selectedNotesCoach === 'ALL_COACHES' ? 'Notes for all coaches...' : `Notes for ${staff?.find(s => s.id === selectedNotesCoach)?.name || 'this coach'}...`}
-                                                    disabled={isLocked}
-                                                />
+                                                {(() => {
+                                                    const migrated = migrateSegmentNotes(segment);
+                                                    const allNotes = migrated.notes['ALL_COACHES'];
+                                                    const hasAnyNotes = Object.keys(migrated.notes).some(key => migrated.notes[key]);
+                                                    const displayNote = selectedNotesCoach === 'ALL_COACHES'
+                                                        ? (allNotes || (hasAnyNotes ? 'View Notes...' : ''))
+                                                        : (migrated.notes[selectedNotesCoach] || '');
+
+                                                    return (
+                                                        <button
+                                                            className="form-input"
+                                                            style={{
+                                                                padding: '0.25rem 0.5rem',
+                                                                textAlign: 'left',
+                                                                cursor: 'pointer',
+                                                                width: '100%',
+                                                                backgroundColor: hasAnyNotes ? 'var(--bg-input)' : 'transparent',
+                                                                border: hasAnyNotes ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                                                color: hasAnyNotes ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                                fontStyle: hasAnyNotes ? 'normal' : 'italic',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap'
+                                                            }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setNotesModalSegmentId(segment.id);
+                                                            }}
+                                                        >
+                                                            {hasAnyNotes
+                                                                ? (displayNote || 'Click to view notes...')
+                                                                : 'Click to add notes...'
+                                                            }
+                                                        </button>
+                                                    );
+                                                })()}
                                             </td>
                                             <td style={{ padding: '0.5rem', textAlign: 'right' }}>
                                                 {!isLocked && (
@@ -16545,7 +16714,7 @@
                             Printing Strike &apos;Em Out (Matrix). Use Landscape mode for best results.
                         </div>
                         <h2 style={{ textAlign: 'center', marginBottom: '0.5rem', borderBottom: '2px solid black' }}>Strike &apos;Em Out Matrix</h2>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.6rem', tableLayout: 'fixed' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.6rem' }}>
                             <thead>
                                 <tr>
                                     <th rowSpan={2} style={{ border: '1px solid black', padding: '2px', background: '#ccc', width: '80px' }}>Formation / Type</th>
@@ -16559,7 +16728,7 @@
                                     {columnGroups.map((group) => (
                                         <React.Fragment key={group.id + '_sub'}>
                                             {group.cols.map((col, i) => (
-                                                <th key={col.id} style={{ border: '1px solid black', fontSize: '0.5rem', overflow: 'hidden', whiteSpace: 'nowrap' }}>{col.header}</th>
+                                                <th key={col.id} style={{ border: '1px solid black', fontSize: '0.5rem', overflow: 'hidden', whiteSpace: 'nowrap', width: '11%' }}>{col.header}</th>
                                             ))}
                                         </React.Fragment>
                                     ))}
@@ -23485,6 +23654,17 @@
                             {plan.segments.map((seg, idx) => {
                                 const startTimeStr = formatTime(currentTime);
                                 currentTime.setMinutes(currentTime.getMinutes() + parseInt(seg.duration));
+
+                                // Filter Logic:
+                                // Show segment if:
+                                // 1. Filter is 'ALL'
+                                // 2. Coach is the assigned Staff Member
+                                // 3. Coach has specific notes for this segment
+                                const isRelevant = coachFilter === 'ALL' ||
+                                    seg.staffId === coachFilter ||
+                                    (seg.notes && typeof seg.notes === 'object' && seg.notes[coachFilter]);
+
+                                if (!isRelevant) return null;
 
                                 return (
                                     <tr key={idx} style={{ pageBreakInside: 'avoid', borderBottom: '1px solid #ccc' }}>
