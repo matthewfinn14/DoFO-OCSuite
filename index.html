@@ -2148,6 +2148,7 @@
 
                 // -- Settings & UI Fixes --
                 case "Mail": return <svg {...commonProps}><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>;
+                case "Archive": return <svg {...commonProps}><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>;
                 case "Phone": return <svg {...commonProps}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>;
                 case "Edit2": return <svg {...commonProps}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>;
                 case "Pencil": return <svg {...commonProps}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>;
@@ -10552,12 +10553,10 @@
             const fileInputRef = useRef(null);
 
             const downloadTemplate = () => {
-                const template = `Number,Name,Position,Year,Height,Weight
-1,John Smith,QB/LB,Sr,6'2",185
-2,Mike Johnson,RB/LB,Jr,5'11",175
-3,Chris Davis,WR/DB,So,6'0",170
-4,Tom Wilson,TE/DE,Fr,6'3",210
-5,Alex Brown,OL/DL,Sr,6'1",245`;
+                const template = `Number,Name,OffPos,DefPos,Year,Height,Weight
+1,John Smith,QB,LB,Sr,6'2",185
+2,Mike Johnson,RB,LB,Jr,5'11",175
+3,Chris Davis,WR,DB,So,6'0",170`;
 
                 const blob = new Blob([template], { type: 'text/csv' });
                 const url = window.URL.createObjectURL(blob);
@@ -11239,9 +11238,6 @@
                                             {[
                                                 { header: 'Number', alias: 'Jersey, #, No', example: '12' },
                                                 { header: 'Name', alias: 'Full Name, Player', example: 'John Doe' },
-                                                { header: 'First Name', alias: 'Fname', example: 'John' },
-                                                { header: 'Last Name', alias: 'Lname', example: 'Doe' },
-                                                { header: 'Position', alias: 'Pos', example: 'QB/LB' },
                                                 { header: 'OffPos', alias: 'Offense', example: 'QB' },
                                                 { header: 'DefPos', alias: 'Defense', example: 'LB' },
                                                 { header: 'Year', alias: 'Grade, Class, Yr', example: 'Fr, 9' },
@@ -14729,6 +14725,133 @@
             );
         };
 
+        const ArchiveManager = ({ roster, staff, onUpdateRoster, onUpdateStaff }) => {
+            const [tab, setTab] = useState('players'); // players | staff
+            const archivedPlayers = roster.filter(p => p.archived);
+            const archivedStaff = staff.filter(s => s.archived);
+
+            const restorePlayer = (id) => {
+                onUpdateRoster(roster.map(p => p.id === id ? { ...p, archived: false } : p));
+            };
+
+            const deletePlayerForever = (id) => {
+                if (confirm("PERMANENT DELETE: This cannot be undone. Are you sure?")) {
+                    onUpdateRoster(roster.filter(p => p.id !== id));
+                }
+            };
+
+            const restoreStaff = (id) => {
+                onUpdateStaff(staff.map(s => s.id === id ? { ...s, archived: false } : s));
+            };
+
+            const deleteStaffForever = (id) => {
+                if (confirm("PERMANENT DELETE: This cannot be undone. Are you sure?")) {
+                    onUpdateStaff(staff.filter(s => s.id !== id));
+                }
+            };
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <h2>Archive Management</h2>
+                        </div>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button className={`btn ${tab === 'players' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setTab('players')}>
+                                Players ({archivedPlayers.length})
+                            </button>
+                            <button className={`btn ${tab === 'staff' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setTab('staff')}>
+                                Staff ({archivedStaff.length})
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        {tab === 'players' && (
+                            <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                                        <th style={{ textAlign: 'left', padding: '1rem' }}>Name</th>
+                                        <th style={{ textAlign: 'left', padding: '1rem' }}>Position</th>
+                                        <th style={{ textAlign: 'left', padding: '1rem' }}>Year</th>
+                                        <th style={{ textAlign: 'right', padding: '1rem' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {archivedPlayers.map(p => (
+                                        <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <td style={{ padding: '1rem' }}>
+                                                <div style={{ fontWeight: 'bold' }}>{p.name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>#{p.number}</div>
+                                            </td>
+                                            <td style={{ padding: '1rem' }}>{p.position}</td>
+                                            <td style={{ padding: '1rem' }}>{p.year}</td>
+                                            <td style={{ padding: '1rem', textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button className="btn btn-secondary" onClick={() => restorePlayer(p.id)} title="Restore to Roster">
+                                                    <Icon name="Undo" size={16} /> Restore
+                                                </button>
+                                                <button className="btn btn-danger" onClick={() => deletePlayerForever(p.id)} title="Delete Permanently">
+                                                    <Icon name="Trash" size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {archivedPlayers.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                                No archived players found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        )}
+
+                        {tab === 'staff' && (
+                            <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                                        <th style={{ textAlign: 'left', padding: '1rem' }}>Name</th>
+                                        <th style={{ textAlign: 'left', padding: '1rem' }}>Role</th>
+                                        <th style={{ textAlign: 'left', padding: '1rem' }}>Email</th>
+                                        <th style={{ textAlign: 'right', padding: '1rem' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {archivedStaff.map(s => (
+                                        <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <td style={{ padding: '1rem' }}>
+                                                <div style={{ fontWeight: 'bold' }}>{s.name}</div>
+                                            </td>
+                                            <td style={{ padding: '1rem' }}>{s.role}</td>
+                                            <td style={{ padding: '1rem' }}>{s.email}</td>
+                                            <td style={{ padding: '1rem', textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button className="btn btn-secondary" onClick={() => restoreStaff(s.id)} title="Restore to Staff">
+                                                    <Icon name="Undo" size={16} /> Restore
+                                                </button>
+                                                <button className="btn btn-danger" onClick={() => deleteStaffForever(s.id)} title="Delete Permanently">
+                                                    <Icon name="Trash" size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {archivedStaff.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                                No archived staff found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // -- Archive Manager --
+
         const StaffManager = ({ currentUser, staff, onUpdateStaff, dutyAssignments, onUpdateDuties, view = 'roster', masterTasks, onUpdateMasterTasks }) => {
             // view: 'roster' | 'duties'
             const [newMember, setNewMember] = useState({
@@ -14870,8 +14993,8 @@
             };
 
             const deleteMember = (id) => {
-                if (confirm('Are you sure you want to remove this staff member?')) {
-                    onUpdateStaff(staff.filter(m => m.id !== id));
+                if (confirm('Are you sure you want to ARCHIVE this staff member? They can be restored from the Personnel > Archive menu.')) {
+                    onUpdateStaff(staff.map(m => m.id === id ? { ...m, archived: true } : m));
                 }
             };
 
@@ -16183,8 +16306,8 @@
 
             // Derive base type and squad level
             const formattedType = chartType || 'OFFENSE';
-            const baseChartType = formattedType.replace(/^(V|JV|J2)_/, '');
-            const squadPrefix = formattedType.match(/^(V|JV|J2)_/)?.[1] || '';
+            const baseChartType = formattedType.replace(/^(V|JV|J2|SCOUT)_/, '');
+            const squadPrefix = formattedType.match(/^(V|JV|J2|SCOUT)_/)?.[1] || '';
             const squadName = { 'V': 'Varsity', 'JV': 'JV', 'J2': 'JV2' }[squadPrefix] || 'Varsity';
 
             // Standard coordinate mappings for different formations
@@ -22494,7 +22617,7 @@
                             <h3 style={{ margin: 0 }}>{viewCategory === 'ironman' ? 'Iron Man' : 'Combine Data'}</h3>
                         </div>
                         <div style={{ flex: 1, overflowY: 'auto' }}>
-                            {roster.map(player => {
+                            {roster.filter(p => !p.archived).map(player => {
                                 const stats = getLatestStats(player.id);
                                 return (
                                     <div
@@ -25947,10 +26070,16 @@
             );
         };
 
-        const PlayerApp = ({ roster, attendance, setRoster, setAttendance, getPlayerWeightLogs, addWeightLog, tasks, onUpdateTasks, dailyConnections, setDailyConnections, currentWeek }) => {
+        const PlayerApp = ({ roster, attendance, setRoster, setAttendance, getPlayerWeightLogs, addWeightLog, tasks, onUpdateTasks, dailyConnections, setDailyConnections, currentWeek, culturalCalibration, setCulturalCalibration }) => {
             const [selectedPlayerId, setSelectedPlayerId] = useState(roster.length > 0 ? roster[0].id : '');
-            const [activeTab, setActiveTab] = useState('wellness'); // wellness, profile, attendance, achievements
+            const [activeTab, setActiveTab] = useState('wellness'); // wellness, profile, attendance, achievements, culture
             const [showCoachAlert, setShowCoachAlert] = useState(false);
+
+            // Culture Calibration State
+            const [cultureReflection, setCultureReflection] = useState('');
+            const [cultureCurrentScore, setCultureCurrentScore] = useState(5);
+            const [cultureDesiredScore, setCultureDesiredScore] = useState(5);
+            const [cultureFeedback, setCultureFeedback] = useState('');
 
             // Warrior Dial Form State
             const [wellnessForm, setWellnessForm] = useState({
@@ -26293,6 +26422,7 @@
                                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)', overflowX: 'auto' }}>
                                     {[
                                         { id: 'wellness', label: 'Daily Check-In', icon: 'Heart' },
+                                        { id: 'culture', label: 'Culture', icon: 'Zap' },
                                         { id: 'gameweek', label: 'Game Week', icon: 'Calendar' },
                                         { id: 'profile', label: 'My Profile', icon: 'User' },
                                         { id: 'attendance', label: 'Attendance', icon: 'Calendar' },
@@ -26322,6 +26452,177 @@
                                         </button>
                                     ))}
                                 </div>
+
+
+                                {/* CULTURE TAB */}
+                                {activeTab === 'culture' && (
+                                    <div style={{ paddingBottom: '2rem' }}>
+                                        {/* Header */}
+                                        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(245, 158, 11, 0.1))', border: '1px solid rgba(249, 115, 22, 0.3)' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#f97316' }}>Culture Calibration</h3>
+                                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                                Stay aligned with our program's values and standards.
+                                            </p>
+                                        </div>
+
+                                        {(() => {
+                                            // Helper to find active item (copied logic from main app)
+                                            const getTodayDateString = () => {
+                                                const d = new Date();
+                                                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                                            };
+                                            const todayKey = getTodayDateString();
+
+                                            const findActiveItem = (items) => {
+                                                if (!items || !Array.isArray(items)) return null;
+                                                return items.find(i => {
+                                                    if (i.date === todayKey) return true;
+                                                    if (i.recurring) {
+                                                        const itemDate = new Date(i.date + 'T00:00:00');
+                                                        const today = new Date();
+                                                        // Simple check for same month/day (ignoring leap year nuances for now)
+                                                        return itemDate.getMonth() === today.getMonth() && itemDate.getDate() === today.getDate();
+                                                    }
+                                                    return false;
+                                                });
+                                            };
+
+                                            const activeQuote = findActiveItem(culturalCalibration?.quotes);
+                                            const activeChallenge = findActiveItem(culturalCalibration?.challenges);
+
+                                            return (
+                                                <>
+                                                    {/* Quote Card */}
+                                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                                        <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <Icon name="Quote" size={18} color="#3b82f6" />
+                                                            Today's Quote
+                                                        </h3>
+                                                        {activeQuote ? (
+                                                            <div style={{ fontSize: '1.1rem' }}>
+                                                                <div style={{ fontStyle: 'italic', marginBottom: '0.75rem', lineHeight: '1.5' }}>"{activeQuote.text}"</div>
+                                                                <div style={{ textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>— {activeQuote.author}</div>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', textAlign: 'center' }}>No active quote for today</div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Challenge Card */}
+                                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                                        <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <Icon name="Zap" size={18} color="#f59e0b" />
+                                                            Today's Challenge
+                                                        </h3>
+                                                        {activeChallenge ? (
+                                                            <div style={{ fontSize: '1.05rem', lineHeight: '1.5' }}>
+                                                                {activeChallenge.text}
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', textAlign: 'center' }}>No active challenge for today</div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Feedback Form */}
+                                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                                        <h3 style={{ margin: '0 0 1rem 0' }}>Your Feedback</h3>
+
+                                                        <div style={{ marginBottom: '1.5rem' }}>
+                                                            <label className="form-label">How are you feeling about our program's culture? What's on your mind?</label>
+                                                            <textarea
+                                                                className="form-input"
+                                                                rows={4}
+                                                                placeholder="Share your thoughts, reflections, or concerns..."
+                                                                value={cultureReflection}
+                                                                onChange={e => setCultureReflection(e.target.value)}
+                                                            />
+                                                        </div>
+
+                                                        <div style={{ marginBottom: '1.5rem' }}>
+                                                            <label className="form-label">Current Culture Score (1-10)</label>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                                <input
+                                                                    type="range"
+                                                                    min="1"
+                                                                    max="10"
+                                                                    value={cultureCurrentScore}
+                                                                    onChange={e => setCultureCurrentScore(parseInt(e.target.value))}
+                                                                    style={{ flex: 1 }}
+                                                                />
+                                                                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#f97316' }}>{cultureCurrentScore}</span>
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                                                <span>Toxic</span>
+                                                                <span>Elite</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ marginBottom: '1.5rem' }}>
+                                                            <label className="form-label">Desired Culture Score (1-10)</label>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                                <input
+                                                                    type="range"
+                                                                    min="1"
+                                                                    max="10"
+                                                                    value={cultureDesiredScore}
+                                                                    onChange={e => setCultureDesiredScore(parseInt(e.target.value))}
+                                                                    style={{ flex: 1 }}
+                                                                />
+                                                                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#10b981' }}>{cultureDesiredScore}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ marginBottom: '1.5rem' }}>
+                                                            <label className="form-label">Additional Feedback (Optional)</label>
+                                                            <textarea
+                                                                className="form-input"
+                                                                rows={3}
+                                                                placeholder="Any suggestions or thoughts on how we can improve?"
+                                                                value={cultureFeedback}
+                                                                onChange={e => setCultureFeedback(e.target.value)}
+                                                            />
+                                                        </div>
+
+                                                        <button
+                                                            className="btn btn-primary"
+                                                            disabled={!cultureReflection.trim()}
+                                                            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
+                                                            onClick={() => {
+                                                                // Create response object
+                                                                const newResponse = {
+                                                                    id: Date.now().toString(),
+                                                                    playerId: selectedPlayerId,
+                                                                    playerName: `${selectedPlayer.firstName} ${selectedPlayer.lastName}`,
+                                                                    date: new Date().toISOString(),
+                                                                    reflection: cultureReflection,
+                                                                    currentCultureScore: cultureCurrentScore,
+                                                                    desiredCultureScore: cultureDesiredScore,
+                                                                    additionalFeedback: cultureFeedback
+                                                                };
+
+                                                                // Update state
+                                                                setCulturalCalibration(prev => ({
+                                                                    ...prev,
+                                                                    responses: [...(prev.responses || []), newResponse]
+                                                                }));
+
+                                                                // Reset form
+                                                                setCultureReflection('');
+                                                                setCultureFeedback('');
+                                                                setCultureCurrentScore(5);
+                                                                setCultureDesiredScore(5);
+
+                                                                alert('Thank you! Your feedback has been recorded.');
+                                                            }}
+                                                        >
+                                                            <Icon name="Send" size={16} /> Submit Response
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
 
                                 {/* WELLNESS TAB */}
                                 {activeTab === 'wellness' && (
@@ -26385,8 +26686,8 @@
                                                 Track your weight to monitor progress over time.
                                             </p>
 
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', marginBottom: '1.5rem' }}>
-                                                <div className="form-group">
+                                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', marginBottom: '1.5rem' }}>
+                                                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                                                     <label className="form-label">Weight (lbs)</label>
                                                     <input
                                                         type="number"
@@ -26399,23 +26700,21 @@
                                                         step="0.1"
                                                     />
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                                    <button
-                                                        className="btn btn-primary"
-                                                        onClick={() => {
-                                                            if (weightInput && parseFloat(weightInput) >= 50 && parseFloat(weightInput) <= 500) {
-                                                                addWeightLog(selectedPlayerId, weightInput);
-                                                                setWeightInput('');
-                                                                alert('Weight logged successfully!');
-                                                            } else {
-                                                                alert('Please enter a valid weight between 50 and 500 lbs');
-                                                            }
-                                                        }}
-                                                        style={{ height: 'fit-content' }}
-                                                    >
-                                                        <Icon name="Save" /> Log Weight
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    className="btn btn-primary"
+                                                    onClick={() => {
+                                                        if (weightInput && parseFloat(weightInput) >= 50 && parseFloat(weightInput) <= 500) {
+                                                            addWeightLog(selectedPlayerId, weightInput);
+                                                            setWeightInput('');
+                                                            alert('Weight logged successfully!');
+                                                        } else {
+                                                            alert('Please enter a valid weight between 50 and 500 lbs');
+                                                        }
+                                                    }}
+                                                    style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                >
+                                                    <Icon name="Save" /> Log Weight
+                                                </button>
                                             </div>
 
                                             {/* Recent Weight Entries */}
@@ -26538,7 +26837,7 @@
                                             </button>
 
                                             {/* Recent Logs */}
-                                            {selectedPlayer.metrics.warriorDialLogs && selectedPlayer.metrics.warriorDialLogs.length > 0 && (
+                                            {selectedPlayer.metrics?.warriorDialLogs && selectedPlayer.metrics.warriorDialLogs.length > 0 && (
                                                 <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
                                                     <h3 style={{ marginBottom: '1rem' }}>Recent Check-Ins</h3>
                                                     <div style={{ display: 'grid', gap: '0.75rem' }}>
@@ -26629,6 +26928,96 @@
                                                 <span>{currentWeek.date || 'TBD'}</span>
                                             </div>
                                         </div>
+
+                                        {/* Assignments Section */}
+                                        {(() => {
+                                            const assignments = {
+                                                offense: [],
+                                                defense: [],
+                                                specialTeams: [],
+                                                scout: []
+                                            };
+
+                                            if (currentWeek.depthChart) {
+                                                Object.entries(currentWeek.depthChart).forEach(([chartType, positions]) => {
+                                                    const isScout = chartType.includes('SCOUT');
+                                                    const isOffense = chartType.includes('OFFENSE') && !isScout;
+                                                    const isDefense = chartType.includes('DEFENSE') && !isScout;
+                                                    const isSpecialTeams = !isOffense && !isDefense && !isScout;
+
+                                                    Object.entries(positions).forEach(([posId, playerIdOrArr]) => {
+                                                        const playerIds = Array.isArray(playerIdOrArr) ? playerIdOrArr : [playerIdOrArr];
+                                                        const depthIndex = playerIds.indexOf(selectedPlayer.id);
+
+                                                        if (depthIndex !== -1) {
+                                                            const chartName = chartType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                                            // Handle position name: split by underscore and take last part to remove prefixes if any
+                                                            const posName = posId.split('_').pop();
+                                                            const display = `${posName}${depthIndex + 1}`; // e.g. "X" + 1 -> "X1"
+
+                                                            const assignment = { type: chartName, position: display };
+
+                                                            if (isScout) assignments.scout.push(assignment);
+                                                            else if (isOffense) assignments.offense.push(assignment);
+                                                            else if (isDefense) assignments.defense.push(assignment);
+                                                            else assignments.specialTeams.push(assignment);
+                                                        }
+                                                    });
+                                                });
+                                            }
+
+                                            const hasAssignments = Object.values(assignments).some(arr => arr.length > 0);
+
+                                            if (hasAssignments) {
+                                                return (
+                                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                                        <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Your Weekly Assignments</h3>
+                                                        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                                                            {assignments.offense.length > 0 && (
+                                                                <div>
+                                                                    <div style={{ fontWeight: 'bold', color: 'var(--accent)', marginBottom: '0.5rem' }}>Offense</div>
+                                                                    {assignments.offense.map((a, i) => (
+                                                                        <div key={i} style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>{a.type}: {a.position}</div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            {assignments.defense.length > 0 && (
+                                                                <div>
+                                                                    <div style={{ fontWeight: 'bold', color: 'var(--accent)', marginBottom: '0.5rem' }}>Defense</div>
+                                                                    {assignments.defense.map((a, i) => (
+                                                                        <div key={i} style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>{a.type}: {a.position}</div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            {assignments.specialTeams.length > 0 && (
+                                                                <div>
+                                                                    <div style={{ fontWeight: 'bold', color: 'var(--accent)', marginBottom: '0.5rem' }}>Special Teams</div>
+                                                                    {assignments.specialTeams.map((a, i) => (
+                                                                        <div key={i} style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>{a.type}: {a.position}</div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            {assignments.scout.length > 0 && (
+                                                                <div>
+                                                                    <div style={{ fontWeight: 'bold', color: '#f59e0b', marginBottom: '0.5rem' }}>Scout Teams</div>
+                                                                    {assignments.scout.map((a, i) => (
+                                                                        <div key={i} style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>{a.type}: {a.position}</div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            } else {
+                                                return (
+                                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                        <h3 style={{ marginBottom: '0.5rem' }}>No Weekly Assignments</h3>
+                                                        <p style={{ fontSize: '0.9rem' }}>You are not currently assigned to any depth chart positions for this week.</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                        })()}
 
                                         {/* Overview Section */}
                                         {(!currentWeek.overview?.distribution || currentWeek.overview.distribution.showOverview) && (
@@ -39922,6 +40311,9 @@
                                     <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                         <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
                                     </button>
+                                    <button className={`nav-item ${view === 'archive' ? 'active' : ''}`} onClick={() => setView('archive')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Archive" size={16} style={{ marginRight: '8px' }} /> Archive
+                                    </button>
 
                                 </CollapsibleCategory>
                             )}
@@ -40186,6 +40578,14 @@
                                                     </button>
                                                 ))}
                                             </CollapsibleCategory>
+
+                                            <div style={{ padding: '0.5rem 0 0.25rem 2rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>SCOUT TEAMS</div>
+                                            <button className={`nav-item ${view === 'depth' && depthChartType === 'SCOUT_OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('SCOUT_OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                Scout Offense
+                                            </button>
+                                            <button className={`nav-item ${view === 'depth' && depthChartType === 'SCOUT_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('SCOUT_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                Scout Defense
+                                            </button>
                                         </CollapsibleCategory>
                                     )}
 
@@ -41008,6 +41408,16 @@
                             )
                         }
                         {
+                            view === 'archive' && (
+                                <ArchiveManager
+                                    roster={roster}
+                                    staff={staff}
+                                    onUpdateRoster={setRoster}
+                                    onUpdateStaff={setStaff}
+                                />
+                            )
+                        }
+                        {
                             view === 'staff-meeting' && (
                                 <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
                                     <Icon name="Presentation" size={48} color="var(--accent)" style={{ marginBottom: '1rem' }} />
@@ -41125,7 +41535,7 @@
                         {view === 'ratings' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
                         {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={handleUpdateGameLog} roster={roster} depthChart={currentWeek.depthChart || {}} situation={situation} onUpdateSituation={setSituation} formations={formations} activePlay={activePlay} setActivePlay={setActivePlay} />}
                         {view === 'grading' && <GameGradingView gameLog={currentWeek.gameLog} roster={roster} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} valhallaData={valhallaData} onUpdateValhalla={setValhallaData} />}
-                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} />}
+                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} setCulturalCalibration={setCulturalCalibration} />}
                         {view === 'coach-app' && <PracticeCoachApp staff={staff} roster={roster} plans={currentWeek.practicePlans || []} plays={plays} drills={DRILL_DATA} />}
                         {view === 'self-assessment' && <AthleteSelfAssessment roster={roster} staff={staff} currentUser={currentUser} onSync={(data) => syncToFirestore(currentUser?.uid, 'athleteAssessments', data)} />}
                         {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} gamePlanLayouts={gamePlanLayouts} />}
