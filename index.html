@@ -36584,6 +36584,135 @@
             'Deadlift': {}
         };
 
+        // Cultural Calibration Component
+        const CulturalCalibration = ({ culturalCalibration, setCulturalCalibration, currentPermissions, authUser }) => {
+            const isAdmin = currentPermissions?.organizationAdmin || currentPermissions?.culturalAdmin;
+            const [ccMode, setCCMode] = useState(isAdmin ? 'admin' : 'user');
+            const [quoteText, setQuoteText] = useState('');
+            const [quoteAuthor, setQuoteAuthor] = useState('');
+            const [challengeText, setChallengeText] = useState('');
+            const [reflection, setReflection] = useState('');
+            const [currentScore, setCurrentScore] = useState(5);
+            const [desiredScore, setDesiredScore] = useState(8);
+            const [feedback, setFeedback] = useState('');
+
+            const addQuote = () => {
+                if (!quoteText.trim()) return;
+                const newQuote = {
+                    id: Date.now().toString(),
+                    text: quoteText,
+                    author: quoteAuthor || 'Unknown',
+                    dateAdded: new Date().toISOString(),
+                    scheduledDate: null
+                };
+                setCulturalCalibration({
+                    ...culturalCalibration,
+                    quotes: [...(culturalCalibration.quotes || []), newQuote]
+                });
+                setQuoteText('');
+                setQuoteAuthor('');
+            };
+
+            const addChallenge = () => {
+                if (!challengeText.trim()) return;
+                const newChallenge = {
+                    id: Date.now().toString(),
+                    text: challengeText,
+                    dateAdded: new Date().toISOString(),
+                    scheduledDate: null
+                };
+                setCulturalCalibration({
+                    ...culturalCalibration,
+                    challenges: [...(culturalCalibration.challenges || []), newChallenge]
+                });
+                setChallengeText('');
+            };
+
+            const setActiveQuote = (id) => {
+                setCulturalCalibration({
+                    ...culturalCalibration,
+                    activeQuote: id
+                });
+            };
+
+            const setActiveChallenge = (id) => {
+                setCulturalCalibration({
+                    ...culturalCalibration,
+                    activeChallenge: id
+                });
+            };
+
+            const deleteQuote = (id) => {
+                setCulturalCalibration({
+                    ...culturalCalibration,
+                    quotes: (culturalCalibration.quotes || []).filter(q => q.id !== id),
+                    activeQuote: culturalCalibration.activeQuote === id ? null : culturalCalibration.activeQuote
+                });
+            };
+
+            const deleteChallenge = (id) => {
+                setCulturalCalibration({
+                    ...culturalCalibration,
+                    challenges: (culturalCalibration.challenges || []).filter(c => c.id !== id),
+                    activeChallenge: culturalCalibration.activeChallenge === id ? null : culturalCalibration.activeChallenge
+                });
+            };
+
+            const submitResponse = () => {
+                const newResponse = {
+                    id: Date.now().toString(),
+                    userId: authUser?.uid,
+                    userName: authUser?.displayName || authUser?.email,
+                    date: new Date().toISOString(),
+                    reflection: reflection,
+                    currentCultureScore: currentScore,
+                    desiredCultureScore: desiredScore,
+                    feedback: feedback
+                };
+                setCulturalCalibration({
+                    ...culturalCalibration,
+                    responses: [...(culturalCalibration.responses || []), newResponse]
+                });
+                setReflection('');
+                setCurrentScore(5);
+                setDesiredScore(8);
+                setFeedback('');
+                alert('Response submitted successfully!');
+            };
+
+            const activeQuoteObj = (culturalCalibration.quotes || []).find(q => q.id === culturalCalibration.activeQuote);
+            const activeChallengeObj = (culturalCalibration.challenges || []).find(c => c.id === culturalCalibration.activeChallenge);
+
+            const responses = culturalCalibration.responses || [];
+            const avgCurrent = responses.length > 0 ? (responses.reduce((sum, r) => sum + r.currentCultureScore, 0) / responses.length).toFixed(1) : 'N/A';
+            const avgDesired = responses.length > 0 ? (responses.reduce((sum, r) => sum + r.desiredCultureScore, 0) / responses.length).toFixed(1) : 'N/A';
+
+            return (
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
+                    <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)' }}>
+                        <h2 style={{ margin: '0 0 1rem 0', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Icon name="Heart" size={28} />
+                            Culture Calibration
+                        </h2>
+                        <p style={{ margin: 0, opacity: 0.9, color: 'white' }}>
+                            Daily quotes, challenges, and culture feedback
+                        </p>
+                        {isAdmin && (
+                            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
+                                <button className={`btn ${ccMode === 'admin' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setCCMode('admin')} style={{ borderRadius: '20px' }}>Admin View</button>
+                                <button className={`btn ${ccMode === 'user' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setCCMode('user')} style={{ borderRadius: '20px' }}>User View</button>
+                            </div>
+                        )}
+                    </div>
+                    {ccMode === 'admin' ? (
+                        <><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Response Dashboard</h3><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}><div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Responses</div><div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{responses.length}</div></div><div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Current Culture</div><div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f97316' }}>{avgCurrent}</div></div><div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Desired Culture</div><div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>{avgDesired}</div></div></div></div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Daily Quotes</h3><div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}><input className="form-input" placeholder="Quote text..." value={quoteText} onChange={e => setQuoteText(e.target.value)} /><input className="form-input" placeholder="Author (optional)" value={quoteAuthor} onChange={e => setQuoteAuthor(e.target.value)} /><button className="btn btn-primary" onClick={addQuote} disabled={!quoteText.trim()}>Add Quote</button></div><div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{(culturalCalibration.quotes || []).map(quote => (<div key={quote.id} style={{ padding: '1rem', background: quote.id === culturalCalibration.activeQuote ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-secondary)', borderRadius: '8px', border: quote.id === culturalCalibration.activeQuote ? '2px solid var(--accent)' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}><div style={{ flex: 1 }}><div style={{ fontStyle: 'italic', marginBottom: '0.5rem' }}>"{quote.text}"</div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>— {quote.author}</div></div><div style={{ display: 'flex', gap: '0.5rem' }}><button className="btn btn-sm btn-secondary" onClick={() => setActiveQuote(quote.id)} disabled={quote.id === culturalCalibration.activeQuote}>{quote.id === culturalCalibration.activeQuote ? 'Active' : 'Set Active'}</button><button className="btn btn-sm btn-danger" onClick={() => deleteQuote(quote.id)}>Delete</button></div></div>))}</div></div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Daily Challenges</h3><div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}><textarea className="form-input" rows={3} placeholder="Challenge text..." value={challengeText} onChange={e => setChallengeText(e.target.value)} /><button className="btn btn-primary" onClick={addChallenge} disabled={!challengeText.trim()}>Add Challenge</button></div><div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{(culturalCalibration.challenges || []).map(challenge => (<div key={challenge.id} style={{ padding: '1rem', background: challenge.id === culturalCalibration.activeChallenge ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-secondary)', borderRadius: '8px', border: challenge.id === culturalCalibration.activeChallenge ? '2px solid var(--accent)' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}><div style={{ flex: 1 }}>{challenge.text}</div><div style={{ display: 'flex', gap: '0.5rem' }}><button className="btn btn-sm btn-secondary" onClick={() => setActiveChallenge(challenge.id)} disabled={challenge.id === culturalCalibration.activeChallenge}>{challenge.id === culturalCalibration.activeChallenge ? 'Active' : 'Set Active'}</button><button className="btn btn-sm btn-danger" onClick={() => deleteChallenge(challenge.id)}>Delete</button></div></div>))}</div></div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Submitted Responses</h3><div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>{responses.length === 0 ? (<div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No responses yet</div>) : (responses.map(response => (<div key={response.id} style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><div style={{ fontWeight: 'bold' }}>{response.userName}</div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{new Date(response.date).toLocaleDateString()}</div></div><div style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>{response.reflection}</div><div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem' }}><div>Current: <span style={{ fontWeight: 'bold', color: '#f97316' }}>{response.currentCultureScore}/10</span></div><div>Desired: <span style={{ fontWeight: 'bold', color: '#10b981' }}>{response.desiredCultureScore}/10</span></div></div>{response.feedback && (<div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: '4px', fontSize: '0.85rem' }}><strong>Feedback:</strong> {response.feedback}</div>)}</div>)))}</div></div></>
+                    ) : (
+                        <><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Today's Quote</h3>{activeQuoteObj ? (<div style={{ fontSize: '1.1rem' }}><div style={{ fontStyle: 'italic', marginBottom: '0.75rem' }}>"{activeQuoteObj.text}"</div><div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>— {activeQuoteObj.author}</div></div>) : (<div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No active quote for today</div>)}</div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Today's Challenge</h3>{activeChallengeObj ? (<div style={{ fontSize: '1.05rem' }}>{activeChallengeObj.text}</div>) : (<div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No active challenge for today</div>)}</div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Your Feedback</h3><div style={{ marginBottom: '1.5rem' }}><label className="form-label">How are you feeling about our program's culture? What's on your mind?</label><textarea className="form-input" rows={4} placeholder="Share your thoughts, reflections, or concerns..." value={reflection} onChange={e => setReflection(e.target.value)} /></div><div style={{ marginBottom: '1.5rem' }}><label className="form-label">Current Culture Score (1-10)</label><div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><input type="range" min="1" max="10" value={currentScore} onChange={e => setCurrentScore(parseInt(e.target.value))} style={{ flex: 1 }} /><span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#f97316' }}>{currentScore}</span></div></div><div style={{ marginBottom: '1.5rem' }}><label className="form-label">Desired Culture Score (1-10)</label><div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><input type="range" min="1" max="10" value={desiredScore} onChange={e => setDesiredScore(parseInt(e.target.value))} style={{ flex: 1 }} /><span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#10b981' }}>{desiredScore}</span></div></div><div style={{ marginBottom: '1.5rem' }}><label className="form-label">Additional Feedback (Optional)</label><textarea className="form-input" rows={3} placeholder="Any suggestions or thoughts on how we can improve?" value={feedback} onChange={e => setFeedback(e.target.value)} /></div><button className="btn btn-primary" onClick={submitResponse} disabled={!reflection.trim()} style={{ width: '100%' }}>Submit Response</button></div></>
+                    )}
+                </div>
+            );
+        };
+
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
             const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
@@ -39901,541 +40030,148 @@
                             </div>
                         )}
 
-                        {view === 'culturalCalibration' && (() => {
-                            const isAdmin = currentPermissions?.organizationAdmin || currentPermissions?.culturalAdmin;
-                            const [ccMode, setCCMode] = useState(isAdmin ? 'admin' : 'user');
-                            const [quoteText, setQuoteText] = useState('');
-                            const [quoteAuthor, setQuoteAuthor] = useState('');
-                            const [challengeText, setChallengeText] = useState('');
-                            const [reflection, setReflection] = useState('');
-                            const [currentScore, setCurrentScore] = useState(5);
-                            const [desiredScore, setDesiredScore] = useState(8);
-                            const [feedback, setFeedback] = useState('');
+                        {view === 'culturalCalibration' && (
+                            <CulturalCalibration
+                                culturalCalibration={culturalCalibration}
+                                setCulturalCalibration={setCulturalCalibration}
+                                currentPermissions={currentPermissions}
+                                authUser={authUser}
+                            />
+                        )}
 
-                            const addQuote = () => {
-                                if (!quoteText.trim()) return;
-                                const newQuote = {
-                                    id: Date.now().toString(),
-                                    text: quoteText,
-                                    author: quoteAuthor || 'Unknown',
-                                    dateAdded: new Date().toISOString(),
-                                    scheduledDate: null
-                                };
-                                setCulturalCalibration({
-                                    ...culturalCalibration,
-                                    quotes: [...(culturalCalibration.quotes || []), newQuote]
-                                });
-                                setQuoteText('');
-                                setQuoteAuthor('');
-                            };
-
-                            const addChallenge = () => {
-                                if (!challengeText.trim()) return;
-                                const newChallenge = {
-                                    id: Date.now().toString(),
-                                    text: challengeText,
-                                    dateAdded: new Date().toISOString(),
-                                    scheduledDate: null
-                                };
-                                setCulturalCalibration({
-                                    ...culturalCalibration,
-                                    challenges: [...(culturalCalibration.challenges || []), newChallenge]
-                                });
-                                setChallengeText('');
-                            };
-
-                            const setActiveQuote = (id) => {
-                                setCulturalCalibration({
-                                    ...culturalCalibration,
-                                    activeQuote: id
-                                });
-                            };
-
-                            const setActiveChallenge = (id) => {
-                                setCulturalCalibration({
-                                    ...culturalCalibration,
-                                    activeChallenge: id
-                                });
-                            };
-
-                            const deleteQuote = (id) => {
-                                setCulturalCalibration({
-                                    ...culturalCalibration,
-                                    quotes: (culturalCalibration.quotes || []).filter(q => q.id !== id),
-                                    activeQuote: culturalCalibration.activeQuote === id ? null : culturalCalibration.activeQuote
-                                });
-                            };
-
-                            const deleteChallenge = (id) => {
-                                setCulturalCalibration({
-                                    ...culturalCalibration,
-                                    challenges: (culturalCalibration.challenges || []).filter(c => c.id !== id),
-                                    activeChallenge: culturalCalibration.activeChallenge === id ? null : culturalCalibration.activeChallenge
-                                });
-                            };
-
-                            const submitResponse = () => {
-                                const newResponse = {
-                                    id: Date.now().toString(),
-                                    userId: authUser?.uid,
-                                    userName: authUser?.displayName || authUser?.email,
-                                    date: new Date().toISOString(),
-                                    reflection: reflection,
-                                    currentCultureScore: currentScore,
-                                    desiredCultureScore: desiredScore,
-                                    feedback: feedback
-                                };
-                                setCulturalCalibration({
-                                    ...culturalCalibration,
-                                    responses: [...(culturalCalibration.responses || []), newResponse]
-                                });
-                                setReflection('');
-                                setCurrentScore(5);
-                                setDesiredScore(8);
-                                setFeedback('');
-                                alert('Response submitted successfully!');
-                            };
-
-                            const activeQuoteObj = (culturalCalibration.quotes || []).find(q => q.id === culturalCalibration.activeQuote);
-                            const activeChallengeObj = (culturalCalibration.challenges || []).find(c => c.id === culturalCalibration.activeChallenge);
-
-                            const responses = culturalCalibration.responses || [];
-                            const avgCurrent = responses.length > 0 ? (responses.reduce((sum, r) => sum + r.currentCultureScore, 0) / responses.length).toFixed(1) : 'N/A';
-                            const avgDesired = responses.length > 0 ? (responses.reduce((sum, r) => sum + r.desiredCultureScore, 0) / responses.length).toFixed(1) : 'N/A';
-
-                            return (
+                        {
+                            view === 'onboarding' && (
                                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
                                     {/* Header */}
-                                    <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)' }}>
-                                        <h2 style={{ margin: '0 0 1rem 0', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <Icon name="Heart" size={28} />
-                                            Culture Calibration
+                                    <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: 'white' }}>
+                                        <h2 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Icon name="UserPlus" size={28} />
+                                            Onboarding Dashboard
                                         </h2>
-                                        <p style={{ margin: 0, opacity: 0.9, color: 'white' }}>
-                                            Daily quotes, challenges, and culture feedback
-                                        </p>
-                                        {isAdmin && (
-                                            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
-                                                <button
-                                                    className={`btn ${ccMode === 'admin' ? 'btn-primary' : 'btn-secondary'}`}
-                                                    onClick={() => setCCMode('admin')}
-                                                    style={{ borderRadius: '20px' }}
-                                                >
-                                                    Admin View
-                                                </button>
-                                                <button
-                                                    className={`btn ${ccMode === 'user' ? 'btn-primary' : 'btn-secondary'}`}
-                                                    onClick={() => setCCMode('user')}
-                                                    style={{ borderRadius: '20px' }}
-                                                >
-                                                    User View
-                                                </button>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1.5rem' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Total People</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{totalPeople}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Fully Complete</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#86efac' }}>{fullyCompleted}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>In Progress</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fcd34d' }}>{inProgress}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Not Started</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fca5a5' }}>{notStarted}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Filter */}
+                                    <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0' }}>
+                                        <span style={{ fontWeight: 'bold', marginRight: '0.5rem' }}>Filter:</span>
+                                        {['All', 'Player', 'Coach', 'Manager'].map(role => (
+                                            <button key={role} onClick={() => setOnboardingRoleFilter(role)} style={{ padding: '0.5rem 1rem', border: 'none', background: onboardingRoleFilter === role ? 'var(--primary)' : 'var(--surface)', color: onboardingRoleFilter === role ? 'white' : 'var(--text)', borderRadius: '6px', cursor: 'pointer', fontWeight: onboardingRoleFilter === role ? 'bold' : 'normal' }}>
+                                                {role}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* People List */}
+                                    <div className="card" style={{ padding: '1.5rem' }}>
+                                        <h3 style={{ margin: '0 0 1rem 0' }}>People ({filteredPeople.length})</h3>
+                                        {filteredPeople.length === 0 ? (
+                                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                                No people found. Add players to your roster or staff members to see them here.
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'grid', gap: '1rem' }}>
+                                                {filteredPeople.map(person => {
+                                                    const stats = getCompletionStats(person);
+                                                    const statusColor = stats.percentage === 100 ? '#10b981' : stats.percentage > 0 ? '#f59e0b' : '#6b7280';
+                                                    return (
+                                                        <div key={person.id} className="card" style={{ padding: '1rem', background: 'var(--surface)', cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => setOnboardingSelectedPerson(person)}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                                <div>
+                                                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{person.name}</div>
+                                                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{person.role}</div>
+                                                                </div>
+                                                                <div style={{ textAlign: 'right' }}>
+                                                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: statusColor }}>{stats.percentage}%</div>
+                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{stats.completed}/{stats.total} complete</div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ background: 'var(--background)', borderRadius: '999px', height: '8px', overflow: 'hidden' }}>
+                                                                <div style={{ width: `${stats.percentage}%`, height: '100%', background: statusColor, transition: 'width 0.3s' }}></div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
 
-                                    {ccMode === 'admin' ? (
-                                        <>
-                                            {/* Dashboard Stats */}
-                                            <div className="card" style={{ padding: '1.5rem' }}>
-                                                <h3 style={{ margin: '0 0 1rem 0' }}>Response Dashboard</h3>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                                                    <div>
-                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Responses</div>
-                                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{responses.length}</div>
+                                    {/* Detail Modal */}
+                                    {onboardingSelectedPerson && (() => {
+                                        const personData = getPersonOnboardingData(onboardingSelectedPerson.id, onboardingSelectedPerson.role);
+                                        return (
+                                            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setOnboardingSelectedPerson(null)}>
+                                                <div className="card" style={{ width: '90%', maxWidth: '600px', maxHeight: '80vh', overflow: 'auto', padding: '2rem', background: 'var(--background)' }} onClick={(e) => e.stopPropagation()}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                                        <div>
+                                                            <h2 style={{ margin: 0 }}>{onboardingSelectedPerson.name}</h2>
+                                                            <div style={{ color: 'var(--text-secondary)' }}>{onboardingSelectedPerson.role}</div>
+                                                        </div>
+                                                        <button onClick={() => setOnboardingSelectedPerson(null)} style={{ padding: '0.5rem', background: 'var(--surface)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                                                            <Icon name="X" size={20} />
+                                                        </button>
                                                     </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Current Culture</div>
-                                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f97316' }}>{avgCurrent}</div>
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Desired Culture</div>
-                                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#22c55e' }}>{avgDesired}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
 
-                                            {/* Manage Quotes */}
-                                            <div className="card" style={{ padding: '1.5rem' }}>
-                                                <h3 style={{ margin: '0 0 1rem 0' }}>Manage Quotes</h3>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '0.75rem', marginBottom: '1rem' }}>
-                                                    <input
-                                                        className="form-input"
-                                                        placeholder="Quote text..."
-                                                        value={quoteText}
-                                                        onChange={e => setQuoteText(e.target.value)}
-                                                    />
-                                                    <input
-                                                        className="form-input"
-                                                        placeholder="Author"
-                                                        value={quoteAuthor}
-                                                        onChange={e => setQuoteAuthor(e.target.value)}
-                                                    />
-                                                    <button className="btn btn-primary" onClick={addQuote}>Add Quote</button>
-                                                </div>
-                                                <div style={{ maxHeight: '300px', overflow: 'auto' }}>
-                                                    {(culturalCalibration.quotes || []).map(quote => (
-                                                        <div key={quote.id} style={{
-                                                            padding: '1rem',
-                                                            border: '1px solid var(--border)',
-                                                            borderRadius: '8px',
-                                                            marginBottom: '0.5rem',
-                                                            background: quote.id === culturalCalibration.activeQuote ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
-                                                        }}>
-                                                            <div style={{ marginBottom: '0.5rem', fontStyle: 'italic' }}>"{quote.text}"</div>
-                                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>— {quote.author}</div>
-                                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                                <button
-                                                                    className="btn btn-sm btn-secondary"
-                                                                    onClick={() => setActiveQuote(quote.id)}
-                                                                    disabled={quote.id === culturalCalibration.activeQuote}
-                                                                >
-                                                                    {quote.id === culturalCalibration.activeQuote ? 'Active' : 'Set Active'}
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-sm"
-                                                                    onClick={() => deleteQuote(quote.id)}
-                                                                    style={{ background: '#ef4444', color: 'white' }}
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </div>
+                                                    <div style={{ marginBottom: '1.5rem' }}>
+                                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: getCompletionStats(onboardingSelectedPerson).percentage === 100 ? '#10b981' : '#f59e0b' }}>
+                                                            {getCompletionStats(onboardingSelectedPerson).percentage}% Complete
                                                         </div>
-                                                    ))}
-                                                    {(culturalCalibration.quotes || []).length === 0 && (
-                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                            No quotes added yet
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Manage Challenges */}
-                                            <div className="card" style={{ padding: '1.5rem' }}>
-                                                <h3 style={{ margin: '0 0 1rem 0' }}>Manage Challenges</h3>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', marginBottom: '1rem' }}>
-                                                    <input
-                                                        className="form-input"
-                                                        placeholder="Challenge text..."
-                                                        value={challengeText}
-                                                        onChange={e => setChallengeText(e.target.value)}
-                                                    />
-                                                    <button className="btn btn-primary" onClick={addChallenge}>Add Challenge</button>
-                                                </div>
-                                                <div style={{ maxHeight: '300px', overflow: 'auto' }}>
-                                                    {(culturalCalibration.challenges || []).map(challenge => (
-                                                        <div key={challenge.id} style={{
-                                                            padding: '1rem',
-                                                            border: '1px solid var(--border)',
-                                                            borderRadius: '8px',
-                                                            marginBottom: '0.5rem',
-                                                            background: challenge.id === culturalCalibration.activeChallenge ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
-                                                        }}>
-                                                            <div style={{ marginBottom: '0.75rem' }}>{challenge.text}</div>
-                                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                                <button
-                                                                    className="btn btn-sm btn-secondary"
-                                                                    onClick={() => setActiveChallenge(challenge.id)}
-                                                                    disabled={challenge.id === culturalCalibration.activeChallenge}
-                                                                >
-                                                                    {challenge.id === culturalCalibration.activeChallenge ? 'Active' : 'Set Active'}
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-sm"
-                                                                    onClick={() => deleteChallenge(challenge.id)}
-                                                                    style={{ background: '#ef4444', color: 'white' }}
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {(culturalCalibration.challenges || []).length === 0 && (
-                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                            No challenges added yet
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Recent Responses */}
-                                            <div className="card" style={{ padding: '1.5rem' }}>
-                                                <h3 style={{ margin: '0 0 1rem 0' }}>Recent Responses</h3>
-                                                <div style={{ maxHeight: '400px', overflow: 'auto' }}>
-                                                    {responses.slice().reverse().slice(0, 10).map(response => (
-                                                        <div key={response.id} style={{
-                                                            padding: '1rem',
-                                                            border: '1px solid var(--border)',
-                                                            borderRadius: '8px',
-                                                            marginBottom: '0.5rem'
-                                                        }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                                <strong>{response.userName}</strong>
-                                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                                                    {new Date(response.date).toLocaleDateString()}
-                                                                </span>
-                                                            </div>
-                                                            <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>{response.reflection}</div>
-                                                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem' }}>
-                                                                <span>Current: <strong style={{ color: '#f97316' }}>{response.currentCultureScore}/10</strong></span>
-                                                                <span>Desired: <strong style={{ color: '#22c55e' }}>{response.desiredCultureScore}/10</strong></span>
-                                                            </div>
-                                                            {response.feedback && (
-                                                                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                                                    Feedback: {response.feedback}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {responses.length === 0 && (
-                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                            No responses yet
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            {/* User View - Today's Quote */}
-                                            <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)' }}>
-                                                <h3 style={{ margin: '0 0 1rem 0', color: 'var(--accent)' }}>Quote of the Day</h3>
-                                                {activeQuoteObj ? (
-                                                    <>
-                                                        <p style={{ fontSize: '1.25rem', fontStyle: 'italic', margin: '0 0 1rem 0' }}>
-                                                            "{activeQuoteObj.text}"
-                                                        </p>
-                                                        <p style={{ margin: 0, textAlign: 'right', color: 'var(--text-secondary)' }}>
-                                                            — {activeQuoteObj.author}
-                                                        </p>
-                                                    </>
-                                                ) : (
-                                                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>No quote set for today</p>
-                                                )}
-                                            </div>
-
-                                            {/* User View - Today's Challenge */}
-                                            <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)' }}>
-                                                <h3 style={{ margin: '0 0 1rem 0', color: '#22c55e' }}>Today's Challenge</h3>
-                                                {activeChallengeObj ? (
-                                                    <p style={{ fontSize: '1.1rem', margin: 0 }}>{activeChallengeObj.text}</p>
-                                                ) : (
-                                                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>No challenge set for today</p>
-                                                )}
-                                            </div>
-
-                                            {/* User View - Reflection & Feedback */}
-                                            <div className="card" style={{ padding: '1.5rem' }}>
-                                                <h3 style={{ margin: '0 0 1rem 0' }}>Your Reflection</h3>
-
-                                                <div style={{ marginBottom: '1.5rem' }}>
-                                                    <label className="form-label">Self-Reflection</label>
-                                                    <textarea
-                                                        className="form-input"
-                                                        rows={4}
-                                                        placeholder="How are you feeling about today's quote or challenge?"
-                                                        value={reflection}
-                                                        onChange={e => setReflection(e.target.value)}
-                                                    />
-                                                </div>
-
-                                                <div style={{ marginBottom: '1.5rem' }}>
-                                                    <label className="form-label">Current Culture Score (1-10)</label>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                        <input
-                                                            type="range"
-                                                            min="1"
-                                                            max="10"
-                                                            value={currentScore}
-                                                            onChange={e => setCurrentScore(parseInt(e.target.value))}
-                                                            style={{ flex: 1 }}
-                                                        />
-                                                        <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f97316', minWidth: '50px' }}>
-                                                            {currentScore}
-                                                        </span>
-                                                    </div>
-                                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0 0 0' }}>
-                                                        How would you rate our current program culture?
-                                                    </p>
-                                                </div>
-
-                                                <div style={{ marginBottom: '1.5rem' }}>
-                                                    <label className="form-label">Desired Culture Score (1-10)</label>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                        <input
-                                                            type="range"
-                                                            min="1"
-                                                            max="10"
-                                                            value={desiredScore}
-                                                            onChange={e => setDesiredScore(parseInt(e.target.value))}
-                                                            style={{ flex: 1 }}
-                                                        />
-                                                        <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#22c55e', minWidth: '50px' }}>
-                                                            {desiredScore}
-                                                        </span>
-                                                    </div>
-                                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0 0 0' }}>
-                                                        Where do you want our culture to be?
-                                                    </p>
-                                                </div>
-
-                                                <div style={{ marginBottom: '1.5rem' }}>
-                                                    <label className="form-label">Additional Feedback (Optional)</label>
-                                                    <textarea
-                                                        className="form-input"
-                                                        rows={3}
-                                                        placeholder="Any suggestions or thoughts on how we can improve?"
-                                                        value={feedback}
-                                                        onChange={e => setFeedback(e.target.value)}
-                                                    />
-                                                </div>
-
-                                                <button
-                                                    className="btn btn-primary"
-                                                    onClick={submitResponse}
-                                                    disabled={!reflection.trim()}
-                                                    style={{ width: '100%' }}
-                                                >
-                                                    Submit Response
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            );
-                        })()}
-
-                        {view === 'onboarding' && (
-                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
-                                {/* Header */}
-                                <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: 'white' }}>
-                                    <h2 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="UserPlus" size={28} />
-                                        Onboarding Dashboard
-                                    </h2>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1.5rem' }}>
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Total People</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{totalPeople}</div>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Fully Complete</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#86efac' }}>{fullyCompleted}</div>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>In Progress</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fcd34d' }}>{inProgress}</div>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Not Started</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fca5a5' }}>{notStarted}</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Filter */}
-                                <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0' }}>
-                                    <span style={{ fontWeight: 'bold', marginRight: '0.5rem' }}>Filter:</span>
-                                    {['All', 'Player', 'Coach', 'Manager'].map(role => (
-                                        <button key={role} onClick={() => setOnboardingRoleFilter(role)} style={{ padding: '0.5rem 1rem', border: 'none', background: onboardingRoleFilter === role ? 'var(--primary)' : 'var(--surface)', color: onboardingRoleFilter === role ? 'white' : 'var(--text)', borderRadius: '6px', cursor: 'pointer', fontWeight: onboardingRoleFilter === role ? 'bold' : 'normal' }}>
-                                            {role}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* People List */}
-                                <div className="card" style={{ padding: '1.5rem' }}>
-                                    <h3 style={{ margin: '0 0 1rem 0' }}>People ({filteredPeople.length})</h3>
-                                    {filteredPeople.length === 0 ? (
-                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                            No people found. Add players to your roster or staff members to see them here.
-                                        </div>
-                                    ) : (
-                                        <div style={{ display: 'grid', gap: '1rem' }}>
-                                            {filteredPeople.map(person => {
-                                                const stats = getCompletionStats(person);
-                                                const statusColor = stats.percentage === 100 ? '#10b981' : stats.percentage > 0 ? '#f59e0b' : '#6b7280';
-                                                return (
-                                                    <div key={person.id} className="card" style={{ padding: '1rem', background: 'var(--surface)', cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => setOnboardingSelectedPerson(person)}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                                            <div>
-                                                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{person.name}</div>
-                                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{person.role}</div>
-                                                            </div>
-                                                            <div style={{ textAlign: 'right' }}>
-                                                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: statusColor }}>{stats.percentage}%</div>
-                                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{stats.completed}/{stats.total} complete</div>
-                                                            </div>
-                                                        </div>
-                                                        <div style={{ background: 'var(--background)', borderRadius: '999px', height: '8px', overflow: 'hidden' }}>
-                                                            <div style={{ width: `${stats.percentage}%`, height: '100%', background: statusColor, transition: 'width 0.3s' }}></div>
+                                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                                            {getCompletionStats(onboardingSelectedPerson).completed} of {getCompletionStats(onboardingSelectedPerson).total} items completed
                                                         </div>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
 
-                                {/* Detail Modal */}
-                                {onboardingSelectedPerson && (() => {
-                                    const personData = getPersonOnboardingData(onboardingSelectedPerson.id, onboardingSelectedPerson.role);
-                                    return (
-                                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setOnboardingSelectedPerson(null)}>
-                                            <div className="card" style={{ width: '90%', maxWidth: '600px', maxHeight: '80vh', overflow: 'auto', padding: '2rem', background: 'var(--background)' }} onClick={(e) => e.stopPropagation()}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                                    <div>
-                                                        <h2 style={{ margin: 0 }}>{onboardingSelectedPerson.name}</h2>
-                                                        <div style={{ color: 'var(--text-secondary)' }}>{onboardingSelectedPerson.role}</div>
-                                                    </div>
-                                                    <button onClick={() => setOnboardingSelectedPerson(null)} style={{ padding: '0.5rem', background: 'var(--surface)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                                                        <Icon name="X" size={20} />
-                                                    </button>
-                                                </div>
-
-                                                <div style={{ marginBottom: '1.5rem' }}>
-                                                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: getCompletionStats(onboardingSelectedPerson).percentage === 100 ? '#10b981' : '#f59e0b' }}>
-                                                        {getCompletionStats(onboardingSelectedPerson).percentage}% Complete
-                                                    </div>
-                                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                                        {getCompletionStats(onboardingSelectedPerson).completed} of {getCompletionStats(onboardingSelectedPerson).total} items completed
-                                                    </div>
-                                                </div>
-
-                                                <h3 style={{ marginBottom: '1rem' }}>Onboarding Checklist</h3>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                    {getRequiredItems(onboardingSelectedPerson.role).map(itemKey => {
-                                                        const item = personData[itemKey] || { completed: false, dateCompleted: null, notes: '' };
-                                                        return (
-                                                            <div key={itemKey} className="card" style={{ padding: '1rem', background: item.completed ? 'rgba(16, 185, 129, 0.1)' : 'var(--surface)' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                                                                    <input type="checkbox" checked={item.completed} onChange={(e) => updatePersonItem(onboardingSelectedPerson.id, onboardingSelectedPerson.role, itemKey, 'completed', e.target.checked)} style={{ marginTop: '0.25rem', width: '20px', height: '20px', cursor: 'pointer' }} />
-                                                                    <div style={{ flex: 1 }}>
-                                                                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', textDecoration: item.completed ? 'line-through' : 'none' }}>
-                                                                            {getItemLabel(itemKey)}
-                                                                        </div>
-                                                                        {item.completed && item.dateCompleted && (
-                                                                            <div style={{ fontSize: '0.85rem', color: '#10b981', marginBottom: '0.5rem' }}>
-                                                                                ✓ Completed on {new Date(item.dateCompleted).toLocaleDateString()}
+                                                    <h3 style={{ marginBottom: '1rem' }}>Onboarding Checklist</h3>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                        {getRequiredItems(onboardingSelectedPerson.role).map(itemKey => {
+                                                            const item = personData[itemKey] || { completed: false, dateCompleted: null, notes: '' };
+                                                            return (
+                                                                <div key={itemKey} className="card" style={{ padding: '1rem', background: item.completed ? 'rgba(16, 185, 129, 0.1)' : 'var(--surface)' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                                                        <input type="checkbox" checked={item.completed} onChange={(e) => updatePersonItem(onboardingSelectedPerson.id, onboardingSelectedPerson.role, itemKey, 'completed', e.target.checked)} style={{ marginTop: '0.25rem', width: '20px', height: '20px', cursor: 'pointer' }} />
+                                                                        <div style={{ flex: 1 }}>
+                                                                            <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', textDecoration: item.completed ? 'line-through' : 'none' }}>
+                                                                                {getItemLabel(itemKey)}
                                                                             </div>
-                                                                        )}
-                                                                        <input className="form-input" placeholder="Notes (optional)" value={item.notes} onChange={(e) => updatePersonItem(onboardingSelectedPerson.id, onboardingSelectedPerson.role, itemKey, 'notes', e.target.value)} style={{ fontSize: '0.9rem', marginTop: '0.5rem' }} />
+                                                                            {item.completed && item.dateCompleted && (
+                                                                                <div style={{ fontSize: '0.85rem', color: '#10b981', marginBottom: '0.5rem' }}>
+                                                                                    ✓ Completed on {new Date(item.dateCompleted).toLocaleDateString()}
+                                                                                </div>
+                                                                            )}
+                                                                            <input className="form-input" placeholder="Notes (optional)" value={item.notes} onChange={(e) => updatePersonItem(onboardingSelectedPerson.id, onboardingSelectedPerson.role, itemKey, 'notes', e.target.value)} style={{ fontSize: '0.9rem', marginTop: '0.5rem' }} />
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
 
-                                                <div style={{ marginTop: '1.5rem' }}>
-                                                    <button className="btn-primary" onClick={() => setOnboardingSelectedPerson(null)} style={{ width: '100%' }}>Close</button>
+                                                    <div style={{ marginTop: '1.5rem' }}>
+                                                        <button className="btn-primary" onClick={() => setOnboardingSelectedPerson(null)} style={{ width: '100%' }}>Close</button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        )}
+                                        );
+                                    })()}
+                                </div>
+                            )
+                        }
 
                         {view === 'valhalla' && <ValhallaDashboard roster={roster} valhallaData={valhallaData || { progress: {}, xpLog: [], programEvents: [], participation: {} }} onUpdateValhalla={setValhallaData} initialTab="player" />}
                         {view === 'valhalla-events' && <ValhallaDashboard roster={roster} valhallaData={valhallaData || { progress: {}, xpLog: [], programEvents: [], participation: {} }} onUpdateValhalla={setValhallaData} initialTab="events" />}
@@ -40444,313 +40180,331 @@
                         {view === 'defense-setup' && renderSetup('DEFENSE')}
                         {view === 'st-setup' && renderSetup('SPECIAL_TEAMS')}
 
-                        {view === 'new-play' && (
-                            <PlayInput
-                                onSave={handleSavePlay}
-                                onCancel={() => { setEditingPlay(null); setView('playbook'); }}
-                                onDelete={handleDeletePlay}
-                                initialData={editingPlay}
-                                rooskiLibrary={rooskiLibrary}
-                                setRooskiLibrary={setRooskiLibrary}
-                                positionNames={positionNames}
-                                formations={formations}
-                                playSyntax={playSyntax}
-                                termLibrary={termLibrary}
-                                programLevels={programLevels}
-                            />
-                        )}
+                        {
+                            view === 'new-play' && (
+                                <PlayInput
+                                    onSave={handleSavePlay}
+                                    onCancel={() => { setEditingPlay(null); setView('playbook'); }}
+                                    onDelete={handleDeletePlay}
+                                    initialData={editingPlay}
+                                    rooskiLibrary={rooskiLibrary}
+                                    setRooskiLibrary={setRooskiLibrary}
+                                    positionNames={positionNames}
+                                    formations={formations}
+                                    playSyntax={playSyntax}
+                                    termLibrary={termLibrary}
+                                    programLevels={programLevels}
+                                />
+                            )
+                        }
 
-                        {view === 'playbook' && (
-                            <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <h2>Playbook ({filteredPlaybook.length} / {plays.length})</h2>
-                                    <div style={{ display: 'flex', gap: '1rem' }}>
-                                        {selectedPlays.length > 0 && (
-                                            <button className="btn" style={{ backgroundColor: '#ef4444', color: 'white' }} onClick={handleDeleteSelected}>
-                                                Delete Selected ({selectedPlays.length})
-                                            </button>
-                                        )}
-                                        <button className="btn btn-primary" onClick={() => { setEditingPlay(null); setView('new-play'); }}>
-                                            <Icon name="PlusCircle" /> New Play
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Filter Bar */}
-                                <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
+                        {
+                            view === 'playbook' && (
+                                <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                        <h4 style={{ margin: 0, color: 'var(--text-secondary)' }}>Filters</h4>
+                                        <h2>Playbook ({filteredPlaybook.length} / {plays.length})</h2>
                                         <div style={{ display: 'flex', gap: '1rem' }}>
                                             {selectedPlays.length > 0 && (
-                                                <button
-                                                    className="btn"
-                                                    style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}
-                                                    onClick={() => setSelectedPlays([])}
-                                                >
-                                                    Clear Selection
+                                                <button className="btn" style={{ backgroundColor: '#ef4444', color: 'white' }} onClick={handleDeleteSelected}>
+                                                    Delete Selected ({selectedPlays.length})
                                                 </button>
                                             )}
-                                            <button
-                                                className="btn"
-                                                style={{ fontSize: '0.9rem', color: 'var(--accent)' }}
-                                                onClick={() => setPlaybookFilters({ formation: '', concept: '', tag: '', situation: '' })}
-                                            >
-                                                Clear Filters
+                                            <button className="btn btn-primary" onClick={() => { setEditingPlay(null); setView('new-play'); }}>
+                                                <Icon name="PlusCircle" /> New Play
                                             </button>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                                        {/* Formation Filter */}
-                                        <div>
-                                            <label className="form-label">Formation</label>
-                                            <select
-                                                className="form-select"
-                                                value={playbookFilters.formation}
-                                                onChange={e => setPlaybookFilters({ ...playbookFilters, formation: e.target.value })}
-                                            >
-                                                <option value="">All Formations</option>
-                                                {uniqueFormations.map(f => (
-                                                    <option key={f} value={f}>{f}</option>
-                                                ))}
-                                            </select>
-                                        </div>
 
-                                        {/* Concept Filter */}
-                                        <div>
-                                            <label className="form-label">Concept</label>
-                                            <select
-                                                className="form-select"
-                                                value={playbookFilters.concept}
-                                                onChange={e => setPlaybookFilters({ ...playbookFilters, concept: e.target.value })}
-                                            >
-                                                <option value="">All Concepts</option>
-                                                {uniqueConcepts.map(c => (
-                                                    <option key={c} value={c}>{c}</option>
-                                                ))}
-                                            </select>
+                                    {/* Filter Bar */}
+                                    <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <h4 style={{ margin: 0, color: 'var(--text-secondary)' }}>Filters</h4>
+                                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                                {selectedPlays.length > 0 && (
+                                                    <button
+                                                        className="btn"
+                                                        style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}
+                                                        onClick={() => setSelectedPlays([])}
+                                                    >
+                                                        Clear Selection
+                                                    </button>
+                                                )}
+                                                <button
+                                                    className="btn"
+                                                    style={{ fontSize: '0.9rem', color: 'var(--accent)' }}
+                                                    onClick={() => setPlaybookFilters({ formation: '', concept: '', tag: '', situation: '' })}
+                                                >
+                                                    Clear Filters
+                                                </button>
+                                            </div>
                                         </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                                            {/* Formation Filter */}
+                                            <div>
+                                                <label className="form-label">Formation</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={playbookFilters.formation}
+                                                    onChange={e => setPlaybookFilters({ ...playbookFilters, formation: e.target.value })}
+                                                >
+                                                    <option value="">All Formations</option>
+                                                    {uniqueFormations.map(f => (
+                                                        <option key={f} value={f}>{f}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
 
-                                        {/* Situation Filter */}
-                                        <div>
-                                            <label className="form-label">Situation</label>
-                                            <select
-                                                className="form-select"
-                                                value={playbookFilters.situation}
-                                                onChange={e => setPlaybookFilters({ ...playbookFilters, situation: e.target.value })}
-                                            >
-                                                <option value="">All Situations</option>
-                                                {situationTags.map(s => (
-                                                    <option key={s} value={s}>{s}</option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                            {/* Concept Filter */}
+                                            <div>
+                                                <label className="form-label">Concept</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={playbookFilters.concept}
+                                                    onChange={e => setPlaybookFilters({ ...playbookFilters, concept: e.target.value })}
+                                                >
+                                                    <option value="">All Concepts</option>
+                                                    {uniqueConcepts.map(c => (
+                                                        <option key={c} value={c}>{c}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
 
-                                        {/* General Tag Filter */}
-                                        <div>
-                                            <label className="form-label">Any Tag</label>
-                                            <select
-                                                className="form-select"
-                                                value={playbookFilters.tag}
-                                                onChange={e => setPlaybookFilters({ ...playbookFilters, tag: e.target.value })}
-                                            >
-                                                <option value="">All Tags</option>
-                                                {allTags.map(t => (
-                                                    <option key={t} value={t}>{t}</option>
-                                                ))}
-                                            </select>
+                                            {/* Situation Filter */}
+                                            <div>
+                                                <label className="form-label">Situation</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={playbookFilters.situation}
+                                                    onChange={e => setPlaybookFilters({ ...playbookFilters, situation: e.target.value })}
+                                                >
+                                                    <option value="">All Situations</option>
+                                                    {situationTags.map(s => (
+                                                        <option key={s} value={s}>{s}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            {/* General Tag Filter */}
+                                            <div>
+                                                <label className="form-label">Any Tag</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={playbookFilters.tag}
+                                                    onChange={e => setPlaybookFilters({ ...playbookFilters, tag: e.target.value })}
+                                                >
+                                                    <option value="">All Tags</option>
+                                                    {allTags.map(t => (
+                                                        <option key={t} value={t}>{t}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                                    {filteredPlaybook.map(play => (
-                                        <PlayCard
-                                            key={play.id}
-                                            play={play}
-                                            onEdit={handleEditPlay}
-                                            isSelected={selectedPlays.includes(play.id)}
-                                            onToggleSelection={togglePlaySelection}
-                                        />
-                                    ))}
-                                    {filteredPlaybook.length === 0 && (
-                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-                                            No plays match your filters.
-                                        </div>
-                                    )}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                                        {filteredPlaybook.map(play => (
+                                            <PlayCard
+                                                key={play.id}
+                                                play={play}
+                                                onEdit={handleEditPlay}
+                                                isSelected={selectedPlays.includes(play.id)}
+                                                onToggleSelection={togglePlaySelection}
+                                            />
+                                        ))}
+                                        {filteredPlaybook.length === 0 && (
+                                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                                No plays match your filters.
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
 
                         {view === 'formations-offense' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="OFFENSE" />}
                         {view === 'formations-defense' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="DEFENSE" />}
                         {view === 'formations-st' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="SPECIAL_TEAMS" />}
 
                         {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan || { sets: [], miniScripts: [] }} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} />}
-                        {view === 'game-plan' && <OffensiveGamePlan
-                            plays={plays}
-                            gamePlan={currentWeek.offensiveGamePlan || { sets: [] }}
-                            onUpdateGamePlan={setGamePlan}
-                            onQuickAddPlay={handleQuickAddPlay}
-                            onUpdatePlay={handleUpdatePlay}
-                            gamePlanLayouts={gamePlanLayouts}
-                            onUpdateLayouts={setGamePlanLayouts}
-                            isLocked={currentWeek.isLocked}
-                            layoutVersions={layoutVersions}
-                            onSaveLayoutVersion={saveLayoutVersion}
-                            onDeleteLayoutVersion={deleteLayoutVersion}
-                            onLoadLayoutVersion={loadLayoutVersion}
-                        />}
+                        {
+                            view === 'game-plan' && <OffensiveGamePlan
+                                plays={plays}
+                                gamePlan={currentWeek.offensiveGamePlan || { sets: [] }}
+                                onUpdateGamePlan={setGamePlan}
+                                onQuickAddPlay={handleQuickAddPlay}
+                                onUpdatePlay={handleUpdatePlay}
+                                gamePlanLayouts={gamePlanLayouts}
+                                onUpdateLayouts={setGamePlanLayouts}
+                                isLocked={currentWeek.isLocked}
+                                layoutVersions={layoutVersions}
+                                onSaveLayoutVersion={saveLayoutVersion}
+                                onDeleteLayoutVersion={deleteLayoutVersion}
+                                onLoadLayoutVersion={loadLayoutVersion}
+                            />
+                        }
 
                         {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
                         {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
                         {view === 'game-week-overview' && <GameWeekOverview week={currentWeek} onUpdateWeek={handleUpdateWeek} teamLogo={teamLogo} isLocked={currentWeek.isLocked} />}
                         {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} user={authUser} isLocked={currentWeek.isLocked} />}
                         {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} depthChart={depthChart} />}
-                        {view === 'player-profiles' && <PlayerProfileGallery
-                            roster={roster}
-                            onUpdateRoster={setRoster}
-                            attendance={attendance}
-                            getPlayerWeightLogs={getPlayerWeightLogs}
-                            addWeightLog={addWeightLog}
-                            updateWeightLog={updateWeightLog}
-                            deleteWeightLog={deleteWeightLog}
-                            depthChart={depthChart}
-                        />}
-                        {view === 'depth' && <DepthChart
-                            roster={roster}
-                            depthChart={currentWeek.depthChart || {}}
-                            onUpdateDepthChart={(dc) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthChart: dc } : w))}
-                            chartType={depthChartType}
-                            teamLogo={teamLogo}
-                            savedLayout={formationLayouts[depthChartType] || {}}
-                            onUpdateLayout={(posId, x, y) => updateFormationLayout(depthChartType, posId, x, y)}
-                            positionNames={positionNames}
-                            onUpdatePositionNames={setPositionNames}
-                            onResetLayout={() => resetFormationLayout(depthChartType)}
-                            depthStrings={currentWeek.depthStrings || {}}
-                            onUpdateDepthStrings={(ds) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthStrings: ds } : w))}
-                            depthRowCounts={currentWeek.depthRowCounts || {}}
-                            onUpdateDepthRowCounts={(drc) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthRowCounts: drc } : w))}
-                        />}
-                        {view === 'staff-roster' && (
-                            <StaffManager
-                                currentUser={currentUser}
-                                staff={staff}
-                                onUpdateStaff={setStaff}
-                                dutyAssignments={dutyAssignments}
-                                onUpdateDuties={setDutyAssignments}
-                                view="roster"
-                                masterTasks={masterTasks}
-                                onUpdateMasterTasks={setMasterTasks}
-                            />
-                        )}
-                        {view === 'staff-meeting' && (
-                            <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
-                                <Icon name="Presentation" size={48} color="var(--accent)" style={{ marginBottom: '1rem' }} />
-                                <h2>Staff Meeting</h2>
-                                <p style={{ color: 'var(--text-secondary)' }}>Coming Soon: Organize agendas, meeting notes, and staff action items.</p>
-                            </div>
-                        )}
-                        {view === 'staff-tasks' && (
-                            <StaffTasksView
-                                tasks={masterTasks}
-                                onUpdateTasks={setMasterTasks}
-                                staff={staff}
+                        {
+                            view === 'player-profiles' && <PlayerProfileGallery
                                 roster={roster}
-                                currentUser={currentUser}
+                                onUpdateRoster={setRoster}
+                                attendance={attendance}
+                                getPlayerWeightLogs={getPlayerWeightLogs}
+                                addWeightLog={addWeightLog}
+                                updateWeightLog={updateWeightLog}
+                                deleteWeightLog={deleteWeightLog}
+                                depthChart={depthChart}
                             />
-                        )}
+                        }
+                        {
+                            view === 'depth' && <DepthChart
+                                roster={roster}
+                                depthChart={currentWeek.depthChart || {}}
+                                onUpdateDepthChart={(dc) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthChart: dc } : w))}
+                                chartType={depthChartType}
+                                teamLogo={teamLogo}
+                                savedLayout={formationLayouts[depthChartType] || {}}
+                                onUpdateLayout={(posId, x, y) => updateFormationLayout(depthChartType, posId, x, y)}
+                                positionNames={positionNames}
+                                onUpdatePositionNames={setPositionNames}
+                                onResetLayout={() => resetFormationLayout(depthChartType)}
+                                depthStrings={currentWeek.depthStrings || {}}
+                                onUpdateDepthStrings={(ds) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthStrings: ds } : w))}
+                                depthRowCounts={currentWeek.depthRowCounts || {}}
+                                onUpdateDepthRowCounts={(drc) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthRowCounts: drc } : w))}
+                            />
+                        }
+                        {
+                            view === 'staff-roster' && (
+                                <StaffManager
+                                    currentUser={currentUser}
+                                    staff={staff}
+                                    onUpdateStaff={setStaff}
+                                    dutyAssignments={dutyAssignments}
+                                    onUpdateDuties={setDutyAssignments}
+                                    view="roster"
+                                    masterTasks={masterTasks}
+                                    onUpdateMasterTasks={setMasterTasks}
+                                />
+                            )
+                        }
+                        {
+                            view === 'staff-meeting' && (
+                                <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
+                                    <Icon name="Presentation" size={48} color="var(--accent)" style={{ marginBottom: '1rem' }} />
+                                    <h2>Staff Meeting</h2>
+                                    <p style={{ color: 'var(--text-secondary)' }}>Coming Soon: Organize agendas, meeting notes, and staff action items.</p>
+                                </div>
+                            )
+                        }
+                        {
+                            view === 'staff-tasks' && (
+                                <StaffTasksView
+                                    tasks={masterTasks}
+                                    onUpdateTasks={setMasterTasks}
+                                    staff={staff}
+                                    roster={roster}
+                                    currentUser={currentUser}
+                                />
+                            )
+                        }
 
 
                         {view === 'testing-records' && <TestingRecords roster={roster} programRecords={programRecords} />}
 
                         {view === 'summer-comp' && <SummerCompetitionManager roster={roster} compData={summerCompData} onUpdateComp={setSummerCompData} />}
-                        {view === 'attendance-app' && (
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                padding: '2rem',
-                                background: '#1a1a1a', // Dark background for contrast
-                                minHeight: '100vh',
-                                alignItems: 'flex-start'
-                            }}>
+                        {
+                            view === 'attendance-app' && (
                                 <div style={{
-                                    width: '375px',
-                                    height: '812px',
-                                    background: 'black',
-                                    borderRadius: '40px',
-                                    padding: '12px',
-                                    boxShadow: '0 0 0 10px #333, 0 20px 40px rgba(0,0,0,0.5)',
-                                    position: 'relative',
-                                    overflow: 'hidden',
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    flexShrink: 0
+                                    justifyContent: 'center',
+                                    padding: '2rem',
+                                    background: '#1a1a1a', // Dark background for contrast
+                                    minHeight: '100vh',
+                                    alignItems: 'flex-start'
                                 }}>
-                                    {/* iPhone Notch */}
                                     <div style={{
-                                        position: 'absolute',
-                                        top: '0',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        width: '50%',
-                                        height: '30px',
-                                        background: '#333',
-                                        borderBottomLeftRadius: '20px',
-                                        borderBottomRightRadius: '20px',
-                                        zIndex: 1000
-                                    }}></div>
-
-                                    {/* Status Bar Mockup */}
-                                    <div style={{
-                                        height: '44px',
-                                        width: '100%',
+                                        width: '375px',
+                                        height: '812px',
+                                        background: 'black',
+                                        borderRadius: '40px',
+                                        padding: '12px',
+                                        boxShadow: '0 0 0 10px #333, 0 20px 40px rgba(0,0,0,0.5)',
+                                        position: 'relative',
+                                        overflow: 'hidden',
                                         display: 'flex',
-                                        justifyContent: 'space-between',
-                                        padding: '0 20px',
-                                        alignItems: 'center',
-                                        color: 'white',
-                                        fontSize: '12px',
-                                        fontWeight: 'bold',
-                                        paddingTop: '10px',
+                                        flexDirection: 'column',
                                         flexShrink: 0
                                     }}>
-                                        <span>9:41</span>
-                                        <div style={{ display: 'flex', gap: '5px' }}>
-                                            <Icon name="Signal" size={12} />
-                                            <Icon name="Wifi" size={12} />
-                                            <Icon name="Battery" size={12} />
+                                        {/* iPhone Notch */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '0',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            width: '50%',
+                                            height: '30px',
+                                            background: '#333',
+                                            borderBottomLeftRadius: '20px',
+                                            borderBottomRightRadius: '20px',
+                                            zIndex: 1000
+                                        }}></div>
+
+                                        {/* Status Bar Mockup */}
+                                        <div style={{
+                                            height: '44px',
+                                            width: '100%',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            padding: '0 20px',
+                                            alignItems: 'center',
+                                            color: 'white',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold',
+                                            paddingTop: '10px',
+                                            flexShrink: 0
+                                        }}>
+                                            <span>9:41</span>
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                <Icon name="Signal" size={12} />
+                                                <Icon name="Wifi" size={12} />
+                                                <Icon name="Battery" size={12} />
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* App Screen Content */}
-                                    <div style={{
-                                        background: 'var(--bg-app)', // Use app theme background
-                                        flex: 1,
-                                        overflow: 'hidden', // Let component handle scroll
-                                        borderRadius: '30px',
-                                        position: 'relative',
-                                        display: 'flex',
-                                        flexDirection: 'column'
-                                    }}>
-                                        <MobileAttendanceApp roster={roster} attendance={attendance} setAttendance={setAttendance} />
-                                    </div>
+                                        {/* App Screen Content */}
+                                        <div style={{
+                                            background: 'var(--bg-app)', // Use app theme background
+                                            flex: 1,
+                                            overflow: 'hidden', // Let component handle scroll
+                                            borderRadius: '30px',
+                                            position: 'relative',
+                                            display: 'flex',
+                                            flexDirection: 'column'
+                                        }}>
+                                            <MobileAttendanceApp roster={roster} attendance={attendance} setAttendance={setAttendance} />
+                                        </div>
 
-                                    {/* Home Indicator */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        bottom: '8px',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        width: '134px',
-                                        height: '5px',
-                                        background: 'white',
-                                        borderRadius: '100px',
-                                        zIndex: 1000
-                                    }}></div>
+                                        {/* Home Indicator */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '8px',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            width: '134px',
+                                            height: '5px',
+                                            background: 'white',
+                                            borderRadius: '100px',
+                                            zIndex: 1000
+                                        }}></div>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
                         {view === 'testing' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="combine" />}
                         {view === 'ironman' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="ironman" />}
                         {view === 'ratings' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
@@ -40762,154 +40516,162 @@
                         {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} gamePlanLayouts={gamePlanLayouts} />}
                         {view === 'dumb-callsheet' && <DumbCallSheet data={dumbCallSheetData} onUpdateData={setDumbCallSheetData} gamePlanLayouts={gamePlanLayouts} plays={plays} gamePlan={currentWeek.offensiveGamePlan || {}} />}
                         {view === 'simulator' && <PlayCallSimulator plays={plays} roster={roster} gamePlan={currentWeek.offensiveGamePlan || {}} onUpdateGamePlan={setGamePlan} />}
-                        {view === 'special-teams' && (
-                            <SpecialTeamsDashboard
-                                roster={roster}
-                                depthCharts={currentWeek.depthChart || {}}
-                                onUpdateDepthChart={(chartType, updated) => {
-                                    const newDepthChart = { ...(currentWeek.depthChart || {}), [chartType]: updated };
-                                    setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthChart: newDepthChart } : w));
-                                }}
-                                savedLayouts={formationLayouts}
-                                onUpdateLayout={(chartType, posId, x, y) => updateFormationLayout(chartType, posId, x, y)}
-                                onResetLayout={(chartType) => resetFormationLayout(chartType)}
-                                opponentData={currentWeek.opponentData || {}}
-                                onUpdateOpponentData={(data) => {
-                                    const updatedWeeks = weeks.map(w =>
-                                        w.id === currentWeek.id ? { ...w, opponentData: data } : w
-                                    );
-                                    setWeeks(updatedWeeks);
-                                }}
-                            />
-                        )}
-                        {view.startsWith('equipment-') && (
-                            <EquipmentManager
-                                equipmentDueDate={equipmentDueDate}
-                                setEquipmentDueDate={setEquipmentDueDate}
-                                view={view}
-                                roster={roster}
-                                inventory={inventory}
-                                onUpdateInventory={setInventory}
-                                checkouts={checkouts} // Legacy checks, mostly unused now but kept for compatibility
-                                onUpdateCheckouts={setCheckouts}
-                                issuance={issuance}
-                                onUpdateIssuance={setIssuance}
-                                wishlist={wishlist}
-                                onUpdateWishlist={setWishlist}
-                                lotteryData={lotteryData}
-                                onUpdateLottery={setLotteryData}
-                            />
-                        )}
+                        {
+                            view === 'special-teams' && (
+                                <SpecialTeamsDashboard
+                                    roster={roster}
+                                    depthCharts={currentWeek.depthChart || {}}
+                                    onUpdateDepthChart={(chartType, updated) => {
+                                        const newDepthChart = { ...(currentWeek.depthChart || {}), [chartType]: updated };
+                                        setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthChart: newDepthChart } : w));
+                                    }}
+                                    savedLayouts={formationLayouts}
+                                    onUpdateLayout={(chartType, posId, x, y) => updateFormationLayout(chartType, posId, x, y)}
+                                    onResetLayout={(chartType) => resetFormationLayout(chartType)}
+                                    opponentData={currentWeek.opponentData || {}}
+                                    onUpdateOpponentData={(data) => {
+                                        const updatedWeeks = weeks.map(w =>
+                                            w.id === currentWeek.id ? { ...w, opponentData: data } : w
+                                        );
+                                        setWeeks(updatedWeeks);
+                                    }}
+                                />
+                            )
+                        }
+                        {
+                            view.startsWith('equipment-') && (
+                                <EquipmentManager
+                                    equipmentDueDate={equipmentDueDate}
+                                    setEquipmentDueDate={setEquipmentDueDate}
+                                    view={view}
+                                    roster={roster}
+                                    inventory={inventory}
+                                    onUpdateInventory={setInventory}
+                                    checkouts={checkouts} // Legacy checks, mostly unused now but kept for compatibility
+                                    onUpdateCheckouts={setCheckouts}
+                                    issuance={issuance}
+                                    onUpdateIssuance={setIssuance}
+                                    wishlist={wishlist}
+                                    onUpdateWishlist={setWishlist}
+                                    lotteryData={lotteryData}
+                                    onUpdateLottery={setLotteryData}
+                                />
+                            )
+                        }
                         {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} renderSyncManager={renderDataSyncManager} isSiteAdmin={isSiteAdmin} siteAdmins={siteAdmins} schoolData={{ id: localStorage.getItem('hc_school_id'), ...JSON.parse(JSON.stringify(window.db ? {} : {})) /* Hack: appData isn't in state directly, relying on props */ }} currentSchoolId={localStorage.getItem('hc_school_id')} programLevels={programLevels} onUpdateProgramLevels={setProgramLevels} />}
 
                         {view === 'help' && <UserGuide />}
 
                         {/* Logout Confirmation Modal */}
-                        {showLogoutConfirm && (
-                            <div style={{
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                background: 'rgba(0, 0, 0, 0.7)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 10000
-                            }}>
+                        {
+                            showLogoutConfirm && (
                                 <div style={{
-                                    background: 'white',
-                                    padding: '2rem',
-                                    borderRadius: '8px',
-                                    maxWidth: '400px',
-                                    width: '90%',
-                                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                                    border: '1px solid rgba(0,0,0,0.1)'
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    background: 'rgba(0, 0, 0, 0.7)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10000
                                 }}>
-                                    <h3 style={{ marginTop: 0, color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '1.25rem' }}>Log Out?</h3>
-                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                                        Are you sure you want to sign out?
-                                    </p>
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                        <button
-                                            onClick={() => setShowLogoutConfirm(false)}
-                                            style={{
-                                                padding: '0.75rem 1.5rem',
-                                                borderRadius: '6px',
-                                                border: '1px solid #e2e8f0',
-                                                background: 'white',
-                                                color: 'var(--text-secondary)',
-                                                fontWeight: '600',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowLogoutConfirm(false);
-                                                logout();
-                                            }}
-                                            style={{
-                                                padding: '0.75rem 1.5rem',
-                                                borderRadius: '6px',
-                                                border: 'none',
-                                                background: '#ef4444',
-                                                color: 'white',
-                                                fontWeight: '600',
-                                                cursor: 'pointer',
-                                                boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)'
-                                            }}
-                                        >
-                                            Log Out
-                                        </button>
+                                    <div style={{
+                                        background: 'white',
+                                        padding: '2rem',
+                                        borderRadius: '8px',
+                                        maxWidth: '400px',
+                                        width: '90%',
+                                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                                        border: '1px solid rgba(0,0,0,0.1)'
+                                    }}>
+                                        <h3 style={{ marginTop: 0, color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '1.25rem' }}>Log Out?</h3>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                                            Are you sure you want to sign out?
+                                        </p>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                            <button
+                                                onClick={() => setShowLogoutConfirm(false)}
+                                                style={{
+                                                    padding: '0.75rem 1.5rem',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #e2e8f0',
+                                                    background: 'white',
+                                                    color: 'var(--text-secondary)',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowLogoutConfirm(false);
+                                                    logout();
+                                                }}
+                                                style={{
+                                                    padding: '0.75rem 1.5rem',
+                                                    borderRadius: '6px',
+                                                    border: 'none',
+                                                    background: '#ef4444',
+                                                    color: 'white',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)'
+                                                }}
+                                            >
+                                                Log Out
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
                         {/* Invite Acceptance Modal */}
-                        {inviteData && (
-                            <div style={{
-                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                                background: 'rgba(0,0,0,0.85)', zIndex: 10001,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                                <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
-                                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
-                                        {inviteData.type === 'domain_match' ? '🏫' : '📩'}
-                                    </div>
-                                    <h2 style={{ marginBottom: '0.5rem' }}>
-                                        {inviteData.type === 'domain_match' ? 'Join Your Team?' : 'You\'re Invited!'}
-                                    </h2>
-                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                                        {inviteData.type === 'domain_match'
-                                            ? <span>Your email matches <strong>{inviteData.schoolName}</strong>.<br />Join now as a <strong>{inviteData.role}</strong>?</span>
-                                            : <span>To join <strong>{inviteData.schoolName}</strong> as a <strong>{inviteData.role}</strong>.</span>
-                                        }
-                                    </p>
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
-                                        onClick={handleAcceptInvite}
-                                    >
-                                        Accept & Join Team
-                                    </button>
-                                    <button
-                                        className="btn btn-secondary"
-                                        style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
-                                        onClick={() => {
-                                            if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
-                                                setInviteData(null);
-                                                setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
+                        {
+                            inviteData && (
+                                <div style={{
+                                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                    background: 'rgba(0,0,0,0.85)', zIndex: 10001,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
+                                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                                            {inviteData.type === 'domain_match' ? '🏫' : '📩'}
+                                        </div>
+                                        <h2 style={{ marginBottom: '0.5rem' }}>
+                                            {inviteData.type === 'domain_match' ? 'Join Your Team?' : 'You\'re Invited!'}
+                                        </h2>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                            {inviteData.type === 'domain_match'
+                                                ? <span>Your email matches <strong>{inviteData.schoolName}</strong>.<br />Join now as a <strong>{inviteData.role}</strong>?</span>
+                                                : <span>To join <strong>{inviteData.schoolName}</strong> as a <strong>{inviteData.role}</strong>.</span>
                                             }
-                                        }}
-                                    >
-                                        No, Create New School Instead
-                                    </button>
+                                        </p>
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
+                                            onClick={handleAcceptInvite}
+                                        >
+                                            Accept & Join Team
+                                        </button>
+                                        <button
+                                            className="btn btn-secondary"
+                                            style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
+                                            onClick={() => {
+                                                if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
+                                                    setInviteData(null);
+                                                    setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
+                                                }
+                                            }}
+                                        >
+                                            No, Create New School Instead
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
                     </main >
                 </div >
             );
