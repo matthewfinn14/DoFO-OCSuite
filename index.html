@@ -2151,6 +2151,7 @@
                 case "Edit2": return <svg {...commonProps}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>;
                 case "Pencil": return <svg {...commonProps}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>;
                 case "Trash2": return <svg {...commonProps}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>;
+                case "Heart": return <svg {...commonProps}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>;
 
                 default:
                     // Fallback to text (Emoji or just text)
@@ -11224,19 +11225,63 @@
                                     <h4 style={{ color: 'var(--accent)', marginBottom: '0.75rem' }}>Step 2: Fill in Your Data</h4>
                                     <p style={{ marginBottom: '0.5rem' }}>Open the template in Excel, Google Sheets, or any spreadsheet program and fill in your roster data.</p>
 
-                                    <div style={{ background: 'var(--bg-panel)', padding: '1rem', borderRadius: '8px', marginTop: '1rem' }}>
-                                        <strong>Supported Columns:</strong>
-                                        <ul style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
-                                            <li><strong>Number</strong> (or Jersey, #, No) - Player's jersey number</li>
-                                            <li><strong>Name</strong> (or Full Name, Player) - Player's full name</li>
-                                            <li><strong>First Name</strong> and <strong>Last Name</strong> - Alternative to Name column</li>
-                                            <li><strong>Position</strong> (or Pos) - Use format like "QB/LB" for both positions</li>
-                                            <li><strong>OffPos</strong> (or Offense) - Offensive position only</li>
-                                            <li><strong>DefPos</strong> (or Defense) - Defensive position only</li>
-                                            <li><strong>Year</strong> (or Grade, Class, Yr, Gr) - Fr, So, Jr, Sr</li>
-                                            <li><strong>Height</strong> (or Ht) - e.g., 6'2"</li>
-                                            <li><strong>Weight</strong> (or Wt) - e.g., 185</li>
-                                        </ul>
+                                    <div style={{ marginTop: '1rem' }}>
+                                        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>Expected Spreadsheet Columns:</div>
+                                        <div style={{
+                                            display: 'flex',
+                                            overflowX: 'auto',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '6px',
+                                            background: 'white',
+                                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
+                                        }}>
+                                            {[
+                                                { header: 'Number', alias: 'Jersey, #, No', example: '12' },
+                                                { header: 'Name', alias: 'Full Name, Player', example: 'John Doe' },
+                                                { header: 'First Name', alias: 'Fname', example: 'John' },
+                                                { header: 'Last Name', alias: 'Lname', example: 'Doe' },
+                                                { header: 'Position', alias: 'Pos', example: 'QB/LB' },
+                                                { header: 'OffPos', alias: 'Offense', example: 'QB' },
+                                                { header: 'DefPos', alias: 'Defense', example: 'LB' },
+                                                { header: 'Year', alias: 'Grade, Class, Yr', example: 'Fr, 9' },
+                                                { header: 'Height', alias: 'Ht', example: '6\'2"' },
+                                                { header: 'Weight', alias: 'Wt', example: '185' },
+                                            ].map((col, idx) => (
+                                                <div key={idx} style={{
+                                                    minWidth: '130px',
+                                                    flexShrink: 0,
+                                                    borderRight: '1px solid var(--border)',
+                                                    display: 'flex',
+                                                    flexDirection: 'column'
+                                                }}>
+                                                    {/* Header Cell */}
+                                                    <div style={{
+                                                        background: '#f8fafc',
+                                                        padding: '8px',
+                                                        borderBottom: '1px solid var(--border)',
+                                                        fontWeight: 'bold',
+                                                        textAlign: 'center',
+                                                        color: '#334155',
+                                                        fontSize: '0.9rem'
+                                                    }}>
+                                                        {col.header}
+                                                    </div>
+                                                    {/* Body Cell */}
+                                                    <div style={{ padding: '8px', fontSize: '0.8rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <div style={{ color: 'var(--text-secondary)' }}>
+                                                            <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.7 }}>Accepts:</span><br />
+                                                            {col.alias}
+                                                        </div>
+                                                        <div style={{ marginTop: 'auto', paddingTop: '4px', borderTop: '1px dashed var(--border)', color: 'var(--accent)', fontFamily: 'monospace' }}>
+                                                            Ex: {col.example}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', textAlign: 'right', fontStyle: 'italic' }}>
+                                            Scroll horizontally to see more labels &rarr;
+                                        </div>
                                     </div>
                                 </div>
 
@@ -16696,10 +16741,10 @@
                 // Group columns by pitch type (Same logic as main view)
                 const safeCols = layout.cols || [];
                 const columnGroups = [
-                    { id: 'FB', label: 'FASTBALL', cols: safeCols.slice(0, 2) },
-                    { id: 'CB', label: 'CURVEBALL', cols: safeCols.slice(2, 4) },
-                    { id: 'CU', label: 'CHANGE UP', cols: safeCols.slice(4, 6) },
-                    { id: 'SO', label: 'STRIKEOUT', cols: safeCols.slice(6, 8) }
+                    { id: 'FB', label: 'BASE/INITIAL', cols: safeCols.slice(0, 2) },
+                    { id: 'CB', label: 'BASE W/ DRESSING', cols: safeCols.slice(2, 4) },
+                    { id: 'CU', label: 'CONVERT', cols: safeCols.slice(4, 6) },
+                    { id: 'SO', label: 'EXPLOSIVE', cols: safeCols.slice(6, 8) }
                 ];
 
                 const getMatrixPlays = (setId) => {
@@ -18293,7 +18338,7 @@
                         <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Offensive Coordinator Usage</h2>
                         <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
                             <li><strong>Playbook:</strong> Add and organize plays with tags (Formation, Concept, Situation). Use batch delete to clean up old plays.</li>
-                            <li><strong>Game Planning:</strong> Build your "Smart Call Sheet" by tagging plays with specific situations (e.g., "3rd & Long").</li>
+                            <li><strong>Game Planning:</strong> Build your "Situations and Scripts" by tagging plays with specific situations (e.g., "3rd & Long").</li>
                             <li><strong>Practice Scripts:</strong> Generate scripts based on your installed playbook and daily focus.</li>
                             <li><strong>In-Game:</strong> Use the "OC Call Sheet" on the tablet app for real-time play calling and tracking.</li>
                         </ul>
@@ -18311,7 +18356,7 @@
             );
         };
 
-        const TestingRecords = ({ roster }) => {
+        const TestingRecords = ({ roster, programRecords = {} }) => {
             const [selectedView, setSelectedView] = useState('Senior'); // Default to Senior View
 
 
@@ -18913,694 +18958,11 @@
             // Historical Data Structure
             // Format: { Event: { WeightClass: { Grade: { value, holder, year } } } }
             // Grade key 'PR' = Program Record
-            const HISTORICAL_RECORDS = {
-                'Squat': {
-                    '320+': {
-                        'PR': { value: '--', holder: '-', year: '-' }
-                    },
-                    '310-319': {
-                        '12': { value: '470', holder: 'David Downs', year: '8/20' },
-                        'PR': { value: '470', holder: 'David Downs', year: '8/20' }
-                    },
-                    '300-309': {
-                        '12': { value: '480', holder: 'Tyler Heithoff', year: '7/22' },
-                        '11': { value: '465', holder: 'Tyler Heithoff', year: '5/22' },
-                        '10': { value: '350', holder: 'Tyler Heithoff', year: '5/21' },
-                        '9': { value: '240', holder: 'Patrick Gomez', year: '5/22' },
-                        'PR': { value: '480', holder: 'Tyler Heithoff', year: '7/22' }
-                    },
-                    '290-299': {
-                        '12': { value: '315', holder: 'Colin Hansen', year: '8/21' },
-                        '11': { value: '280', holder: 'Colin Hansen', year: '5/21' },
-                        '10': { value: '315', holder: 'Tyler Heithoff', year: '2/21' },
-                        '9': { value: '220', holder: 'Patrick Gomez', year: '11/21' },
-                        'PR': { value: '315', holder: 'C. Hansen / T. Heithoff', year: '2021' }
-                    },
-                    '280-289': {
-                        '12': { value: '355', holder: 'Carson Barber', year: '7/24' },
-                        '11': { value: '455', holder: 'Aaron Peyton', year: '5/23' },
-                        '10': { value: '350', holder: 'Carson Barber', year: '5/23' },
-                        'PR': { value: '455', holder: 'Aaron Peyton', year: '5/23' }
-                    },
-                    '270-279': {
-                        '12': { value: '455', holder: 'Aaron Peyton', year: '7/23' },
-                        '10': { value: '315', holder: 'Carson Barber', year: '10/22' },
-                        '9': { value: '270', holder: 'Carson Barber', year: '5/22' },
-                        'PR': { value: '455', holder: 'Aaron Peyton', year: '7/23' }
-                    },
-                    '260-269': {
-                        '11': { value: '415', holder: 'Aaron Peyton', year: '10/22' },
-                        '9': { value: '250', holder: 'Carson Barber', year: '2/22' },
-                        'PR': { value: '415', holder: 'Aaron Peyton', year: '10/22' }
-                    },
-                    '250-259': {
-                        '11': { value: '450', holder: 'Record Holder', year: '5/24' },
-                        '10': { value: '365', holder: 'Aaron Peyton', year: '5/22' },
-                        '9': { value: '230', holder: 'Carson Barber', year: '11/21' },
-                        'PR': { value: '450', holder: 'Record Holder', year: '5/24' }
-                    },
-                    '240-249': {
-                        '12': { value: '405', holder: 'W. Licht, T. Tjaden, T. Peterson', year: '23/24' },
-                        '11': { value: '415', holder: 'Record Holder', year: '7/23' },
-                        '10': { value: '380', holder: 'Record Holder', year: '2/23' },
-                        '9': { value: '225', holder: 'Jackson Mohr', year: '2/23' },
-                        'PR': { value: '415', holder: 'Record Holder', year: '7/23' }
-                    },
-                    '230-239': {
-                        '12': { value: '400', holder: 'Wes Hansen', year: '7/24' },
-                        '11': { value: '425', holder: 'Wes Hansen', year: '5/24' },
-                        '10': { value: '335', holder: 'Aaron Peyton', year: '2/22' },
-                        'PR': { value: '425', holder: 'Wes Hansen', year: '5/24' }
-                    },
-                    '220-229': {
-                        '12': { value: '470', holder: 'Zach Twedt', year: '8/20' },
-                        '11': { value: '445', holder: 'Charlie Watts', year: '2/24' },
-                        '10': { value: '340', holder: 'Wes Hansen', year: '5/23' },
-                        '9': { value: '285', holder: 'Blake Nelsen', year: '2/23' },
-                        'PR': { value: '470', holder: 'Zach Twedt', year: '8/20' }
-                    },
-                    '210-219': {
-                        '12': { value: '460', holder: 'Garret Nerem', year: '7/24' },
-                        '11': { value: '425', holder: 'Garrett Nerem', year: '5/24' },
-                        '10': { value: '335', holder: 'Tristan Peterson', year: '5/23' },
-                        '9': { value: '340', holder: 'Jake Rogers', year: '5/23' },
-                        'PR': { value: '460', holder: 'Garret Nerem', year: '7/24' }
-                    },
-                    '200-209': {
-                        '12': { value: '280', holder: 'Parker Watts', year: '8/21' },
-                        '11': { value: '415', holder: 'C. Watts / G. Nerem', year: '23/24' },
-                        '10': { value: '425', holder: 'Fiston Carlson', year: '7/24' },
-                        '9': { value: '335', holder: 'Jake Rogers', year: '2/23' },
-                        'PR': { value: '425', holder: 'Fiston Carlson', year: '7/24' }
-                    },
-                    '190-199': {
-                        '12': { value: '285', holder: 'Logan Schnurr', year: '8/21' },
-                        '11': { value: '400', holder: 'Cael Vermeer', year: '7/24' },
-                        '10': { value: '350', holder: 'Cael Vermeer', year: '7/23' },
-                        '9': { value: '430', holder: 'Fiston Carlson', year: '5/24' },
-                        'PR': { value: '430', holder: 'Fiston Carlson', year: '5/24' }
-                    },
-                    '180-189': {
-                        '12': { value: '380', holder: 'Sam Knoll', year: '7/24' },
-                        '11': { value: '440', holder: 'Fiston Carlson', year: '7/25' },
-                        '10': { value: '355', holder: 'Ben Licht', year: '7/24' },
-                        '9': { value: '360', holder: 'Fiston Carlson', year: '7/23' },
-                        'PR': { value: '440', holder: 'Fiston Carlson', year: '7/25' }
-                    },
-                    '170-179': {
-                        '12': { value: '355', holder: 'D. Lettow / H. Johnson', year: '22/23' },
-                        '11': { value: '340', holder: 'Tyler Lambert', year: '7/25' },
-                        '10': { value: '350', holder: 'Isaac Miskell', year: '7/24' },
-                        '9': { value: '345', holder: 'Isaac Miskell', year: '2/24' },
-                        'PR': { value: '355', holder: 'D. Lettow / H. Johnson', year: '22/23' }
-                    },
-                    '160-169': {
-                        '12': { value: '320', holder: 'Heston McIlrath', year: '7/24' },
-                        '11': { value: '350', holder: 'Sam Knoll', year: '7/23' },
-                        '10': { value: '335', holder: 'Cooper Triggs', year: '7/24' },
-                        '9': { value: '300', holder: 'Ben Licht', year: '10/23' },
-                        'PR': { value: '350', holder: 'Sam Knoll', year: '7/23' }
-                    },
-                    '150-159': {
-                        '12': { value: '315', holder: 'G. Carpenter / C. Long', year: '22/25' },
-                        '11': { value: '345', holder: 'Cody Long', year: '7/24' },
-                        '10': { value: '330', holder: 'Cody Long', year: '11/23' },
-                        '9': { value: '355', holder: 'Ben Mazyck', year: '10/23' },
-                        'PR': { value: '355', holder: 'Ben Mazyck', year: '10/23' }
-                    },
-                    '140-149': {
-                        '12': { value: '290', holder: 'C. Diehl / J. Martin', year: '21/22' },
-                        '11': { value: '275', holder: 'Blake Larson', year: '7/24' },
-                        '10': { value: '315', holder: 'Cody Long', year: '7/23' },
-                        '9': { value: '305', holder: 'Ben Mazyck', year: '7/23' },
-                        'PR': { value: '315', holder: 'Cody Long', year: '7/23' }
-                    },
-                    '130-139': {
-                        '11': { value: '255', holder: 'Jake Knoll', year: '7/25' },
-                        '10': { value: '275', holder: 'Jake Knoll', year: '7/24' },
-                        '9': { value: '270', holder: 'C. Long / B. Loof', year: '22/23' },
-                        'PR': { value: '275', holder: 'Jake Knoll', year: '7/24' }
-                    },
-                    '120-129': {
-                        '11': { value: '215', holder: 'Noah Healy', year: '7/25' },
-                        '9': { value: '260', holder: 'Brady Long', year: '7/24' },
-                        'PR': { value: '260', holder: 'Brady Long', year: '7/24' }
-                    },
-                    '110-119': { // Assuming 110 maps to 110-119 range
-                        '11': { value: '180', holder: 'Brayden Kilstofte', year: '11/21' },
-                        '9': { value: '195', holder: 'B. Larson / M. Dahlsten', year: '23/25' },
-                        'PR': { value: '195', holder: 'B. Larson / M. Dahlsten', year: '23/25' }
-                    },
-                    '100-109': { // Assuming 100 maps to 100-109 range
-                        '11': { value: '160', holder: 'Brayden Kilstofte', year: '8/21' },
-                        '9': { value: '185', holder: 'Blake Larson', year: '10/22' },
-                        'PR': { value: '185', holder: 'Blake Larson', year: '10/22' }
-                    }
-                },
-                'Bench': {
-                    '320+': {
-                        'PR': { value: '--', holder: '-', year: '-' }
-                    },
-                    '310-319': {
-                        '12': { value: '295', holder: 'David Downs', year: '8/20' },
-                        'PR': { value: '295', holder: 'David Downs', year: '8/20' }
-                    },
-                    '300-309': {
-                        '12': { value: '250', holder: 'Tyler Heithoff', year: '7/22' },
-                        '11': { value: '250', holder: 'Tyler Heithoff', year: '5/22' },
-                        '9': { value: '170', holder: 'Patrick Gomez', year: '5/22' },
-                        'PR': { value: '250', holder: 'Tyler Heithoff', year: '2022' }
-                    },
-                    '290-299': {
-                        '12': { value: '175', holder: 'Colin Hansen', year: '8/21' },
-                        '11': { value: '165', holder: 'Colin Hansen', year: '5/21' },
-                        '10': { value: '185', holder: 'Tyler Heithoff', year: '2/21' },
-                        '9': { value: '155', holder: 'Patrick Gomez', year: '11/21' },
-                        'PR': { value: '185', holder: 'Tyler Heithoff', year: '2/21' }
-                    },
-                    '280-289': {
-                        '12': { value: '220', holder: 'Carson Barber', year: '7/24' },
-                        '11': { value: '220', holder: 'Carson Barber', year: '7/23' },
-                        '10': { value: '215', holder: 'Carson Barber', year: '5/23' },
-                        'PR': { value: '220', holder: 'Carson Barber', year: '23/24' }
-                    },
-                    '270-279': {
-                        '12': { value: '245', holder: 'Aaron Peyton', year: '7/23' },
-                        '10': { value: '195', holder: 'Carson Barber', year: '10/22' },
-                        '9': { value: '175', holder: 'Carson Barber', year: '5/22' },
-                        'PR': { value: '245', holder: 'Aaron Peyton', year: '7/23' }
-                    },
-                    '260-269': {
-                        '11': { value: '245', holder: 'Aaron Peyton', year: '10/22' },
-                        '10': { value: '155', holder: 'Carson Barber', year: '2/22' },
-                        'PR': { value: '245', holder: 'Aaron Peyton', year: '10/22' }
-                    },
-                    '250-259': {
-                        '11': { value: '245', holder: 'Aaron Peyton', year: '7/22' },
-                        '10': { value: '245', holder: 'Aaron Peyton', year: '5/22' },
-                        '9': { value: '145', holder: 'Carson Barber', year: '11/21' },
-                        'PR': { value: '245', holder: 'Aaron Peyton', year: '2022' }
-                    },
-                    '240-249': {
-                        '12': { value: '280', holder: 'William Licht', year: '7/23' },
-                        '11': { value: '255', holder: 'Thomas Tjaden', year: '5/23' },
-                        '10': { value: '215', holder: 'Aaron Peyton', year: '11/21' },
-                        '9': { value: '170', holder: 'Jackson Mohr', year: '10/22' },
-                        'PR': { value: '280', holder: 'William Licht', year: '7/23' }
-                    },
-                    '230-239': {
-                        '12': { value: '265', holder: 'Blake Nelsen', year: '8/25' },
-                        '11': { value: '270', holder: 'William Licht', year: '5/23' },
-                        '10': { value: '215', holder: 'Record Holder', year: '10/22' },
-                        'PR': { value: '270', holder: 'William Licht', year: '5/23' }
-                    },
-                    '220-229': {
-                        '12': { value: '315', holder: 'Jimmy Philipsen', year: '8/20' },
-                        '11': { value: '280', holder: 'Charlie Watts', year: '2/24' },
-                        '10': { value: '190', holder: 'Wes Hansen', year: '5/23' },
-                        '9': { value: '185', holder: 'Aaron Peyton', year: '5/21' },
-                        'PR': { value: '315', holder: 'Jimmy Philipsen', year: '8/20' }
-                    },
-                    '210-219': {
-                        '12': { value: '255', holder: 'Garrett Nerem', year: '7/24' },
-                        '11': { value: '300', holder: 'Chance Georgius', year: '7/25' },
-                        '10': { value: '250', holder: 'William Licht', year: '5/22' },
-                        '9': { value: '245', holder: 'Jake Rogers', year: '5/23' },
-                        'PR': { value: '300', holder: 'Chance Georgius', year: '7/25' }
-                    },
-                    '200-209': {
-                        '12': { value: '230', holder: 'Jonovan Wilkinson', year: '7/23' },
-                        '11': { value: '270', holder: 'Charlie Watts', year: '7/23' },
-                        '10': { value: '235', holder: 'William Licht', year: '2/22' },
-                        '9': { value: '225', holder: 'Blake Winecoff', year: '7/25' },
-                        'PR': { value: '270', holder: 'Charlie Watts', year: '7/23' }
-                    },
-                    '190-199': {
-                        '12': { value: '170', holder: 'Logan Schnurr', year: '8/21' },
-                        '11': { value: '210', holder: 'Jonovan Wilkinson', year: '10/22' },
-                        '10': { value: '270', holder: 'Charlie Watts', year: '5/23' },
-                        '9': { value: '305', holder: 'Fiston Carlson', year: '2/24' },
-                        'PR': { value: '305', holder: 'Fiston Carlson', year: '2/24' }
-                    },
-                    '180-189': {
-                        '12': { value: '280', holder: 'Christian Eslick', year: '7/22' },
-                        '11': { value: '325', holder: 'Fiston Carlson', year: '7/25' },
-                        '10': { value: '215', holder: 'G. Nerem / C. Barber', year: '23/24' },
-                        '9': { value: '255', holder: 'Fiston Carlson', year: '7/23' },
-                        'PR': { value: '325', holder: 'Fiston Carlson', year: '7/25' }
-                    },
-                    '170-179': {
-                        '12': { value: '220', holder: 'Jackson Sterle', year: '8/20' },
-                        '11': { value: '245', holder: 'Ben Mazyck', year: '7/25' },
-                        '10': { value: '215', holder: 'Isaac Miskell', year: '7/24' },
-                        '9': { value: '210', holder: 'Ben Licht', year: '2/24' },
-                        'PR': { value: '245', holder: 'Ben Mazyck', year: '7/25' }
-                    },
-                    '160-169': {
-                        '12': { value: '235', holder: 'Heston McIlrath', year: '7/24' },
-                        '11': { value: '200', holder: 'Q. Ante / D. Lettow', year: '21/21' },
-                        '10': { value: '235', holder: 'Sam Knoll', year: '2/23' },
-                        '9': { value: '195', holder: 'S. Knoll / B. Licht', year: '22/23' },
-                        'PR': { value: '235', holder: 'H. McIlrath / S. Knoll', year: '23/24' }
-                    },
-                    '150-159': {
-                        '12': { value: '210', holder: 'Cody Long', year: '7/25' },
-                        '11': { value: '205', holder: 'Brady Lettow', year: '7/23' },
-                        '10': { value: '235', holder: 'Ben Mazyck', year: '7/24' },
-                        '9': { value: '225', holder: 'Ben Mazyck', year: '10/23' },
-                        'PR': { value: '235', holder: 'Ben Mazyck', year: '7/24' }
-                    },
-                    '140-149': {
-                        '12': { value: '185', holder: 'John Martin', year: '7/22' },
-                        '11': { value: '190', holder: 'Blake Larson', year: '7/24' },
-                        '10': { value: '200', holder: 'Brody Kilstofte', year: '7/25' },
-                        '9': { value: '200', holder: 'Ben Mazyck', year: '7/23' },
-                        'PR': { value: '200', holder: 'B. Kilstofte / B. Mazyck', year: '23/25' }
-                    },
-                    '130-139': {
-                        '11': { value: '185', holder: 'Jake Knoll', year: '7/25' },
-                        '10': { value: '190', holder: 'Jake Knoll', year: '7/24' },
-                        '9': { value: '160', holder: 'Blake Loof', year: '11/23' },
-                        'PR': { value: '190', holder: 'Jake Knoll', year: '7/24' }
-                    },
-                    '120-129': {
-                        '11': { value: '160', holder: 'Noah Healy', year: '7/25' },
-                        '10': { value: '185', holder: 'Jake Knoll', year: '7/23' },
-                        'PR': { value: '185', holder: 'Jake Knoll', year: '7/23' }
-                    },
-                    '110-119': {
-                        '11': { value: '120', holder: 'Brayden Kilstofte', year: '11/21' },
-                        '10': { value: '160', holder: 'Max Dahlsten', year: '7/25' },
-                        'PR': { value: '160', holder: 'Max Dahlsten', year: '7/25' }
-                    },
-                    '100-109': {
-                        '10': { value: '125', holder: 'Blake Larson', year: '2/23' },
-                        'PR': { value: '125', holder: 'Blake Larson', year: '2/23' }
-                    }
-                },
-                'Tape Shuttle': {
-                    '320+': {
-                        'PR': { value: '--', holder: '-', year: '-' }
-                    },
-                    '310-319': {
-                        '12': { value: '59.4', holder: 'David Downs', year: '8/20' },
-                        'PR': { value: '59.4', holder: 'David Downs', year: '8/20' }
-                    },
-                    '300-309': {
-                        '12': { value: '1:05.2', holder: 'Tyler Heithoff', year: '8/22' },
-                        '11': { value: '1:08', holder: 'Tyler Heithoff', year: '8/21' },
-                        'PR': { value: '1:05.2', holder: 'Tyler Heithoff', year: '8/22' }
-                    },
-                    '290-299': {
-                        '12': { value: '1:05', holder: 'Colin Hansen', year: '8/21' },
-                        '11': { value: '1:05', holder: 'Colin Hansen', year: '8/20' },
-                        '10': { value: '68.9', holder: 'Tyler Heithoff', year: '8/20' },
-                        'PR': { value: '1:05', holder: 'Colin Hansen', year: '8/21' }
-                    },
-                    '280-289': {
-                        '12': { value: '59.0', holder: 'Carson Barber', year: '8/24' },
-                        'PR': { value: '59.0', holder: 'Carson Barber', year: '8/24' }
-                    },
-                    '270-279': {
-                        '12': { value: '58.7', holder: 'Jackson Mohr', year: '8/25' },
-                        '10': { value: '58.9', holder: 'Carson Barber', year: '8/22' },
-                        'PR': { value: '58.7', holder: 'Jackson Mohr', year: '8/25' }
-                    },
-                    '260-269': {
-                        '11': { value: '59.2', holder: 'Jackson Mohr', year: '8/24' },
-                        'PR': { value: '59.2', holder: 'Jackson Mohr', year: '8/24' }
-                    },
-                    '250-259': {
-                        '11': { value: '51.5', holder: 'Aaron Peyton', year: '8/22' },
-                        '10': { value: '1:08', holder: 'Carson Barber', year: '8/21' },
-                        'PR': { value: '51.5', holder: 'Aaron Peyton', year: '8/22' }
-                    },
-                    '240-249': {
-                        '12': { value: '51.6', holder: 'Tristan Peterson', year: '8/24' },
-                        '11': { value: '1:00.6', holder: 'Jake Jennings', year: '8/22' },
-                        '9': { value: '1:00', holder: 'Jackson Mohr', year: '8/22' },
-                        'PR': { value: '51.6', holder: 'Tristan Peterson', year: '8/24' }
-                    },
-                    '230-239': {
-                        '12': { value: '48.6', holder: 'Blake Nelsen', year: '8/25' },
-                        '11': { value: '1:01', holder: 'Nick Stewart', year: '8/21' },
-                        '10': { value: '49.4', holder: 'Record Holder', year: '8/22' },
-                        'PR': { value: '48.6', holder: 'Blake Nelsen', year: '8/25' }
-                    },
-                    '220-229': {
-                        '12': { value: '49.3', holder: 'Luke Patton', year: '8/22' },
-                        '11': { value: '52.5', holder: 'Blake Nelsen', year: '8/24' },
-                        '9': { value: '1:10', holder: 'Aaron Peyton', year: '8/20' },
-                        'PR': { value: '49.3', holder: 'Luke Patton', year: '8/22' }
-                    },
-                    '210-219': {
-                        '11': { value: '49.8', holder: 'Carter Barber', year: '8/25' },
-                        '10': { value: '53', holder: 'Luke Patton', year: '8/20' },
-                        '9': { value: '1:01', holder: 'B. Nelsen / J. Rogers', year: '8/22' },
-                        'PR': { value: '49.8', holder: 'Carter Barber', year: '8/25' }
-                    },
-                    '200-209': {
-                        '12': { value: '50.1', holder: 'Cael Vermeer', year: '8/25' },
-                        '11': { value: '50.8', holder: 'Christian Chelsvig', year: '8/22' },
-                        '10': { value: '45.0', holder: 'Fiston Carlson', year: '8/24' },
-                        '9': { value: '55.32', holder: 'Blake Winecoff', year: '8/25' },
-                        'PR': { value: '45.0', holder: 'Fiston Carlson', year: '8/24' }
-                    },
-                    '190-199': {
-                        '12': { value: '50.6', holder: 'Logan Schnurr', year: '8/21' },
-                        '11': { value: '47.9', holder: 'Cael Vermeer', year: '8/24' },
-                        '10': { value: '49.4', holder: 'Nick Butler', year: '8/20' },
-                        '9': { value: '1:00.7', holder: 'Jaxson Kadolph', year: '8/20' },
-                        'PR': { value: '47.9', holder: 'Cael Vermeer', year: '8/24' }
-                    },
-                    '180-189': {
-                        '12': { value: '45.4', holder: 'Kale Lande', year: '8/22' },
-                        '11': { value: '45.3', holder: 'Cooper Triggs', year: '8/25' },
-                        '10': { value: '48.0', holder: 'Carter Barber', year: '8/24' },
-                        '9': { value: '52.9', holder: 'Cole Olson', year: '8/20' },
-                        'PR': { value: '45.3', holder: 'Cooper Triggs', year: '8/25' }
-                    },
-                    '170-179': {
-                        '12': { value: '45', holder: 'Will Bunn', year: '8/21' },
-                        '11': { value: '44.1', holder: 'Hesston Johnson', year: '8/22' },
-                        '10': { value: '46.2', holder: 'Jonovan Wilkinson', year: '8/21' },
-                        '9': { value: '47.6', holder: 'Connor Morton', year: '8/21' },
-                        'PR': { value: '44.1', holder: 'Hesston Johnson', year: '8/22' }
-                    },
-                    '160-169': {
-                        '12': { value: '43.8', holder: 'Heston McIlrath', year: '8/24' },
-                        '11': { value: '45.9', holder: 'Dillon Lettow', year: '8/21' },
-                        '10': { value: '45.5', holder: 'Sam Knoll', year: '8/22' },
-                        '9': { value: '51.3', holder: 'Charlie Watts', year: '8/21' },
-                        'PR': { value: '43.8', holder: 'Heston McIlrath', year: '8/24' }
-                    },
-                    '150-159': {
-                        '12': { value: '43.3', holder: 'Cody Long', year: '8/25' },
-                        '11': { value: '44.9', holder: 'Gavin Carpenter', year: '8/21' },
-                        '10': { value: '44.1', holder: 'Luke Thoreson', year: '8/24' },
-                        '9': { value: '46.7', holder: 'Sam Scarrow', year: '8/25' },
-                        'PR': { value: '43.3', holder: 'Cody Long', year: '8/25' }
-                    },
-                    '140-149': {
-                        '12': { value: '45.5', holder: 'Cade Diehl', year: '8/21' },
-                        '11': { value: '46.3', holder: 'Blake Larson', year: '8/24' },
-                        '10': { value: '46.3', holder: 'Brody Kilstofte', year: '8/25' },
-                        '9': { value: '48.1', holder: 'Hesston Johnson', year: '8/20' },
-                        'PR': { value: '45.5', holder: 'Cade Diehl', year: '8/21' }
-                    },
-                    '130-139': {
-                        '11': { value: '45.9', holder: 'Jake Knoll', year: '8/25' },
-                        '10': { value: '46.1', holder: 'Brady Long', year: '8/25' },
-                        '9': { value: '45.7', holder: 'Myles McIlrath', year: '8/25' },
-                        'PR': { value: '45.7', holder: 'Myles McIlrath', year: '8/25' }
-                    },
-                    '120-129': {
-                        '11': { value: '47.21', holder: 'Noah Healy', year: '8/25' },
-                        '10': { value: '45.9', holder: 'Cody Long', year: '8/22' },
-                        'PR': { value: '45.9', holder: 'Cody Long', year: '8/22' }
-                    },
-                    '110-119': {
-                        '10': { value: '50.4', holder: 'Parker Watson', year: '8/25' },
-                        'PR': { value: '50.4', holder: 'Parker Watson', year: '8/25' }
-                    },
-                    '100-109': {
-                        '10': { value: '49.3', holder: 'Brayden Kilstofte', year: '8/21' },
-                        '9': { value: '50.2', holder: 'Blake Larson', year: '8/22' },
-                        'PR': { value: '49.3', holder: 'Brayden Kilstofte', year: '8/21' }
-                    }
-                },
-                '800m': {
-                    '320+': {
-                        'PR': { value: '--', holder: '-', year: '-' }
-                    },
-                    '310-319': {
-                        '12': { value: '3:53', holder: 'David Downs', year: '8/20' },
-                        'PR': { value: '3:53', holder: 'David Downs', year: '8/20' }
-                    },
-                    '300-309': {
-                        '12': { value: '4:51', holder: 'Tyler Heithoff', year: '8/22' },
-                        'PR': { value: '4:51', holder: 'Tyler Heithoff', year: '8/22' }
-                    },
-                    '290-299': {
-                        '11': { value: '4:18', holder: 'Colin Hansen', year: '8/20' },
-                        '10': { value: '4:39', holder: 'Patrick Gomez', year: '8/22' },
-                        'PR': { value: '4:18', holder: 'Colin Hansen', year: '8/20' }
-                    },
-                    '280-289': {
-                        '12': { value: '4:13', holder: 'Ryan Johnson', year: '8/21' },
-                        'PR': { value: '4:13', holder: 'Ryan Johnson', year: '8/21' }
-                    },
-                    '270-279': {
-                        '12': { value: '3:43', holder: 'Jackson Mohr', year: '8/25' },
-                        '10': { value: '4:04', holder: 'Carson Barber', year: '8/22' },
-                        'PR': { value: '3:43', holder: 'Jackson Mohr', year: '8/25' }
-                    },
-                    '260-269': {
-                        '11': { value: '4:35', holder: 'Ryan Johnson', year: '8/20' },
-                        'PR': { value: '4:35', holder: 'Ryan Johnson', year: '8/20' }
-                    },
-                    '250-259': {
-                        '11': { value: '3:33', holder: 'Aaron Peyton', year: '8/22' },
-                        '10': { value: '3:39', holder: 'Carson Barber', year: '8/21' },
-                        'PR': { value: '3:33', holder: 'Aaron Peyton', year: '8/22' }
-                    },
-                    '240-249': {
-                        '11': { value: '3:40', holder: 'Jake Jennings', year: '8/22' },
-                        '10': { value: '4:18', holder: 'Jackson Mohr', year: '8/22' },
-                        'PR': { value: '3:40', holder: 'Jake Jennings', year: '8/22' }
-                    },
-                    '230-239': {
-                        '12': { value: '2:43', holder: 'Blake Nelsen', year: '8/25' },
-                        '11': { value: '3:32', holder: 'Nick Stewart', year: '8/21' },
-                        '10': { value: '3:27', holder: 'Aaron Peyton', year: '8/21' },
-                        'PR': { value: '2:43', holder: 'Blake Nelsen', year: '8/25' }
-                    },
-                    '220-229': {
-                        '12': { value: '2:25', holder: 'Luke Patton', year: '8/22' },
-                        '11': { value: '3:20', holder: 'William Licht', year: '8/22' },
-                        '9': { value: '4:36', holder: 'Aaron Peyton', year: '8/20' },
-                        'PR': { value: '2:25', holder: 'Luke Patton', year: '8/22' }
-                    },
-                    '210-219': {
-                        '11': { value: '2:43', holder: 'C. Barber / G. Jeter', year: '8/25' },
-                        '10': { value: '2:52', holder: 'Luke Patton', year: '8/20' },
-                        '9': { value: '4:05', holder: 'Jake Rogers', year: '8/22' },
-                        'PR': { value: '2:43', holder: 'C. Barber / G. Jeter', year: '8/25' }
-                    },
-                    '200-209': {
-                        '12': { value: '2:34', holder: 'Cael Vermeer', year: '8/25' },
-                        '11': { value: '2:54', holder: 'Christian Chelsvig', year: '8/22' },
-                        '10': { value: '3:15', holder: 'Nick Stewart', year: '8/21' },
-                        '9': { value: '3:35', holder: 'Blake Winecoff', year: '8/25' },
-                        'PR': { value: '2:34', holder: 'Cael Vermeer', year: '8/25' }
-                    },
-                    '190-199': {
-                        '12': { value: '3:08', holder: 'Logan Schnurr', year: '8/21' },
-                        '11': { value: '2:40', holder: 'Tucker Hawkins', year: '8/25' },
-                        '10': { value: '3:02', holder: 'Nick Butler', year: '8/20' },
-                        '9': { value: '3:29', holder: 'Jaxson Kadolph', year: '8/20' },
-                        'PR': { value: '2:40', holder: 'Tucker Hawkins', year: '8/25' }
-                    },
-                    '180-189': {
-                        '12': { value: '2:09', holder: 'Kale Lande', year: '8/22' },
-                        '11': { value: '2:31', holder: 'Luke Thoreson', year: '8/25' },
-                        '10': { value: '3:02', holder: 'Garrett Nerem', year: '8/22' },
-                        '9': { value: '2:52', holder: 'Cael Vermeer', year: '8/22' },
-                        'PR': { value: '2:09', holder: 'Kale Lande', year: '8/22' }
-                    },
-                    '170-179': {
-                        '12': { value: '2:11', holder: 'Dillon Lettow', year: '8/22' },
-                        '11': { value: '2:09', holder: 'Kale Lande', year: '8/21' },
-                        '10': { value: '2:29', holder: 'Jonovan Wilkinson', year: '8/21' },
-                        '9': { value: '2:38', holder: 'Connor Morton', year: '8/21' },
-                        'PR': { value: '2:09', holder: 'Kale Lande', year: '8/21' }
-                    },
-                    '160-169': {
-                        '12': { value: '2:34', holder: 'Matt Phelan', year: '8/21' },
-                        '11': { value: '2:19', holder: 'Dillon Lettow', year: '8/21' },
-                        '10': { value: '2:15', holder: 'Colin Willis', year: '8/25' },
-                        '9': { value: '2:53', holder: 'Garrett Nerem', year: '8/21' },
-                        'PR': { value: '2:15', holder: 'Colin Willis', year: '8/25' }
-                    },
-                    '150-159': {
-                        '12': { value: '2:16', holder: 'Ben Greenfield', year: '8/22' },
-                        '11': { value: '2:23', holder: 'Gavin Carpenter', year: '8/21' },
-                        '10': { value: '2:20', holder: 'Hesston Johnson', year: '8/21' },
-                        '9': { value: '2:45', holder: 'Sam Scarrow', year: '8/25' },
-                        'PR': { value: '2:16', holder: 'Ben Greenfield', year: '8/22' }
-                    },
-                    '140-149': {
-                        '12': { value: '2:15', holder: 'Cade Diehl', year: '8/21' },
-                        '11': { value: '2:32', holder: 'Carter Loof', year: '8/20' },
-                        '10': { value: '2:30', holder: 'Boaz Clark', year: '8/21' },
-                        '9': { value: '2:38', holder: 'Sam Knoll', year: '8/21' },
-                        'PR': { value: '2:15', holder: 'Cade Diehl', year: '8/21' }
-                    },
-                    '130-139': {
-                        '11': { value: '2:26', holder: 'Cade Diehl', year: '8/21' },
-                        '10': { value: '2:38', holder: 'Brady Long', year: '8/25' },
-                        '9': { value: '2:39', holder: 'Myles McIlrath', year: '8/25' },
-                        'PR': { value: '2:26', holder: 'Cade Diehl', year: '8/21' }
-                    },
-                    '120-129': {
-                        '11': { value: '2:31', holder: 'Noah Healy', year: '8/25' },
-                        '10': { value: '2:33', holder: 'Hayden Janssen', year: '8/22' },
-                        'PR': { value: '2:31', holder: 'Noah Healy', year: '8/25' }
-                    },
-                    '110-119': {
-                        '11': { value: '2:43', holder: 'Tristan Anderson', year: '8/21' },
-                        '10': { value: '2:42', holder: 'Max Dahlsten', year: '8/25' },
-                        'PR': { value: '2:42', holder: 'Max Dahlsten', year: '8/25' }
-                    },
-                    '100-109': {
-                        '11': { value: '2:28', holder: 'Brayden Kilstofte', year: '8/21' },
-                        '9': { value: '2:46', holder: 'Blake Larson', year: '8/22' },
-                        'PR': { value: '2:28', holder: 'Brayden Kilstofte', year: '8/21' }
-                    }
-                },
-                'Bag Jump': {
-                    '320+': {
-                        'PR': { value: '--', holder: '-', year: '-' }
-                    },
-                    '310-319': {
-                        '12': { value: '33', holder: 'David Downs', year: '8/20' },
-                        'PR': { value: '33', holder: 'David Downs', year: '8/20' }
-                    },
-                    '300-309': {
-                        '12': { value: '27', holder: 'Tyler Heithoff', year: '8/22' },
-                        '11': { value: '27', holder: 'Tyler Heithoff', year: '8/21' },
-                        'PR': { value: '27', holder: 'Tyler Heithoff', year: '21/22' }
-                    },
-                    '290-299': {
-                        '12': { value: '34', holder: 'Colin Hansen', year: '8/21' },
-                        '11': { value: '36', holder: 'Colin Hansen', year: '8/20' },
-                        '10': { value: '25', holder: 'Tyler Heithoff', year: '8/20' },
-                        'PR': { value: '36', holder: 'Colin Hansen', year: '8/20' }
-                    },
-                    '280-289': {
-                        '12': { value: '43', holder: 'Carson Barber', year: '8/24' },
-                        'PR': { value: '43', holder: 'Carson Barber', year: '8/24' }
-                    },
-                    '270-279': {
-                        '12': { value: '37', holder: 'Jackson Mohr', year: '8/25' },
-                        '10': { value: '36', holder: 'Carson Barber', year: '8/22' },
-                        'PR': { value: '37', holder: 'Jackson Mohr', year: '8/25' }
-                    },
-                    '260-269': {
-                        '11': { value: '39', holder: 'Ryan Johnson', year: '8/20' },
-                        'PR': { value: '39', holder: 'Ryan Johnson', year: '8/20' }
-                    },
-                    '250-259': {
-                        '11': { value: '49', holder: 'Aaron Peyton', year: '8/22' },
-                        '10': { value: '44', holder: 'Carson Barber', year: '8/21' },
-                        'PR': { value: '49', holder: 'Aaron Peyton', year: '8/22' }
-                    },
-                    '240-249': {
-                        '12': { value: '53', holder: 'Tristan Peterson', year: '8/24' },
-                        '11': { value: '44', holder: 'Jake Jennings', year: '8/22' },
-                        '9': { value: '38', holder: 'Jackson Mohr', year: '8/22' },
-                        'PR': { value: '53', holder: 'Tristan Peterson', year: '8/24' }
-                    },
-                    '230-239': {
-                        '12': { value: '55', holder: 'Blake Nelsen', year: '8/25' },
-                        '11': { value: '44', holder: 'Nick Stewart', year: '8/21' },
-                        '10': { value: '50', holder: 'Aaron Peyton', year: '8/21' },
-                        'PR': { value: '55', holder: 'Blake Nelsen', year: '8/25' }
-                    },
-                    '220-229': {
-                        '12': { value: '57', holder: 'Jimmy Philipsen', year: '8/20' },
-                        '11': { value: '53', holder: 'Blake Nelsen', year: '8/24' },
-                        '9': { value: '43', holder: 'Aaron Peyton', year: '8/20' },
-                        'PR': { value: '57', holder: 'Jimmy Philipsen', year: '8/20' }
-                    },
-                    '210-219': {
-                        '12': { value: '59', holder: 'Garrett Nerem', year: '8/24' },
-                        '11': { value: '53', holder: 'C. Barber / C. Georgius', year: '8/25' },
-                        '10': { value: '51', holder: 'Luke Patton', year: '8/20' },
-                        '9': { value: '52', holder: 'Jake Rogers', year: '8/22' },
-                        'PR': { value: '59', holder: 'Garrett Nerem', year: '8/24' }
-                    },
-                    '200-209': {
-                        '12': { value: '51', holder: 'Parker Watts', year: '8/21' },
-                        '11': { value: '55', holder: 'Christian Chelsvig', year: '8/22' },
-                        '10': { value: '53', holder: 'Thomas Tjaden', year: '8/21' },
-                        '9': { value: '46', holder: 'Blake Winecoff', year: '8/25' },
-                        'PR': { value: '55', holder: 'Christian Chelsvig', year: '8/22' }
-                    },
-                    '190-199': {
-                        '12': { value: '51', holder: 'Logan Schnurr', year: '8/21' },
-                        '11': { value: '54', holder: 'Nick Butler', year: '8/21' },
-                        '10': { value: '54', holder: 'Charlie Watts', year: '8/22' },
-                        '9': { value: '41', holder: 'Jaxson Kadolph', year: '8/20' },
-                        'PR': { value: '54', holder: 'N. Butler / C. Watts', year: '21/22' }
-                    },
-                    '180-189': {
-                        '12': { value: '62', holder: 'Sam Knoll', year: '8/24' },
-                        '11': { value: '61', holder: 'Luke Thoreson', year: '8/25' },
-                        '10': { value: '56', holder: 'C. Chelsvig / C. Barber', year: '21/24' },
-                        '9': { value: '47', holder: 'Cael Vermeer', year: '8/22' },
-                        'PR': { value: '62', holder: 'Sam Knoll', year: '8/24' }
-                    },
-                    '170-179': {
-                        '12': { value: '64', holder: 'Adam McIlrath', year: '8/20' },
-                        '11': { value: '63', holder: 'Hesston Johnson', year: '8/22' },
-                        '10': { value: '58', holder: 'Jonovan Wilkinson', year: '8/21' },
-                        '9': { value: '61', holder: 'Connor Morton', year: '8/21' },
-                        'PR': { value: '64', holder: 'Adam McIlrath', year: '8/20' }
-                    },
-                    '160-169': {
-                        '12': { value: '66', holder: 'Heston McIlrath', year: '8/24' },
-                        '11': { value: '64', holder: 'Aiden Frey', year: '8/25' },
-                        '10': { value: '56', holder: 'K. Lande / C. Willis', year: '20/25' },
-                        '9': { value: '59', holder: 'Charlie Watts', year: '8/21' },
-                        'PR': { value: '66', holder: 'Heston McIlrath', year: '8/24' }
-                    },
-                    '150-159': {
-                        '12': { value: '65', holder: 'Cody Long', year: '8/25' },
-                        '11': { value: '62', holder: 'Cody Long', year: '8/24' },
-                        '10': { value: '62', holder: 'Hesston Johnson', year: '8/21' },
-                        '9': { value: '60', holder: 'Sam Scarrow', year: '8/25' },
-                        'PR': { value: '65', holder: 'Cody Long', year: '8/25' }
-                    },
-                    '140-149': {
-                        '12': { value: '64', holder: 'Cade Diehl', year: '8/22' },
-                        '11': { value: '64', holder: 'Riley Larson', year: '8/22' },
-                        '10': { value: '62', holder: 'Jake Berggren', year: '8/22' },
-                        '9': { value: '60', holder: 'H. McIlrath / H. Johnson', year: '20/21' },
-                        'PR': { value: '64', holder: 'C. Diehl / R. Larson', year: '2022' }
-                    },
-                    '130-139': {
-                        '11': { value: '64', holder: 'Cade Diehl', year: '8/20' },
-                        '10': { value: '65', holder: 'Brady Long', year: '8/25' },
-                        '9': { value: '61', holder: 'Jake Berggren', year: '8/21' },
-                        'PR': { value: '65', holder: 'Brady Long', year: '8/25' }
-                    },
-                    '120-129': {
-                        '10': { value: '58', holder: 'Riley Larson', year: '8/21' },
-                        '9': { value: '66', holder: 'Brady Long', year: '8/24' },
-                        'PR': { value: '66', holder: 'Brady Long', year: '8/24' }
-                    },
-                    '110-119': {
-                        '10': { value: '50', holder: 'Tristan Anderson', year: '8/21' },
-                        '9': { value: '54', holder: 'Max Dahlsten', year: '8/25' },
-                        'PR': { value: '54', holder: 'Max Dahlsten', year: '8/25' }
-                    },
-                    '100-109': {
-                        '10': { value: '51', holder: 'Brayden Kilstofte', year: '8/21' },
-                        '9': { value: '56', holder: 'Blake Larson', year: '8/22' },
-                        'PR': { value: '56', holder: 'Blake Larson', year: '8/22' }
-                    }
-                },
-                'Broad Jump': {},
-                '10m Fly': {},
-                'Pro Agility': {},
-                'Deadlift': {}
-            };
 
             const getRecord = (weightClass, grade, test) => {
                 // Check Historical Data First
-                if (HISTORICAL_RECORDS[test] && HISTORICAL_RECORDS[test][weightClass] && HISTORICAL_RECORDS[test][weightClass][grade]) {
-                    return HISTORICAL_RECORDS[test][weightClass][grade];
+                if (programRecords[test] && programRecords[test][weightClass] && programRecords[test][weightClass][grade]) {
+                    return programRecords[test][weightClass][grade];
                 }
 
                 // Legacy Mock / Fallback
@@ -19618,12 +18980,12 @@
             };
 
             const getOverallRecord = (test) => {
-                if (!HISTORICAL_RECORDS[test]) return null;
+                if (!programRecords[test]) return null;
 
                 let bestRecord = null;
                 const isLowerBetter = ['40 Yard', '10m Fly', 'Pro Agility', 'Tape Shuttle', '800m'].includes(test);
 
-                Object.values(HISTORICAL_RECORDS[test]).forEach(weightClassData => {
+                Object.values(programRecords[test]).forEach(weightClassData => {
                     const pr = weightClassData['PR'];
                     if (!pr || pr.value === '--') return;
 
@@ -21103,7 +20465,8 @@
                                             key: 'program', label: 'Program Management', items: [
                                                 { key: 'staffTasks', label: 'Staff Tasks' },
                                                 { key: 'calendar', label: 'Annual Calendar' },
-                                                { key: 'budget', label: 'Budget & Wishlist' },
+                                                { key: 'budget', label: 'Budget' },
+                                                { key: 'culturalCalibration', label: 'Culture Calibration' },
                                                 { key: 'onboarding', label: 'Onboarding' },
                                                 { key: 'equipmentCheckout', label: 'Equipment Checkout' },
                                                 { key: 'jerseyLottery', label: 'Jersey Lottery' },
@@ -21116,7 +20479,7 @@
                                                 { key: 'playerApp', label: 'Player App Preview' },
                                                 { key: 'attendanceApp', label: 'Attendance App' },
                                                 { key: 'coachApp', label: 'Practice Coach App' },
-                                                { key: 'callsheet', label: 'Smart Call Sheet' },
+                                                { key: 'callsheet', label: 'Situations and Scripts' },
                                                 { key: 'simulator', label: 'Play-Calling Simulator' },
                                                 { key: 'pressbox', label: 'Pressbox' },
                                                 { key: 'specialTeams', label: 'Special Teams' }
@@ -21519,7 +20882,7 @@
                     }
 
                     // Add all cells from this section
-                    (section.rows || []).forEach(cell => {
+                    (section.boxes || section.rows || []).forEach(cell => {
                         const meta = getMeta(cell.setId);
 
                         // Use the cell's header as the label
@@ -21649,207 +21012,258 @@
             // Main Menu View
             if (!selectedSection) {
                 return (
-                    <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem', background: 'white', borderRadius: '8px' }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <h2 style={{ margin: 0, marginBottom: '0.5rem' }}>Smart Call Sheet</h2>
-
-                            {/* View Toggle Buttons */}
-                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem' }}>
-                                <button
-                                    onClick={() => setViewMode('matrix')}
-                                    className="btn"
-                                    style={{
-                                        background: viewMode === 'matrix' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'matrix' ? 'white' : '#1e293b',
-                                        border: viewMode === 'matrix' ? 'none' : '2px solid var(--border)',
-                                        fontWeight: 'bold',
-                                        padding: '0.75rem 2rem',
-                                        fontSize: '1rem'
-                                    }}
-                                >
-                                    ⚾ STRIKE 'EM OUT
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('situations')}
-                                    className="btn"
-                                    style={{
-                                        background: viewMode === 'situations' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'situations' ? 'white' : '#1e293b',
-                                        border: viewMode === 'situations' ? 'none' : '2px solid var(--border)',
-                                        fontWeight: 'bold',
-                                        padding: '0.75rem 2rem',
-                                        fontSize: '1rem'
-                                    }}
-                                >
-                                    📋 SITUATIONS
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('play_type')}
-                                    className="btn"
-                                    style={{
-                                        background: viewMode === 'play_type' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'play_type' ? 'white' : '#1e293b',
-                                        border: viewMode === 'play_type' ? 'none' : '2px solid var(--border)',
-                                        fontWeight: 'bold',
-                                        padding: '0.75rem 2rem',
-                                        fontSize: '1rem'
-                                    }}
-                                >
-                                    🎯 PLAY TYPE
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('player_touches')}
-                                    className="btn"
-                                    style={{
-                                        background: viewMode === 'player_touches' ? 'var(--accent)' : 'var(--bg-card)',
-                                        color: viewMode === 'player_touches' ? 'white' : '#1e293b',
-                                        border: viewMode === 'player_touches' ? 'none' : '2px solid var(--border)',
-                                        fontWeight: 'bold',
-                                        padding: '0.75rem 2rem',
-                                        fontSize: '1rem'
-                                    }}
-                                >
-                                    👐 PLAYER TOUCHES
-                                </button>
-                            </div>
-
-                            <p style={{ color: '#475569', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                                {viewMode === 'situations' ? 'Select a game situation to view plays' : viewMode === 'play_type' ? 'View plays organized by play type' : viewMode === 'player_touches' ? 'Manage plays designed to get the ball to key players' : 'View plays organized by formation'}
-                            </p>
+                    <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem', background: 'white', borderRadius: '8px', overflowY: 'auto' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+                            <h2 style={{ margin: 0, marginBottom: '0.5rem' }}>Situations and Scripts</h2>
+                            <p style={{ color: 'var(--text-secondary)' }}>Select a situation to view plays</p>
                         </div>
 
-                        {viewMode === 'situations' ? (
-                            // Situations View - organized with section headers
-                            <div style={{
-                                overflowY: 'auto',
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '2rem'
-                            }}>
-                                {(() => {
-                                    const groupedSections = [];
-                                    let currentGroup = { header: null, items: [] };
+                        {/* View Tabs */}
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                            {[
+                                { id: 'situations', label: 'Situations & Scripts', icon: 'List' },
+                                { id: 'matrix', label: "Strike 'Em Out", icon: 'Grid' },
+                                { id: 'play_types', label: 'Play Type', icon: 'Layers' },
+                                { id: 'player_touches', label: 'Player Touches', icon: 'Users' }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setViewMode(tab.id)}
+                                    className={`btn ${viewMode === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        padding: '0.75rem 1.5rem',
+                                        borderRadius: '24px',
+                                        border: viewMode === tab.id ? 'none' : '1px solid var(--border)',
+                                        color: '#1f2937',
+                                        background: viewMode === tab.id ? 'var(--primary)' : '#f3f4f6',
+                                        fontWeight: viewMode === tab.id ? 'bold' : '500'
+                                    }}
+                                >
+                                    <Icon name={tab.icon} size={16} />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
 
-                                    gamePlanSections.forEach(section => {
-                                        if (section.type === 'header') {
-                                            if (currentGroup.items.length > 0) {
-                                                groupedSections.push(currentGroup);
-                                            }
-                                            currentGroup = { header: section.label, items: [] };
-                                        } else {
-                                            currentGroup.items.push(section);
-                                        }
-                                    });
+                        {/* Situations View */}
+                        {viewMode === 'situations' && (gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => (
+                            <div key={section.id || sIdx} style={{ marginBottom: '1.5rem' }}>
+                                {section.title && (
+                                    <h3 style={{
+                                        fontSize: '1rem',
+                                        color: 'var(--text-secondary)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                        borderBottom: '1px solid var(--border)',
+                                        paddingBottom: '0.5rem',
+                                        marginBottom: '1rem'
+                                    }}>
+                                        {section.title}
+                                    </h3>
+                                )}
 
-                                    if (currentGroup.items.length > 0) {
-                                        groupedSections.push(currentGroup);
-                                    }
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(4, 1fr)',
+                                    gap: '1rem'
+                                }}>
+                                    {(section.boxes || section.rows || []).map(cell => {
+                                        const meta = { icon: 'Circle', ...cell }; // Fallback
+                                        const playCount = (gamePlan.sets || []).find(s => s.id === cell.setId)?.playIds?.length || 0;
 
-                                    return groupedSections.map((group, groupIdx) => (
-                                        <div key={groupIdx}>
-                                            {/* Section Header */}
-                                            <div style={{
-                                                fontSize: '1.1rem',
-                                                fontWeight: 'bold',
-                                                color: 'var(--accent)',
-                                                marginBottom: '1rem',
-                                                paddingBottom: '0.5rem',
-                                                borderBottom: '2px solid var(--accent)',
-                                                textAlign: 'center'
-                                            }}>
-                                                {group.header}
-                                            </div>
-
-                                            {/* Buttons Grid */}
-                                            <div style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: 'repeat(4, 1fr)',
-                                                gap: '1rem'
-                                            }}>
-                                                {group.items.map(section => {
-                                                    // For opening script, combine LH and RH counts
-                                                    let playCount = 0;
-                                                    if (section.key === 'opening_script') {
-                                                        playCount = ((gamePlan.sets || []).find(s => s.id === '1st_ten_lh')?.playIds?.length || 0) +
-                                                            ((gamePlan.sets || []).find(s => s.id === '1st_ten_rh')?.playIds?.length || 0);
-                                                    } else if (section.key === '2nd_xl') {
-                                                        // For 1st/2nd & XL, combine LH and RH counts
-                                                        playCount = ((gamePlan.sets || []).find(s => s.id === '2nd_xl_lh')?.playIds?.length || 0) +
-                                                            ((gamePlan.sets || []).find(s => s.id === '2nd_xl_rh')?.playIds?.length || 0);
-                                                    } else if (section.key === 'convert_short_med') {
-                                                        // For Convert Short/Med, combine short and med counts
-                                                        playCount = ((gamePlan.sets || []).find(s => s.id === '3rd_short')?.playIds?.length || 0) +
-                                                            ((gamePlan.sets || []).find(s => s.id === '3rd_med')?.playIds?.length || 0);
-                                                    } else if (section.key === 'convert_long_xl') {
-                                                        // For Convert L/XL, combine long and xl counts
-                                                        playCount = ((gamePlan.sets || []).find(s => s.id === '3rd_long')?.playIds?.length || 0) +
-                                                            ((gamePlan.sets || []).find(s => s.id === '3rd_xl')?.playIds?.length || 0);
-                                                    } else if (section.key === 'two_minute') {
-                                                        // For 2-minute drill, combine all category counts
-                                                        playCount = ['oob_yac', 'first_down', 'touchdown', 'final_play'].reduce((sum, cat) => {
-                                                            return sum + ((gamePlan.sets || []).find(s => s.id === `two_minute_${cat} `)?.playIds?.length || 0);
-                                                        }, 0);
-                                                    } else {
-                                                        playCount = (gamePlan.sets || []).find(s => s.id === section.key)?.playIds?.length || 0;
-                                                    }
-
-                                                    return (
-                                                        <button
-                                                            key={section.key}
-                                                            onClick={() => setSelectedSection(section.key)}
-                                                            style={{
-                                                                background: section.color,
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '12px',
-                                                                padding: '1.5rem',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s',
-                                                                display: 'flex',
-                                                                flexDirection: 'column',
-                                                                alignItems: 'center',
-                                                                gap: '0.75rem',
-                                                                minHeight: '140px',
-                                                                position: 'relative',
-                                                                fontSize: '1rem',
-                                                                fontWeight: 'bold',
-                                                                textTransform: 'uppercase',
-                                                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.transform = 'translateY(-4px)';
-                                                                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-                                                            }}
-                                                        >
-                                                            <Icon name={section.icon} size={32} />
-                                                            <div style={{ textAlign: 'center' }}>{section.label}</div>
-                                                            <div style={{
-                                                                fontSize: '0.75rem',
-                                                                opacity: 0.9,
-                                                                position: 'absolute',
-                                                                bottom: '0.5rem',
-                                                                right: '0.5rem',
-                                                                background: 'rgba(0,0,0,0.2)',
-                                                                padding: '0.25rem 0.5rem',
-                                                                borderRadius: '4px'
-                                                            }}>
-                                                                {playCount} {playCount === 1 ? 'play' : 'plays'}
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    ));
-                                })()}
+                                        return (
+                                            <button
+                                                key={cell.setId}
+                                                onClick={() => setSelectedSection(cell.setId)}
+                                                style={{
+                                                    background: cell.color,
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '12px',
+                                                    padding: '1.5rem',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    gap: '0.75rem',
+                                                    minHeight: '140px',
+                                                    position: 'relative',
+                                                    fontSize: '1rem',
+                                                    fontWeight: 'bold',
+                                                    textTransform: 'uppercase',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.transform = 'translateY(-4px)';
+                                                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.transform = 'translateY(0)';
+                                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                                                }}
+                                            >
+                                                {/* Try to find icon from predefined list or use default */}
+                                                <div style={{ textAlign: 'center' }}>{cell.header}</div>
+                                                <div style={{
+                                                    fontSize: '0.75rem',
+                                                    opacity: 0.9,
+                                                    position: 'absolute',
+                                                    bottom: '0.5rem',
+                                                    right: '0.5rem',
+                                                    background: 'rgba(0,0,0,0.2)',
+                                                    padding: '0.25rem 0.5rem',
+                                                    borderRadius: '4px'
+                                                }}>
+                                                    {playCount} {playCount === 1 ? 'play' : 'plays'}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        ) : viewMode === 'player_touches' ? (
-                            // Player Touches View - single button
+                        ))}
+
+                        {/* Matrix View (Strike 'Em Out) */}
+                        {viewMode === 'matrix' && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                                gap: '1rem',
+                                overflowY: 'auto',
+                                flex: 1
+                            }}>
+                                {/* Use Matrix Formations */}
+                                {(gamePlanLayouts?.MATRIX?.formations || formationGroups).map(group => {
+                                    const formationPlays = plays.filter(p => p.formation && p.formation.includes(group.id));
+                                    const playCount = formationPlays.length;
+
+                                    // Special handling for legacy/static groups if needed, but prefer dynamic
+                                    // If group comes from gamePlanLayouts it might miss 'icon', add fallback
+                                    const icon = group.icon || 'Grid';
+
+                                    return (
+                                        <button
+                                            key={group.id}
+                                            onClick={() => setSelectedSection(group.id)}
+                                            style={{
+                                                background: group.color || '#ef4444',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '12px',
+                                                padding: '1.5rem',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '0.75rem',
+                                                minHeight: '140px',
+                                                position: 'relative',
+                                                fontSize: '1.5rem',
+                                                fontWeight: 'bold',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(-4px)';
+                                                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                                            }}
+                                        >
+                                            <Icon name={icon} size={32} />
+                                            <div style={{ textAlign: 'center' }}>{group.label}</div>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                opacity: 0.9,
+                                                position: 'absolute',
+                                                bottom: '0.5rem',
+                                                right: '0.5rem',
+                                                background: 'rgba(0,0,0,0.2)',
+                                                padding: '0.25rem 0.5rem',
+                                                borderRadius: '4px'
+                                            }}>
+                                                {playCount} {playCount === 1 ? 'play' : 'plays'}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Play Types View */}
+                        {viewMode === 'play_types' && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                                gap: '1rem',
+                                overflowY: 'auto',
+                                flex: 1
+                            }}>
+                                {playTypeGroups.map(group => {
+                                    const playCount = plays.filter(p => {
+                                        const allTags = [...(p.tags || []), p.tag1, p.tag2].filter(Boolean);
+                                        return allTags.includes(group.id);
+                                    }).length;
+
+                                    return (
+                                        <button
+                                            key={group.id}
+                                            onClick={() => setSelectedSection(group.id)}
+                                            style={{
+                                                background: group.color,
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '12px',
+                                                padding: '1.5rem',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '0.75rem',
+                                                minHeight: '140px',
+                                                position: 'relative',
+                                                fontSize: '1.25rem',
+                                                fontWeight: 'bold',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(-4px)';
+                                                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                                            }}
+                                        >
+                                            <Icon name={group.icon} size={32} />
+                                            <div style={{ textAlign: 'center' }}>{group.label}</div>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                opacity: 0.9,
+                                                position: 'absolute',
+                                                bottom: '0.5rem',
+                                                right: '0.5rem',
+                                                background: 'rgba(0,0,0,0.2)',
+                                                padding: '0.25rem 0.5rem',
+                                                borderRadius: '4px'
+                                            }}>
+                                                {playCount} {playCount === 1 ? 'play' : 'plays'}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Player Touches View */}
+                        {viewMode === 'player_touches' && (
                             <div style={{
                                 display: 'flex',
                                 justifyContent: 'center',
@@ -21903,85 +21317,10 @@
                                     </div>
                                 </button>
                             </div>
-                        ) : (
-                            // Matrix View - formation buttons
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                                gap: '1rem',
-                                overflowY: 'auto',
-                                flex: 1
-                            }}>
-                                {(viewMode === 'play_type' ? playTypeGroups : formationGroups).map(group => {
-                                    // Get play count
-                                    let playCount = 0;
-
-                                    if (viewMode === 'play_type') {
-                                        playCount = plays.filter(p => {
-                                            const allTags = [...(p.tags || []), p.tag1, p.tag2].filter(Boolean);
-                                            return allTags.includes(group.id);
-                                        }).length;
-                                    } else if (group.id === 'one_word') {
-                                        // For one_word, combine counts from all three categories
-                                        playCount = ['form_adj', 'motion', 'tag'].reduce((sum, cat) => {
-                                            return sum + ((gamePlan.sets || []).find(s => s.id === cat)?.playIds?.length || 0);
-                                        }, 0);
-                                    } else {
-                                        const formationPlays = plays.filter(p => p.formation && p.formation.includes(group.id));
-                                        playCount = formationPlays.length;
-                                    }
-
-                                    return (
-                                        <button
-                                            key={group.id}
-                                            onClick={() => setSelectedSection(group.id)}
-                                            style={{
-                                                background: group.color,
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '12px',
-                                                padding: '1.5rem',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '0.75rem',
-                                                minHeight: '140px',
-                                                position: 'relative',
-                                                fontSize: '1.5rem',
-                                                fontWeight: 'bold',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.transform = 'translateY(-4px)';
-                                                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-                                            }}
-                                        >
-                                            <Icon name={group.icon} size={32} />
-                                            <div style={{ textAlign: 'center' }}>{group.label}</div>
-                                            <div style={{
-                                                fontSize: '0.75rem',
-                                                opacity: 0.9,
-                                                position: 'absolute',
-                                                bottom: '0.5rem',
-                                                right: '0.5rem',
-                                                background: 'rgba(0,0,0,0.2)',
-                                                padding: '0.25rem 0.5rem',
-                                                borderRadius: '4px'
-                                            }}>
-                                                {playCount} {playCount === 1 ? 'play' : 'plays'}
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
                         )}
+
                     </div>
+
                 );
             }
 
@@ -29719,14 +29058,14 @@
                 id: 'MATRIX',
                 name: "Strike 'Em Out",
                 cols: [
-                    { id: 'FB_L', label: 'FB L', fullLabel: 'Fastball Left' },
-                    { id: 'FB_R', label: 'FB R', fullLabel: 'Fastball Right' },
-                    { id: 'CB_L', label: 'CB L', fullLabel: 'Curveball Left' },
-                    { id: 'CB_R', label: 'CB R', fullLabel: 'Curveball Right' },
-                    { id: 'CU_L', label: 'CU L', fullLabel: 'Change Up Left' },
-                    { id: 'CU_R', label: 'CU R', fullLabel: 'Change Up Right' },
-                    { id: 'SO_L', label: 'SO L', fullLabel: 'Strikeout Left' },
-                    { id: 'SO_R', label: 'SO R', fullLabel: 'Strikeout Right' }
+                    { id: 'FB_L', label: 'FB L', fullLabel: 'Base/Initial Left' },
+                    { id: 'FB_R', label: 'FB R', fullLabel: 'Base/Initial Right' },
+                    { id: 'CB_L', label: 'CB L', fullLabel: 'Base w/ Dressing Left' },
+                    { id: 'CB_R', label: 'CB R', fullLabel: 'Base w/ Dressing Right' },
+                    { id: 'CU_L', label: 'CU L', fullLabel: 'Convert Left' },
+                    { id: 'CU_R', label: 'CU R', fullLabel: 'Convert Right' },
+                    { id: 'SO_L', label: 'SO L', fullLabel: 'Explosive Left' },
+                    { id: 'SO_R', label: 'SO R', fullLabel: 'Explosive Right' }
                 ],
                 formations: [
                     { id: '887', label: '887', color: '#ef4444' },
@@ -32555,10 +31894,10 @@
 
                 // Group columns by pitch type
                 const columnGroups = [
-                    { id: 'FB', label: 'FASTBALL', cols: layout.cols.slice(0, 2) },
-                    { id: 'CB', label: 'CURVEBALL', cols: layout.cols.slice(2, 4) },
-                    { id: 'CU', label: 'CHANGE UP', cols: layout.cols.slice(4, 6) },
-                    { id: 'SO', label: 'STRIKEOUT', cols: layout.cols.slice(6, 8) }
+                    { id: 'FB', label: 'BASE/INITIAL', cols: layout.cols.slice(0, 2) },
+                    { id: 'CB', label: 'BASE W/ DRESSING', cols: layout.cols.slice(2, 4) },
+                    { id: 'CU', label: 'CONVERT', cols: layout.cols.slice(4, 6) },
+                    { id: 'SO', label: 'EXPLOSIVE', cols: layout.cols.slice(6, 8) }
                 ];
 
                 const toggleGroup = (groupId) => {
@@ -36561,6 +35900,690 @@
             return 'FREE';
         };
 
+        const LEGACY_PROGRAM_RECORDS = {
+            'Squat': {
+                '320+': {
+                    'PR': { value: '--', holder: '-', year: '-' }
+                },
+                '310-319': {
+                    '12': { value: '470', holder: 'David Downs', year: '8/20' },
+                    'PR': { value: '470', holder: 'David Downs', year: '8/20' }
+                },
+                '300-309': {
+                    '12': { value: '480', holder: 'Tyler Heithoff', year: '7/22' },
+                    '11': { value: '465', holder: 'Tyler Heithoff', year: '5/22' },
+                    '10': { value: '350', holder: 'Tyler Heithoff', year: '5/21' },
+                    '9': { value: '240', holder: 'Patrick Gomez', year: '5/22' },
+                    'PR': { value: '480', holder: 'Tyler Heithoff', year: '7/22' }
+                },
+                '290-299': {
+                    '12': { value: '315', holder: 'Colin Hansen', year: '8/21' },
+                    '11': { value: '280', holder: 'Colin Hansen', year: '5/21' },
+                    '10': { value: '315', holder: 'Tyler Heithoff', year: '2/21' },
+                    '9': { value: '220', holder: 'Patrick Gomez', year: '11/21' },
+                    'PR': { value: '315', holder: 'C. Hansen / T. Heithoff', year: '2021' }
+                },
+                '280-289': {
+                    '12': { value: '355', holder: 'Carson Barber', year: '7/24' },
+                    '11': { value: '455', holder: 'Aaron Peyton', year: '5/23' },
+                    '10': { value: '350', holder: 'Carson Barber', year: '5/23' },
+                    'PR': { value: '455', holder: 'Aaron Peyton', year: '5/23' }
+                },
+                '270-279': {
+                    '12': { value: '455', holder: 'Aaron Peyton', year: '7/23' },
+                    '10': { value: '315', holder: 'Carson Barber', year: '10/22' },
+                    '9': { value: '270', holder: 'Carson Barber', year: '5/22' },
+                    'PR': { value: '455', holder: 'Aaron Peyton', year: '7/23' }
+                },
+                '260-269': {
+                    '11': { value: '415', holder: 'Aaron Peyton', year: '10/22' },
+                    '9': { value: '250', holder: 'Carson Barber', year: '2/22' },
+                    'PR': { value: '415', holder: 'Aaron Peyton', year: '10/22' }
+                },
+                '250-259': {
+                    '11': { value: '450', holder: 'Record Holder', year: '5/24' },
+                    '10': { value: '365', holder: 'Aaron Peyton', year: '5/22' },
+                    '9': { value: '230', holder: 'Carson Barber', year: '11/21' },
+                    'PR': { value: '450', holder: 'Record Holder', year: '5/24' }
+                },
+                '240-249': {
+                    '12': { value: '405', holder: 'W. Licht, T. Tjaden, T. Peterson', year: '23/24' },
+                    '11': { value: '415', holder: 'Record Holder', year: '7/23' },
+                    '10': { value: '380', holder: 'Record Holder', year: '2/23' },
+                    '9': { value: '225', holder: 'Jackson Mohr', year: '2/23' },
+                    'PR': { value: '415', holder: 'Record Holder', year: '7/23' }
+                },
+                '230-239': {
+                    '12': { value: '400', holder: 'Wes Hansen', year: '7/24' },
+                    '11': { value: '425', holder: 'Wes Hansen', year: '5/24' },
+                    '10': { value: '335', holder: 'Aaron Peyton', year: '2/22' },
+                    'PR': { value: '425', holder: 'Wes Hansen', year: '5/24' }
+                },
+                '220-229': {
+                    '12': { value: '470', holder: 'Zach Twedt', year: '8/20' },
+                    '11': { value: '445', holder: 'Charlie Watts', year: '2/24' },
+                    '10': { value: '340', holder: 'Wes Hansen', year: '5/23' },
+                    '9': { value: '285', holder: 'Blake Nelsen', year: '2/23' },
+                    'PR': { value: '470', holder: 'Zach Twedt', year: '8/20' }
+                },
+                '210-219': {
+                    '12': { value: '460', holder: 'Garret Nerem', year: '7/24' },
+                    '11': { value: '425', holder: 'Garrett Nerem', year: '5/24' },
+                    '10': { value: '335', holder: 'Tristan Peterson', year: '5/23' },
+                    '9': { value: '340', holder: 'Jake Rogers', year: '5/23' },
+                    'PR': { value: '460', holder: 'Garret Nerem', year: '7/24' }
+                },
+                '200-209': {
+                    '12': { value: '280', holder: 'Parker Watts', year: '8/21' },
+                    '11': { value: '415', holder: 'C. Watts / G. Nerem', year: '23/24' },
+                    '10': { value: '425', holder: 'Fiston Carlson', year: '7/24' },
+                    '9': { value: '335', holder: 'Jake Rogers', year: '2/23' },
+                    'PR': { value: '425', holder: 'Fiston Carlson', year: '7/24' }
+                },
+                '190-199': {
+                    '12': { value: '285', holder: 'Logan Schnurr', year: '8/21' },
+                    '11': { value: '400', holder: 'Cael Vermeer', year: '7/24' },
+                    '10': { value: '350', holder: 'Cael Vermeer', year: '7/23' },
+                    '9': { value: '430', holder: 'Fiston Carlson', year: '5/24' },
+                    'PR': { value: '430', holder: 'Fiston Carlson', year: '5/24' }
+                },
+                '180-189': {
+                    '12': { value: '380', holder: 'Sam Knoll', year: '7/24' },
+                    '11': { value: '440', holder: 'Fiston Carlson', year: '7/25' },
+                    '10': { value: '355', holder: 'Ben Licht', year: '7/24' },
+                    '9': { value: '360', holder: 'Fiston Carlson', year: '7/23' },
+                    'PR': { value: '440', holder: 'Fiston Carlson', year: '7/25' }
+                },
+                '170-179': {
+                    '12': { value: '355', holder: 'D. Lettow / H. Johnson', year: '22/23' },
+                    '11': { value: '340', holder: 'Tyler Lambert', year: '7/25' },
+                    '10': { value: '350', holder: 'Isaac Miskell', year: '7/24' },
+                    '9': { value: '345', holder: 'Isaac Miskell', year: '2/24' },
+                    'PR': { value: '355', holder: 'D. Lettow / H. Johnson', year: '22/23' }
+                },
+                '160-169': {
+                    '12': { value: '320', holder: 'Heston McIlrath', year: '7/24' },
+                    '11': { value: '350', holder: 'Sam Knoll', year: '7/23' },
+                    '10': { value: '335', holder: 'Cooper Triggs', year: '7/24' },
+                    '9': { value: '300', holder: 'Ben Licht', year: '10/23' },
+                    'PR': { value: '350', holder: 'Sam Knoll', year: '7/23' }
+                },
+                '150-159': {
+                    '12': { value: '315', holder: 'G. Carpenter / C. Long', year: '22/25' },
+                    '11': { value: '345', holder: 'Cody Long', year: '7/24' },
+                    '10': { value: '330', holder: 'Cody Long', year: '11/23' },
+                    '9': { value: '355', holder: 'Ben Mazyck', year: '10/23' },
+                    'PR': { value: '355', holder: 'Ben Mazyck', year: '10/23' }
+                },
+                '140-149': {
+                    '12': { value: '290', holder: 'C. Diehl / J. Martin', year: '21/22' },
+                    '11': { value: '275', holder: 'Blake Larson', year: '7/24' },
+                    '10': { value: '315', holder: 'Cody Long', year: '7/23' },
+                    '9': { value: '305', holder: 'Ben Mazyck', year: '7/23' },
+                    'PR': { value: '315', holder: 'Cody Long', year: '7/23' }
+                },
+                '130-139': {
+                    '11': { value: '255', holder: 'Jake Knoll', year: '7/25' },
+                    '10': { value: '275', holder: 'Jake Knoll', year: '7/24' },
+                    '9': { value: '270', holder: 'C. Long / B. Loof', year: '22/23' },
+                    'PR': { value: '275', holder: 'Jake Knoll', year: '7/24' }
+                },
+                '120-129': {
+                    '11': { value: '215', holder: 'Noah Healy', year: '7/25' },
+                    '9': { value: '260', holder: 'Brady Long', year: '7/24' },
+                    'PR': { value: '260', holder: 'Brady Long', year: '7/24' }
+                },
+                '110-119': {
+                    '11': { value: '180', holder: 'Brayden Kilstofte', year: '11/21' },
+                    '9': { value: '195', holder: 'B. Larson / M. Dahlsten', year: '23/25' },
+                    'PR': { value: '195', holder: 'B. Larson / M. Dahlsten', year: '23/25' }
+                },
+                '100-109': {
+                    '11': { value: '160', holder: 'Brayden Kilstofte', year: '8/21' },
+                    '9': { value: '185', holder: 'Blake Larson', year: '10/22' },
+                    'PR': { value: '185', holder: 'Blake Larson', year: '10/22' }
+                }
+            },
+            'Bench': {
+                '320+': {
+                    'PR': { value: '--', holder: '-', year: '-' }
+                },
+                '310-319': {
+                    '12': { value: '295', holder: 'David Downs', year: '8/20' },
+                    'PR': { value: '295', holder: 'David Downs', year: '8/20' }
+                },
+                '300-309': {
+                    '12': { value: '250', holder: 'Tyler Heithoff', year: '7/22' },
+                    '11': { value: '250', holder: 'Tyler Heithoff', year: '5/22' },
+                    '9': { value: '170', holder: 'Patrick Gomez', year: '5/22' },
+                    'PR': { value: '250', holder: 'Tyler Heithoff', year: '2022' }
+                },
+                '290-299': {
+                    '12': { value: '175', holder: 'Colin Hansen', year: '8/21' },
+                    '11': { value: '165', holder: 'Colin Hansen', year: '5/21' },
+                    '10': { value: '185', holder: 'Tyler Heithoff', year: '2/21' },
+                    '9': { value: '155', holder: 'Patrick Gomez', year: '11/21' },
+                    'PR': { value: '185', holder: 'Tyler Heithoff', year: '2/21' }
+                },
+                '280-289': {
+                    '12': { value: '220', holder: 'Carson Barber', year: '7/24' },
+                    '11': { value: '220', holder: 'Carson Barber', year: '7/23' },
+                    '10': { value: '215', holder: 'Carson Barber', year: '5/23' },
+                    'PR': { value: '220', holder: 'Carson Barber', year: '23/24' }
+                },
+                '270-279': {
+                    '12': { value: '245', holder: 'Aaron Peyton', year: '7/23' },
+                    '10': { value: '195', holder: 'Carson Barber', year: '10/22' },
+                    '9': { value: '175', holder: 'Carson Barber', year: '5/22' },
+                    'PR': { value: '245', holder: 'Aaron Peyton', year: '7/23' }
+                },
+                '260-269': {
+                    '11': { value: '245', holder: 'Aaron Peyton', year: '10/22' },
+                    '10': { value: '155', holder: 'Carson Barber', year: '2/22' },
+                    'PR': { value: '245', holder: 'Aaron Peyton', year: '10/22' }
+                },
+                '250-259': {
+                    '11': { value: '245', holder: 'Aaron Peyton', year: '7/22' },
+                    '10': { value: '245', holder: 'Aaron Peyton', year: '5/22' },
+                    '9': { value: '145', holder: 'Carson Barber', year: '11/21' },
+                    'PR': { value: '245', holder: 'Aaron Peyton', year: '2022' }
+                },
+                '240-249': {
+                    '12': { value: '280', holder: 'William Licht', year: '7/23' },
+                    '11': { value: '255', holder: 'Thomas Tjaden', year: '5/23' },
+                    '10': { value: '215', holder: 'Aaron Peyton', year: '11/21' },
+                    '9': { value: '170', holder: 'Jackson Mohr', year: '10/22' },
+                    'PR': { value: '280', holder: 'William Licht', year: '7/23' }
+                },
+                '230-239': {
+                    '12': { value: '265', holder: 'Blake Nelsen', year: '8/25' },
+                    '11': { value: '270', holder: 'William Licht', year: '5/23' },
+                    '10': { value: '215', holder: 'Record Holder', year: '10/22' },
+                    'PR': { value: '270', holder: 'William Licht', year: '5/23' }
+                },
+                '220-229': {
+                    '12': { value: '315', holder: 'Jimmy Philipsen', year: '8/20' },
+                    '11': { value: '280', holder: 'Charlie Watts', year: '2/24' },
+                    '10': { value: '190', holder: 'Wes Hansen', year: '5/23' },
+                    '9': { value: '185', holder: 'Aaron Peyton', year: '5/21' },
+                    'PR': { value: '315', holder: 'Jimmy Philipsen', year: '8/20' }
+                },
+                '210-219': {
+                    '12': { value: '255', holder: 'Garrett Nerem', year: '7/24' },
+                    '11': { value: '300', holder: 'Chance Georgius', year: '7/25' },
+                    '10': { value: '250', holder: 'William Licht', year: '5/22' },
+                    '9': { value: '245', holder: 'Jake Rogers', year: '5/23' },
+                    'PR': { value: '300', holder: 'Chance Georgius', year: '7/25' }
+                },
+                '200-209': {
+                    '12': { value: '230', holder: 'Jonovan Wilkinson', year: '7/23' },
+                    '11': { value: '270', holder: 'Charlie Watts', year: '7/23' },
+                    '10': { value: '235', holder: 'William Licht', year: '2/22' },
+                    '9': { value: '225', holder: 'Blake Winecoff', year: '7/25' },
+                    'PR': { value: '270', holder: 'Charlie Watts', year: '7/23' }
+                },
+                '190-199': {
+                    '12': { value: '170', holder: 'Logan Schnurr', year: '8/21' },
+                    '11': { value: '210', holder: 'Jonovan Wilkinson', year: '10/22' },
+                    '10': { value: '270', holder: 'Charlie Watts', year: '5/23' },
+                    '9': { value: '305', holder: 'Fiston Carlson', year: '2/24' },
+                    'PR': { value: '305', holder: 'Fiston Carlson', year: '2/24' }
+                },
+                '180-189': {
+                    '12': { value: '280', holder: 'Christian Eslick', year: '7/22' },
+                    '11': { value: '325', holder: 'Fiston Carlson', year: '7/25' },
+                    '10': { value: '215', holder: 'G. Nerem / C. Barber', year: '23/24' },
+                    '9': { value: '255', holder: 'Fiston Carlson', year: '7/23' },
+                    'PR': { value: '325', holder: 'Fiston Carlson', year: '7/25' }
+                },
+                '170-179': {
+                    '12': { value: '220', holder: 'Jackson Sterle', year: '8/20' },
+                    '11': { value: '245', holder: 'Ben Mazyck', year: '7/25' },
+                    '10': { value: '215', holder: 'Isaac Miskell', year: '7/24' },
+                    '9': { value: '210', holder: 'Ben Licht', year: '2/24' },
+                    'PR': { value: '245', holder: 'Ben Mazyck', year: '7/25' }
+                },
+                '160-169': {
+                    '12': { value: '235', holder: 'Heston McIlrath', year: '7/24' },
+                    '11': { value: '200', holder: 'Q. Ante / D. Lettow', year: '21/21' },
+                    '10': { value: '235', holder: 'Sam Knoll', year: '2/23' },
+                    '9': { value: '195', holder: 'S. Knoll / B. Licht', year: '22/23' },
+                    'PR': { value: '235', holder: 'H. McIlrath / S. Knoll', year: '23/24' }
+                },
+                '150-159': {
+                    '12': { value: '210', holder: 'Cody Long', year: '7/25' },
+                    '11': { value: '205', holder: 'Brady Lettow', year: '7/23' },
+                    '10': { value: '235', holder: 'Ben Mazyck', year: '7/24' },
+                    '9': { value: '225', holder: 'Ben Mazyck', year: '10/23' },
+                    'PR': { value: '235', holder: 'Ben Mazyck', year: '7/24' }
+                },
+                '140-149': {
+                    '12': { value: '185', holder: 'John Martin', year: '7/22' },
+                    '11': { value: '190', holder: 'Blake Larson', year: '7/24' },
+                    '10': { value: '200', holder: 'Brody Kilstofte', year: '7/25' },
+                    '9': { value: '200', holder: 'Ben Mazyck', year: '7/23' },
+                    'PR': { value: '200', holder: 'B. Kilstofte / B. Mazyck', year: '23/25' }
+                },
+                '130-139': {
+                    '11': { value: '185', holder: 'Jake Knoll', year: '7/25' },
+                    '10': { value: '190', holder: 'Jake Knoll', year: '7/24' },
+                    '9': { value: '160', holder: 'Blake Loof', year: '11/23' },
+                    'PR': { value: '190', holder: 'Jake Knoll', year: '7/24' }
+                },
+                '120-129': {
+                    '11': { value: '160', holder: 'Noah Healy', year: '7/25' },
+                    '10': { value: '185', holder: 'Jake Knoll', year: '7/23' },
+                    'PR': { value: '185', holder: 'Jake Knoll', year: '7/23' }
+                },
+                '110-119': {
+                    '11': { value: '120', holder: 'Brayden Kilstofte', year: '11/21' },
+                    '10': { value: '160', holder: 'Max Dahlsten', year: '7/25' },
+                    'PR': { value: '160', holder: 'Max Dahlsten', year: '7/25' }
+                },
+                '100-109': {
+                    '10': { value: '125', holder: 'Blake Larson', year: '2/23' },
+                    'PR': { value: '125', holder: 'Blake Larson', year: '2/23' }
+                }
+            },
+            'Tape Shuttle': {
+                '320+': {
+                    'PR': { value: '--', holder: '-', year: '-' }
+                },
+                '310-319': {
+                    '12': { value: '59.4', holder: 'David Downs', year: '8/20' },
+                    'PR': { value: '59.4', holder: 'David Downs', year: '8/20' }
+                },
+                '300-309': {
+                    '12': { value: '1:05.2', holder: 'Tyler Heithoff', year: '8/22' },
+                    '11': { value: '1:08', holder: 'Tyler Heithoff', year: '8/21' },
+                    'PR': { value: '1:05.2', holder: 'Tyler Heithoff', year: '8/22' }
+                },
+                '290-299': {
+                    '12': { value: '1:05', holder: 'Colin Hansen', year: '8/21' },
+                    '11': { value: '1:05', holder: 'Colin Hansen', year: '8/20' },
+                    '10': { value: '68.9', holder: 'Tyler Heithoff', year: '8/20' },
+                    'PR': { value: '1:05', holder: 'Colin Hansen', year: '8/21' }
+                },
+                '280-289': {
+                    '12': { value: '59.0', holder: 'Carson Barber', year: '8/24' },
+                    'PR': { value: '59.0', holder: 'Carson Barber', year: '8/24' }
+                },
+                '270-279': {
+                    '12': { value: '58.7', holder: 'Jackson Mohr', year: '8/25' },
+                    '10': { value: '58.9', holder: 'Carson Barber', year: '8/22' },
+                    'PR': { value: '58.7', holder: 'Jackson Mohr', year: '8/25' }
+                },
+                '260-269': {
+                    '11': { value: '59.2', holder: 'Jackson Mohr', year: '8/24' },
+                    'PR': { value: '59.2', holder: 'Jackson Mohr', year: '8/24' }
+                },
+                '250-259': {
+                    '11': { value: '51.5', holder: 'Aaron Peyton', year: '8/22' },
+                    '10': { value: '1:08', holder: 'Carson Barber', year: '8/21' },
+                    'PR': { value: '51.5', holder: 'Aaron Peyton', year: '8/22' }
+                },
+                '240-249': {
+                    '12': { value: '51.6', holder: 'Tristan Peterson', year: '8/24' },
+                    '11': { value: '1:00.6', holder: 'Jake Jennings', year: '8/22' },
+                    '9': { value: '1:00', holder: 'Jackson Mohr', year: '8/22' },
+                    'PR': { value: '51.6', holder: 'Tristan Peterson', year: '8/24' }
+                },
+                '230-239': {
+                    '12': { value: '48.6', holder: 'Blake Nelsen', year: '8/25' },
+                    '11': { value: '1:01', holder: 'Nick Stewart', year: '8/21' },
+                    '10': { value: '49.4', holder: 'Record Holder', year: '8/22' },
+                    'PR': { value: '48.6', holder: 'Blake Nelsen', year: '8/25' }
+                },
+                '220-229': {
+                    '12': { value: '49.3', holder: 'Luke Patton', year: '8/22' },
+                    '11': { value: '52.5', holder: 'Blake Nelsen', year: '8/24' },
+                    '9': { value: '1:10', holder: 'Aaron Peyton', year: '8/20' },
+                    'PR': { value: '49.3', holder: 'Luke Patton', year: '8/22' }
+                },
+                '210-219': {
+                    '11': { value: '49.8', holder: 'Carter Barber', year: '8/25' },
+                    '10': { value: '53', holder: 'Luke Patton', year: '8/20' },
+                    '9': { value: '1:01', holder: 'B. Nelsen / J. Rogers', year: '8/22' },
+                    'PR': { value: '49.8', holder: 'Carter Barber', year: '8/25' }
+                },
+                '200-209': {
+                    '12': { value: '50.1', holder: 'Cael Vermeer', year: '8/25' },
+                    '11': { value: '50.8', holder: 'Christian Chelsvig', year: '8/22' },
+                    '10': { value: '45.0', holder: 'Fiston Carlson', year: '8/24' },
+                    '9': { value: '55.32', holder: 'Blake Winecoff', year: '8/25' },
+                    'PR': { value: '45.0', holder: 'Fiston Carlson', year: '8/24' }
+                },
+                '190-199': {
+                    '12': { value: '50.6', holder: 'Logan Schnurr', year: '8/21' },
+                    '11': { value: '47.9', holder: 'Cael Vermeer', year: '8/24' },
+                    '10': { value: '49.4', holder: 'Nick Butler', year: '8/20' },
+                    '9': { value: '1:00.7', holder: 'Jaxson Kadolph', year: '8/20' },
+                    'PR': { value: '47.9', holder: 'Cael Vermeer', year: '8/24' }
+                },
+                '180-189': {
+                    '12': { value: '45.4', holder: 'Kale Lande', year: '8/22' },
+                    '11': { value: '45.3', holder: 'Cooper Triggs', year: '8/25' },
+                    '10': { value: '48.0', holder: 'Carter Barber', year: '8/24' },
+                    '9': { value: '52.9', holder: 'Cole Olson', year: '8/20' },
+                    'PR': { value: '45.3', holder: 'Cooper Triggs', year: '8/25' }
+                },
+                '170-179': {
+                    '12': { value: '45', holder: 'Will Bunn', year: '8/21' },
+                    '11': { value: '44.1', holder: 'Hesston Johnson', year: '8/22' },
+                    '10': { value: '46.2', holder: 'Jonovan Wilkinson', year: '8/21' },
+                    '9': { value: '47.6', holder: 'Connor Morton', year: '8/21' },
+                    'PR': { value: '44.1', holder: 'Hesston Johnson', year: '8/22' }
+                },
+                '160-169': {
+                    '12': { value: '43.8', holder: 'Heston McIlrath', year: '8/24' },
+                    '11': { value: '45.9', holder: 'Dillon Lettow', year: '8/21' },
+                    '10': { value: '45.5', holder: 'Sam Knoll', year: '8/22' },
+                    '9': { value: '51.3', holder: 'Charlie Watts', year: '8/21' },
+                    'PR': { value: '43.8', holder: 'Heston McIlrath', year: '8/24' }
+                },
+                '150-159': {
+                    '12': { value: '43.3', holder: 'Cody Long', year: '8/25' },
+                    '11': { value: '44.9', holder: 'Gavin Carpenter', year: '8/21' },
+                    '10': { value: '44.1', holder: 'Luke Thoreson', year: '8/24' },
+                    '9': { value: '46.7', holder: 'Sam Scarrow', year: '8/25' },
+                    'PR': { value: '43.3', holder: 'Cody Long', year: '8/25' }
+                },
+                '140-149': {
+                    '12': { value: '45.5', holder: 'Cade Diehl', year: '8/21' },
+                    '11': { value: '46.3', holder: 'Blake Larson', year: '8/24' },
+                    '10': { value: '46.3', holder: 'Brody Kilstofte', year: '8/25' },
+                    '9': { value: '48.1', holder: 'Hesston Johnson', year: '8/20' },
+                    'PR': { value: '45.5', holder: 'Cade Diehl', year: '8/21' }
+                },
+                '130-139': {
+                    '11': { value: '45.9', holder: 'Jake Knoll', year: '8/25' },
+                    '10': { value: '46.1', holder: 'Brady Long', year: '8/25' },
+                    '9': { value: '45.7', holder: 'Myles McIlrath', year: '8/25' },
+                    'PR': { value: '45.7', holder: 'Myles McIlrath', year: '8/25' }
+                },
+                '120-129': {
+                    '11': { value: '47.21', holder: 'Noah Healy', year: '8/25' },
+                    '10': { value: '45.9', holder: 'Cody Long', year: '8/22' },
+                    'PR': { value: '45.9', holder: 'Cody Long', year: '8/22' }
+                },
+                '110-119': {
+                    '10': { value: '50.4', holder: 'Parker Watson', year: '8/25' },
+                    'PR': { value: '50.4', holder: 'Parker Watson', year: '8/25' }
+                },
+                '100-109': {
+                    '10': { value: '49.3', holder: 'Brayden Kilstofte', year: '8/21' },
+                    '9': { value: '50.2', holder: 'Blake Larson', year: '8/22' },
+                    'PR': { value: '49.3', holder: 'Brayden Kilstofte', year: '8/21' }
+                }
+            },
+            '800m': {
+                '320+': {
+                    'PR': { value: '--', holder: '-', year: '-' }
+                },
+                '310-319': {
+                    '12': { value: '3:53', holder: 'David Downs', year: '8/20' },
+                    'PR': { value: '3:53', holder: 'David Downs', year: '8/20' }
+                },
+                '300-309': {
+                    '12': { value: '4:51', holder: 'Tyler Heithoff', year: '8/22' },
+                    'PR': { value: '4:51', holder: 'Tyler Heithoff', year: '8/22' }
+                },
+                '290-299': {
+                    '11': { value: '4:18', holder: 'Colin Hansen', year: '8/20' },
+                    '10': { value: '4:39', holder: 'Patrick Gomez', year: '8/22' },
+                    'PR': { value: '4:18', holder: 'Colin Hansen', year: '8/20' }
+                },
+                '280-289': {
+                    '12': { value: '4:13', holder: 'Ryan Johnson', year: '8/21' },
+                    'PR': { value: '4:13', holder: 'Ryan Johnson', year: '8/21' }
+                },
+                '270-279': {
+                    '12': { value: '3:43', holder: 'Jackson Mohr', year: '8/25' },
+                    '10': { value: '4:04', holder: 'Carson Barber', year: '8/22' },
+                    'PR': { value: '3:43', holder: 'Jackson Mohr', year: '8/25' }
+                },
+                '260-269': {
+                    '11': { value: '4:35', holder: 'Ryan Johnson', year: '8/20' },
+                    'PR': { value: '4:35', holder: 'Ryan Johnson', year: '8/20' }
+                },
+                '250-259': {
+                    '11': { value: '3:33', holder: 'Aaron Peyton', year: '8/22' },
+                    '10': { value: '3:39', holder: 'Carson Barber', year: '8/21' },
+                    'PR': { value: '3:33', holder: 'Aaron Peyton', year: '8/22' }
+                },
+                '240-249': {
+                    '11': { value: '3:40', holder: 'Jake Jennings', year: '8/22' },
+                    '10': { value: '4:18', holder: 'Jackson Mohr', year: '8/22' },
+                    'PR': { value: '3:40', holder: 'Jake Jennings', year: '8/22' }
+                },
+                '230-239': {
+                    '12': { value: '2:43', holder: 'Blake Nelsen', year: '8/25' },
+                    '11': { value: '3:32', holder: 'Nick Stewart', year: '8/21' },
+                    '10': { value: '3:27', holder: 'Aaron Peyton', year: '8/21' },
+                    'PR': { value: '2:43', holder: 'Blake Nelsen', year: '8/25' }
+                },
+                '220-229': {
+                    '12': { value: '2:25', holder: 'Luke Patton', year: '8/22' },
+                    '11': { value: '3:20', holder: 'William Licht', year: '8/22' },
+                    '9': { value: '4:36', holder: 'Aaron Peyton', year: '8/20' },
+                    'PR': { value: '2:25', holder: 'Luke Patton', year: '8/22' }
+                },
+                '210-219': {
+                    '11': { value: '2:43', holder: 'C. Barber / G. Jeter', year: '8/25' },
+                    '10': { value: '2:52', holder: 'Luke Patton', year: '8/20' },
+                    '9': { value: '4:05', holder: 'Jake Rogers', year: '8/22' },
+                    'PR': { value: '2:43', holder: 'C. Barber / G. Jeter', year: '8/25' }
+                },
+                '200-209': {
+                    '12': { value: '2:34', holder: 'Cael Vermeer', year: '8/25' },
+                    '11': { value: '2:54', holder: 'Christian Chelsvig', year: '8/22' },
+                    '10': { value: '3:15', holder: 'Nick Stewart', year: '8/21' },
+                    '9': { value: '3:35', holder: 'Blake Winecoff', year: '8/25' },
+                    'PR': { value: '2:34', holder: 'Cael Vermeer', year: '8/25' }
+                },
+                '190-199': {
+                    '12': { value: '3:08', holder: 'Logan Schnurr', year: '8/21' },
+                    '11': { value: '2:40', holder: 'Tucker Hawkins', year: '8/25' },
+                    '10': { value: '3:02', holder: 'Nick Butler', year: '8/20' },
+                    '9': { value: '3:29', holder: 'Jaxson Kadolph', year: '8/20' },
+                    'PR': { value: '2:40', holder: 'Tucker Hawkins', year: '8/25' }
+                },
+                '180-189': {
+                    '12': { value: '2:09', holder: 'Kale Lande', year: '8/22' },
+                    '11': { value: '2:31', holder: 'Luke Thoreson', year: '8/25' },
+                    '10': { value: '3:02', holder: 'Garrett Nerem', year: '8/22' },
+                    '9': { value: '2:52', holder: 'Cael Vermeer', year: '8/22' },
+                    'PR': { value: '2:09', holder: 'Kale Lande', year: '8/22' }
+                },
+                '170-179': {
+                    '12': { value: '2:11', holder: 'Dillon Lettow', year: '8/22' },
+                    '11': { value: '2:09', holder: 'Kale Lande', year: '8/21' },
+                    '10': { value: '2:29', holder: 'Jonovan Wilkinson', year: '8/21' },
+                    '9': { value: '2:38', holder: 'Connor Morton', year: '8/21' },
+                    'PR': { value: '2:09', holder: 'Kale Lande', year: '8/21' }
+                },
+                '160-169': {
+                    '12': { value: '2:34', holder: 'Matt Phelan', year: '8/21' },
+                    '11': { value: '2:19', holder: 'Dillon Lettow', year: '8/21' },
+                    '10': { value: '2:15', holder: 'Colin Willis', year: '8/25' },
+                    '9': { value: '2:53', holder: 'Garrett Nerem', year: '8/21' },
+                    'PR': { value: '2:15', holder: 'Colin Willis', year: '8/25' }
+                },
+                '150-159': {
+                    '12': { value: '2:16', holder: 'Ben Greenfield', year: '8/22' },
+                    '11': { value: '2:23', holder: 'Gavin Carpenter', year: '8/21' },
+                    '10': { value: '2:20', holder: 'Hesston Johnson', year: '8/21' },
+                    '9': { value: '2:45', holder: 'Sam Scarrow', year: '8/25' },
+                    'PR': { value: '2:16', holder: 'Ben Greenfield', year: '8/22' }
+                },
+                '140-149': {
+                    '12': { value: '2:15', holder: 'Cade Diehl', year: '8/21' },
+                    '11': { value: '2:32', holder: 'Carter Loof', year: '8/20' },
+                    '10': { value: '2:30', holder: 'Boaz Clark', year: '8/21' },
+                    '9': { value: '2:38', holder: 'Sam Knoll', year: '8/21' },
+                    'PR': { value: '2:15', holder: 'Cade Diehl', year: '8/21' }
+                },
+                '130-139': {
+                    '11': { value: '2:26', holder: 'Cade Diehl', year: '8/21' },
+                    '10': { value: '2:38', holder: 'Brady Long', year: '8/25' },
+                    '9': { value: '2:39', holder: 'Myles McIlrath', year: '8/25' },
+                    'PR': { value: '2:26', holder: 'Cade Diehl', year: '8/21' }
+                },
+                '120-129': {
+                    '11': { value: '2:31', holder: 'Noah Healy', year: '8/25' },
+                    '10': { value: '2:33', holder: 'Hayden Janssen', year: '8/22' },
+                    'PR': { value: '2:31', holder: 'Noah Healy', year: '8/25' }
+                },
+                '110-119': {
+                    '11': { value: '2:43', holder: 'Tristan Anderson', year: '8/21' },
+                    '10': { value: '2:42', holder: 'Max Dahlsten', year: '8/25' },
+                    'PR': { value: '2:42', holder: 'Max Dahlsten', year: '8/25' }
+                },
+                '100-109': {
+                    '11': { value: '2:28', holder: 'Brayden Kilstofte', year: '8/21' },
+                    '9': { value: '2:46', holder: 'Blake Larson', year: '8/22' },
+                    'PR': { value: '2:28', holder: 'Brayden Kilstofte', year: '8/21' }
+                }
+            },
+            'Bag Jump': {
+                '320+': {
+                    'PR': { value: '--', holder: '-', year: '-' }
+                },
+                '310-319': {
+                    '12': { value: '33', holder: 'David Downs', year: '8/20' },
+                    'PR': { value: '33', holder: 'David Downs', year: '8/20' }
+                },
+                '300-309': {
+                    '12': { value: '27', holder: 'Tyler Heithoff', year: '8/22' },
+                    '11': { value: '27', holder: 'Tyler Heithoff', year: '8/21' },
+                    'PR': { value: '27', holder: 'Tyler Heithoff', year: '21/22' }
+                },
+                '290-299': {
+                    '12': { value: '34', holder: 'Colin Hansen', year: '8/21' },
+                    '11': { value: '36', holder: 'Colin Hansen', year: '8/20' },
+                    '10': { value: '25', holder: 'Tyler Heithoff', year: '8/20' },
+                    'PR': { value: '36', holder: 'Colin Hansen', year: '8/20' }
+                },
+                '280-289': {
+                    '12': { value: '43', holder: 'Carson Barber', year: '8/24' },
+                    'PR': { value: '43', holder: 'Carson Barber', year: '8/24' }
+                },
+                '270-279': {
+                    '12': { value: '37', holder: 'Jackson Mohr', year: '8/25' },
+                    '10': { value: '36', holder: 'Carson Barber', year: '8/22' },
+                    'PR': { value: '37', holder: 'Jackson Mohr', year: '8/25' }
+                },
+                '260-269': {
+                    '11': { value: '39', holder: 'Ryan Johnson', year: '8/20' },
+                    'PR': { value: '39', holder: 'Ryan Johnson', year: '8/20' }
+                },
+                '250-259': {
+                    '11': { value: '49', holder: 'Aaron Peyton', year: '8/22' },
+                    '10': { value: '44', holder: 'Carson Barber', year: '8/21' },
+                    'PR': { value: '49', holder: 'Aaron Peyton', year: '8/22' }
+                },
+                '240-249': {
+                    '12': { value: '53', holder: 'Tristan Peterson', year: '8/24' },
+                    '11': { value: '44', holder: 'Jake Jennings', year: '8/22' },
+                    '9': { value: '38', holder: 'Jackson Mohr', year: '8/22' },
+                    'PR': { value: '53', holder: 'Tristan Peterson', year: '8/24' }
+                },
+                '230-239': {
+                    '12': { value: '55', holder: 'Blake Nelsen', year: '8/25' },
+                    '11': { value: '44', holder: 'Nick Stewart', year: '8/21' },
+                    '10': { value: '50', holder: 'Aaron Peyton', year: '8/21' },
+                    'PR': { value: '55', holder: 'Blake Nelsen', year: '8/25' }
+                },
+                '220-229': {
+                    '12': { value: '57', holder: 'Jimmy Philipsen', year: '8/20' },
+                    '11': { value: '53', holder: 'Blake Nelsen', year: '8/24' },
+                    '9': { value: '43', holder: 'Aaron Peyton', year: '8/20' },
+                    'PR': { value: '57', holder: 'Jimmy Philipsen', year: '8/20' }
+                },
+                '210-219': {
+                    '12': { value: '59', holder: 'Garrett Nerem', year: '8/24' },
+                    '11': { value: '53', holder: 'C. Barber / C. Georgius', year: '8/25' },
+                    '10': { value: '51', holder: 'Luke Patton', year: '8/20' },
+                    '9': { value: '52', holder: 'Jake Rogers', year: '8/22' },
+                    'PR': { value: '59', holder: 'Garrett Nerem', year: '8/24' }
+                },
+                '200-209': {
+                    '12': { value: '51', holder: 'Parker Watts', year: '8/21' },
+                    '11': { value: '55', holder: 'Christian Chelsvig', year: '8/22' },
+                    '10': { value: '53', holder: 'Thomas Tjaden', year: '8/21' },
+                    '9': { value: '46', holder: 'Blake Winecoff', year: '8/25' },
+                    'PR': { value: '55', holder: 'Christian Chelsvig', year: '8/22' }
+                },
+                '190-199': {
+                    '12': { value: '51', holder: 'Logan Schnurr', year: '8/21' },
+                    '11': { value: '54', holder: 'Nick Butler', year: '8/21' },
+                    '10': { value: '54', holder: 'Charlie Watts', year: '8/22' },
+                    '9': { value: '41', holder: 'Jaxson Kadolph', year: '8/20' },
+                    'PR': { value: '54', holder: 'N. Butler / C. Watts', year: '21/22' }
+                },
+                '180-189': {
+                    '12': { value: '62', holder: 'Sam Knoll', year: '8/24' },
+                    '11': { value: '61', holder: 'Luke Thoreson', year: '8/25' },
+                    '10': { value: '56', holder: 'C. Chelsvig / C. Barber', year: '21/24' },
+                    '9': { value: '47', holder: 'Cael Vermeer', year: '8/22' },
+                    'PR': { value: '62', holder: 'Sam Knoll', year: '8/24' }
+                },
+                '170-179': {
+                    '12': { value: '64', holder: 'Adam McIlrath', year: '8/20' },
+                    '11': { value: '63', holder: 'Hesston Johnson', year: '8/22' },
+                    '10': { value: '58', holder: 'Jonovan Wilkinson', year: '8/21' },
+                    '9': { value: '61', holder: 'Connor Morton', year: '8/21' },
+                    'PR': { value: '64', holder: 'Adam McIlrath', year: '8/20' }
+                },
+                '160-169': {
+                    '12': { value: '66', holder: 'Heston McIlrath', year: '8/24' },
+                    '11': { value: '64', holder: 'Aiden Frey', year: '8/25' },
+                    '10': { value: '56', holder: 'K. Lande / C. Willis', year: '20/25' },
+                    '9': { value: '59', holder: 'Charlie Watts', year: '8/21' },
+                    'PR': { value: '66', holder: 'Heston McIlrath', year: '8/24' }
+                },
+                '150-159': {
+                    '12': { value: '65', holder: 'Cody Long', year: '8/25' },
+                    '11': { value: '62', holder: 'Cody Long', year: '8/24' },
+                    '10': { value: '62', holder: 'Hesston Johnson', year: '8/21' },
+                    '9': { value: '60', holder: 'Sam Scarrow', year: '8/25' },
+                    'PR': { value: '65', holder: 'Cody Long', year: '8/25' }
+                },
+                '140-149': {
+                    '12': { value: '64', holder: 'Cade Diehl', year: '8/22' },
+                    '11': { value: '64', holder: 'Riley Larson', year: '8/22' },
+                    '10': { value: '62', holder: 'Jake Berggren', year: '8/22' },
+                    '9': { value: '60', holder: 'H. McIlrath / H. Johnson', year: '20/21' },
+                    'PR': { value: '64', holder: 'C. Diehl / R. Larson', year: '2022' }
+                },
+                '130-139': {
+                    '11': { value: '64', holder: 'Cade Diehl', year: '8/20' },
+                    '10': { value: '65', holder: 'Brady Long', year: '8/25' },
+                    '9': { value: '61', holder: 'Jake Berggren', year: '8/21' },
+                    'PR': { value: '65', holder: 'Brady Long', year: '8/25' }
+                },
+                '120-129': {
+                    '10': { value: '58', holder: 'Riley Larson', year: '8/21' },
+                    '9': { value: '66', holder: 'Brady Long', year: '8/24' },
+                    'PR': { value: '66', holder: 'Brady Long', year: '8/24' }
+                },
+                '110-119': {
+                    '10': { value: '50', holder: 'Tristan Anderson', year: '8/21' },
+                    '9': { value: '54', holder: 'Max Dahlsten', year: '8/25' },
+                    'PR': { value: '54', holder: 'Max Dahlsten', year: '8/25' }
+                },
+                '100-109': {
+                    '10': { value: '51', holder: 'Brayden Kilstofte', year: '8/21' },
+                    '9': { value: '56', holder: 'Blake Larson', year: '8/22' },
+                    'PR': { value: '56', holder: 'Blake Larson', year: '8/22' }
+                }
+            },
+            'Broad Jump': {},
+            '10m Fly': {},
+            'Pro Agility': {},
+            'Deadlift': {}
+        };
+
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
             const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
@@ -36594,6 +36617,38 @@
             // -- SCHOOL INITIALIZATION CHECK --
             const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
             const [inviteData, setInviteData] = useState(null); // NEW: Invite State
+
+            // -- PROGRAM RECORDS MIGRATION --
+            const [programRecords, setProgramRecords] = useLocalStorage('hc-program-records', {});
+
+            // Sync Program Records to Firestore
+            useAutoSync(authUser, 'program_records', programRecords);
+
+            // -- CULTURAL CALIBRATION --
+            const [culturalCalibration, setCulturalCalibration] = useLocalStorage('hc-cultural-calibration', {
+                quotes: [],
+                challenges: [],
+                activeQuote: null,
+                activeChallenge: null,
+                responses: []
+            });
+
+            // Sync Cultural Calibration to Firestore
+            useAutoSync(authUser, 'cultural_calibration', culturalCalibration);
+
+            // Migration Effect
+            useEffect(() => {
+                const MIGRATION_KEY = 'program_records_migrated_v1';
+                // Check for specific user email to load legacy data once
+                if (authUser && authUser.email === 'mfinn@roland-story.k12.ia.us') {
+                    const hasMigrated = localStorage.getItem(MIGRATION_KEY);
+                    if (!hasMigrated && typeof LEGACY_PROGRAM_RECORDS !== 'undefined') {
+                        console.log("Migrating legacy program records for mfinn...");
+                        setProgramRecords(LEGACY_PROGRAM_RECORDS);
+                        localStorage.setItem(MIGRATION_KEY, 'true');
+                    }
+                }
+            }, [authUser, setProgramRecords]);
 
             useEffect(() => {
                 const checkSchoolInit = async () => {
@@ -36823,6 +36878,7 @@
                             taskAssigner: true,
                             calendar: true,
                             budget: true,
+                            culturalCalibration: true,
                             onboarding: true,
                             equipmentCheckout: true,
                             jerseyLottery: true,
@@ -39424,7 +39480,12 @@
                                     )}
                                     {visibleFeatures.program?.items?.budget && (
                                         <button className={`nav-item ${view === 'budget' ? 'active' : ''}`} onClick={() => setView('budget')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="DollarSign" size={16} style={{ marginRight: '8px' }} /> Budget & Wishlist
+                                            <Icon name="DollarSign" size={16} style={{ marginRight: '8px' }} /> Budget
+                                        </button>
+                                    )}
+                                    {visibleFeatures.program?.items?.culturalCalibration && (
+                                        <button className={`nav-item ${view === 'culturalCalibration' ? 'active' : ''}`} onClick={() => setView('culturalCalibration')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Heart" size={16} style={{ marginRight: '8px' }} /> Culture Calibration
                                         </button>
                                     )}
                                     {visibleFeatures.program?.items?.onboarding && (
@@ -39840,6 +39901,410 @@
                             </div>
                         )}
 
+                        {view === 'culturalCalibration' && (() => {
+                            const isAdmin = currentPermissions?.organizationAdmin || currentPermissions?.culturalAdmin;
+                            const [ccMode, setCCMode] = useState(isAdmin ? 'admin' : 'user');
+                            const [quoteText, setQuoteText] = useState('');
+                            const [quoteAuthor, setQuoteAuthor] = useState('');
+                            const [challengeText, setChallengeText] = useState('');
+                            const [reflection, setReflection] = useState('');
+                            const [currentScore, setCurrentScore] = useState(5);
+                            const [desiredScore, setDesiredScore] = useState(8);
+                            const [feedback, setFeedback] = useState('');
+
+                            const addQuote = () => {
+                                if (!quoteText.trim()) return;
+                                const newQuote = {
+                                    id: Date.now().toString(),
+                                    text: quoteText,
+                                    author: quoteAuthor || 'Unknown',
+                                    dateAdded: new Date().toISOString(),
+                                    scheduledDate: null
+                                };
+                                setCulturalCalibration({
+                                    ...culturalCalibration,
+                                    quotes: [...(culturalCalibration.quotes || []), newQuote]
+                                });
+                                setQuoteText('');
+                                setQuoteAuthor('');
+                            };
+
+                            const addChallenge = () => {
+                                if (!challengeText.trim()) return;
+                                const newChallenge = {
+                                    id: Date.now().toString(),
+                                    text: challengeText,
+                                    dateAdded: new Date().toISOString(),
+                                    scheduledDate: null
+                                };
+                                setCulturalCalibration({
+                                    ...culturalCalibration,
+                                    challenges: [...(culturalCalibration.challenges || []), newChallenge]
+                                });
+                                setChallengeText('');
+                            };
+
+                            const setActiveQuote = (id) => {
+                                setCulturalCalibration({
+                                    ...culturalCalibration,
+                                    activeQuote: id
+                                });
+                            };
+
+                            const setActiveChallenge = (id) => {
+                                setCulturalCalibration({
+                                    ...culturalCalibration,
+                                    activeChallenge: id
+                                });
+                            };
+
+                            const deleteQuote = (id) => {
+                                setCulturalCalibration({
+                                    ...culturalCalibration,
+                                    quotes: (culturalCalibration.quotes || []).filter(q => q.id !== id),
+                                    activeQuote: culturalCalibration.activeQuote === id ? null : culturalCalibration.activeQuote
+                                });
+                            };
+
+                            const deleteChallenge = (id) => {
+                                setCulturalCalibration({
+                                    ...culturalCalibration,
+                                    challenges: (culturalCalibration.challenges || []).filter(c => c.id !== id),
+                                    activeChallenge: culturalCalibration.activeChallenge === id ? null : culturalCalibration.activeChallenge
+                                });
+                            };
+
+                            const submitResponse = () => {
+                                const newResponse = {
+                                    id: Date.now().toString(),
+                                    userId: authUser?.uid,
+                                    userName: authUser?.displayName || authUser?.email,
+                                    date: new Date().toISOString(),
+                                    reflection: reflection,
+                                    currentCultureScore: currentScore,
+                                    desiredCultureScore: desiredScore,
+                                    feedback: feedback
+                                };
+                                setCulturalCalibration({
+                                    ...culturalCalibration,
+                                    responses: [...(culturalCalibration.responses || []), newResponse]
+                                });
+                                setReflection('');
+                                setCurrentScore(5);
+                                setDesiredScore(8);
+                                setFeedback('');
+                                alert('Response submitted successfully!');
+                            };
+
+                            const activeQuoteObj = (culturalCalibration.quotes || []).find(q => q.id === culturalCalibration.activeQuote);
+                            const activeChallengeObj = (culturalCalibration.challenges || []).find(c => c.id === culturalCalibration.activeChallenge);
+
+                            const responses = culturalCalibration.responses || [];
+                            const avgCurrent = responses.length > 0 ? (responses.reduce((sum, r) => sum + r.currentCultureScore, 0) / responses.length).toFixed(1) : 'N/A';
+                            const avgDesired = responses.length > 0 ? (responses.reduce((sum, r) => sum + r.desiredCultureScore, 0) / responses.length).toFixed(1) : 'N/A';
+
+                            return (
+                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
+                                    {/* Header */}
+                                    <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)' }}>
+                                        <h2 style={{ margin: '0 0 1rem 0', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Icon name="Heart" size={28} />
+                                            Culture Calibration
+                                        </h2>
+                                        <p style={{ margin: 0, opacity: 0.9, color: 'white' }}>
+                                            Daily quotes, challenges, and culture feedback
+                                        </p>
+                                        {isAdmin && (
+                                            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
+                                                <button
+                                                    className={`btn ${ccMode === 'admin' ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => setCCMode('admin')}
+                                                    style={{ borderRadius: '20px' }}
+                                                >
+                                                    Admin View
+                                                </button>
+                                                <button
+                                                    className={`btn ${ccMode === 'user' ? 'btn-primary' : 'btn-secondary'}`}
+                                                    onClick={() => setCCMode('user')}
+                                                    style={{ borderRadius: '20px' }}
+                                                >
+                                                    User View
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {ccMode === 'admin' ? (
+                                        <>
+                                            {/* Dashboard Stats */}
+                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                <h3 style={{ margin: '0 0 1rem 0' }}>Response Dashboard</h3>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Responses</div>
+                                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{responses.length}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Current Culture</div>
+                                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f97316' }}>{avgCurrent}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Desired Culture</div>
+                                                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#22c55e' }}>{avgDesired}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Manage Quotes */}
+                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                <h3 style={{ margin: '0 0 1rem 0' }}>Manage Quotes</h3>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '0.75rem', marginBottom: '1rem' }}>
+                                                    <input
+                                                        className="form-input"
+                                                        placeholder="Quote text..."
+                                                        value={quoteText}
+                                                        onChange={e => setQuoteText(e.target.value)}
+                                                    />
+                                                    <input
+                                                        className="form-input"
+                                                        placeholder="Author"
+                                                        value={quoteAuthor}
+                                                        onChange={e => setQuoteAuthor(e.target.value)}
+                                                    />
+                                                    <button className="btn btn-primary" onClick={addQuote}>Add Quote</button>
+                                                </div>
+                                                <div style={{ maxHeight: '300px', overflow: 'auto' }}>
+                                                    {(culturalCalibration.quotes || []).map(quote => (
+                                                        <div key={quote.id} style={{
+                                                            padding: '1rem',
+                                                            border: '1px solid var(--border)',
+                                                            borderRadius: '8px',
+                                                            marginBottom: '0.5rem',
+                                                            background: quote.id === culturalCalibration.activeQuote ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                                                        }}>
+                                                            <div style={{ marginBottom: '0.5rem', fontStyle: 'italic' }}>"{quote.text}"</div>
+                                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>— {quote.author}</div>
+                                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                                <button
+                                                                    className="btn btn-sm btn-secondary"
+                                                                    onClick={() => setActiveQuote(quote.id)}
+                                                                    disabled={quote.id === culturalCalibration.activeQuote}
+                                                                >
+                                                                    {quote.id === culturalCalibration.activeQuote ? 'Active' : 'Set Active'}
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-sm"
+                                                                    onClick={() => deleteQuote(quote.id)}
+                                                                    style={{ background: '#ef4444', color: 'white' }}
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {(culturalCalibration.quotes || []).length === 0 && (
+                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                            No quotes added yet
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Manage Challenges */}
+                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                <h3 style={{ margin: '0 0 1rem 0' }}>Manage Challenges</h3>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', marginBottom: '1rem' }}>
+                                                    <input
+                                                        className="form-input"
+                                                        placeholder="Challenge text..."
+                                                        value={challengeText}
+                                                        onChange={e => setChallengeText(e.target.value)}
+                                                    />
+                                                    <button className="btn btn-primary" onClick={addChallenge}>Add Challenge</button>
+                                                </div>
+                                                <div style={{ maxHeight: '300px', overflow: 'auto' }}>
+                                                    {(culturalCalibration.challenges || []).map(challenge => (
+                                                        <div key={challenge.id} style={{
+                                                            padding: '1rem',
+                                                            border: '1px solid var(--border)',
+                                                            borderRadius: '8px',
+                                                            marginBottom: '0.5rem',
+                                                            background: challenge.id === culturalCalibration.activeChallenge ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                                                        }}>
+                                                            <div style={{ marginBottom: '0.75rem' }}>{challenge.text}</div>
+                                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                                <button
+                                                                    className="btn btn-sm btn-secondary"
+                                                                    onClick={() => setActiveChallenge(challenge.id)}
+                                                                    disabled={challenge.id === culturalCalibration.activeChallenge}
+                                                                >
+                                                                    {challenge.id === culturalCalibration.activeChallenge ? 'Active' : 'Set Active'}
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-sm"
+                                                                    onClick={() => deleteChallenge(challenge.id)}
+                                                                    style={{ background: '#ef4444', color: 'white' }}
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {(culturalCalibration.challenges || []).length === 0 && (
+                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                            No challenges added yet
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Recent Responses */}
+                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                <h3 style={{ margin: '0 0 1rem 0' }}>Recent Responses</h3>
+                                                <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+                                                    {responses.slice().reverse().slice(0, 10).map(response => (
+                                                        <div key={response.id} style={{
+                                                            padding: '1rem',
+                                                            border: '1px solid var(--border)',
+                                                            borderRadius: '8px',
+                                                            marginBottom: '0.5rem'
+                                                        }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                                <strong>{response.userName}</strong>
+                                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                                    {new Date(response.date).toLocaleDateString()}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>{response.reflection}</div>
+                                                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem' }}>
+                                                                <span>Current: <strong style={{ color: '#f97316' }}>{response.currentCultureScore}/10</strong></span>
+                                                                <span>Desired: <strong style={{ color: '#22c55e' }}>{response.desiredCultureScore}/10</strong></span>
+                                                            </div>
+                                                            {response.feedback && (
+                                                                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                                                    Feedback: {response.feedback}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {responses.length === 0 && (
+                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                            No responses yet
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {/* User View - Today's Quote */}
+                                            <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)' }}>
+                                                <h3 style={{ margin: '0 0 1rem 0', color: 'var(--accent)' }}>Quote of the Day</h3>
+                                                {activeQuoteObj ? (
+                                                    <>
+                                                        <p style={{ fontSize: '1.25rem', fontStyle: 'italic', margin: '0 0 1rem 0' }}>
+                                                            "{activeQuoteObj.text}"
+                                                        </p>
+                                                        <p style={{ margin: 0, textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                                            — {activeQuoteObj.author}
+                                                        </p>
+                                                    </>
+                                                ) : (
+                                                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>No quote set for today</p>
+                                                )}
+                                            </div>
+
+                                            {/* User View - Today's Challenge */}
+                                            <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)' }}>
+                                                <h3 style={{ margin: '0 0 1rem 0', color: '#22c55e' }}>Today's Challenge</h3>
+                                                {activeChallengeObj ? (
+                                                    <p style={{ fontSize: '1.1rem', margin: 0 }}>{activeChallengeObj.text}</p>
+                                                ) : (
+                                                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>No challenge set for today</p>
+                                                )}
+                                            </div>
+
+                                            {/* User View - Reflection & Feedback */}
+                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                <h3 style={{ margin: '0 0 1rem 0' }}>Your Reflection</h3>
+
+                                                <div style={{ marginBottom: '1.5rem' }}>
+                                                    <label className="form-label">Self-Reflection</label>
+                                                    <textarea
+                                                        className="form-input"
+                                                        rows={4}
+                                                        placeholder="How are you feeling about today's quote or challenge?"
+                                                        value={reflection}
+                                                        onChange={e => setReflection(e.target.value)}
+                                                    />
+                                                </div>
+
+                                                <div style={{ marginBottom: '1.5rem' }}>
+                                                    <label className="form-label">Current Culture Score (1-10)</label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                        <input
+                                                            type="range"
+                                                            min="1"
+                                                            max="10"
+                                                            value={currentScore}
+                                                            onChange={e => setCurrentScore(parseInt(e.target.value))}
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                        <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f97316', minWidth: '50px' }}>
+                                                            {currentScore}
+                                                        </span>
+                                                    </div>
+                                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0 0 0' }}>
+                                                        How would you rate our current program culture?
+                                                    </p>
+                                                </div>
+
+                                                <div style={{ marginBottom: '1.5rem' }}>
+                                                    <label className="form-label">Desired Culture Score (1-10)</label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                        <input
+                                                            type="range"
+                                                            min="1"
+                                                            max="10"
+                                                            value={desiredScore}
+                                                            onChange={e => setDesiredScore(parseInt(e.target.value))}
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                        <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#22c55e', minWidth: '50px' }}>
+                                                            {desiredScore}
+                                                        </span>
+                                                    </div>
+                                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0 0 0' }}>
+                                                        Where do you want our culture to be?
+                                                    </p>
+                                                </div>
+
+                                                <div style={{ marginBottom: '1.5rem' }}>
+                                                    <label className="form-label">Additional Feedback (Optional)</label>
+                                                    <textarea
+                                                        className="form-input"
+                                                        rows={3}
+                                                        placeholder="Any suggestions or thoughts on how we can improve?"
+                                                        value={feedback}
+                                                        onChange={e => setFeedback(e.target.value)}
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    className="btn btn-primary"
+                                                    onClick={submitResponse}
+                                                    disabled={!reflection.trim()}
+                                                    style={{ width: '100%' }}
+                                                >
+                                                    Submit Response
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
                         {view === 'onboarding' && (
                             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
                                 {/* Header */}
@@ -40197,7 +40662,7 @@
                         )}
 
 
-                        {view === 'testing-records' && <TestingRecords roster={roster} />}
+                        {view === 'testing-records' && <TestingRecords roster={roster} programRecords={programRecords} />}
 
                         {view === 'summer-comp' && <SummerCompetitionManager roster={roster} compData={summerCompData} onUpdateComp={setSummerCompData} />}
                         {view === 'attendance-app' && (
@@ -40452,8 +40917,7 @@
 
         class ErrorBoundary extends React.Component {
             constructor(props) {
-                super(props);
-                this.state = { hasError: false, error: null, errorInfo: null };
+                super(props); this.state = { hasError: false, error: null, errorInfo: null };
             }
 
             static getDerivedStateFromError(error) {
