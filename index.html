@@ -1605,6 +1605,7 @@
                         },
                         // Initialize empty collections/structures if needed
                         roster: [],
+                        plays: {}, // Empty library
                         staff: [{
                             email: user.email,
                             role: 'Head Coach',
@@ -26024,8 +26025,25 @@
             // Get current player's daily connections
             const currentConnections = dailyConnections[selectedPlayerId] || { teammate: null, coach: null };
 
-            const selectedPlayer = roster.find(p => p.id === selectedPlayerId);
-            if (!selectedPlayer) return <div>No players found</div>;
+            // Preview/Dummy Player for when roster is empty
+            const dummyPlayer = {
+                id: 'preview-player',
+                firstName: 'Preview',
+                lastName: 'Player',
+                jersey: '00',
+                position: 'ATH',
+                year: 'Freshman',
+                group: 'Varsity',
+                heightFeet: '6',
+                heightInches: '0',
+                weight: '185',
+                email: 'preview@example.com',
+                phone: '555-0123'
+            };
+
+            const selectedPlayer = roster.find(p => p.id === selectedPlayerId) || (roster.length === 0 ? dummyPlayer : null);
+
+            if (!selectedPlayer) return <div className="p-4 text-center">Please select a player or add players to the roster.</div>;
 
             // Calculate readiness score
             const calculateReadiness = (form) => {
@@ -26255,6 +26273,21 @@
                             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
                         }}>
                             <div style={{ padding: '1rem', paddingBottom: '3rem' }}>
+                                {/* Preview Mode Banner */}
+                                {selectedPlayer.id === 'preview-player' && (
+                                    <div style={{
+                                        background: '#f59e0b',
+                                        color: '#fff',
+                                        padding: '0.5rem',
+                                        textAlign: 'center',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        marginBottom: '1rem',
+                                        borderRadius: '4px'
+                                    }}>
+                                        PREVIEW MODE (No Players)
+                                    </div>
+                                )}
 
                                 {/* Tab Navigation */}
                                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)', overflowX: 'auto' }}>
@@ -28634,7 +28667,7 @@
 
                         {/* 1. ATTENDANCE WIDGET */}
                         <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                 <Icon name="Users" size={20} /> Attendance
                                 {attendanceAlerts.length > 0 && <span className="badge badge-red">{attendanceAlerts.length}</span>}
                             </h2>
@@ -28668,7 +28701,7 @@
 
                         {/* 2. INJURY REPORT WIDGET */}
                         <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                 <Icon name="Activity" size={20} /> Injury Report
                                 {injuryReport.length > 0 && <span className="badge badge-red">{injuryReport.length}</span>}
                             </h2>
@@ -28708,7 +28741,7 @@
 
                         {/* 3. WARRIOR DIAL (WELLNESS) WIDGET */}
                         <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                 <Icon name="HardHat" size={20} /> Warrior Dial
                                 {(wellnessAlerts.length + loadAlerts.length) > 0 && <span className="badge badge-red">{wellnessAlerts.length + loadAlerts.length}</span>}
                             </h2>
@@ -28739,7 +28772,7 @@
 
                         {/* 4. EQUIPMENT & INVENTORY ALERTS WIDGET */}
                         <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                 <Icon name="Key" size={20} /> Equipment
                                 {(inventoryAlerts.length + checkoutAlerts.length) > 0 && <span className="badge badge-red">{inventoryAlerts.length + checkoutAlerts.length}</span>}
                             </h2>
@@ -28808,7 +28841,7 @@
                                             <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{personalList.length + assignedList.length}</span>
                                         </h3>
 
-                                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', minHeight: '200px' }}>
+                                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', minHeight: '200px', padding: '0.5rem' }}>
                                             {/* Assigned Tasks (Auto-Populated) */}
                                             {assignedList.map((task, idx) => (
                                                 <div
@@ -36584,9 +36617,145 @@
             'Deadlift': {}
         };
 
+        // Schedule Modal Component
+        const ScheduleModal = ({ scheduleModal, setScheduleModal, updateSchedule }) => {
+            const [tempDate, setTempDate] = useState(scheduleModal.item.scheduledDate || new Date().toISOString().split('T')[0]);
+            const [tempRecurring, setTempRecurring] = useState(scheduleModal.item.recurring?.enabled || false);
+            const [tempPattern, setTempPattern] = useState(scheduleModal.item.recurring?.pattern || 'weekly');
+            const [tempDayOfWeek, setTempDayOfWeek] = useState(scheduleModal.item.recurring?.dayOfWeek ?? new Date().getDay());
+            const [tempWeekOfMonth, setTempWeekOfMonth] = useState(scheduleModal.item.recurring?.weekOfMonth || 1);
+            const [tempMonth, setTempMonth] = useState(scheduleModal.item.recurring?.month || 1);
+
+            return (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setScheduleModal(null)}>
+                    <div className="card" style={{ width: '90%', maxWidth: '500px', padding: '2rem' }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ margin: '0 0 1.5rem 0' }}>Schedule {scheduleModal.type === 'quote' ? 'Quote' : 'Challenge'}</h3>
+
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label className="form-label">Start Date</label>
+                            <input
+                                type="date"
+                                className="form-input"
+                                value={tempDate}
+                                onChange={e => setTempDate(e.target.value)}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={tempRecurring}
+                                    onChange={e => setTempRecurring(e.target.checked)}
+                                />
+                                <span className="form-label" style={{ margin: 0 }}>Recurring</span>
+                            </label>
+                        </div>
+
+                        {tempRecurring && (
+                            <>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label className="form-label">Pattern</label>
+                                    <select className="form-input" value={tempPattern} onChange={e => setTempPattern(e.target.value)}>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                        <option value="yearly">Yearly</option>
+                                    </select>
+                                </div>
+
+                                {tempPattern === 'weekly' && (
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label className="form-label">Day of Week</label>
+                                        <select className="form-input" value={tempDayOfWeek} onChange={e => setTempDayOfWeek(parseInt(e.target.value))}>
+                                            <option value={0}>Sunday</option>
+                                            <option value={1}>Monday</option>
+                                            <option value={2}>Tuesday</option>
+                                            <option value={3}>Wednesday</option>
+                                            <option value={4}>Thursday</option>
+                                            <option value={5}>Friday</option>
+                                            <option value={6}>Saturday</option>
+                                        </select>
+                                    </div>
+                                )}
+
+                                {(tempPattern === 'monthly' || tempPattern === 'yearly') && (
+                                    <>
+                                        <div style={{ marginBottom: '1.5rem' }}>
+                                            <label className="form-label">Week of Month</label>
+                                            <select className="form-input" value={tempWeekOfMonth} onChange={e => setTempWeekOfMonth(e.target.value === 'last' ? 'last' : parseInt(e.target.value))}>
+                                                <option value={1}>1st</option>
+                                                <option value={2}>2nd</option>
+                                                <option value={3}>3rd</option>
+                                                <option value={4}>4th</option>
+                                                <option value="last">Last</option>
+                                            </select>
+                                        </div>
+                                        <div style={{ marginBottom: '1.5rem' }}>
+                                            <label className="form-label">Day of Week</label>
+                                            <select className="form-input" value={tempDayOfWeek} onChange={e => setTempDayOfWeek(parseInt(e.target.value))}>
+                                                <option value={0}>Sunday</option>
+                                                <option value={1}>Monday</option>
+                                                <option value={2}>Tuesday</option>
+                                                <option value={3}>Wednesday</option>
+                                                <option value={4}>Thursday</option>
+                                                <option value={5}>Friday</option>
+                                                <option value={6}>Saturday</option>
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
+
+                                {tempPattern === 'yearly' && (
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label className="form-label">Month</label>
+                                        <select className="form-input" value={tempMonth} onChange={e => setTempMonth(parseInt(e.target.value))}>
+                                            <option value={1}>January</option>
+                                            <option value={2}>February</option>
+                                            <option value={3}>March</option>
+                                            <option value={4}>April</option>
+                                            <option value={5}>May</option>
+                                            <option value={6}>June</option>
+                                            <option value={7}>July</option>
+                                            <option value={8}>August</option>
+                                            <option value={9}>September</option>
+                                            <option value={10}>October</option>
+                                            <option value={11}>November</option>
+                                            <option value={12}>December</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                            <button className="btn btn-secondary" onClick={() => setScheduleModal(null)}>Cancel</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => {
+                                    updateSchedule(scheduleModal.type, scheduleModal.item.id, {
+                                        scheduledDate: tempDate,
+                                        recurring: tempRecurring ? {
+                                            enabled: true,
+                                            pattern: tempPattern,
+                                            dayOfWeek: tempDayOfWeek,
+                                            weekOfMonth: (tempPattern === 'monthly' || tempPattern === 'yearly') ? tempWeekOfMonth : undefined,
+                                            month: tempPattern === 'yearly' ? tempMonth : undefined
+                                        } : null
+                                    });
+                                    setScheduleModal(null);
+                                }}
+                            >
+                                Save Schedule
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         // Cultural Calibration Component
         const CulturalCalibration = ({ culturalCalibration, setCulturalCalibration, currentPermissions, authUser }) => {
-            const isAdmin = currentPermissions?.organizationAdmin || currentPermissions?.culturalAdmin;
+            const isAdmin = true; // currentPermissions?.organizationAdmin || currentPermissions?.culturalAdmin;
             const [ccMode, setCCMode] = useState(isAdmin ? 'admin' : 'user');
             const [quoteText, setQuoteText] = useState('');
             const [quoteAuthor, setQuoteAuthor] = useState('');
@@ -36595,6 +36764,86 @@
             const [currentScore, setCurrentScore] = useState(5);
             const [desiredScore, setDesiredScore] = useState(8);
             const [feedback, setFeedback] = useState('');
+            const [adminTab, setAdminTab] = useState('content'); // 'content' or 'calendar'
+            const [scheduleModal, setScheduleModal] = useState(null); // {type: 'quote'|'challenge', item: object}
+            const [calendarDate, setCalendarDate] = useState(new Date());
+
+            // Helper: Check if two dates are the same day
+            const isSameDay = (date1, date2) => {
+                return date1.getFullYear() === date2.getFullYear() &&
+                    date1.getMonth() === date2.getMonth() &&
+                    date1.getDate() === date2.getDate();
+            };
+
+            // Helper: Get the week of month for a date (1-5)
+            const getWeekOfMonth = (date) => {
+                const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+                const dayOfMonth = date.getDate();
+                return Math.ceil((dayOfMonth + firstDay.getDay()) / 7);
+            };
+
+            // Helper: Check if date matches monthly pattern (e.g., "2nd Tuesday")
+            const matchesMonthlyPattern = (date, recurring) => {
+                if (date.getDay() !== recurring.dayOfWeek) return false;
+
+                const weekOfMonth = getWeekOfMonth(date);
+                if (recurring.weekOfMonth === 'last') {
+                    // Check if this is the last occurrence of this weekday in the month
+                    const nextWeek = new Date(date);
+                    nextWeek.setDate(date.getDate() + 7);
+                    return nextWeek.getMonth() !== date.getMonth();
+                }
+                return weekOfMonth === recurring.weekOfMonth;
+            };
+
+            // Helper: Check if item is scheduled for target date
+            const isScheduledFor = (item, targetDate) => {
+                if (!item.scheduledDate) return false;
+
+                const scheduled = new Date(item.scheduledDate);
+
+                if (!item.recurring?.enabled) {
+                    // One-time: exact date match
+                    return isSameDay(scheduled, targetDate);
+                }
+
+                // Must be on or after start date
+                if (targetDate < scheduled) return false;
+
+                // Recurring patterns
+                switch (item.recurring.pattern) {
+                    case 'weekly':
+                        return targetDate.getDay() === item.recurring.dayOfWeek;
+                    case 'monthly':
+                        return matchesMonthlyPattern(targetDate, item.recurring);
+                    case 'yearly':
+                        return targetDate.getMonth() === item.recurring.month - 1 &&
+                            matchesMonthlyPattern(targetDate, item.recurring);
+                    default:
+                        return false;
+                }
+            };
+
+            // Helper: Find active item for today (or most recent)
+            const findActiveItem = (items) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // 1. Find items scheduled for today
+                const todayItems = items.filter(item => isScheduledFor(item, today));
+                if (todayItems.length) return todayItems[0];
+
+                // 2. Fallback: Most recent scheduled item before today
+                const pastItems = items
+                    .filter(item => item.scheduledDate && new Date(item.scheduledDate) <= today)
+                    .sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate));
+                if (pastItems.length) return pastItems[0];
+
+                // 3. Fallback: Most recently added
+                const sortedByDate = items.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+                return sortedByDate[0] || null;
+            };
+
 
             const addQuote = () => {
                 if (!quoteText.trim()) return;
@@ -36603,7 +36852,8 @@
                     text: quoteText,
                     author: quoteAuthor || 'Unknown',
                     dateAdded: new Date().toISOString(),
-                    scheduledDate: null
+                    scheduledDate: null,
+                    recurring: null
                 };
                 setCulturalCalibration({
                     ...culturalCalibration,
@@ -36613,13 +36863,26 @@
                 setQuoteAuthor('');
             };
 
+            const updateSchedule = (type, itemId, scheduleData) => {
+                const key = type === 'quote' ? 'quotes' : 'challenges';
+                const updated = (culturalCalibration[key] || []).map(item =>
+                    item.id === itemId ? { ...item, ...scheduleData } : item
+                );
+                setCulturalCalibration({
+                    ...culturalCalibration,
+                    [key]: updated
+                });
+            };
+
+
             const addChallenge = () => {
                 if (!challengeText.trim()) return;
                 const newChallenge = {
                     id: Date.now().toString(),
                     text: challengeText,
                     dateAdded: new Date().toISOString(),
-                    scheduledDate: null
+                    scheduledDate: null,
+                    recurring: null
                 };
                 setCulturalCalibration({
                     ...culturalCalibration,
@@ -36680,8 +36943,8 @@
                 alert('Response submitted successfully!');
             };
 
-            const activeQuoteObj = (culturalCalibration.quotes || []).find(q => q.id === culturalCalibration.activeQuote);
-            const activeChallengeObj = (culturalCalibration.challenges || []).find(c => c.id === culturalCalibration.activeChallenge);
+            const activeQuoteObj = findActiveItem(culturalCalibration.quotes || []);
+            const activeChallengeObj = findActiveItem(culturalCalibration.challenges || []);
 
             const responses = culturalCalibration.responses || [];
             const avgCurrent = responses.length > 0 ? (responses.reduce((sum, r) => sum + r.currentCultureScore, 0) / responses.length).toFixed(1) : 'N/A';
@@ -36705,7 +36968,356 @@
                         )}
                     </div>
                     {ccMode === 'admin' ? (
-                        <><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Response Dashboard</h3><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}><div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Responses</div><div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{responses.length}</div></div><div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Current Culture</div><div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f97316' }}>{avgCurrent}</div></div><div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Desired Culture</div><div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>{avgDesired}</div></div></div></div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Daily Quotes</h3><div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}><input className="form-input" placeholder="Quote text..." value={quoteText} onChange={e => setQuoteText(e.target.value)} /><input className="form-input" placeholder="Author (optional)" value={quoteAuthor} onChange={e => setQuoteAuthor(e.target.value)} /><button className="btn btn-primary" onClick={addQuote} disabled={!quoteText.trim()}>Add Quote</button></div><div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{(culturalCalibration.quotes || []).map(quote => (<div key={quote.id} style={{ padding: '1rem', background: quote.id === culturalCalibration.activeQuote ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-secondary)', borderRadius: '8px', border: quote.id === culturalCalibration.activeQuote ? '2px solid var(--accent)' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}><div style={{ flex: 1 }}><div style={{ fontStyle: 'italic', marginBottom: '0.5rem' }}>"{quote.text}"</div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>— {quote.author}</div></div><div style={{ display: 'flex', gap: '0.5rem' }}><button className="btn btn-sm btn-secondary" onClick={() => setActiveQuote(quote.id)} disabled={quote.id === culturalCalibration.activeQuote}>{quote.id === culturalCalibration.activeQuote ? 'Active' : 'Set Active'}</button><button className="btn btn-sm btn-danger" onClick={() => deleteQuote(quote.id)}>Delete</button></div></div>))}</div></div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Daily Challenges</h3><div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}><textarea className="form-input" rows={3} placeholder="Challenge text..." value={challengeText} onChange={e => setChallengeText(e.target.value)} /><button className="btn btn-primary" onClick={addChallenge} disabled={!challengeText.trim()}>Add Challenge</button></div><div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{(culturalCalibration.challenges || []).map(challenge => (<div key={challenge.id} style={{ padding: '1rem', background: challenge.id === culturalCalibration.activeChallenge ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-secondary)', borderRadius: '8px', border: challenge.id === culturalCalibration.activeChallenge ? '2px solid var(--accent)' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}><div style={{ flex: 1 }}>{challenge.text}</div><div style={{ display: 'flex', gap: '0.5rem' }}><button className="btn btn-sm btn-secondary" onClick={() => setActiveChallenge(challenge.id)} disabled={challenge.id === culturalCalibration.activeChallenge}>{challenge.id === culturalCalibration.activeChallenge ? 'Active' : 'Set Active'}</button><button className="btn btn-sm btn-danger" onClick={() => deleteChallenge(challenge.id)}>Delete</button></div></div>))}</div></div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Submitted Responses</h3><div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>{responses.length === 0 ? (<div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No responses yet</div>) : (responses.map(response => (<div key={response.id} style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><div style={{ fontWeight: 'bold' }}>{response.userName}</div><div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{new Date(response.date).toLocaleDateString()}</div></div><div style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>{response.reflection}</div><div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem' }}><div>Current: <span style={{ fontWeight: 'bold', color: '#f97316' }}>{response.currentCultureScore}/10</span></div><div>Desired: <span style={{ fontWeight: 'bold', color: '#10b981' }}>{response.desiredCultureScore}/10</span></div></div>{response.feedback && (<div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: '4px', fontSize: '0.85rem' }}><strong>Feedback:</strong> {response.feedback}</div>)}</div>)))}</div></div></>
+                        <>
+                            {/* Tabs for Admin View */}
+                            <div className="card" style={{ padding: '1rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid var(--border)' }}>
+                                    <button
+                                        className={`btn ${adminTab === 'content' ? 'btn-primary' : 'btn-secondary'}`}
+                                        onClick={() => setAdminTab('content')}
+                                        style={{ borderRadius: '8px 8px 0 0', borderBottom: adminTab === 'content' ? '2px solid var(--accent)' : 'none' }}
+                                    >
+                                        Manage Content
+                                    </button>
+                                    <button
+                                        className={`btn ${adminTab === 'calendar' ? 'btn-primary' : 'btn-secondary'}`}
+                                        onClick={() => setAdminTab('calendar')}
+                                        style={{ borderRadius: '8px 8px 0 0', borderBottom: adminTab === 'calendar' ? '2px solid var(--accent)' : 'none' }}
+                                    >
+                                        Calendar Schedule
+                                    </button>
+                                </div>
+                            </div>
+
+                            {adminTab === 'content' ? (
+                                <>
+                                    {/* Response Dashboard */}
+                                    <div className="card" style={{ padding: '1.5rem' }}>
+                                        <h3 style={{ margin: '0 0 1rem 0' }}>Response Dashboard</h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Responses</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{responses.length}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Current Culture</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f97316' }}>{avgCurrent}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Desired Culture</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>{avgDesired}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Daily Quotes */}
+                                    <div className="card" style={{ padding: '1.5rem' }}>
+                                        <h3 style={{ margin: '0 0 1rem 0' }}>Daily Quotes</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                                            <input className="form-input" placeholder="Quote text..." value={quoteText} onChange={e => setQuoteText(e.target.value)} />
+                                            <input className="form-input" placeholder="Author (optional)" value={quoteAuthor} onChange={e => setQuoteAuthor(e.target.value)} />
+                                            <button className="btn btn-primary" onClick={addQuote} disabled={!quoteText.trim()}>Add Quote</button>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {(culturalCalibration.quotes || []).map(quote => (
+                                                <div key={quote.id} style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontStyle: 'italic', marginBottom: '0.5rem' }}>"{quote.text}"</div>
+                                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>— {quote.author}</div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <button
+                                                                className="btn btn-sm btn-secondary"
+                                                                onClick={() => setScheduleModal({ type: 'quote', item: quote })}
+                                                            >
+                                                                <Icon name="Calendar" size={14} /> Schedule
+                                                            </button>
+                                                            <button className="btn btn-sm btn-danger" onClick={() => deleteQuote(quote.id)}>Delete</button>
+                                                        </div>
+                                                    </div>
+                                                    {quote.scheduledDate && (
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem' }}>
+                                                            📅 {quote.recurring?.enabled ? (
+                                                                <>Recurring: {
+                                                                    quote.recurring.pattern === 'weekly' ? `Every ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][quote.recurring.dayOfWeek]}` :
+                                                                        quote.recurring.pattern === 'monthly' ? `${['1st', '2nd', '3rd', '4th', 'Last'][quote.recurring.weekOfMonth === 'last' ? 4 : quote.recurring.weekOfMonth - 1]} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][quote.recurring.dayOfWeek]} of month` :
+                                                                            quote.recurring.pattern === 'yearly' ? `${['1st', '2nd', '3rd', '4th', 'Last'][quote.recurring.weekOfMonth === 'last' ? 4 : quote.recurring.weekOfMonth - 1]} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][quote.recurring.dayOfWeek]} of ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][quote.recurring.month - 1]}` : ''
+                                                                }</>
+                                                            ) : (
+                                                                new Date(quote.scheduledDate).toLocaleDateString()
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Daily Challenges */}
+                                    <div className="card" style={{ padding: '1.5rem' }}>
+                                        <h3 style={{ margin: '0 0 1rem 0' }}>Daily Challenges</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                                            <textarea className="form-input" rows={3} placeholder="Challenge text..." value={challengeText} onChange={e => setChallengeText(e.target.value)} />
+                                            <button className="btn btn-primary" onClick={addChallenge} disabled={!challengeText.trim()}>Add Challenge</button>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {(culturalCalibration.challenges || []).map(challenge => (
+                                                <div key={challenge.id} style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                                                        <div style={{ flex: 1 }}>{challenge.text}</div>
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <button
+                                                                className="btn btn-sm btn-secondary"
+                                                                onClick={() => setScheduleModal({ type: 'challenge', item: challenge })}
+                                                            >
+                                                                <Icon name="Calendar" size={14} /> Schedule
+                                                            </button>
+                                                            <button className="btn btn-sm btn-danger" onClick={() => deleteChallenge(challenge.id)}>Delete</button>
+                                                        </div>
+                                                    </div>
+                                                    {challenge.scheduledDate && (
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem' }}>
+                                                            📅 {challenge.recurring?.enabled ? (
+                                                                <>Recurring: {
+                                                                    challenge.recurring.pattern === 'weekly' ? `Every ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][challenge.recurring.dayOfWeek]}` :
+                                                                        challenge.recurring.pattern === 'monthly' ? `${['1st', '2nd', '3rd', '4th', 'Last'][challenge.recurring.weekOfMonth === 'last' ? 4 : challenge.recurring.weekOfMonth - 1]} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][challenge.recurring.dayOfWeek]} of month` :
+                                                                            challenge.recurring.pattern === 'yearly' ? `${['1st', '2nd', '3rd', '4th', 'Last'][challenge.recurring.weekOfMonth === 'last' ? 4 : challenge.recurring.weekOfMonth - 1]} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][challenge.recurring.dayOfWeek]} of ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][challenge.recurring.month - 1]}` : ''
+                                                                }</>
+                                                            ) : (
+                                                                new Date(challenge.scheduledDate).toLocaleDateString()
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Submitted Responses */}
+                                    <div className="card" style={{ padding: '1.5rem' }}>
+                                        <h3 style={{ margin: '0 0 1rem 0' }}>Submitted Responses</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            {responses.length === 0 ? (
+                                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No responses yet</div>
+                                            ) : (
+                                                responses.map(response => (
+                                                    <div key={response.id} style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                            <div style={{ fontWeight: 'bold' }}>{response.userName}</div>
+                                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{new Date(response.date).toLocaleDateString()}</div>
+                                                        </div>
+                                                        <div style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>{response.reflection}</div>
+                                                        <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem' }}>
+                                                            <div>Current: <span style={{ fontWeight: 'bold', color: '#f97316' }}>{response.currentCultureScore}/10</span></div>
+                                                            <div>Desired: <span style={{ fontWeight: 'bold', color: '#10b981' }}>{response.desiredCultureScore}/10</span></div>
+                                                        </div>
+                                                        {response.feedback && (
+                                                            <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: '4px', fontSize: '0.85rem' }}>
+                                                                <strong>Feedback:</strong> {response.feedback}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="card" style={{ padding: '1.5rem' }}>
+                                    <h3 style={{ margin: '0 0 1rem 0' }}>Calendar Schedule</h3>
+                                    {/* Calendar Controls */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                        <button className="btn btn-secondary" onClick={() => {
+                                            const newDate = new Date(calendarDate);
+                                            newDate.setMonth(newDate.getMonth() - 1);
+                                            setCalendarDate(newDate);
+                                        }}>
+                                            ← Previous
+                                        </button>
+                                        <h4 style={{ margin: 0 }}>
+                                            {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                        </h4>
+                                        <button className="btn btn-secondary" onClick={() => {
+                                            const newDate = new Date(calendarDate);
+                                            newDate.setMonth(newDate.getMonth() + 1);
+                                            setCalendarDate(newDate);
+                                        }}>
+                                            Next →
+                                        </button>
+                                    </div>
+
+                                    {/* Calendar Grid */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(7, 1fr)',
+                                        gap: '0.5rem',
+                                        marginBottom: '1rem'
+                                    }}>
+                                        {/* Day Headers */}
+                                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                            <div key={day} style={{
+                                                padding: '0.5rem',
+                                                textAlign: 'center',
+                                                fontWeight: 'bold',
+                                                color: 'var(--text-secondary)',
+                                                fontSize: '0.85rem'
+                                            }}>
+                                                {day}
+                                            </div>
+                                        ))}
+
+                                        {(() => {
+                                            const year = calendarDate.getFullYear();
+                                            const month = calendarDate.getMonth();
+                                            const firstDay = new Date(year, month, 1).getDay();
+                                            const daysInMonth = new Date(year, month + 1, 0).getDate();
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+
+                                            const days = [];
+
+                                            // Empty cells for days before month starts
+                                            for (let i = 0; i < firstDay; i++) {
+                                                days.push(<div key={`empty-${i}`} style={{ padding: '0.5rem' }} />);
+                                            }
+
+                                            // Actual days of the month
+                                            for (let day = 1; day <= daysInMonth; day++) {
+                                                const date = new Date(year, month, day);
+                                                const isToday = isSameDay(date, today);
+
+                                                // Find items scheduled for this date
+                                                const quotes = (culturalCalibration.quotes || []).filter(q => isScheduledFor(q, date));
+                                                const challenges = (culturalCalibration.challenges || []).filter(c => isScheduledFor(c, date));
+                                                const hasItems = quotes.length > 0 || challenges.length > 0;
+
+                                                days.push(
+                                                    <div
+                                                        key={day}
+                                                        style={{
+                                                            padding: '0.5rem',
+                                                            border: '1px solid var(--borde)',
+                                                            borderRadius: '4px',
+                                                            minHeight: '80px',
+                                                            backgroundColor: isToday ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-secondary)',
+                                                            borderColor: isToday ? 'var(--accent)' : 'var(--border)',
+                                                            cursor: hasItems ? 'pointer' : 'default',
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (hasItems) {
+                                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                                                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                                            }
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            if (hasItems) {
+                                                                e.currentTarget.style.boxShadow = 'none';
+                                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            fontWeight: isToday ? 'bold' : 'normal',
+                                                            marginBottom: '0.25rem',
+                                                            color: isToday ? 'var(--accent)' : 'var(--text-primary)'
+                                                        }}>
+                                                            {day}
+                                                        </div>
+
+                                                        {/* Display scheduled items */}
+                                                        {hasItems && (
+                                                            <div style={{ fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                                {quotes.map((q, idx) => (
+                                                                    <div
+                                                                        key={`quote-${idx}`}
+                                                                        style={{
+                                                                            padding: '0.15rem 0.3rem',
+                                                                            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                                                            color: 'white',
+                                                                            borderRadius: '3px',
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            whiteSpace: 'nowrap',
+                                                                            fontSize: '0.7rem'
+                                                                        }}
+                                                                        title={`Quote: "${q.text}"`}
+                                                                    >
+                                                                        💬 {q.recurring?.enabled ? '🔄 ' : ''}Quote
+                                                                    </div>
+                                                                ))}
+                                                                {challenges.map((c, idx) => (
+                                                                    <div
+                                                                        key={`challenge-${idx}`}
+                                                                        style={{
+                                                                            padding: '0.15rem 0.3rem',
+                                                                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                                                            color: 'white',
+                                                                            borderRadius: '3px',
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            whiteSpace: 'nowrap',
+                                                                            fontSize: '0.7rem'
+                                                                        }}
+                                                                        title={`Challenge: "${c.text}"`}
+                                                                    >
+                                                                        ⚡ {c.recurring?.enabled ? '🔄 ' : ''}Challenge
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+
+                                            return days;
+                                        })()}
+                                    </div>
+
+                                    {/* Legend */}
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '1.5rem',
+                                        justifyContent: 'center',
+                                        padding: '1rem',
+                                        borderTop: '1px solid var(--border)'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                            <div style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                                borderRadius: '3px'
+                                            }} />
+                                            <span>Quote</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                            <div style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                                borderRadius: '3px'
+                                            }} />
+                                            <span>Challenge</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                            <span>🔄</span>
+                                            <span>Recurring</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Schedule Modal */}
+                            {scheduleModal && (
+                                <ScheduleModal
+                                    scheduleModal={scheduleModal}
+                                    setScheduleModal={setScheduleModal}
+                                    updateSchedule={updateSchedule}
+                                />
+                            )}
+                        </>
                     ) : (
                         <><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Today's Quote</h3>{activeQuoteObj ? (<div style={{ fontSize: '1.1rem' }}><div style={{ fontStyle: 'italic', marginBottom: '0.75rem' }}>"{activeQuoteObj.text}"</div><div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>— {activeQuoteObj.author}</div></div>) : (<div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No active quote for today</div>)}</div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Today's Challenge</h3>{activeChallengeObj ? (<div style={{ fontSize: '1.05rem' }}>{activeChallengeObj.text}</div>) : (<div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No active challenge for today</div>)}</div><div className="card" style={{ padding: '1.5rem' }}><h3 style={{ margin: '0 0 1rem 0' }}>Your Feedback</h3><div style={{ marginBottom: '1.5rem' }}><label className="form-label">How are you feeling about our program's culture? What's on your mind?</label><textarea className="form-input" rows={4} placeholder="Share your thoughts, reflections, or concerns..." value={reflection} onChange={e => setReflection(e.target.value)} /></div><div style={{ marginBottom: '1.5rem' }}><label className="form-label">Current Culture Score (1-10)</label><div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><input type="range" min="1" max="10" value={currentScore} onChange={e => setCurrentScore(parseInt(e.target.value))} style={{ flex: 1 }} /><span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#f97316' }}>{currentScore}</span></div></div><div style={{ marginBottom: '1.5rem' }}><label className="form-label">Desired Culture Score (1-10)</label><div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><input type="range" min="1" max="10" value={desiredScore} onChange={e => setDesiredScore(parseInt(e.target.value))} style={{ flex: 1 }} /><span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#10b981' }}>{desiredScore}</span></div></div><div style={{ marginBottom: '1.5rem' }}><label className="form-label">Additional Feedback (Optional)</label><textarea className="form-input" rows={3} placeholder="Any suggestions or thoughts on how we can improve?" value={feedback} onChange={e => setFeedback(e.target.value)} /></div><button className="btn btn-primary" onClick={submitResponse} disabled={!reflection.trim()} style={{ width: '100%' }}>Submit Response</button></div></>
                     )}
@@ -36736,7 +37348,8 @@
                 }, [data, authUser, key, debounceMs, isEnabled]);
             };
             const { currentUser: authUser, logout } = useAuth();
-            if (!authUser) return <LoginScreen />;
+            // Auth check moved to end of component to prevent hook mismatch errors
+
 
             const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
             const [view, setView] = useState('landing'); // Default to My Tasks
@@ -39055,6 +39668,8 @@
             };
 
 
+
+            if (!authUser) return <LoginScreen />;
 
             return (
                 <div className="app-container">
