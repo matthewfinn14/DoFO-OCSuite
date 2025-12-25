@@ -5317,6 +5317,22 @@
                         card6: { type: 'standard', opp: '', iter: '1', rows: [] },
                         version: 'v3'
                     }));
+                } else {
+                    // Check for old 'modular' type and auto-migrate to 'mini-scripts'
+                    let hasMigration = false;
+                    const updates = {};
+                    ['card1', 'card2', 'card3', 'card4', 'card5', 'card6'].forEach(cardKey => {
+                        const card = wbSettings[cardKey];
+                        if (card && card.type === 'modular' && card.rows && !card.version) {
+                            // If it has 'rows' and NO version (legacy), migrate to mini-scripts
+                            updates[cardKey] = { ...card, type: 'mini-scripts', version: 'v1' };
+                            hasMigration = true;
+                        }
+                    });
+
+                    if (hasMigration) {
+                        setWbSettings(prev => ({ ...prev, ...updates }));
+                    }
                 }
             }, []);
 
@@ -5411,6 +5427,17 @@
                     type: 'tempo',
                     tempoType: tempoType,
                     label: protocol ? protocol.code : tempoType
+                };
+                updateCard(cardId, { rows: [...card.rows, newRow] });
+            };
+
+            const handleAddHeaderRow = (cardId) => {
+                const card = wbSettings[cardId];
+                const newRow = {
+                    id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'header',
+                    label: 'New Section',
+                    color: 'gray'
                 };
                 updateCard(cardId, { rows: [...card.rows, newRow] });
             };
@@ -5591,12 +5618,13 @@
 
             const renderSpreadsheetTable = (slots, rangeClass, cardId, title = '') => {
                 const card = wbSettings[cardId];
+                const isMiniScripts = card.type === 'mini-scripts';
                 const isModular = card.type === 'modular';
 
                 // Determine row source
                 let displayRows = [];
-                if (isModular) {
-                    // Modular uses the sequence of rows defined in the card
+                if (isMiniScripts) {
+                    // Mini-Scripts uses the sequence of rows defined in the card
                     displayRows = card.rows.map((row, idx) => {
                         if (row.type === 'play') {
                             const play = plays.find(p => p.id === row.playId);
@@ -5621,6 +5649,72 @@
                             };
                         }
                     });
+                } else if (isModular) {
+                    // Modular: Standard Layout (2 cols) but defined by rows (Plays & Headers)
+                    const startSlot = slots[0];
+                    let logicalSlot = startSlot;
+                    let displaySlotCounter = startSlot;
+
+                    displayRows = [];
+                    card.rows.forEach(row => {
+                        const isHeader = row.type === 'header' || row.type === 'tempo';
+
+                        // Force Header to start on Odd slot (New Row)
+                        if (isHeader && logicalSlot % 2 === 0) {
+                            // Current is Even (Right). Fill it with spacer to move to next row.
+                            displayRows.push({
+                                slot: logicalSlot,
+                                type: 'spacer',
+                                text: ''
+                            });
+                            logicalSlot++;
+                        }
+
+                        const currentLogical = logicalSlot;
+
+                        if (isHeader) {
+                            // Header consumes Odd slot
+                            let text = (row.type === 'header') ? (row.label || 'SECTION') : (row.label || row.tempoType || 'TEMPO');
+                            displayRows.push({
+                                slot: currentLogical,
+                                displaySlot: '',
+                                type: row.type,
+                                text: text,
+                                isHeader: isHeader,
+                                playId: row.playId,
+                                color: row.color
+                            });
+
+                            // Also consume the Even slot as whitespace/spacer to keep alignment
+                            displayRows.push({
+                                slot: currentLogical + 1,
+                                type: 'spacer',
+                                text: ''
+                            });
+
+                            logicalSlot += 2;
+                        } else {
+                            // Standard Play
+                            let slotDisplay = displaySlotCounter;
+                            displaySlotCounter++;
+
+                            let text = '';
+                            const play = plays.find(p => p.id === row.playId);
+                            text = play ? (row.playName || play.name) : 'Unknown';
+                            if (play && play.formation) text += ' - ' + play.formation;
+
+                            displayRows.push({
+                                slot: currentLogical,
+                                displaySlot: slotDisplay,
+                                type: row.type,
+                                text: text,
+                                isHeader: false,
+                                playId: row.playId,
+                                color: row.color
+                            });
+                            logicalSlot++;
+                        }
+                    });
                 } else {
                     // Standard uses the absolute slots
                     displayRows = slots.map(slot => {
@@ -5634,9 +5728,9 @@
                     });
                 }
 
-                if (isModular) {
+                if (isMiniScripts) {
                     // ---------------------------------------------------------
-                    // MODULAR / SCRIPT LAYOUT: 1 Coord Column + 3 Play Columns
+                    // MINI-SCRIPTS LAYOUT: 1 Coord Column + 3 Play Columns
                     // ---------------------------------------------------------
                     const chunks = [];
                     const chunkSize = 3;
@@ -5792,10 +5886,31 @@
                                 {tableRows.map((rowGroup, rowIndex) => (
                                     <tr key={rowIndex} className={rangeClass}>
                                         {rowGroup.map((cellData, colIndex) => {
+                                            if (cellData && cellData.type === 'spacer') return null;
+
+                                            if (cellData && cellData.isHeader) {
+                                                const isTempo = cellData.type === 'tempo';
+                                                return (
+                                                    <React.Fragment key={colIndex}>
+                                                        <td colSpan={4} style={{
+                                                            background: isTempo ? '#ffedd5' : '#333',
+                                                            color: isTempo ? 'black' : 'white',
+                                                            fontWeight: 'bold',
+                                                            textAlign: 'center',
+                                                            border: '1px solid #333',
+                                                            fontSize: '8pt',
+                                                            padding: '2px'
+                                                        }}>
+                                                            {cellData.text}
+                                                        </td>
+                                                    </React.Fragment>
+                                                );
+                                            }
+
                                             if (!cellData) return <React.Fragment key={colIndex}><td style={{ border: '1px solid #333', height: `${rowHeight}px` }} /><td style={{ border: '1px solid #333', height: `${rowHeight}px` }} /></React.Fragment>;
 
                                             const play = cellData.play;
-                                            const isClickable = !isModular && selectedPlayId && !play;
+                                            const isClickable = !isMiniScripts && selectedPlayId && !play;
 
                                             // Calculate color background for this row
                                             let cellBackground = 'inherit';
@@ -5815,6 +5930,33 @@
                                                     'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
                                                 };
                                                 cellBackground = colorMap[`${colorBase}-${shade}`] || 'inherit';
+                                            }
+
+                                            // Header/Tempo Row Render
+                                            if (cellData.isHeader) {
+                                                const isTempo = cellData.type === 'tempo';
+                                                return (
+                                                    <React.Fragment key={`${colIndex}-${cellData.slot}`}>
+                                                        <td
+                                                            colSpan={2}
+                                                            style={{
+                                                                fontWeight: 'bold',
+                                                                background: isTempo ? '#ffedd5' : '#333',
+                                                                color: isTempo ? 'black' : 'white',
+                                                                textAlign: 'center',
+                                                                border: '1px solid #333',
+                                                                height: `${rowHeight}px`,
+                                                                maxHeight: `${rowHeight}px`,
+                                                                fontSize: `${fontSize}rem`,
+                                                                verticalAlign: 'middle',
+                                                                overflow: 'hidden',
+                                                                whiteSpace: 'nowrap'
+                                                            }}
+                                                        >
+                                                            {cellData.text}
+                                                        </td>
+                                                    </React.Fragment>
+                                                );
                                             }
 
                                             return (
@@ -5838,7 +5980,7 @@
                                                             boxSizing: 'border-box',
                                                             textAlign: colIndex === 1 ? 'center' : 'left'
                                                         }}
-                                                        onClick={() => !isModular && handleAssignSlot(cellData.slot)}
+                                                        onClick={() => !isMiniScripts && handleAssignSlot(cellData.slot)}
                                                     >
                                                         {cellData.slot}
                                                     </td>
@@ -5860,7 +6002,7 @@
                                                             lineHeight: `${rowHeight}px`,
                                                             boxSizing: 'border-box'
                                                         }}
-                                                        onClick={() => !isModular && handleAssignSlot(cellData.slot)}
+                                                        onClick={() => !isMiniScripts && handleAssignSlot(cellData.slot)}
                                                     >
                                                         {quickAddSlot === cellData.slot ? (
                                                             <div style={{ position: 'relative', width: '100%', height: '100%' }} onClick={(e) => e.stopPropagation()}>
@@ -5880,7 +6022,7 @@
                                                         ) : (
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                 <span>{cellData.text}</span>
-                                                                {!isModular && !play && (
+                                                                {!isMiniScripts && !play && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); handleQuickAddStart(cellData.slot); }}
                                                                         style={{ fontSize: '0.5rem', color: '#999', background: 'none', border: 'none' }}
@@ -5888,7 +6030,7 @@
                                                                         +
                                                                     </button>
                                                                 )}
-                                                                {!isModular && play && (
+                                                                {!isMiniScripts && play && (
                                                                     <button
                                                                         className="wristband-clear-btn"
                                                                         onClick={(e) => { e.stopPropagation(); onUpdatePlay({ ...play, wristbandSlot: '' }); }}
@@ -6287,6 +6429,154 @@
                 return slots;
             };
 
+            const renderModularEditorRows = (card) => {
+                const rows = [];
+                const startCoord = card.id === 'card1' ? 101 : (card.id === 'card2' ? 201 : (card.id === 'card3' ? 301 : (card.id === 'card4' ? 401 : (card.id === 'card5' ? 501 : 601))));
+
+                let currentCoord = startCoord;
+                let buffer = [];
+
+                // Iterate through all rows
+                for (let i = 0; i < card.rows.length; i++) {
+                    const item = card.rows[i];
+
+                    if (item.type === 'header') {
+                        // Flush buffer if any
+                        if (buffer.length > 0) {
+                            const paddedBuffer = [...buffer];
+                            while (paddedBuffer.length < 2) paddedBuffer.push(null);
+
+                            rows.push(
+                                <div key={`play-row-${i}`} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr', gap: '0.5rem', alignItems: 'start', marginBottom: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                        {currentCoord}
+                                    </div>
+                                    {paddedBuffer.map((cell, idx) => {
+                                        if (!cell) return <div key={idx} style={{ background: 'var(--bg-panel)', border: '1px dashed var(--border)', borderRadius: '4px', height: '100%', minHeight: '40px' }}></div>;
+                                        return (
+                                            <div key={idx} style={{
+                                                position: 'relative',
+                                                background: 'var(--bg-panel)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '4px',
+                                                padding: '0.25rem',
+                                                fontSize: '0.7rem'
+                                            }}>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '2px', lineHeight: '1.2' }}>{cell.type === 'play' ? cell.playName : cell.label}</div>
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                                                    <button className="btn btn-danger" style={{ padding: '0px 4px', fontSize: '0.6rem', height: '16px', lineHeight: '14px' }} onClick={() => handleRemoveRow(selectedCardId, cell.id)}>×</button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                            currentCoord++;
+                            buffer = [];
+                        }
+
+                        // Render Header
+                        rows.push(
+                            <div key={item.id} style={{ padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-input)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Header Label</label>
+                                    <input
+                                        value={item.label}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { label: e.target.value })}
+                                        style={{ width: '100%', fontWeight: 'bold', fontSize: '0.9rem', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Color</label>
+                                    <select
+                                        value={item.color || 'gray'}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { color: e.target.value })}
+                                        style={{ fontSize: '0.8rem', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                    >
+                                        <option value="gray">Gray</option>
+                                        <option value="black">Black</option>
+                                        <option value="red">Red</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="green">Green</option>
+                                        <option value="orange">Orange</option>
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', gap: '2px', alignSelf: 'flex-end', paddingBottom: '2px' }}>
+                                    <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, -1)} title="Move Up">↑</button>
+                                    <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, 1)} title="Move Down">↓</button>
+                                    <button className="btn btn-danger" style={{ padding: '4px 8px' }} onClick={() => handleRemoveRow(selectedCardId, item.id)} title="Delete Header">×</button>
+                                </div>
+                            </div>
+                        );
+
+                    } else {
+                        // It's a play or tempo
+                        buffer.push(item);
+                        if (buffer.length === 2) {
+                            // Render row
+                            const rowBuffer = [...buffer];
+                            rows.push(
+                                <div key={`play-row-full-${i}`} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr', gap: '0.5rem', alignItems: 'start', marginBottom: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                        {currentCoord}
+                                    </div>
+                                    {rowBuffer.map((cell, idx) => (
+                                        <div key={idx} style={{
+                                            position: 'relative',
+                                            background: 'var(--bg-panel)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '4px',
+                                            padding: '0.25rem',
+                                            fontSize: '0.7rem'
+                                        }}>
+                                            <div style={{ fontWeight: 'bold', marginBottom: '2px', lineHeight: '1.2' }}>{cell.type === 'play' ? cell.playName : cell.label}</div>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                                                <button className="btn btn-danger" style={{ padding: '0px 4px', fontSize: '0.6rem', height: '16px', lineHeight: '14px' }} onClick={() => handleRemoveRow(selectedCardId, cell.id)}>×</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                            currentCoord++;
+                            buffer = [];
+                        }
+                    }
+                }
+
+                // Flush remaining buffer
+                if (buffer.length > 0) {
+                    const paddedBuffer = [...buffer];
+                    while (paddedBuffer.length < 2) paddedBuffer.push(null);
+                    rows.push(
+                        <div key={`play-row-last`} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr', gap: '0.5rem', alignItems: 'start', marginBottom: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                {currentCoord}
+                            </div>
+                            {paddedBuffer.map((cell, idx) => {
+                                if (!cell) return <div key={idx} style={{ background: 'var(--bg-panel)', border: '1px dashed var(--border)', borderRadius: '4px', height: '100%', minHeight: '40px' }}></div>;
+                                return (
+                                    <div key={idx} style={{
+                                        position: 'relative',
+                                        background: 'var(--bg-panel)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '4px',
+                                        padding: '0.25rem',
+                                        fontSize: '0.7rem'
+                                    }}>
+                                        <div style={{ fontWeight: 'bold', marginBottom: '2px', lineHeight: '1.2' }}>{cell.type === 'play' ? cell.playName : cell.label}</div>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                                            <button className="btn btn-danger" style={{ padding: '0px 4px', fontSize: '0.6rem', height: '16px', lineHeight: '14px' }} onClick={() => handleRemoveRow(selectedCardId, cell.id)}>×</button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                }
+
+                return rows;
+            };
+
             const miniScripts = useMemo(() => {
                 return (gamePlan?.miniScripts || []);
             }, [gamePlan]);
@@ -6328,7 +6618,7 @@
                                         <div
                                             key={play.id}
                                             onClick={() => {
-                                                if (activeCard.type === 'modular') {
+                                                if (activeCard.type === 'mini-scripts' || activeCard.type === 'modular') {
                                                     handleAddPlayRow(selectedCardId, play);
                                                 } else {
                                                     setSelectedPlayId(play.id);
@@ -6455,6 +6745,8 @@
                                     onChange={e => updateCard(selectedCardId, { type: e.target.value })}
                                 >
                                     <option value="standard">Standard (Traditional)</option>
+                                    <option value="mini-scripts">Mini-Scripts (Old Modular)</option>
+                                    <option value="modular">Modular (Mixed Headers)</option>
                                     <option value="rooski">Rooski (16-slot grid)</option>
                                     <option value="audible">Audible (Coordinate + 2 Plays)</option>
                                 </select>
@@ -6540,100 +6832,72 @@
 
                         {/* Rendering Logic */}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-                            {activeCard.type === 'modular' ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            {(activeCard.type === 'mini-scripts' || activeCard.type === 'modular') ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button className="btn btn-secondary" onClick={() => handleAddHeaderRow(selectedCardId)} style={{ fontSize: '0.8rem' }}>+ Add Section Header</button>
+                                    </div>
                                     {/* Modular Editor List */}
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {/* Header */}
-                                            <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 1fr', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
-                                                <div style={{ textAlign: 'center' }}>Coord</div>
-                                                <div>Column A</div>
-                                                <div>Column B</div>
-                                                <div>Column C</div>
-                                            </div>
-
-                                            {/* Rows of 3 */}
-                                            {(() => {
-                                                const rows = [];
-                                                const chunkSize = 3;
-                                                const startCoord = activeCard.id === 'card1' ? 101 : (activeCard.id === 'card2' ? 201 : 301); // Simplified base logic, ideally relies on getSlotsForCard
-
-                                                for (let i = 0; i < activeCard.rows.length; i += chunkSize) {
-                                                    const chunk = activeCard.rows.slice(i, i + chunkSize);
-                                                    const rowStartCoord = startCoord + (i / 3);
-                                                    rows.push(
-                                                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 1fr', gap: '0.5rem', alignItems: 'start' }}>
-                                                            {/* Coordinate */}
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
-                                                                {rowStartCoord}
-                                                            </div>
-                                                            {/* Play Slots */}
-                                                            {[0, 1, 2].map(offset => {
-                                                                const item = chunk[offset];
-                                                                if (!item) return <div key={offset} style={{ background: 'var(--bg-panel)', border: '1px dashed var(--border)', borderRadius: '4px', height: '100%', minHeight: '40px' }}></div>;
-
-                                                                return (
-                                                                    <div key={offset} style={{
-                                                                        position: 'relative',
-                                                                        background: 'var(--bg-panel)',
-                                                                        border: '1px solid var(--border)',
-                                                                        borderRadius: '4px',
-                                                                        padding: '0.25rem',
-                                                                        fontSize: '0.7rem'
-                                                                    }}>
-                                                                        <div style={{ fontWeight: 'bold', marginBottom: '2px', lineHeight: '1.2' }}>{item.type === 'play' ? item.playName : item.label}</div>
-                                                                        {/* Controls */}
-                                                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                                                                            <button
-                                                                                className="btn btn-danger"
-                                                                                style={{ padding: '0px 4px', fontSize: '0.6rem', height: '16px', lineHeight: '14px' }}
-                                                                                onClick={() => handleRemoveRow(selectedCardId, item.id)}
-                                                                            >×</button>
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    );
-                                                }
-                                                return rows;
-                                            })()}
-
-                                            {activeCard.rows.length === 0 && (
-                                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', border: '2px dashed var(--border)' }}>
-                                                    Drag scripts/plays or add tempos to build your sequence. Starts at Column A.
+                                            {activeCard.type === 'mini-scripts' ? (
+                                                <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 1fr', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                                    <div style={{ textAlign: 'center' }}>Coord</div>
+                                                    <div>Column A</div>
+                                                    <div>Column B</div>
+                                                    <div>Column C</div>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                                    <div style={{ textAlign: 'center' }}>Coord</div>
+                                                    <div>Play 1</div>
+                                                    <div>Play 2</div>
                                                 </div>
                                             )}
+
+                                            {/* Rows */}
+                                            {renderModularEditorRows(activeCard)}
                                         </div>
                                     </div>
 
                                     {/* Split Preview */}
                                     <div style={{ width: '100%' }}>
                                         <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Preview</h3>
-                                        <div style={{
-                                            background: 'white',
-                                            padding: '1rem',
-                                            border: '2px solid #333',
-                                            borderRadius: '4px',
-                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                            width: '100%',
-                                            maxWidth: '600px',
-                                            margin: '0 auto',
-                                            aspectRatio: '5/3'
-                                        }}>
-                                            {/* Header */}
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '2px solid #333' }}>
-                                                <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.9rem' }}>{activeCard.opp || 'OPPONENT'}</span>
-                                                <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Card {selectedCardId === 'card1' ? '1' : (selectedCardId === 'card2' ? '2' : (selectedCardId === 'card3' ? '3' : (selectedCardId === 'card4' ? '4' : (selectedCardId === 'card5' ? '5' : '6'))))}{activeCard.iter ? ` - Iter ${activeCard.iter}` : ''}</span>
+                                        {activeCard.type === 'mini-scripts' ? (
+                                            <div style={{
+                                                background: 'white',
+                                                padding: '1rem',
+                                                border: '2px solid #333',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                                width: '100%',
+                                                maxWidth: '600px',
+                                                margin: '0 auto',
+                                                aspectRatio: '5/3',
+                                                color: 'black'
+                                            }}>
+                                                {/* Header */}
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '2px solid #333' }}>
+                                                    <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.9rem' }}>{activeCard.opp || 'OPPONENT'}</span>
+                                                    <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Card {selectedCardId === 'card1' ? '1' : (selectedCardId === 'card2' ? '2' : (selectedCardId === 'card3' ? '3' : (selectedCardId === 'card4' ? '4' : (selectedCardId === 'card5' ? '5' : '6'))))}{activeCard.iter ? ` - Iter ${activeCard.iter}` : ''}</span>
+                                                </div>
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId, activeCard.opp || activeCard.opponent || '')}
                                             </div>
-                                            {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId, activeCard.opp || activeCard.opponent || '')}
-                                        </div>
+                                        ) : (
+                                            <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
+                                                    <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
+                                                    <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
+                                                </div>
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
-                                <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
+                                <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
                                         <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
                                         <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
                                     </div>
@@ -6696,18 +6960,8 @@
                             <div className="wristband-print-grid">
                                 {/* Render 4 identical copies of the active card */}
                                 {[1, 2, 3, 4].map(copyNum => {
-                                    // Determine color class based on activeCard.color and copy number
-                                    // Alternating tones: copy 1 = light, copy 2 = medium, copy 3 = light, copy 4 = medium
-                                    let colorClass = '';
-                                    if (activeCard.color && activeCard.color !== 'none') {
-                                        const colorBase = activeCard.color;
-                                        const shades = ['light', 'medium', 'light', 'medium'];
-                                        const shade = shades[copyNum - 1];
-                                        colorClass = `wristband-color-${colorBase}-${shade}`;
-                                    }
-
                                     return (
-                                        <div key={copyNum} className={`wristband-print-card ${colorClass}`}>
+                                        <div key={copyNum} className="wristband-print-card">
                                             <>
                                                 {/* Header */}
                                                 <div className="print-card-header">
@@ -23451,7 +23705,7 @@
                                 {availableCards.map(cardId => {
                                     const card = wbSettings[cardId];
                                     const cardNumber = cardId.replace('card', '');
-                                    const cardTypeLabel = card.type === 'rooski' ? 'ROOSKI' : card.type === 'modular' ? 'SCRIPT' : 'TRADITIONAL';
+                                    const cardTypeLabel = card.type === 'rooski' ? 'ROOSKI' : card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL';
                                     const opponent = card.opp || card.opponent || 'No Opponent';
 
                                     return (
@@ -23700,14 +23954,14 @@
                         );
                     } else {
                         // Traditional and script cards - proper rendering matching WristbandBuilder
-                        const isModular = card.type === 'modular';
-                        const cardType = isModular ? 'SCRIPT' : 'TRADITIONAL';
+                        const isMiniScripts = card.type === 'mini-scripts';
+                        const cardType = isMiniScripts ? 'SCRIPT' : 'TRADITIONAL';
                         const rowHeight = 11;
                         const fontSize = 0.55; // rem
 
                         // Prepare Data Rows
                         let displayRows = [];
-                        if (isModular) {
+                        if (isMiniScripts) {
                             displayRows = (card.rows || []).map((row, idx) => {
                                 const slotNum = slots[0] + idx; // Calculate slot based on start
                                 if (row.type === 'play') {
@@ -23718,6 +23972,81 @@
                                     return { slot: slotNum, text: displayText, type: row.type, color: row.color };
                                 } else {
                                     return { slot: slotNum, text: row.label, type: row.type, color: row.color };
+                                }
+                            });
+                        } else if (card.type === 'modular') {
+                            const colorBase = card.color || 'white';
+                            const colorMap = {
+                                'green-light': '#d1fae5', 'green-medium': '#a7f3d0',
+                                'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
+                                'red-light': '#fecaca', 'red-medium': '#fca5a5',
+                                'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
+                                'yellow-light': '#fef08a', 'yellow-medium': '#fde047',
+                                'purple-light': '#e9d5ff', 'purple-medium': '#d8b4fe',
+                                'teal-light': '#99f6e4', 'teal-medium': '#5eead4',
+                                'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
+                            };
+
+                            const startSlot = slots[0];
+                            let logicalSlot = startSlot;
+                            let displaySlotCounter = startSlot;
+
+                            displayRows = [];
+                            (card.rows || []).forEach((row, idx) => {
+                                const isHeader = row.type === 'header' || row.type === 'tempo';
+
+                                if (isHeader && logicalSlot % 2 === 0) {
+                                    displayRows.push({
+                                        slot: logicalSlot,
+                                        type: 'spacer',
+                                        text: ''
+                                    });
+                                    logicalSlot++;
+                                }
+
+                                const currentLogical = logicalSlot;
+
+                                let rowColor = 'transparent';
+                                if (colorBase && colorBase !== 'white' && colorBase !== 'gray') {
+                                    const shade = Math.floor(idx / 2) % 2 === 0 ? 'light' : 'medium';
+                                    rowColor = colorMap[`${colorBase}-${shade}`] || 'transparent';
+                                }
+
+                                if (isHeader) {
+                                    let text = (row.type === 'header') ? (row.label || 'SECTION') : (row.label || row.tempoType || 'TEMPO');
+                                    displayRows.push({
+                                        slot: currentLogical,
+                                        displaySlot: '',
+                                        type: row.type,
+                                        text: text,
+                                        isHeader: isHeader,
+                                        color: rowColor
+                                    });
+                                    displayRows.push({
+                                        slot: currentLogical + 1,
+                                        type: 'spacer',
+                                        text: '',
+                                        color: rowColor
+                                    });
+                                    logicalSlot += 2;
+                                } else {
+                                    let slotDisplay = displaySlotCounter;
+                                    displaySlotCounter++;
+
+                                    let text = '';
+                                    const play = plays.find(p => p.id === row.playId);
+                                    text = play ? (row.playName || play.name) : 'Unknown';
+                                    if (play && play.formation) text += ' - ' + play.formation;
+
+                                    displayRows.push({
+                                        slot: currentLogical,
+                                        displaySlot: slotDisplay,
+                                        type: row.type,
+                                        text: text,
+                                        isHeader: false,
+                                        color: rowColor
+                                    });
+                                    logicalSlot++;
                                 }
                             });
                         } else {
@@ -23815,6 +24144,37 @@
                                                         </React.Fragment>
                                                     );
 
+                                                    // Header/Tempo Row Render
+                                                    if (cellData.isHeader) {
+                                                        const isTempo = cellData.type === 'tempo';
+                                                        return (
+                                                            <React.Fragment key={`${colIndex}-${cellData.slot}`}>
+                                                                <td
+                                                                    colSpan={4}
+                                                                    style={{
+                                                                        fontWeight: 'bold',
+                                                                        background: isTempo ? '#ffedd5' : '#333',
+                                                                        color: isTempo ? 'black' : 'white',
+                                                                        textAlign: 'center',
+                                                                        border: '1px solid #333',
+                                                                        height: `${fontSize + 0.5}rem`, // Adjust height slightly for preview
+                                                                        fontSize: `${fontSize}rem`,
+                                                                        verticalAlign: 'middle',
+                                                                        overflow: 'hidden',
+                                                                        whiteSpace: 'nowrap',
+                                                                        borderBottom: boBottom
+                                                                    }}
+                                                                >
+                                                                    {cellData.text}
+                                                                </td>
+                                                            </React.Fragment>
+                                                        );
+                                                    }
+
+                                                    if (cellData.type === 'spacer') {
+                                                        return null;
+                                                    }
+
                                                     return (
                                                         <React.Fragment key={`${colIndex}-${cellData.slot}`}>
                                                             {/* Slot Number */}
@@ -23830,7 +24190,7 @@
                                                                 verticalAlign: 'middle',
                                                                 color: 'black'
                                                             }}>
-                                                                {cellData.slot}
+                                                                {cellData.displaySlot !== undefined ? cellData.displaySlot : cellData.slot}
                                                             </td>
                                                             {/* Play Name / Text */}
                                                             <td style={{
@@ -23904,7 +24264,7 @@
                                         <label style={{ fontSize: '0.9rem', opacity: 0.8 }}>Header Title:</label>
                                         <input
                                             type="text"
-                                            value={card.customHeader !== undefined ? card.customHeader : (card.type === 'rooski' ? 'ROOSKI' : (card.type === 'modular' ? 'SCRIPT' : 'TRADITIONAL'))}
+                                            value={card.customHeader !== undefined ? card.customHeader : (card.type === 'rooski' ? 'ROOSKI' : (card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL'))}
                                             onChange={(e) => {
                                                 const newHeader = e.target.value;
                                                 setWbSettings(prev => ({
@@ -30266,7 +30626,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion }) => {
+        const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings }) => {
 
             const [viewMode, setViewMode] = useState('call-sheet'); // 'call-sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
@@ -30276,6 +30636,41 @@
             // For Wristband Autocomplete
             const [showWristband, setShowWristband] = useState(true);
             const [wristbandFocus, setWristbandFocus] = useState(null);
+            const [wbAutocomplete, setWbAutocomplete] = useState({ playId: null, query: '' });
+
+            const validWristbandSlots = useMemo(() => {
+                if (!wbSettings) return [];
+                const slots = [];
+                const cardKeys = ['card1', 'card2', 'card3', 'card4', 'card5', 'card6'];
+                for (const key of cardKeys) {
+                    const card = wbSettings[key];
+                    if (!card) continue;
+                    const cardNum = parseInt(key.replace('card', ''));
+
+                    if (card.type && card.type.includes('rooski')) {
+                        // Rooski: Series X, 01-16
+                        for (let i = 1; i <= 16; i++) {
+                            slots.push(`${cardNum}${String(i).padStart(2, '0')}`);
+                        }
+                    } else {
+                        // Standard/Modular: 48 slots per card (X01-X48)
+                        const start = cardNum * 100 + 1;
+                        const end = start + 47;
+                        for (let i = start; i <= end; i++) slots.push(String(i));
+                    }
+                }
+                return slots;
+            }, [wbSettings]);
+
+            const assignedSlots = useMemo(() => {
+                const set = new Set();
+                if (plays) {
+                    plays.forEach(p => {
+                        if (p.wristbandSlot) set.add(p.wristbandSlot);
+                    });
+                }
+                return set;
+            }, [plays]);
 
             // For Matrix/Grid Cell Editing
             const [activeCellSetId, setActiveCellSetId] = useState(null); // The setId currently being edited via modal
@@ -30681,7 +31076,170 @@
                                         <div onClick={(e) => { e.stopPropagation(); handleToggleTempo(pIdx, p.tempo); }}>
                                             {renderTempoBadge(p.tempo)}
                                         </div>
-                                        <span style={{ fontSize: '0.75rem', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
+                                        <span style={{ fontSize: '0.75rem', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1e293b' }}>{p.name}</span>
+                                        <input
+                                            type="text"
+                                            value={wbAutocomplete.playId === p.id ? wbAutocomplete.query : (p.wristbandSlot || '')}
+                                            placeholder="#"
+                                            style={{
+                                                width: '32px',
+                                                padding: '0 2px',
+                                                fontSize: '0.65rem',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '2px',
+                                                marginLeft: '4px',
+                                                textAlign: 'center',
+                                                background: '#f8fafc',
+                                                color: '#475569',
+                                                height: '16px',
+                                                lineHeight: '14px'
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onFocus={(e) => {
+                                                setWbAutocomplete({ playId: p.id, query: e.target.value });
+                                            }}
+                                            onChange={(e) => {
+                                                setWbAutocomplete({ playId: p.id, query: e.target.value });
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    const val = e.currentTarget.value.trim();
+                                                    // Process selection or validation
+                                                    if (val && val !== (p.wristbandSlot || '')) {
+                                                        // Validation logic (same as before)
+                                                        let isValid = false;
+                                                        const cardKeys = ['card1', 'card2', 'card3', 'card4', 'card5', 'card6'];
+                                                        for (const key of cardKeys) {
+                                                            const card = wbSettings[key];
+                                                            if (!card) continue;
+                                                            const cardNum = parseInt(key.replace('card', ''));
+                                                            if (card.type && card.type.includes('rooski')) {
+                                                                for (let i = 1; i <= 16; i++) if (val === `${cardNum}${String(i).padStart(2, '0')}`) isValid = true;
+                                                            } else {
+                                                                const start = cardNum * 100 + 1;
+                                                                const end = start + 47;
+                                                                const num = parseInt(val);
+                                                                if (!isNaN(num) && num >= start && num <= end) isValid = true;
+                                                            }
+                                                        }
+                                                        if (!isValid) {
+                                                            alert(`Invalid wristband slot "${val}".\n\nMust be a valid coordinate from your configured wristbands.`);
+                                                            e.currentTarget.value = p.wristbandSlot || '';
+                                                            return;
+                                                        }
+                                                        // Check for duplicates
+                                                        if (assignedSlots.has(val)) {
+                                                            alert(`Wristband slot "${val}" is already assigned to another play.`);
+                                                            e.currentTarget.value = p.wristbandSlot || '';
+                                                            return;
+                                                        }
+
+                                                        onUpdatePlay({ ...p, wristbandSlot: val });
+                                                    }
+                                                    e.currentTarget.blur();
+                                                    setWbAutocomplete({ playId: null, query: '' });
+                                                }
+                                            }}
+                                            onBlur={(e) => {
+                                                // Delayed blur to allow click on suggestion
+                                                setTimeout(() => {
+                                                    // Determine if we need to validate/save
+                                                    const val = e.target.value.trim();
+                                                    if (val !== (p.wristbandSlot || '')) {
+                                                        // Validation here is redundant if Enter caught it, but good for blur
+                                                        // We might skip complex validation on blur if it's annoying, 
+                                                        // but for consistency we keep it or rely on the previous validation logic.
+                                                        // Let's rely on the user having selected or typed correctly.
+                                                        // Real validation happens on update or explicit check.
+                                                        // Simple check:
+                                                        let isValid = !val;
+                                                        if (val) {
+                                                            const cardKeys = ['card1', 'card2', 'card3', 'card4', 'card5', 'card6'];
+                                                            for (const key of cardKeys) {
+                                                                const card = wbSettings[key];
+                                                                if (!card) continue;
+                                                                const cardNum = parseInt(key.replace('card', ''));
+                                                                if (card.type && card.type.includes('rooski')) {
+                                                                    for (let i = 1; i <= 16; i++) if (val === `${cardNum}${String(i).padStart(2, '0')}`) isValid = true;
+                                                                } else {
+                                                                    const start = cardNum * 100 + 1;
+                                                                    const end = start + 47;
+                                                                    const num = parseInt(val);
+                                                                    if (!isNaN(num) && num >= start && num <= end) isValid = true;
+                                                                }
+                                                            }
+                                                        }
+
+                                                        if (isValid && val && assignedSlots.has(val)) {
+                                                            alert(`Wristband slot "${val}" is already assigned to another play.`);
+                                                            isValid = false;
+                                                        }
+
+                                                        if (isValid) {
+                                                            onUpdatePlay({ ...p, wristbandSlot: val });
+                                                        } else {
+                                                            if (val && !assignedSlots.has(val)) alert(`Invalid wristband slot "${val}".`); // Only alert valid range if not duplicate alert done
+                                                            // if duplicates, alert already shown. 
+                                                            // Wait, logic above shows alert. 
+                                                            e.target.value = p.wristbandSlot || '';
+                                                        }
+                                                    }
+                                                    setWbAutocomplete({ playId: null, query: '' });
+                                                }, 200);
+                                            }}
+                                        />
+                                        {/* Autocomplete Dropdown */}
+                                        {wbAutocomplete.playId === p.id && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                right: 0,
+                                                zIndex: 100,
+                                                background: 'white',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                                maxHeight: '150px',
+                                                overflowY: 'auto',
+                                                width: '60px',
+                                                display: 'flex',
+                                                flexDirection: 'column'
+                                            }}>
+                                                {validWristbandSlots
+                                                    .filter(slot => {
+                                                        if (!slot.startsWith(wbAutocomplete.query)) return false;
+                                                        // Filter out assigned slots, unless it's THIS play's slot
+                                                        if (assignedSlots.has(slot) && slot !== (p.wristbandSlot || '')) return false;
+                                                        return true;
+                                                    })
+                                                    .slice(0, 50) // Limit results
+                                                    .map(slot => (
+                                                        <div
+                                                            key={slot}
+                                                            style={{
+                                                                padding: '4px 8px',
+                                                                fontSize: '0.7rem',
+                                                                cursor: 'pointer',
+                                                                borderBottom: '1px solid #f1f5f9',
+                                                                background: 'white',
+                                                                color: '#334155'
+                                                            }}
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault(); // Prevent blur
+                                                                onUpdatePlay({ ...p, wristbandSlot: slot });
+                                                                // Update input visually if not controlled (it is uncontrolled with defaultValue)
+                                                                // We need to re-render renderPlayListSimple or force update. 
+                                                                // Since onUpdatePlay will trigger re-render of component, we are good.
+                                                                setWbAutocomplete({ playId: null, query: '' });
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                                        >
+                                                            {slot}
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        )}
                                         {isEditing && (
                                             <div style={{ cursor: 'pointer', opacity: 0.5, marginLeft: '4px' }}
                                                 onClick={(e) => {
@@ -30694,7 +31252,7 @@
                                 )}
                             </div>
                         ))}
-                        {playsInSet.length === 0 && <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>+ Add Play</div>}
+
                     </div>
                 );
             };
@@ -31053,6 +31611,136 @@
             };
 
 
+
+
+            const GridPlayInput = ({ setId, onSelectPlay, onQuickAdd }) => {
+                const [searchTerm, setSearchTerm] = useState('');
+                const [showDropdown, setShowDropdown] = useState(false);
+                const [selectedIndex, setSelectedIndex] = useState(0);
+                const inputRef = useRef(null);
+                const dropdownRef = useRef(null);
+
+                const filteredResults = useMemo(() => {
+                    if (!searchTerm) return [];
+                    const lower = searchTerm.toLowerCase();
+                    return plays.filter(p => {
+                        return (p.name || '').toLowerCase().includes(lower) ||
+                            (p.formation || '').toLowerCase().includes(lower) ||
+                            (p.concept || '').toLowerCase().includes(lower) ||
+                            (p.wristbandSlot || '').toLowerCase().includes(lower);
+                    }).slice(0, 8);
+                }, [searchTerm, plays]);
+
+                useEffect(() => {
+                    if (showDropdown && filteredResults.length > 0) setSelectedIndex(0);
+                }, [showDropdown, filteredResults.length]);
+
+                useEffect(() => {
+                    const handleClickOutside = (event) => {
+                        if (dropdownRef.current && !dropdownRef.current.contains(event.target) && !inputRef.current.contains(event.target)) {
+                            setShowDropdown(false);
+                        }
+                    };
+                    document.addEventListener("mousedown", handleClickOutside);
+                    return () => document.removeEventListener("mousedown", handleClickOutside);
+                }, []);
+
+                const handleKeyDown = (e) => {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setSelectedIndex(prev => Math.min(prev + 1, filteredResults.length - 1));
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setSelectedIndex(prev => Math.max(prev - 1, 0));
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (showDropdown && filteredResults.length > 0) {
+                            onSelectPlay(filteredResults[selectedIndex].id);
+                            setSearchTerm('');
+                            setShowDropdown(false);
+                        } else if (searchTerm.trim()) {
+                            onQuickAdd(searchTerm);
+                            setSearchTerm('');
+                            setShowDropdown(false);
+                        }
+                    } else if (e.key === 'Escape') {
+                        setShowDropdown(false);
+                    }
+                };
+
+                return (
+                    <div style={{ position: 'relative', width: '100%', marginTop: '4px' }}>
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            placeholder="+"
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setShowDropdown(true);
+                            }}
+                            onFocus={() => setShowDropdown(true)}
+                            onKeyDown={handleKeyDown}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                width: '100%',
+                                padding: '2px 4px',
+                                fontSize: '0.75rem',
+                                border: '1px dashed var(--border)',
+                                borderRadius: '3px',
+                                background: 'rgba(255,255,255,0.1)'
+                            }}
+                        />
+                        {showDropdown && searchTerm && (
+                            <div
+                                ref={dropdownRef}
+                                style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    width: '200px',
+                                    maxHeight: '150px',
+                                    overflowY: 'auto',
+                                    background: 'white',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    zIndex: 1000,
+                                    marginTop: '2px'
+                                }}
+                            >
+                                {filteredResults.map((p, idx) => (
+                                    <div
+                                        key={p.id}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onSelectPlay(p.id);
+                                            setSearchTerm('');
+                                            setShowDropdown(false);
+                                        }}
+                                        style={{
+                                            padding: '4px 8px',
+                                            fontSize: '0.75rem',
+                                            cursor: 'pointer',
+                                            background: idx === selectedIndex ? '#f1f5f9' : 'white',
+                                            borderBottom: '1px solid #f1f5f9'
+                                        }}
+                                        onMouseEnter={() => setSelectedIndex(idx)}
+                                    >
+                                        <div style={{ fontWeight: 'bold' }}>{p.name}</div>
+                                        <div style={{ fontSize: '0.9em', color: '#64748b' }}>{p.formation}</div>
+                                    </div>
+                                ))}
+                                {filteredResults.length === 0 && (
+                                    <div style={{ padding: '4px 8px', fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                        Enter to create "{searchTerm}"
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            };
 
             const PlaySlot = ({ playId, onUpdate, isLocked, placeholder = "+" }) => {
                 const play = plays.find(p => p.id === playId);
@@ -32339,7 +33027,7 @@
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                             <thead>
                                 <tr>
-                                    <th rowSpan={2} style={{ padding: '0.5rem', border: '1px solid var(--border)', width: '120px', position: 'sticky', left: 0, top: 0, backgroundColor: 'var(--bg-card)', zIndex: 20 }}>Formation / Type</th>
+                                    <th rowSpan={2} style={{ padding: '0.5rem', border: '1px solid var(--border)', width: '120px', position: 'sticky', left: 0, top: 0, backgroundColor: 'white', zIndex: 20 }}>Formation / Type</th>
                                     {columnGroups.map(group => {
                                         const isCollapsed = collapsedGroups.has(group.id);
                                         return (
@@ -32529,9 +33217,9 @@
                                                                 padding: '0.5rem',
                                                                 border: '1px solid var(--border)',
                                                                 fontWeight: '500',
-                                                                backgroundColor: 'var(--surface)',
+                                                                backgroundColor: '#eff6ff',
                                                                 cursor: 'pointer',
-                                                                color: 'var(--text-secondary)',
+                                                                color: '#1e3a8a',
                                                                 fontSize: '0.8rem',
                                                                 fontStyle: 'italic'
                                                             }}
@@ -32552,12 +33240,13 @@
                                                         style={{
                                                             padding: '0.5rem',
                                                             border: '1px solid var(--border)',
-                                                            fontWeight: '500',
-                                                            backgroundColor: 'var(--surface)',
+                                                            fontWeight: 'bold',
+                                                            backgroundColor: '#dbeafe',
                                                             position: 'sticky',
                                                             left: 0,
                                                             zIndex: 5,
-                                                            cursor: 'pointer'
+                                                            cursor: 'pointer',
+                                                            color: '#1e40af'
                                                         }}
                                                         onClick={() => toggleRow(playType.id)}
                                                         title="Click to collapse row"
@@ -32594,31 +33283,14 @@
                                                                 return (
                                                                     <td
                                                                         key={setId}
-                                                                        style={{ padding: '0.25rem', border: '1px solid #ddd', verticalAlign: 'top', cursor: 'pointer', minHeight: '60px', backgroundColor: 'white' }}
-                                                                        onClick={() => openPlaySelector(setId)}
+                                                                        style={{ padding: '0.25rem', border: '1px solid #ddd', verticalAlign: 'top', cursor: 'default', minHeight: '60px', backgroundColor: 'white' }}
                                                                     >
                                                                         {renderPlayListSimple(setId)}
                                                                         {onQuickAddPlay && (
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder="+"
-                                                                                style={{
-                                                                                    width: '100%',
-                                                                                    marginTop: '4px',
-                                                                                    padding: '2px 4px',
-                                                                                    fontSize: '0.75rem',
-                                                                                    border: '1px dashed var(--border)',
-                                                                                    borderRadius: '3px',
-                                                                                    background: 'rgba(255,255,255,0.1)'
-                                                                                }}
-                                                                                onClick={(e) => e.stopPropagation()}
-                                                                                onKeyDown={(e) => {
-                                                                                    if (e.key === 'Enter' && e.target.value.trim()) {
-                                                                                        handleQuickAddToSet(setId, e.target.value);
-                                                                                        e.target.value = '';
-                                                                                        e.preventDefault();
-                                                                                    }
-                                                                                }}
+                                                                            <GridPlayInput
+                                                                                setId={setId}
+                                                                                onSelectPlay={(playId) => handleAddPlayToSet(setId, playId)}
+                                                                                onQuickAdd={(name) => handleQuickAddToSet(setId, name)}
                                                                             />
                                                                         )}
                                                                     </td>
@@ -41355,6 +42027,7 @@
                                 onSaveLayoutVersion={saveLayoutVersion}
                                 onDeleteLayoutVersion={deleteLayoutVersion}
                                 onLoadLayoutVersion={loadLayoutVersion}
+                                wbSettings={wbSettings}
                             />
                         }
 
