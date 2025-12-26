@@ -4149,8 +4149,70 @@
             // For now, let's allow saving and editing.
 
             const handleSaveDiagram = (data) => {
-                setFormData(prev => ({ ...prev, diagramData: data }));
-                setIsDiagramming(false);
+                try {
+                    // CRITICAL DEBUG: Confirm function is called
+                    window.alert("handleSaveDiagram CALLED! Data keys: " + (data ? Object.keys(data).join(',') : 'null'));
+
+                    // Initialize sync objects
+                    const newPlayerNotes = { ...(formData.playerNotes || {}) };
+                    const newPlayerLinks = { ...(formData.playerLinks || {}) };
+
+                    if (data && data.elements) {
+                        const players = data.elements.filter(el => el.type === 'player');
+                        // Find potential link lines (drills)
+                        const links = data.elements.filter(el => (el.link || el.conceptLabel) &&
+                            ['line', 'curve', 'zigzag', 'poly', 'free'].includes(el.type) &&
+                            el.points && el.points.length > 0
+                        );
+
+                        // DEBUG: Confirm data discovery
+                        window.alert(`Saving... Found ${players.length} players and ${links.length} potential links.`);
+
+                        players.forEach(player => {
+                            if (!player.points || !player.points[0]) return;
+                            const pPos = player.points[0];
+
+                            // Find lines starting OR ending near this player (within 80px)
+                            const relevantLink = links.find(link => {
+                                if (!link.points || link.points.length === 0) return false;
+                                const startPoint = link.points[0];
+                                const endPoint = link.points[link.points.length - 1];
+
+                                const distStart = Math.sqrt(Math.pow(startPoint.x - pPos.x, 2) + Math.pow(startPoint.y - pPos.y, 2));
+                                const distEnd = Math.sqrt(Math.pow(endPoint.x - pPos.x, 2) + Math.pow(endPoint.y - pPos.y, 2));
+
+                                return distStart < 80 || distEnd < 80;
+                            });
+
+                            if (relevantLink) {
+                                // Sync Note Text (Label)
+                                const noteText = relevantLink.conceptLabel;
+                                if (noteText) {
+                                    newPlayerNotes[player.label] = noteText;
+                                }
+
+                                // Sync Link URL
+                                if (relevantLink.link) {
+                                    newPlayerLinks[player.label] = relevantLink.link;
+                                }
+                            }
+                        });
+                    }
+
+                    // Update State
+                    setFormData(prev => ({
+                        ...prev,
+                        diagramData: data,
+                        playerNotes: newPlayerNotes,
+                        playerLinks: newPlayerLinks
+                    }));
+
+                } catch (e) {
+                    console.error("Save Error:", e);
+                    window.alert("Save Error: " + e.message);
+                } finally {
+                    setIsDiagramming(false);
+                }
 
                 // Optional: Generate a thumbnail image from the diagram? 
                 // Simple SVG data URI approach
