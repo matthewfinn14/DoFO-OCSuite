@@ -1436,6 +1436,7 @@
                             </button>
                         </form>
 
+
                         <div style={{ marginTop: '1rem', textAlign: 'center' }}>
                             <button
                                 onClick={() => setIsSignUp(!isSignUp)}
@@ -4234,6 +4235,89 @@
             );
         };
 
+        // Play Name Parser Utility
+        const parsePlayName = (playName) => {
+            if (!playName || typeof playName !== 'string') {
+                return { numbers: [], formations: [], directions: [], tags: [], special: [], quoted: [], unassigned: [] };
+            }
+
+            const result = {
+                numbers: [],
+                formations: [],
+                directions: [],
+                tags: [],
+                special: [],
+                quoted: [],
+                unassigned: []
+            };
+
+            // Common formations (case-insensitive)
+            const formationPatterns = [
+                'DIAMOND', 'BUNCH', 'GRN', 'GREEN', 'RED', 'BLUE', 'BRT', 'BRIGHT',
+                'ORNG', 'ORANGE', 'GOLD', 'BRN', 'BROWN', 'METAL', 'OVER', 'TANK'
+            ];
+
+            // Directions
+            const directionPatterns = ['RT', 'LT', 'RIP', 'LIZ', 'RN'];
+
+            // Common tags/concepts
+            const tagPatterns = [
+                'GAMBLE', 'BOOMER', 'KNIFE', 'SMOKE', 'WILLY', 'CAPONE', 'SUPER', 'RPO',
+                'STICK', 'JET', 'RICE', 'SHALLOW', 'LEAK', 'GOT7', 'ARC', 'MUSTANG',
+                'SALT', 'VEER', 'STASH', 'MICKEY', 'CROSS', 'SHARK', 'DITCH', 'JUKE',
+                'OPTION', 'WHEEL', 'SMASH', 'SWING', 'FIST', 'INVERTED', 'SPECIAL',
+                'BULLS', 'TAG', 'DEPOT', 'NOLES'
+            ];
+
+            // Extract quoted strings first
+            const quotedRegex = /"([^"]+)"/g;
+            let match;
+            while ((match = quotedRegex.exec(playName)) !== null) {
+                result.quoted.push(match[1]);
+            }
+
+            // Split by spaces and special characters, but keep the special chars
+            const tokens = playName.split(/(\s+|\+|\*|\(|\)|")/g).filter(t => t.trim());
+
+            tokens.forEach(token => {
+                const upperToken = token.toUpperCase().trim();
+                if (!upperToken || token === '"') return;
+
+                // Check for numbers (including alphanumeric like "36A", "4Y", "5G")
+                if (/^\d+[A-Z]?$/.test(upperToken)) {
+                    result.numbers.push(token);
+                }
+                // Check for formations
+                else if (formationPatterns.includes(upperToken)) {
+                    result.formations.push(token);
+                }
+                // Check for directions
+                else if (directionPatterns.includes(upperToken)) {
+                    result.directions.push(token);
+                }
+                // Check for tags
+                else if (tagPatterns.includes(upperToken)) {
+                    result.tags.push(token);
+                }
+                // Check for special characters
+                else if (['+', '*', '(', ')'].includes(token)) {
+                    result.special.push(token);
+                }
+                // If it's a longer word not in our patterns
+                else {
+                    // Check if it's currently inside a quoted string we already extracted
+                    const isInQuoted = result.quoted.some(q => q.includes(token));
+
+                    if (!isInQuoted) {
+                        result.unassigned.push(token);
+                    }
+                }
+            });
+
+            return result;
+        };
+
+
         const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], rooskiLibrary, setRooskiLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [] }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
@@ -4261,6 +4345,7 @@
                 scenarios: [], // Array of Detailed Scenarios
                 activeScenarioId: null, // ID of scenario being edited
                 wristbandSlot: '',
+                staplesSlot: '', // [NEW] Staples Wristband Slot (10-89)
                 // New call sheet fields
                 playType: '', // Fastball, Curveball, Change Up, Strikeout
                 actionTypes: [], // Array: Strong Run, Weak Run, Quick Game, etc.
@@ -4271,9 +4356,32 @@
                 sequenceName: '', // Look-alike sequence
                 sequenceOrder: '', // Order in sequence
                 assignedScriptIds: initialAssignedScriptIds, // New: Tracks mini script assignments
-                syntaxValues: {},
+                // Extended "Play Call Chain" fields
+                scramble: '',
+                show: '',
+                concept: '',
+                backsideTag: '',
+                navTag: '',
+                autoCompleteValues: {}, // For suggestions
+                syntaxValues: {}, // Keep existing syntax values just in case
                 ...initialData // Merge existing data ON TOP of defaults
             });
+
+            // Play Name Parser State
+            const [parsedComponents, setParsedComponents] = useState(null);
+            const [draggedComponent, setDraggedComponent] = useState(null);
+            const [usedComponents, setUsedComponents] = useState(new Set());
+
+            // Parse play name when it changes
+            useEffect(() => {
+                if (formData.name && formData.name.trim()) {
+                    const parsed = parsePlayName(formData.name);
+                    setParsedComponents(parsed);
+                } else {
+                    setParsedComponents(null);
+                }
+            }, [formData.name]);
+
 
 
 
@@ -4281,12 +4389,12 @@
             useEffect(() => {
                 if (playSyntax && playSyntax.length > 0) {
                     // 1. Calculate Name: Join all values
-                    const nameParts = playSyntax.map(s => formData.syntaxValues?.[s.id]).filter(v => v);
+                    const nameParts = playSyntax.map(s => (formData.syntaxValues && formData.syntaxValues[s.id])).filter(v => v);
                     const newName = nameParts.join(' ');
 
                     // 2. Extract Formation: Find component with label containing "Formation"
                     const formationComp = playSyntax.find(s => s.label.toLowerCase().includes('formation'));
-                    const newFormation = formationComp ? (formData.syntaxValues?.[formationComp.id] || '') : formData.formation;
+                    const newFormation = formationComp ? ((formData.syntaxValues && formData.syntaxValues[formationComp.id]) || '') : formData.formation;
 
                     setFormData(prev => {
                         // Only update if changed to avoid loops (though check is cheap)
@@ -4488,6 +4596,40 @@
                 }
             };
 
+
+            // Drag-and-Drop Handlers
+            const handleDragStart = (component, type) => {
+                setDraggedComponent({ text: component, type: type });
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            };
+
+            const handleDrop = (e, targetField) => {
+                e.preventDefault();
+                // Generic handler for all fields
+                if (draggedComponent) {
+                    const { text } = draggedComponent;
+                    setFormData(prev => ({
+                        ...prev,
+                        [targetField]: text
+                    }));
+                    setUsedComponents(prev => new Set(prev).add(text));
+                    setDraggedComponent(null);
+                } else {
+                    // Fallback for native text selection drag
+                    const text = e.dataTransfer.getData("text/plain");
+                    if (text) {
+                        setFormData(prev => ({
+                            ...prev,
+                            [targetField]: text
+                        }));
+                    }
+                }
+            };
+
             const handleSubmit = (e) => {
                 e.preventDefault();
                 onSave({ ...formData, id: formData.id || Date.now().toString() });
@@ -4497,6 +4639,53 @@
                 if (window.confirm('Are you sure you want to delete this play? This cannot be undone.')) {
                     onDelete(formData.id);
                 }
+            };
+
+            const renderDiagramPreview = (elements) => {
+                if (!elements || elements.length === 0) return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', gap: '0.5rem' }}>
+                        <Icon name="Image" size={24} style={{ opacity: 0.5 }} />
+                        <span style={{ fontSize: '0.9rem' }}>No Diagram Data</span>
+                    </div>
+                );
+
+                return (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" style={{ background: 'white', borderRadius: '8px' }}>
+                        <g opacity="0.1">
+                            <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="4" />
+                            <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
+                        </g>
+                        {elements.map((el, index) => {
+                            let d = '';
+                            if (el.type === 'free') {
+                                if (el.points && el.points.length) {
+                                    d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                                }
+                            } else if (el.points && el.points.length >= 2) { // Determine if line-like
+                                const start = el.points[0];
+                                const end = el.points[el.points.length - 1];
+                                d = `M ${start.x},${start.y} L ${end.x},${end.y}`;
+                            } else {
+                                // Fallback for simple shapes/players if needed, or skip
+                            }
+
+                            // Render text for players/labels
+                            if (el.type === 'player' && el.points && el.points[0]) {
+                                return (
+                                    <text key={index} x={el.points[0].x} y={el.points[0].y} textAnchor="middle" dominantBaseline="middle" fontSize="24" fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
+                                );
+                            }
+                            if (el.label && el.points && el.points[0]) {
+                                // Simple label logic if any
+                            }
+
+                            return <path key={index} d={d} stroke={el.color || '#000'} strokeWidth="4" fill="none" strokeDasharray={el.style === 'dashed' ? '10,5' : 'none'} />;
+                        })}
+                    </svg>
+                );
             };
 
             return (
@@ -4613,12 +4802,189 @@
 
                         {/* NEW TOP SECTION: PLAY CALL */}
                         <div style={{ marginBottom: '1.5rem' }}>
-                            {playSyntax && playSyntax.length > 0 ? (
+                            {playSyntax && playSyntax.length > 0 && (
                                 <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                                     <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                         <Icon name="ClipboardList" size={20} style={{ color: 'var(--accent)' }} />
                                         PLAY CALL
                                     </div>
+                                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                                        <label className="form-label">Play Call</label>
+                                        <input
+                                            className="form-input"
+                                            value={formData.name}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            placeholder="e.g. TRIBE / Spider 2 Y Banana"
+                                            required
+                                        />
+                                    </div>
+                                    {/* Draggable Parsed Components */}
+                                    {parsedComponents && (
+                                        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#64748b' }}>
+                                                Parsed Components (drag to fields below)
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                {parsedComponents.numbers.length > 0 && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                        {parsedComponents.numbers.map((num, idx) => (
+                                                            !usedComponents.has(num) && (
+                                                                <div
+                                                                    key={`num-${idx}`}
+                                                                    draggable
+                                                                    onDragStart={() => handleDragStart(num, 'number')}
+                                                                    style={{
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        background: '#3b82f6',
+                                                                        color: 'white',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.8rem',
+                                                                        cursor: 'grab',
+                                                                        userSelect: 'none',
+                                                                        opacity: usedComponents.has(num) ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    {num}
+                                                                </div>
+                                                            )
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {parsedComponents.formations.length > 0 && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                        {parsedComponents.formations.map((form, idx) => (
+                                                            !usedComponents.has(form) && (
+                                                                <div
+                                                                    key={`form-${idx}`}
+                                                                    draggable
+                                                                    onDragStart={() => handleDragStart(form, 'formation')}
+                                                                    style={{
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        background: '#10b981',
+                                                                        color: 'white',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.8rem',
+                                                                        cursor: 'grab',
+                                                                        userSelect: 'none',
+                                                                        opacity: usedComponents.has(form) ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    {form}
+                                                                </div>
+                                                            )
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {parsedComponents.directions.length > 0 && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                        {parsedComponents.directions.map((dir, idx) => (
+                                                            !usedComponents.has(dir) && (
+                                                                <div
+                                                                    key={`dir-${idx}`}
+                                                                    draggable
+                                                                    onDragStart={() => handleDragStart(dir, 'direction')}
+                                                                    style={{
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        background: '#f97316',
+                                                                        color: 'white',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.8rem',
+                                                                        cursor: 'grab',
+                                                                        userSelect: 'none',
+                                                                        opacity: usedComponents.has(dir) ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    {dir}
+                                                                </div>
+                                                            )
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {parsedComponents.tags.length > 0 && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                        {parsedComponents.tags.map((tag, idx) => (
+                                                            !usedComponents.has(tag) && (
+                                                                <div
+                                                                    key={`tag-${idx}`}
+                                                                    draggable
+                                                                    onDragStart={() => handleDragStart(tag, 'tag')}
+                                                                    style={{
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        background: '#8b5cf6',
+                                                                        color: 'white',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.8rem',
+                                                                        cursor: 'grab',
+                                                                        userSelect: 'none',
+                                                                        opacity: usedComponents.has(tag) ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    {tag}
+                                                                </div>
+                                                            )
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {parsedComponents.quoted.length > 0 && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                        {parsedComponents.quoted.map((quoted, idx) => (
+                                                            !usedComponents.has(quoted) && (
+                                                                <div
+                                                                    key={`quoted-${idx}`}
+                                                                    draggable
+                                                                    onDragStart={() => handleDragStart(quoted, 'quoted')}
+                                                                    style={{
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        background: '#6b7280',
+                                                                        color: 'white',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.8rem',
+                                                                        cursor: 'grab',
+                                                                        userSelect: 'none',
+                                                                        opacity: usedComponents.has(quoted) ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    "{quoted}"
+                                                                </div>
+                                                            )
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {parsedComponents.unassigned && parsedComponents.unassigned.length > 0 && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                        {parsedComponents.unassigned.map((token, idx) => (
+                                                            !usedComponents.has(token) && (
+                                                                <div
+                                                                    key={`unassigned-${idx}`}
+                                                                    draggable
+                                                                    onDragStart={() => handleDragStart(token, 'unassigned')}
+                                                                    style={{
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        background: '#94a3b8',
+                                                                        color: 'white',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.8rem',
+                                                                        cursor: 'grab',
+                                                                        userSelect: 'none',
+                                                                        opacity: usedComponents.has(token) ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    {token}
+                                                                </div>
+                                                            )
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {!parsedComponents.numbers.length && !parsedComponents.formations.length &&
+                                                    !parsedComponents.directions.length && !parsedComponents.tags.length &&
+                                                    !parsedComponents.quoted.length && !parsedComponents.unassigned?.length && (
+                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                                            No recognizable components detected
+                                                        </div>
+                                                    )}
+                                            </div>
+                                        </div>
+                                    )}
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
                                         {playSyntax.map(comp => (
                                             <div key={comp.id} className="form-group" style={{ margin: 0 }}>
@@ -4627,6 +4993,33 @@
                                                     className="form-input"
                                                     list={`terms-${comp.id}`}
                                                     value={formData.syntaxValues?.[comp.id] || ''}
+                                                    onDragOver={handleDragOver}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        if (draggedComponent) {
+                                                            const { text } = draggedComponent;
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                syntaxValues: {
+                                                                    ...(prev.syntaxValues || {}),
+                                                                    [comp.id]: text
+                                                                }
+                                                            }));
+                                                            setUsedComponents(prev => new Set(prev).add(text));
+                                                            setDraggedComponent(null);
+                                                        } else {
+                                                            const text = e.dataTransfer.getData("text/plain");
+                                                            if (text) {
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    syntaxValues: {
+                                                                        ...(prev.syntaxValues || {}),
+                                                                        [comp.id]: text
+                                                                    }
+                                                                }));
+                                                            }
+                                                        }
+                                                    }}
                                                     onChange={e => {
                                                         const newVal = e.target.value;
                                                         setFormData(prev => ({
@@ -4648,496 +5041,249 @@
                                         ))}
                                     </div>
                                 </div>
-                            ) : (
+                            )}
+
+                            {(!playSyntax || playSyntax.length === 0) && (
                                 <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                                     <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                         <Icon name="ClipboardList" size={20} style={{ color: 'var(--accent)' }} />
                                         PLAY CALL
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label">Formation</label>
-                                            <input
-                                                className="form-input"
-                                                value={formData.formation}
-                                                onChange={e => setFormData({ ...formData, formation: e.target.value })}
-                                                placeholder="e.g. Gun Trips Right"
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label">Play Name</label>
-                                            <input
-                                                className="form-input"
-                                                value={formData.name}
-                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                                placeholder="e.g. TRIBE / Spider 2 Y Banana"
-                                                required
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label">Formation Tag</label>
-                                            <input
-                                                className="form-input"
-                                                value={formData.formationTag}
-                                                onChange={e => setFormData({ ...formData, formationTag: e.target.value })}
-                                                placeholder="e.g. Bunch, Stack"
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label">Color (RB/Protection)</label>
-                                            <input
-                                                className="form-input"
-                                                value={formData.color}
-                                                onChange={e => setFormData({ ...formData, color: e.target.value })}
-                                                placeholder="e.g. Slide Right / Blue"
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label">Action (Shift/Motion/PA)</label>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <input
-                                                    className="form-input"
-                                                    value={formData.motion}
-                                                    onChange={e => setFormData({ ...formData, motion: e.target.value })}
-                                                    placeholder="e.g. Jet Motion"
-                                                />
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', whiteSpace: 'nowrap', padding: '0 1rem', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.playAction}
-                                                        onChange={e => setFormData({ ...formData, playAction: e.target.checked })}
-                                                    />
-                                                    <span style={{ fontSize: '0.9rem' }}>Play Action</span>
-                                                </label>
+                                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                                        <label className="form-label">Play Call</label>
+                                        <input
+                                            className="form-input"
+                                            value={formData.name}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            placeholder="e.g. TRIBE / Spider 2 Y Banana"
+                                            required
+                                        />
+                                    </div>
+
+                                    {parsedComponents && (
+                                        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#64748b' }}>
+                                                Parsed Components (drag to fields below)
                                             </div>
-                                        </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                            <div className="form-group" style={{ margin: 0 }}>
-                                                <label className="form-label">Tag 1</label>
-                                                <input
-                                                    className="form-input"
-                                                    value={formData.tag1}
-                                                    onChange={e => setFormData({ ...formData, tag1: e.target.value })}
-                                                    placeholder="e.g. Alert"
-                                                />
-                                            </div>
-                                            <div className="form-group" style={{ margin: 0 }}>
-                                                <label className="form-label">Tag 2</label>
-                                                <input
-                                                    className="form-input"
-                                                    value={formData.tag2}
-                                                    onChange={e => setFormData({ ...formData, tag2: e.target.value })}
-                                                    placeholder="e.g. Check"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                                            <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Level Tags</label>
-                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                                {(programLevels || []).map(level => (
-                                                    <label key={level} style={{
-                                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                                        cursor: 'pointer', padding: '0.4rem 0.8rem',
-                                                        background: (formData.levelTags || []).includes(level) ? 'var(--accent)' : 'var(--bg-input)',
-                                                        color: (formData.levelTags || []).includes(level) ? 'white' : 'var(--text-primary)',
-                                                        border: '1px solid var(--border)', borderRadius: '20px',
-                                                        fontSize: '0.85rem', transition: 'all 0.2s',
-                                                        userSelect: 'none'
-                                                    }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={(formData.levelTags || []).includes(level)}
-                                                            onChange={() => toggleLevelTag(level)}
-                                                            style={{ display: 'none' }}
-                                                        />
-                                                        {level}
-                                                    </label>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                {parsedComponents.numbers && parsedComponents.numbers.map((num, idx) => (
+                                                    !usedComponents.has(num) && <div key={`num-${idx}`} draggable onDragStart={() => handleDragStart(num, 'number')} style={{ padding: '0.25rem 0.5rem', background: '#3b82f6', color: 'white', borderRadius: '4px', fontSize: '0.8rem', cursor: 'grab' }}>{num}</div>
+                                                ))}
+                                                {parsedComponents.formations && parsedComponents.formations.map((form, idx) => (
+                                                    !usedComponents.has(form) && <div key={`form-${idx}`} draggable onDragStart={() => handleDragStart(form, 'formation')} style={{ padding: '0.25rem 0.5rem', background: '#10b981', color: 'white', borderRadius: '4px', fontSize: '0.8rem', cursor: 'grab' }}>{form}</div>
+                                                ))}
+                                                {parsedComponents.directions && parsedComponents.directions.map((dir, idx) => (
+                                                    !usedComponents.has(dir) && <div key={`dir-${idx}`} draggable onDragStart={() => handleDragStart(dir, 'direction')} style={{ padding: '0.25rem 0.5rem', background: '#f97316', color: 'white', borderRadius: '4px', fontSize: '0.8rem', cursor: 'grab' }}>{dir}</div>
+                                                ))}
+                                                {parsedComponents.tags && parsedComponents.tags.map((tag, idx) => (
+                                                    !usedComponents.has(tag) && <div key={`tag-${idx}`} draggable onDragStart={() => handleDragStart(tag, 'tag')} style={{ padding: '0.25rem 0.5rem', background: '#8b5cf6', color: 'white', borderRadius: '4px', fontSize: '0.8rem', cursor: 'grab' }}>{tag}</div>
                                                 ))}
                                             </div>
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Formation</label>
+                                            <input className="form-input" value={formData.formation} onChange={e => setFormData({ ...formData, formation: e.target.value })} />
+                                        </div>
+                                    </div>
+
+                                    {/* Level Tags */}
+                                    <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                                        <label className="form-label" style={{ marginBottom: '0.5rem' }}>Level Tags</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {(programLevels || []).map(level => (
+                                                <div
+                                                    key={level}
+                                                    onClick={() => toggleLevelTag(level)}
+                                                    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '0.4rem 0.8rem', background: (formData.levelTags || []).includes(level) ? 'var(--accent)' : 'transparent', color: (formData.levelTags || []).includes(level) ? 'white' : 'var(--text-primary)', border: '1px solid var(--accent)', borderRadius: '20px', fontSize: '0.85rem', transition: 'all 0.2s', userSelect: 'none' }}
+                                                >
+                                                    {level}
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
                             )}
                         </div>
-
-                        {/* SECOND SECTION: SIDE-BY-SIDE DIAGRAMS */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                        {/* DIAGRAMS SECTION: SIDE-BY-SIDE DIAGRAMS */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
                             {/* Rooski O-Line Diagram */}
                             <div className="form-group" style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                                    <label className="form-label" style={{ margin: 0, fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.025em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="Layout" size={16} style={{ color: 'var(--accent)' }} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                    <label className="form-label" style={{ margin: 0, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="Users" size={16} style={{ color: 'var(--accent)' }} />
                                         Rooski O-Line Diagram
                                     </label>
                                     <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'diagram' }))}
-                                            style={{
-                                                background: 'none', border: 'none',
-                                                color: (formData.rooskiMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)',
-                                                fontWeight: (formData.rooskiMode || 'diagram') === 'diagram' ? 'bold' : 'normal',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Diagram
-                                        </button>
-                                        <span style={{ color: 'var(--border)' }}>|</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'image' }))}
-                                            style={{
-                                                background: 'none', border: 'none',
-                                                color: formData.rooskiMode === 'image' ? 'var(--accent)' : 'var(--text-secondary)',
-                                                fontWeight: formData.rooskiMode === 'image' ? 'bold' : 'normal',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Image
-                                        </button>
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'diagram' }))} style={{ background: 'none', border: 'none', color: (formData.rooskiMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: (formData.rooskiMode || 'diagram') === 'diagram' ? 'bold' : 'normal', cursor: 'pointer' }}>Diagram</button>
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'upload' }))} style={{ background: 'none', border: 'none', color: formData.rooskiMode === 'upload' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: formData.rooskiMode === 'upload' ? 'bold' : 'normal', cursor: 'pointer' }}>Upload</button>
                                     </div>
                                 </div>
-
-                                {formData.rooskiMode === 'image' ? (
-                                    <div style={{
-                                        border: '2px dashed var(--border)', borderRadius: 'var(--radius)', padding: '1rem',
-                                        textAlign: 'center', background: 'var(--bg-input)', position: 'relative',
-                                        minHeight: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        {formData.rooskiImage ? (
-                                            <>
-                                                <img src={formData.rooskiImage} alt="Rooski" style={{ maxWidth: '100%', maxHeight: '200px', marginBottom: '1rem', borderRadius: '4px' }} />
-                                                <button type="button" className="btn btn-secondary" onClick={() => setFormData({ ...formData, rooskiImage: null })}>Remove</button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)' }}><Icon name="Image" size={32} style={{ opacity: 0.5 }} /></div>
-                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Upload JPG/PNG</div>
-                                                <input type="file" accept="image/*" onChange={(e) => {
-                                                    const file = e.target.files[0];
-                                                    if (file) {
-                                                        const reader = new FileReader();
-                                                        reader.onloadend = () => setFormData(prev => ({ ...prev, rooskiImage: reader.result }));
-                                                        reader.readAsDataURL(file);
-                                                    }
-                                                }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
-                                            </>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        border: formData.rooskiOlineData ? '2px solid #10b981' : '2px dashed var(--border)',
-                                        borderRadius: 'var(--radius)', padding: '1rem', textAlign: 'center', minHeight: '200px',
-                                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-                                        background: 'var(--bg-input)', position: 'relative', overflow: 'hidden'
-                                    }}>
-                                        {formData.rooskiOlineData ? (
-                                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid var(--border)', background: 'white', position: 'relative' }}>
-                                                    <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
-                                                        <g opacity="0.1">
-                                                            <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
-                                                            <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
-                                                        </g>
-                                                        {formData.rooskiOlineData.map(el => <circle key={el.id} cx={el.points[0].x} cy={el.points[0].y} r="5" fill={el.color} />)}
-                                                    </svg>
-                                                </div>
-                                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveDiagramMode('rooski-oline')}><Icon name="Edit3" size={14} style={{ marginRight: '4px' }} /> Edit</button>
-                                            </div>
-                                        ) : (
-                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-oline')}><Icon name="PlusCircle" size={16} style={{ marginRight: '6px' }} /> Create O-Line</button>
-                                        )}
-                                    </div>
-                                )}
-                                {formData.rooskiOlineData && formData.rooskiMode !== 'image' && (
-                                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                                        <button type="button" onClick={() => setFormData({ ...formData, rooskiOlineData: null })} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Icon name="Trash" size={12} style={{ marginRight: '4px' }} /> Remove</button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Rooski Skill Diagram */}
-                            <div className="form-group" style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                                    <label className="form-label" style={{ margin: 0, fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.025em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="Users" size={16} style={{ color: 'var(--accent)' }} />
-                                        Rooski Skill Diagram
-                                    </label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({ ...prev, rooskiSkillMode: 'diagram' }))}
-                                            style={{
-                                                background: 'none', border: 'none',
-                                                color: (formData.rooskiSkillMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)',
-                                                fontWeight: (formData.rooskiSkillMode || 'diagram') === 'diagram' ? 'bold' : 'normal',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Diagram
-                                        </button>
-                                        <span style={{ color: 'var(--border)' }}>|</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({ ...prev, rooskiSkillMode: 'image' }))}
-                                            style={{
-                                                background: 'none', border: 'none',
-                                                color: formData.rooskiSkillMode === 'image' ? 'var(--accent)' : 'var(--text-secondary)',
-                                                fontWeight: formData.rooskiSkillMode === 'image' ? 'bold' : 'normal',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Image
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {formData.rooskiSkillMode === 'image' ? (
-                                    <div style={{
-                                        border: '2px dashed var(--border)', borderRadius: 'var(--radius)', padding: '1rem',
-                                        textAlign: 'center', background: 'var(--bg-input)', position: 'relative',
-                                        minHeight: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        {formData.rooskiSkillImage ? (
-                                            <>
-                                                <img src={formData.rooskiSkillImage} alt="Rooski Skill" style={{ maxWidth: '100%', maxHeight: '200px', marginBottom: '1rem', borderRadius: '4px' }} />
-                                                <button type="button" className="btn btn-secondary" onClick={() => setFormData({ ...formData, rooskiSkillImage: null })}>Remove</button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)' }}><Icon name="Image" size={32} style={{ opacity: 0.5 }} /></div>
-                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Upload JPG/PNG</div>
-                                                <input type="file" accept="image/*" onChange={(e) => {
-                                                    const file = e.target.files[0];
-                                                    if (file) {
-                                                        const reader = new FileReader();
-                                                        reader.onloadend = () => setFormData(prev => ({ ...prev, rooskiSkillImage: reader.result }));
-                                                        reader.readAsDataURL(file);
-                                                    }
-                                                }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
-                                            </>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        border: formData.rooskiSkillData ? '2px solid #3b82f6' : '2px dashed var(--border)',
-                                        borderRadius: 'var(--radius)', padding: '1rem', textAlign: 'center', minHeight: '200px',
-                                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-                                        background: 'var(--bg-input)', position: 'relative', overflow: 'hidden'
-                                    }}>
-                                        {formData.rooskiSkillData ? (
-                                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                <div style={{ width: '100%', height: '180px', marginBottom: '1rem', border: '1px solid var(--border)', background: 'white', position: 'relative' }}>
-                                                    <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
-                                                        {formData.rooskiSkillData.map(el => <circle key={el.id} cx={el.points[0].x} cy={el.points[0].y} r="5" fill={el.color} />)}
-                                                    </svg>
-                                                </div>
-                                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveDiagramMode('rooski-skill')}><Icon name="Edit3" size={14} style={{ marginRight: '4px' }} /> Edit</button>
-                                            </div>
-                                        ) : (
-                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-skill')}><Icon name="PlusCircle" size={16} style={{ marginRight: '6px' }} /> Create Skill</button>
-                                        )}
-                                    </div>
-                                )}
-                                {formData.rooskiSkillData && formData.rooskiSkillMode !== 'image' && (
-                                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                                        <button type="button" onClick={() => setFormData({ ...formData, rooskiSkillData: null })} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Icon name="Trash" size={12} style={{ marginRight: '4px' }} /> Remove</button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* THIRD SECTION: METADATA AND NOTES */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                            {/* Left: Metadata */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-
-                                    {/* INSTALL TOGGLE */}
-                                    <div className="form-group" style={{ marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
-                                        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.isInstall || false}
-                                                onChange={(e) => setFormData({ ...formData, isInstall: e.target.checked })}
-                                                style={{ width: '1.2rem', height: '1.2rem' }}
-                                            />
-                                            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: formData.isInstall ? 'var(--accent)' : 'inherit' }}>
-                                                Add to Install Slideshow
-                                            </span>
-                                        </label>
-                                    </div>
-
-                                    {/* Hash Preference */}
-                                    <div className="form-group">
-                                        <label className="form-label">Hash Preference</label>
-                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                            {HASH_PREFERENCES.map(pref => (
+                                <div style={{ minHeight: '150px', background: 'var(--bg-input)', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', position: 'relative' }}>
+                                    {formData.rooskiMode === 'upload' ? (
+                                        formData.image ? (
+                                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                                <img src={formData.image} alt="O-Line" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                                 <button
-                                                    key={pref} type="button"
-                                                    className={`btn ${formData.hashPreference === pref ? 'btn-primary' : 'btn-secondary'}`}
-                                                    onClick={() => setFormData({ ...formData, hashPreference: pref })}
-                                                    style={{ flex: '1 1 auto', minWidth: '80px' }}
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); setFormData(prev => ({ ...prev, image: null })); }}
+                                                    style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
-                                                    {pref}
+                                                    ×
                                                 </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Mirror Play */}
-                                    <div className="form-group">
-                                        <label className="form-label">Mirror Play</label>
-                                        <input
-                                            className="form-input"
-                                            value={formData.mirrorPlay || ''}
-                                            onChange={e => setFormData({ ...formData, mirrorPlay: e.target.value })}
-                                            placeholder="e.g. 877 BLUE 4T TRIBE"
-                                        />
-                                    </div>
-
-                                    {/* Look-A-Like Sequence */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
-                                        <div className="form-group">
-                                            <label className="form-label">Look-A-Like / Group</label>
-                                            <input
-                                                className="form-input"
-                                                value={formData.sequenceName || ''}
-                                                onChange={e => setFormData({ ...formData, sequenceName: e.target.value })}
-                                                placeholder="e.g. Red Group"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Sequence #</label>
-                                            <input
-                                                type="number" className="form-input"
-                                                value={formData.sequenceOrder || ''}
-                                                onChange={e => setFormData({ ...formData, sequenceOrder: e.target.value })}
-                                                placeholder="#"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Mini Script Assignment */}
-                                    {availableMiniScripts && availableMiniScripts.length > 0 && (
-                                        <div className="form-group" style={{ marginBottom: 0 }}>
-                                            <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Assign to Mini Scripts</label>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                                                {availableMiniScripts.map(script => (
-                                                    <label key={script.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '4px 8px', background: formData.assignedScriptIds.includes(script.id) ? 'var(--primary-light)' : 'transparent', borderRadius: '4px', border: formData.assignedScriptIds.includes(script.id) ? '1px solid var(--primary)' : '1px solid transparent' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={formData.assignedScriptIds.includes(script.id)}
-                                                            onChange={(e) => {
-                                                                const isChecked = e.target.checked;
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    assignedScriptIds: isChecked
-                                                                        ? [...prev.assignedScriptIds, script.id]
-                                                                        : prev.assignedScriptIds.filter(id => id !== script.id)
-                                                                }));
-                                                            }}
-                                                        />
-                                                        <span style={{ fontSize: '0.85rem' }}>{script.header || 'Untitled Script'}</span>
-                                                    </label>
-                                                ))}
                                             </div>
-                                        </div>
+                                        ) : (
+                                            <div style={{ textAlign: 'center' }}>
+                                                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} id="oline-upload" />
+                                                <label htmlFor="oline-upload" className="btn btn-secondary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Icon name="Upload" size={16} /> Upload Image
+                                                </label>
+                                            </div>
+                                        )
+                                    ) : (
+                                        formData.rooskiOlineData && formData.rooskiOlineData.length > 0 ? (
+                                            <div onClick={() => setActiveDiagramMode('rooski-oline')} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
+                                                {renderDiagramPreview(formData.rooskiOlineData)}
+                                            </div>
+                                        ) : (
+                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-oline')}>
+                                                <Icon name="Plus" size={16} /> Create Diagram
+                                            </button>
+                                        )
                                     )}
                                 </div>
                             </div>
 
-                            {/* Right: Player Assignment Notes */}
-                            <div>
-                                <div className="form-group" style={{ height: '100%' }}>
-                                    <div style={{ height: '100%', padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-                                        <label className="form-label" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>Player Assignment Notes</label>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem', flex: 1 }}>
-                                            {(() => {
-                                                // 1. Get default/configured positions + any extra from diagram
-                                                // 1. Get default/configured positions + any extra from diagram
-                                                const standardKeys = ['QB', 'RB', 'X', 'Z', 'Y', 'A', 'F', 'H', 'LT', 'LG', 'C', 'RG', 'RT'];
-                                                const defaultPos = standardKeys.map(key => positionNames[key] || key);
-
-                                                // 2. Extract unique player labels from diagram data
-                                                const diagramPlayers = (formData.diagramData?.elements || [])
-                                                    .filter(el => el.type === 'player' && el.label)
-                                                    .map(el => el.label);
-
-                                                // 3. Merge and dedupe
-                                                const allPositions = Array.from(new Set([...defaultPos, ...diagramPlayers]));
-
-                                                return allPositions.map(pos => (
-                                                    <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                        <span style={{ width: '40px', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-secondary)', flexShrink: 0 }}>{pos}</span>
-
-                                                        {/* Note Input */}
-                                                        <input
-                                                            className="form-input"
-                                                            style={{ padding: '0.4rem 0.6rem', flex: 1, fontSize: '0.9rem' }}
-                                                            placeholder={`Notes...`}
-                                                            value={formData.playerNotes?.[pos] || ''}
-                                                            onChange={(e) => setFormData(prev => ({
-                                                                ...prev,
-                                                                playerNotes: { ...prev.playerNotes, [pos]: e.target.value }
-                                                            }))}
-                                                        />
-
-                                                        {/* Drill Link Input - Small Dropdown */}
-                                                        <select
-                                                            className="form-input"
-                                                            style={{ width: '120px', padding: '0.4rem', fontSize: '0.8rem' }}
-                                                            value={formData.playerLinks?.[pos] || ''}
-                                                            onChange={(e) => setFormData(prev => ({
-                                                                ...prev,
-                                                                playerLinks: { ...prev.playerLinks, [pos]: e.target.value }
-                                                            }))}
-                                                        >
-                                                            <option value="">Link Drill...</option>
-                                                            {drills.map(drill => (
-                                                                <option key={drill.id} value={drill.videoUrl || drill.id}>
-                                                                    {drill.title}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                ))
-                                            })()}
+                            {/* Rooski Skill Diagram */}
+                            <div className="form-group" style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <label className="form-label" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Icon name="Target" size={16} style={{ color: 'var(--accent)' }} />
+                                    Rooski Skill Diagram
+                                </label>
+                                <div style={{ minHeight: '150px', background: 'var(--bg-input)', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                    {formData.rooskiSkillData && formData.rooskiSkillData.length > 0 ? (
+                                        <div onClick={() => setActiveDiagramMode('rooski-skill')} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
+                                            {renderDiagramPreview(formData.rooskiSkillData)}
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-skill')}>
+                                            <Icon name="Plus" size={16} /> Create Diagram
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
+                        {/* THIRD SECTION: METADATA & PLAYER ASSIGNMENT */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+                            {/* Left: Metadata */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    {/* Metadata Inputs */}
+                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                        <label className="form-label">Play Call Code</label>
+                                        <input className="form-input" value={formData.playCallCode || ''} onChange={e => setFormData({ ...formData, playCallCode: e.target.value })} placeholder="e.g. 123" />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                        <label className="form-label">Look-A-Like</label>
+                                        <input className="form-input" value={formData.lookALike || ''} onChange={e => setFormData({ ...formData, lookALike: e.target.value })} placeholder="e.g. Similar Play" />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                        <label className="form-label">Sequence (Order)</label>
+                                        <input className="form-input" type="number" value={formData.sequenceOrder || ''} onChange={e => setFormData({ ...formData, sequenceOrder: e.target.value })} placeholder="e.g. 1" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input type="checkbox" checked={formData.isInstall || false} onChange={e => setFormData({ ...formData, isInstall: e.target.checked })} />
+                                            Add to Install Slide
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Right: Player Assignment Notes */}
+                            < div style={{ height: '100%' }}>
+                                <div style={{
+                                    height: '100%', padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)',
+                                    display: 'flex', flexDirection: 'column'
+                                }}>
+                                    <label className="form-label" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>Player Assignment Notes</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem', flex: 1, overflowY: 'auto', maxHeight: '500px' }}>
+                                        {(() => {
+                                            // 1. Get default/configured positions + any extra from diagram
+                                            const standardKeys = ['QB', 'RB', 'X', 'Z', 'Y', 'A', 'F', 'H', 'LT', 'LG', 'C', 'RG', 'RT'];
+                                            const defaultPos = standardKeys.map(key => positionNames[key] || key);
+
+                                            // 2. Extract unique player labels from diagramData
+                                            const diagramPlayers = (formData.diagramData?.elements || [])
+                                                .filter(el => el.type === 'player' && el.label)
+                                                .map(el => el.label);
+
+                                            // Merge and dedupe
+                                            const allPositions = Array.from(new Set([...defaultPos, ...diagramPlayers]));
+
+                                            return allPositions.map(pos => (
+                                                <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                    <span style={{ width: '40px', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)', flexShrink: 0 }}>{pos}</span>
+                                                    <input
+                                                        className="form-input"
+                                                        style={{ padding: '0.4rem 0.6rem', flex: 1, fontSize: '0.9rem' }}
+                                                        placeholder={`Notes for ${pos}...`}
+                                                        value={formData.playerNotes?.[pos] || ''}
+                                                        onChange={(e) => setFormData(prev => ({
+                                                            ...prev,
+                                                            playerNotes: { ...prev.playerNotes, [pos]: e.target.value }
+                                                        }))}
+                                                    />
+                                                    <select
+                                                        style={{ width: '120px', fontSize: '0.8rem', padding: '0.2rem' }}
+                                                        value={formData.playerLinks?.[pos] || ''}
+                                                        onChange={(e) => setFormData(prev => ({
+                                                            ...prev,
+                                                            playerLinks: { ...prev.playerLinks, [pos]: e.target.value }
+                                                        }))}
+                                                    >
+                                                        <option value="">Link Drill...</option>
+                                                        {drills.map(drill => (
+                                                            <option key={drill.id} value={drill.videoUrl || drill.youtubeId || ''}>
+                                                                {drill.category}: {drill.title}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div >
+                                            ));
+                                        })()}
+                                    </div >
+                                </div >
+                            </div >
+                        </div >
+
                         {/* Related Drills Section */}
-                        <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                            <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        < div style={{ marginTop: '1.5rem', padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <h3 style={{
+                                fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-primary)',
+                                display: 'flex', alignItems: 'center', gap: '0.5rem'
+                            }}>
                                 <Icon name="Activity" size={18} style={{ color: 'var(--accent)' }} />
                                 Related Drills
                             </h3>
-
                             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                                 <select
-                                    className="form-input"
-                                    style={{ flex: 1 }}
+                                    className="form-select"
                                     onChange={(e) => {
                                         const drillId = e.target.value;
-                                        if (!drillId) return;
-
-                                        // Use drills prop
-                                        const drillLibrary = drills;
-                                        const drill = drillLibrary.find(d => d.id === drillId);
-
+                                        const drill = drills.find(d => d.id === drillId);
                                         if (drill && (!formData.relatedDrills || !formData.relatedDrills.some(d => d.id === drill.id))) {
                                             setFormData({
                                                 ...formData,
                                                 relatedDrills: [...(formData.relatedDrills || []), { id: drill.id, title: drill.title }]
                                             });
-                                            e.target.value = ""; // Reset
                                         }
+                                        e.target.value = '';
                                     }}
                                 >
-                                    <option value="">Select a drill to link...</option>
+                                    <option value="">+ Add Linked Drill</option>
                                     {drills.map(drill => (
                                         <option key={drill.id} value={drill.id}>
                                             {drill.category}: {drill.title}
@@ -5146,107 +5292,116 @@
                                 </select>
                             </div>
 
-                            {formData.relatedDrills && formData.relatedDrills.length > 0 ? (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.5rem' }}>
-                                    {formData.relatedDrills.map((drill, idx) => (
-                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.9rem', background: 'var(--bg-input)', borderRadius: '8px', fontSize: '0.9rem', border: '1px solid var(--border)' }}>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-primary)' }}>
-                                                <Icon name="Link" size={14} style={{ color: 'var(--accent)' }} />
-                                                {drill.title}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    relatedDrills: formData.relatedDrills.filter(d => d.id !== drill.id)
-                                                })}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}
-                                            >
-                                                &times;
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                                    No drills linked.
-                                </div>
-                            )}
-                        </div>
+                            {
+                                formData.relatedDrills && formData.relatedDrills.length > 0 ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.5rem' }}>
+                                        {formData.relatedDrills.map((drill, idx) => (
+                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.9rem', background: 'var(--bg-input)', borderRadius: '8px', fontSize: '0.9rem', border: '1px solid var(--border)' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                                                    <Icon name="Link" size={14} style={{ color: 'var(--accent)' }} />
+                                                    {drill.title}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({
+                                                        ...formData,
+                                                        relatedDrills: formData.relatedDrills.filter(d => d.id !== drill.id)
+                                                    })}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-error)', display: 'flex', alignItems: 'center' }}
+                                                >
+                                                    <Icon name="X" size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                        No drills linked yet.
+                                    </div>
+                                )
+                            }
+                        </div >
 
-                        <div className="form-group">
-                            <label className="form-label" style={{ marginBottom: '1rem' }}>Situational Tags</label>
-                            <TagSelector selectedTags={formData.tags} onToggle={toggleTag} />
+                        <div className="form-group" style={{ marginTop: '1.5rem', background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <label className="form-label" style={{ marginBottom: '1rem' }}>Situational Tags (or drag tags here)</label>
+                            <div
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (draggedComponent) {
+                                        toggleTag(draggedComponent.text);
+                                        setDraggedComponent(null);
+                                    }
+                                }}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = 'copy';
+                                }}
+                                style={{
+                                    border: draggedComponent ? '2px dashed #3b82f6' : '1px solid transparent',
+                                    borderRadius: '8px', padding: draggedComponent ? '0.5rem' : '0', transition: 'all 0.2s'
+                                }}
+                            >
+                                <TagSelector selectedTags={formData.tags} onToggle={toggleTag} />
+                            </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', paddingBottom: '2rem' }}>
                             <button type="submit" className="btn btn-primary">Save Play</button>
-                            <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>
+                            <button type="button" onClick={() => setIsEditing(false)} className="btn btn-secondary">Cancel</button>
                         </div>
                     </form >
-                </div>
+                </div >
+
             );
         };
 
-        const PlayCard = ({ play, onEdit, isSelected, onToggleSelection }) => {
+        const PlayCard = ({ play, onEdit, isSelected, onToggleSelect }) => {
             return (
-                <div className={`play-card ${isSelected ? 'selected' : ''}`} onClick={() => onEdit(play)} style={{ cursor: 'pointer', position: 'relative', border: isSelected ? '2px solid #ef4444' : '' }}>
+                <div
+                    className={`play-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => onEdit(play)}
+                    style={{ cursor: 'pointer', position: 'relative', border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)' }}
+                >
                     <div
                         onClick={(e) => {
                             e.stopPropagation();
-                            onToggleSelection(play.id, e.shiftKey);
+                            onToggleSelect(play.id);
                         }}
                         style={{
-                            position: 'absolute',
-                            top: '5px',
-                            right: '5px',
-                            zIndex: 10,
-                            background: 'rgba(0,0,0,0.5)',
-                            borderRadius: '4px',
-                            padding: '4px'
+                            position: 'absolute', right: '5px', top: '5px', zIndex: 10,
+                            width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(255,255,255,0.8)', borderRadius: '4px'
                         }}
                     >
                         <input
                             type="checkbox"
-                            checked={isSelected || false}
+                            checked={isSelected}
                             onChange={() => { }} // Handled by div click
                             style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                     </div>
 
-                    {play.diagramData ? (
-                        <div className="play-image" style={{ background: 'white' }}>
-                            <svg
-                                viewBox="0 0 800 500"
-                                width="100%"
-                                height="100%"
-                                style={{ display: 'block' }}
-                                preserveAspectRatio="xMidYMid meet"
-                            >
+                    {play.image ? (
+                        <img src={play.image} className="play-image" alt={play.name} />
+                    ) : (
+                        <div className="play-diagram" style={{ height: '180px', background: 'white' }}>
+                            <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
                                 <g opacity="0.1">
                                     <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
-                                    <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
-                                    <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="4" />
-                                    <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="2" />
                                     <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
                                 </g>
-                                {play.diagramData.elements && play.diagramData.elements.map(el => {
+                                {play.diagramData && play.diagramData.elements && play.diagramData.elements.map(el => {
                                     if (el.type === 'player') {
-                                        const { x, y } = el.points[0];
-                                        const size = 30;
-                                        const isRect = el.shape === 'square';
+                                        const size = 16;
+                                        const x = el.points[0].x;
+                                        const y = el.points[0].y;
                                         return (
                                             <g key={el.id}>
-                                                {isRect ? (
-                                                    <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="2" />
-                                                ) : (
-                                                    <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="2" />
-                                                )}
-                                                <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
+                                                <circle cx={x} cy={y} r={size} fill="white" stroke={el.color} strokeWidth="2" />
+                                                <text x={x} y={y} dy=".35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
                                             </g>
                                         );
                                     }
-
                                     let d = '';
                                     if (el.style === 'zigzag') {
                                         d = getZigZagPath(el.points);
@@ -5282,7 +5437,7 @@
                                         );
                                     } else if (el.endType === 'none') {
                                         markerEnd = undefined;
-                                    } else if (el.type === 'arrow') {
+                                    } else if (el.type !== 'free') {
                                         markerEnd = `url(#arrowhead-${el.color})`;
                                     }
 
@@ -5293,7 +5448,7 @@
                                                 stroke={el.color}
                                                 strokeWidth="4"
                                                 fill="none"
-                                                strokeDasharray={el.style === 'dashed' ? "10,5" : "none"}
+                                                style={el.style === 'dashed' ? { strokeDasharray: '10,10' } : {}}
                                                 markerEnd={markerEnd}
                                             />
                                             {tBlock}
@@ -5301,12 +5456,6 @@
                                     );
                                 })}
                             </svg>
-                        </div>
-                    ) : play.image ? (
-                        <img src={play.image} className="play-image" alt={play.name} />
-                    ) : (
-                        <div className="play-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155' }}>
-                            <span>No Diagram</span>
                         </div>
                     )}
                     <div className="play-content">
@@ -5329,7 +5478,7 @@
                                     </span>
                                 )}
                             </div>
-                            {play.wristbandSlot && <span className="mini-tag" style={{ background: 'var(--accent)', color: '#000' }}>#{play.wristbandSlot}</span>}
+                            {play.wristbandSlot && <span className="mini-tag" style={{ background: 'var(--accent)', color: '#000' }}>#{play.wristbandSlot}</span>} {play.staplesSlot && <span className="mini-tag" style={{ background: '#f59e0b', color: '#000', marginLeft: '2px' }}>S:{play.staplesSlot}</span>}
                         </div>
                         <div className="play-meta">
                             {play.formation} {play.formationTag && `(${play.formationTag})`} • {play.color}
@@ -5359,7 +5508,7 @@
                             })}
                         </div>
                     </div>
-                </div>
+                </div >
             );
         };
 
@@ -5623,6 +5772,7 @@
                 const map = {};
                 plays.forEach(p => {
                     if (p.wristbandSlot) map[p.wristbandSlot] = p;
+                    if (p.staplesSlot) map[p.staplesSlot] = p;
                 });
                 return map;
             }, [plays]);
@@ -5631,8 +5781,13 @@
                 if (!selectedPlayId) return;
                 const play = plays.find(p => p.id === selectedPlayId);
                 if (play) {
-                    // Update play with new slot
-                    onUpdatePlay({ ...play, wristbandSlot: slot.toString() });
+                    // Update play with new slot - Check for Staples
+                    const card = wbSettings[selectedCardId];
+                    if (card && card.type === 'staples') {
+                        onUpdatePlay({ ...play, staplesSlot: slot.toString() });
+                    } else {
+                        onUpdatePlay({ ...play, wristbandSlot: slot.toString() });
+                    }
                     setSelectedPlayId(null); // Deselect after assignment
                 }
             };
@@ -5708,7 +5863,7 @@
             };
 
             const handleClearCard = (cardId) => {
-                const cardName = cardId === 'card1' ? 'WB1 (100s)' : (cardId === 'card2' ? 'WB2 (200s)' : (cardId === 'card3' ? 'WB3 (300s)' : (cardId === 'card4' ? 'WB4 (400s)' : (cardId === 'card5' ? 'WB5 (500s)' : 'WB6 (600s)'))));
+                const cardName = cardId === 'card1' ? 'WB1 (100s)' : (cardId === 'card2' ? 'WB2 (200s)' : (cardId === 'card3' ? 'WB3 (300s)' : (cardId === 'card4' ? 'WB4 (400s)' : (cardId === 'card5' ? 'WB5 (500s)' : (cardId === 'card6' ? 'WB6 (600s)' : 'STAPLES')))));
                 setConfirmModal({
                     action: cardId,
                     message: `Clear all plays from ${cardName}? This cannot be undone.`
@@ -5729,6 +5884,7 @@
                     // Clear all play linkings
                     plays.forEach(play => {
                         if (play.wristbandSlot) onUpdatePlay({ ...play, wristbandSlot: '' });
+                        if (play.staplesSlot) onUpdatePlay({ ...play, staplesSlot: '' });
                     });
                     // Clear all modular rows
                     setWbSettings(prev => ({
@@ -5741,15 +5897,30 @@
                     }));
                 } else {
                     const cardId = confirmModal.action;
-                    const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
-                    const end = start + 47; // Assuming 48 slots max
+                    const card = wbSettings[cardId];
 
-                    plays.forEach(play => {
-                        const slot = Number(play.wristbandSlot);
-                        if (slot >= start && slot <= end) {
-                            onUpdatePlay({ ...play, wristbandSlot: '' });
-                        }
-                    });
+                    if (card && card.type === 'staples') {
+                        // Clear Staples (10-89)
+                        plays.forEach(play => {
+                            if (play.staplesSlot) {
+                                const slot = Number(play.staplesSlot);
+                                if (slot >= 10 && slot <= 89) {
+                                    onUpdatePlay({ ...play, staplesSlot: '' });
+                                }
+                            }
+                        });
+                    } else {
+                        // Standard Clear
+                        const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
+                        const end = start + 47; // Assuming 48 slots max
+
+                        plays.forEach(play => {
+                            const slot = Number(play.wristbandSlot);
+                            if (slot >= start && slot <= end) {
+                                onUpdatePlay({ ...play, wristbandSlot: '' });
+                            }
+                        });
+                    }
 
                     updateCard(cardId, { rows: [] });
                 }
@@ -6106,6 +6277,139 @@
                 }
 
                 // ---------------------------------------------------------
+
+                if (card.type === 'staples') {
+                    // STAPLES LAYOUT: 4 Columns x 20 Rows (Slots 10-89)
+                    // Col 1: 10-29
+                    // Col 2: 30-49
+                    // Col 3: 50-69
+                    // Col 4: 70-89
+
+                    const col1 = displayRows.slice(0, 20);
+                    const col2 = displayRows.slice(20, 40);
+                    const col3 = displayRows.slice(40, 60);
+                    const col4 = displayRows.slice(60, 80);
+
+                    // Create 20 rows
+                    const tableRows = [];
+                    for (let i = 0; i < 20; i++) {
+                        tableRows.push([
+                            col1[i] || null,
+                            col2[i] || null,
+                            col3[i] || null,
+                            col4[i] || null
+                        ]);
+                    }
+
+                    return (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
+                            {/* Header */}
+                            <div style={{
+                                background: 'black',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: '10pt',
+                                padding: '2px 4px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <span style={{ textTransform: 'uppercase' }}>STAPLES</span>
+                                <span>{title}</span>
+                            </div>
+
+                            {/* Table */}
+                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <table className="wristband-spreadsheet-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                                    {/* 4 sets of (Coord + Play) columns */}
+                                    <colgroup>
+                                        <col style={{ width: '30px' }} />
+                                        <col style={{ width: '22%' }} />
+                                        <col style={{ width: '30px' }} />
+                                        <col style={{ width: '22%' }} />
+                                        <col style={{ width: '30px' }} />
+                                        <col style={{ width: '22%' }} />
+                                        <col style={{ width: '30px' }} />
+                                        <col style={{ width: '22%' }} />
+                                    </colgroup>
+                                    <tbody>
+                                        {tableRows.map((rowGroup, rowIndex) => {
+                                            // Calculate color background
+                                            let cellBackground = 'inherit';
+                                            if (card.color && card.color !== 'none') {
+                                                const shades = ['light', 'medium'];
+                                                const shade = shades[rowIndex % 2];
+                                                const colorMap = {
+                                                    'green-light': '#d1fae5', 'green-medium': '#a7f3d0',
+                                                    'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
+                                                    'red-light': '#fecaca', 'red-medium': '#fca5a5',
+                                                    'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
+                                                    'yellow-light': '#fef08a', 'yellow-medium': '#fde047',
+                                                    'purple-light': '#e9d5ff', 'purple-medium': '#d8b4fe',
+                                                    'teal-light': '#99f6e4', 'teal-medium': '#5eead4',
+                                                    'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
+                                                };
+                                                cellBackground = colorMap[`${card.color}-${shade}`] || 'inherit';
+                                            }
+
+                                            return (
+                                                <tr key={rowIndex} className={rangeClass} style={{ height: `${rowHeight}px` }}>
+                                                    {rowGroup.map((cellData, colIdx) => {
+                                                        // Render Pair: Slot + Play
+                                                        // If no cell data, render empty cells
+                                                        if (!cellData) {
+                                                            return (
+                                                                <React.Fragment key={colIdx}>
+                                                                    <td style={{ border: '1px solid #333', background: cellBackground }}></td>
+                                                                    <td style={{ border: '1px solid #333', background: cellBackground }}></td>
+                                                                </React.Fragment>
+                                                            );
+                                                        }
+
+                                                        const play = cellData.play;
+                                                        // Since we are not in Editor mode here potentially, handleAssignSlot might not be needed if this is print view
+                                                        // But previous code included onClick. I'll include it for consistency with Standard.
+                                                        const isClickable = !isMiniScripts && selectedPlayId && !play;
+
+                                                        return (
+                                                            <React.Fragment key={colIdx}>
+                                                                {/* Coord */}
+                                                                <td style={{
+                                                                    border: '1px solid #333',
+                                                                    textAlign: 'center', fontWeight: 'bold',
+                                                                    fontSize: `${fontSize}rem`,
+                                                                    background: cellBackground
+                                                                }}>
+                                                                    {cellData.slot}
+                                                                </td>
+                                                                {/* Play */}
+                                                                <td
+                                                                    onClick={() => handleAssignSlot(cellData.slot)}
+                                                                    style={{
+                                                                        border: '1px solid #333',
+                                                                        padding: '0 2px',
+                                                                        fontSize: `${fontSize}rem`,
+                                                                        verticalAlign: 'middle',
+                                                                        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                                                                        background: cellBackground,
+                                                                        cursor: isClickable ? 'pointer' : 'default',
+                                                                        backgroundColor: isClickable ? '#dbeafe' : cellBackground
+                                                                    }}>
+                                                                    {cellData.text}
+                                                                </td>
+                                                            </React.Fragment>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    );
+                }
+
                 // STANDARD / TRADITIONAL LAYOUT (Original Logic)
                 // ---------------------------------------------------------
 
@@ -6115,6 +6419,7 @@
 
                 displayRows.forEach(row => {
                     const slotNum = parseInt(row.slot);
+                    // Standard (starts at 101/1), Odd is Left, Even is Right
                     if (slotNum % 2 === 1) {
                         col1.push(row);
                     } else {
@@ -6677,6 +6982,12 @@
             const getSlotsForCard = (cardId) => {
                 const card = wbSettings[cardId];
 
+                if (card.type === 'staples') {
+                    const slots = [];
+                    for (let i = 10; i <= 89; i++) slots.push(i);
+                    return slots;
+                }
+
                 if (card.type === 'rooski') {
                     // Rooski uses 16 slots: X01-X16 where X is the series number
                     const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : (cardId === 'card3' ? 3 : (cardId === 'card4' ? 4 : (cardId === 'card5' ? 5 : 6))));
@@ -6901,7 +7212,7 @@
                                         >
                                             <div style={{ fontWeight: 'bold', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
                                                 <span>{play.name}</span>
-                                                {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>}
+                                                {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>} {play.staplesSlot && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '4px' }}>[{play.staplesSlot}]</span>}
                                             </div>
 
                                         </div>
@@ -6963,7 +7274,7 @@
                         {/* Header Tabs */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                {['card1', 'card2', 'card3', 'card4', 'card5', 'card6'].map(id => (
+                                {['card1', 'card2', 'card3', 'card4', 'card5', 'card6', 'staples'].map(id => (
                                     <button
                                         key={id}
                                         onClick={() => setSelectedCardId(id)}
@@ -6978,7 +7289,7 @@
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        {id === 'card1' ? '100s' : (id === 'card2' ? '200s' : (id === 'card3' ? '300s' : (id === 'card4' ? '400s' : (id === 'card5' ? '500s' : '600s'))))}
+                                        {id === 'card1' ? '100s' : (id === 'card2' ? '200s' : (id === 'card3' ? '300s' : (id === 'card4' ? '400s' : (id === 'card5' ? '500s' : (id === 'card6' ? '600s' : 'STAPLES')))))}
                                     </button>
                                 ))}
                             </div>
@@ -7008,8 +7319,10 @@
                                     style={{ width: 'auto', padding: '4px 8px' }}
                                     value={activeCard.type}
                                     onChange={e => updateCard(selectedCardId, { type: e.target.value })}
+                                    disabled={selectedCardId === 'staples'}
                                 >
                                     <option value="standard">Standard (Traditional)</option>
+                                    <option value="staples">STAPLES (10-89)</option>
                                     <option value="mini-scripts">Mini-Scripts (Old Modular)</option>
                                     <option value="modular">Modular (Mixed Headers)</option>
                                     <option value="rooski">Rooski (16-slot grid)</option>
@@ -22824,7 +23137,7 @@
                                                                             }}
                                                                         >
                                                                             <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                                {play.name} {play.wristbandSlot ? <span style={{ fontWeight: 'normal' }}>({play.wristbandSlot})</span> : ''}
+                                                                                {play.name} {play.wristbandSlot ? <span style={{ fontWeight: 'normal' }}>({play.wristbandSlot})</span> : ''} {play.staplesSlot ? <span style={{ fontWeight: 'normal', color: '#b45309', marginLeft: '4px' }}>[{play.staplesSlot}]</span> : ''}
                                                                                 {play.tempo && play.tempo !== 'REGULAR' && (
                                                                                     <span style={{
                                                                                         fontSize: '0.65rem',
@@ -24376,7 +24689,7 @@
                     <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                                <h1 style={{ margin: 0 }}>This Week's Install</h1>
+                                <h1 style={{ margin: 0 }}>Week {week.weekNum} Install/Ready List</h1>
                                 <p style={{ margin: '0.5rem 0 0 0', opacity: 0.7 }}>Manage the active plays for Week {week.weekNum}: {week.opponent}</p>
                             </div>
                             <button
@@ -30863,7 +31176,7 @@
                     </div>
 
                     {/* COMPLETED TASKS BUCKET (Collapsible) */}
-                    < div
+                    <div
                         className="card"
                         style={{
                             marginTop: '2rem',
@@ -31914,7 +32227,7 @@
             // Play Selector specific helper to get grid array (20 items)
             const getGridPlays = (setId) => {
                 let set = gamePlan.sets?.find(s => s.id === setId);
-                if (!set && setId.startsWith('ms_')) {
+                if (!set && setId && setId.startsWith('ms_')) {
                     set = gamePlan.miniScripts?.find(s => s.id === setId);
                 }
                 const rawIds = set ? [...set.playIds] : [];
@@ -32992,7 +33305,7 @@
                                 {(!play.formation || !play.name.toLowerCase().includes(play.formation.toLowerCase())) && (
                                     <span style={{ fontSize: '0.85em', color: '#334155', marginLeft: '6px' }}>{play.formation}</span>
                                 )}
-                                {play.wristbandSlot && <span style={{ fontSize: '0.8em', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '3px', marginLeft: '6px', fontWeight: 'bold' }}>{play.wristbandSlot}</span>}
+                                {play.wristbandSlot && <span style={{ fontSize: '0.8em', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '3px', marginLeft: '6px', fontWeight: 'bold' }}>{play.wristbandSlot}</span>} {play.staplesSlot && <span style={{ fontSize: '0.8em', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '3px', marginLeft: '4px', fontWeight: 'bold' }}>S:{play.staplesSlot}</span>}
                                 {!isLocked && <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px', fontSize: '1.2em', lineHeight: '1' }} onClick={() => onUpdate(null)}>×</button>}
                             </div>
                         ) : (
@@ -40096,6 +40409,12 @@
                         opp: '',
                         iter: '',
                         rows: []
+                    },
+                    staples: {
+                        type: 'staples',
+                        opp: localStorage.getItem('hc_staples_opponent') || '',
+                        iter: localStorage.getItem('hc_staples_iteration') || '',
+                        rows: []
                     }
                 };
             });
@@ -40109,6 +40428,10 @@
                 localStorage.setItem('hc_wb1_iteration', wbSettings.card1.iter);
                 localStorage.setItem('hc_wb2_opponent', wbSettings.card2.opp);
                 localStorage.setItem('hc_wb2_iteration', wbSettings.card2.iter);
+                if (wbSettings.staples) {
+                    localStorage.setItem('hc_staples_opponent', wbSettings.staples.opp);
+                    localStorage.setItem('hc_staples_iteration', wbSettings.staples.iter);
+                }
 
                 if (authUser) {
                     syncToFirestore(authUser.uid, 'wbSettingsV3', {
@@ -40300,6 +40623,7 @@
                     id: `play_${Date.now()}`,
                     name: playName.trim(),
                     wristbandSlot: '',
+                    staplesSlot: '', // [NEW] Staples Wristband Slot (10-89)
                     formation: '',
                     tags: [],
                     incomplete: true, // Mark as incomplete
@@ -43742,122 +44066,139 @@
                                 />
                             )
                         }
-                        {view === 'settings' && <Settings teamLogo={teamLogo} onUpdateLogo={setTeamLogo} accentColor={accentColor} onUpdateAccentColor={setAccentColor} theme={theme} onUpdateTheme={setTheme} positionNames={positionNames} onUpdatePositionNames={setPositionNames} activeYear={activeYear} onUpdateActiveYear={setActiveYear} visibleFeatures={visibleFeatures} onUpdateVisibleFeatures={setVisibleFeatures} renderSyncManager={renderDataSyncManager} isSiteAdmin={isSiteAdmin} siteAdmins={siteAdmins} schoolData={{ id: localStorage.getItem('hc_school_id'), ...JSON.parse(JSON.stringify(window.db ? {} : {})) /* Hack: appData isn't in state directly, relying on props */ }} currentSchoolId={localStorage.getItem('hc_school_id')} programLevels={programLevels} onUpdateProgramLevels={setProgramLevels} />}
+                        {view === 'settings' && (
+                            <Settings
+                                teamLogo={teamLogo}
+                                onUpdateLogo={setTeamLogo}
+                                accentColor={accentColor}
+                                onUpdateAccentColor={setAccentColor}
+                                theme={theme}
+                                onUpdateTheme={setTheme}
+                                positionNames={positionNames}
+                                onUpdatePositionNames={setPositionNames}
+                                activeYear={activeYear}
+                                onUpdateActiveYear={setActiveYear}
+                                visibleFeatures={visibleFeatures}
+                                onUpdateVisibleFeatures={setVisibleFeatures}
+                                isAdmin={isSiteAdmin}
+                                siteAdmins={siteAdmins}
+                                schoolData={{ id: localStorage.getItem('hc_school_id') }}
+                                currentSchoolId={localStorage.getItem('hc_school_id')}
+                                programLevels={programLevels}
+                                onUpdateProgramLevels={setProgramLevels}
+                            />
+                        )}
 
                         {view === 'help' && <UserGuide />}
 
-                        {/* Logout Confirmation Modal */}
-                        {
-                            showLogoutConfirm && (
+                        {showLogoutConfirm && (
+                            <div style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                background: 'rgba(0, 0, 0, 0.7)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 10000
+                            }}>
                                 <div style={{
-                                    position: 'fixed',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    background: 'rgba(0, 0, 0, 0.7)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 10000
+                                    background: 'white',
+                                    padding: '2rem',
+                                    borderRadius: '8px',
+                                    maxWidth: '400px',
+                                    width: '90%',
+                                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                                    border: '1px solid rgba(0,0,0,0.1)'
                                 }}>
-                                    <div style={{
-                                        background: 'white',
-                                        padding: '2rem',
-                                        borderRadius: '8px',
-                                        maxWidth: '400px',
-                                        width: '90%',
-                                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                                        border: '1px solid rgba(0,0,0,0.1)'
-                                    }}>
-                                        <h3 style={{ marginTop: 0, color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '1.25rem' }}>Log Out?</h3>
-                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                                            Are you sure you want to sign out?
-                                        </p>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                            <button
-                                                onClick={() => setShowLogoutConfirm(false)}
-                                                style={{
-                                                    padding: '0.75rem 1.5rem',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid #e2e8f0',
-                                                    background: 'white',
-                                                    color: 'var(--text-secondary)',
-                                                    fontWeight: '600',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setShowLogoutConfirm(false);
-                                                    logout();
-                                                }}
-                                                style={{
-                                                    padding: '0.75rem 1.5rem',
-                                                    borderRadius: '6px',
-                                                    border: 'none',
-                                                    background: '#ef4444',
-                                                    color: 'white',
-                                                    fontWeight: '600',
-                                                    cursor: 'pointer',
-                                                    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)'
-                                                }}
-                                            >
-                                                Log Out
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        }
-                        {/* Invite Acceptance Modal */}
-                        {
-                            inviteData && (
-                                <div style={{
-                                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                                    background: 'rgba(0,0,0,0.85)', zIndex: 10001,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}>
-                                    <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
-                                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
-                                            {inviteData.type === 'domain_match' ? '🏫' : '📩'}
-                                        </div>
-                                        <h2 style={{ marginBottom: '0.5rem' }}>
-                                            {inviteData.type === 'domain_match' ? 'Join Your Team?' : 'You\'re Invited!'}
-                                        </h2>
-                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                                            {inviteData.type === 'domain_match'
-                                                ? <span>Your email matches <strong>{inviteData.schoolName}</strong>.<br />Join now as a <strong>{inviteData.role}</strong>?</span>
-                                                : <span>To join <strong>{inviteData.schoolName}</strong> as a <strong>{inviteData.role}</strong>.</span>
-                                            }
-                                        </p>
+                                    <h3 style={{ marginTop: 0, color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '1.25rem' }}>Log Out?</h3>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                                        Are you sure you want to sign out?
+                                    </p>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                                         <button
-                                            className="btn btn-primary"
-                                            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
-                                            onClick={handleAcceptInvite}
-                                        >
-                                            Accept & Join Team
-                                        </button>
-                                        <button
-                                            className="btn btn-secondary"
-                                            style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
-                                            onClick={() => {
-                                                if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
-                                                    setInviteData(null);
-                                                    setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
-                                                }
+                                            onClick={() => setShowLogoutConfirm(false)}
+                                            style={{
+                                                padding: '0.75rem 1.5rem',
+                                                borderRadius: '6px',
+                                                border: '1px solid #e2e8f0',
+                                                background: 'white',
+                                                color: 'var(--text-secondary)',
+                                                fontWeight: '600',
+                                                cursor: 'pointer'
                                             }}
                                         >
-                                            No, Create New School Instead
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowLogoutConfirm(false);
+                                                logout();
+                                            }}
+                                            style={{
+                                                padding: '0.75rem 1.5rem',
+                                                borderRadius: '6px',
+                                                border: 'none',
+                                                background: '#ef4444',
+                                                color: 'white',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.4)'
+                                            }}
+                                        >
+                                            Log Out
                                         </button>
                                     </div>
                                 </div>
-                            )
-                        }
-                    </main >
-                </div >
+                            </div>
+                        )}
+
+                        {/* Invite Acceptance Modal */}
+                        {inviteData && (
+                            <div style={{
+                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                background: 'rgba(0,0,0,0.85)', zIndex: 10001,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
+                                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                                        {inviteData.type === 'domain_match' ? '🏫' : '📩'}
+                                    </div>
+                                    <h2 style={{ marginBottom: '0.5rem' }}>
+                                        {inviteData.type === 'domain_match' ? 'Join Your Team?' : 'You\'re Invited!'}
+                                    </h2>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                        {inviteData.type === 'domain_match'
+                                            ? <span>Your email matches <strong>{inviteData.schoolName}</strong>.<br />Join now as a <strong>{inviteData.role}</strong>?</span>
+                                            : <span>To join <strong>{inviteData.schoolName}</strong> as a <strong>{inviteData.role}</strong>.</span>
+                                        }
+                                    </p>
+                                    <button
+                                        className="btn btn-primary"
+                                        style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
+                                        onClick={handleAcceptInvite}
+                                    >
+                                        Accept & Join Team
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary"
+                                        style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
+                                        onClick={() => {
+                                            if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
+                                                setInviteData(null);
+                                                setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
+                                            }
+                                        }}
+                                    >
+                                        No, Create New School Instead
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
             );
         };
 
@@ -43888,7 +44229,6 @@
                         </div>
                     );
                 }
-
                 return this.props.children;
             }
         }
