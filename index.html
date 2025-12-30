@@ -8127,6 +8127,44 @@
                 });
             };
 
+            const applyHashPreset = (segmentId, preset) => {
+                const segment = plan.segments.find(s => s.id === segmentId);
+                if (!segment) return;
+
+                const currentScript = ensureScriptSlots(segment.script, parseInt(segment.duration || 0), segment.type);
+
+                let newScript = [...currentScript];
+                const count = newScript.length;
+
+                if (preset === 'SERPENTINE_LR' || preset === 'SERPENTINE_RL') {
+                    const patternLR = ['L', 'LM', 'M', 'RM', 'R', 'RM', 'M', 'LM'];
+                    const patternRL = ['R', 'RM', 'M', 'LM', 'L', 'LM', 'M', 'RM'];
+                    const pattern = preset === 'SERPENTINE_LR' ? patternLR : patternRL;
+
+                    newScript = newScript.map((slot, idx) => ({
+                        ...slot,
+                        hash: pattern[idx % pattern.length]
+                    }));
+                } else if (preset === 'ZONES_LR' || preset === 'ZONES_RL') {
+                    newScript = newScript.map((slot, idx) => {
+                        const progress = idx / count;
+                        let h = 'M';
+                        if (progress < 0.33) h = (preset === 'ZONES_LR') ? 'L' : 'R';
+                        else if (progress < 0.66) h = 'M';
+                        else h = (preset === 'ZONES_LR') ? 'R' : 'L';
+                        return { ...slot, hash: h };
+                    });
+                } else if (preset === 'RANDOM') {
+                    const opts = ['L', 'LM', 'M', 'RM', 'R'];
+                    newScript = newScript.map(slot => ({
+                        ...slot,
+                        hash: opts[Math.floor(Math.random() * opts.length)]
+                    }));
+                }
+
+                updateSegment(segmentId, 'script', newScript);
+            };
+
             // Special handler for notes to support coach-specific notes
             const updateSegmentNotes = (segmentId, coachId, noteText) => {
                 if (segmentId === 'WARMUP') {
@@ -8238,7 +8276,30 @@
                                             <thead>
                                                 <tr style={{ borderBottom: '2px solid var(--border)', backgroundColor: 'var(--bg-body)' }}>
                                                     <th style={{ textAlign: 'center', padding: '8px 4px', width: '30px', color: 'var(--text-secondary)' }}>#</th>
-                                                    <th style={{ textAlign: 'left', padding: '8px 4px', width: '70px' }}>Hash</th>
+                                                    <th style={{ textAlign: 'left', padding: '8px 4px', width: '70px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            Hash
+                                                            {!isLocked && (
+                                                                <select
+                                                                    style={{ fontSize: '0.8rem', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                                                                    onChange={(e) => {
+                                                                        if (e.target.value) {
+                                                                            applyHashPreset(seg.id, e.target.value);
+                                                                            e.target.value = ""; // Reset
+                                                                        }
+                                                                    }}
+                                                                    title="Auto-fill Hash Pattern"
+                                                                >
+                                                                    <option value="">⚡</option>
+                                                                    <option value="SERPENTINE_LR">Serpentine (L→R)</option>
+                                                                    <option value="SERPENTINE_RL">Serpentine (R→L)</option>
+                                                                    <option value="ZONES_LR">Zones (Left 3rd)</option>
+                                                                    <option value="ZONES_RL">Zones (Right 3rd)</option>
+                                                                    <option value="RANDOM">Random</option>
+                                                                </select>
+                                                            )}
+                                                        </div>
+                                                    </th>
                                                     {seg.type === 'Take-Off' ? (
                                                         <>
                                                             <th style={{ textAlign: 'left', padding: '8px 4px', width: '80px' }}>Yard</th>
@@ -40161,6 +40222,11 @@
                 setDrills(prev => [...prev, { ...newDrill, id: 'drill_' + Date.now() }]);
             };
 
+            // -- DEPTH CHART STATE --
+            const [depthCharts, setDepthCharts] = useLocalStorage('hc-depth-charts', {});
+            // Sync Depth Charts to Firestore
+            useAutoSync(authUser, 'depth_charts', depthCharts);
+
             // Migration Effect
             useEffect(() => {
                 const MIGRATION_KEY = 'program_records_migrated_v1';
@@ -43951,6 +44017,7 @@
                         {view === 'staff-tasks' && <StaffManager view="tasks" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
                         {view === 'depth' && <DepthChart roster={roster} depthChart={depthCharts[depthChartType] || {}} onUpdateDepthChart={(updated) => setDepthCharts({ ...depthCharts, [depthChartType]: updated })} chartType={depthChartType} positionNames={positionNames} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} />}
 
 
                         {
