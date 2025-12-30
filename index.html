@@ -2167,17 +2167,17 @@
         // -------------------------------------------------------------------------
 
         // Install Sortable Column
-        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount }) => {
+        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount, handleTogglePriority }) => {
             const [localItems, setLocalItems] = React.useState(items);
 
             // Sync local state when props change (force update from external source)
-            const itemsIds = items.map(p => p.id).join(',');
+            const itemsSignature = items.map(p => `${p.id}-${p.priority}`).join(',');
             React.useEffect(() => {
-                const localIds = localItems.map(p => p.id).join(',');
-                if (itemsIds !== localIds) {
+                const localSignature = localItems.map(p => `${p.id}-${p.priority}`).join(',');
+                if (itemsSignature !== localSignature) {
                     setLocalItems(items);
                 }
-            }, [itemsIds]);
+            }, [itemsSignature]);
 
             return (
                 <ReactSortable
@@ -2194,7 +2194,7 @@
                         <div
                             key={play.id}
                             className="card"
-                            onDoubleClick={(e) => { e.stopPropagation(); onUpdatePlay(play.id, { priority: !play.priority }); }}
+                            onDoubleClick={(e) => { e.stopPropagation(); handleTogglePriority(play.id); }}
                             title="Double-click to toggle priority ⭐"
                             style={{
                                 padding: '0.5rem',
@@ -6464,7 +6464,7 @@
                                                             whiteSpace: 'nowrap',
                                                             lineHeight: `${rowHeight}px`,
                                                             boxSizing: 'border-box',
-                                                            textAlign: colIndex === 1 ? 'center' : 'left'
+                                                            textAlign: 'center'
                                                         }}
                                                         onClick={() => !isMiniScripts && handleAssignSlot(cellData.slot)}
                                                     >
@@ -7683,7 +7683,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [] }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -7725,7 +7725,9 @@
                 ...globalTemplates
             ];
 
-            const focusItems = ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Onside', 'Hands Team', ...(customFocusItems || [])];
+            // const focusItems = ... (Removed, using prop)
+            const availableFocusItems = focusItems.length > 0 ? focusItems : ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Onside', 'Hands Team'];
+            const availableSegmentTypes = segmentTypes.length > 0 ? segmentTypes : ['Competition', 'Take-Off', 'Fundi', '7-on-7', 'Inside Run', 'Team', 'Team Stationary', 'Circuit', 'Specials', 'Conditioning', 'Ghost Script', 'One-on-Ones'];
 
 
 
@@ -8854,7 +8856,7 @@
                                                         style={{ width: '100%', fontSize: '0.85rem' }}
                                                     >
                                                         <option value="">-- Offense --</option>
-                                                        {focusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                        {availableFocusItems.map(item => <option key={item} value={item}>{item}</option>)}
                                                     </select>
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
@@ -8866,7 +8868,7 @@
                                                         style={{ width: '100%', fontSize: '0.85rem' }}
                                                     >
                                                         <option value="">-- Defense --</option>
-                                                        {focusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                        {availableFocusItems.map(item => <option key={item} value={item}>{item}</option>)}
                                                     </select>
                                                 </td>
                                             </>
@@ -8908,7 +8910,7 @@
                                                         onClick={e => e.stopPropagation()}
                                                     >
                                                         <option value="">-- Select Focus --</option>
-                                                        {['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Onside', 'Hands Team', ...customFocusItems].map(f => (
+                                                        {availableFocusItems.map(f => (
                                                             <option key={f} value={f}>{f}</option>
                                                         ))}
                                                         <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
@@ -9230,7 +9232,7 @@
                                                             onClick={e => e.stopPropagation()}
                                                         >
                                                             <option value="">-- Select Type --</option>
-                                                            {['Competition', 'Take-Off', 'Fundi', '7-on-7', 'Inside Run', 'Team', 'Team Stationary', 'Circuit', 'Specials', 'Conditioning', 'Ghost Script', 'One-on-Ones'].map(t => (
+                                                            {availableSegmentTypes.map(t => (
                                                                 <option key={t} value={t}>{t}</option>
                                                             ))}
                                                         </select>
@@ -9249,7 +9251,7 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
                                                                     <option value="">-- Offense --</option>
-                                                                    {focusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                                    {availableFocusItems.map(item => <option key={item} value={item}>{item}</option>)}
                                                                 </select>
                                                             )}
                                                         </td>
@@ -9264,7 +9266,7 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
                                                                     <option value="">-- Defense --</option>
-                                                                    {focusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                                    {availableFocusItems.map(item => <option key={item} value={item}>{item}</option>)}
                                                                 </select>
                                                             )}
                                                         </td>
@@ -9309,7 +9311,7 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
                                                                     <option value="">-- Focus --</option>
-                                                                    {focusItems.map(item => (
+                                                                    {availableFocusItems.map(item => (
                                                                         <option key={item} value={item}>{item}</option>
                                                                     ))}
                                                                     <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
@@ -21832,7 +21834,7 @@
         };
 
 
-        const SmartCallSheet = ({ gamePlan, situation, plays, onUpdateSituation, zonePhilosophies, onUpdatePhilosophy, onUpdateGamePlan, onQuickAddPlay, activePlay, setActivePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS }) => {
+        const SmartCallSheet = ({ gamePlan = {}, situation, plays, onUpdateSituation, zonePhilosophies, onUpdatePhilosophy, onUpdateGamePlan, onQuickAddPlay, activePlay, setActivePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS }) => {
             const [selectedSection, setSelectedSection] = useState(null); // null = main menu, otherwise section key
             const [selectedHash, setSelectedHash] = useState('left'); // For opening script submenu
             const [selected2MinCategory, setSelected2MinCategory] = useState('oob_yac'); // For 2-minute submenu
@@ -24679,12 +24681,16 @@
 
             const handleAddToInstall = (playId) => {
                 if (!installList.includes(playId)) {
-                    // Get the play and ensure it has a type
+                    // Get the play
                     const play = plays.find(p => p.id === playId);
+
+                    // Prepare updates: Reset priority (always start unstarred) + Default type if missing
+                    const updates = { priority: false };
                     if (play && !play.type) {
-                        // Default to 'Run' if no type is set
-                        onUpdatePlay(playId, { type: 'Run' });
+                        updates.type = 'Run';
                     }
+                    onUpdatePlay(playId, updates);
+
                     // Create new installList or append to existing
                     const newList = [...installList, playId];
                     onUpdateWeek(week.id, 'installList', newList);
@@ -32229,6 +32235,9 @@
         };
 
         const OffensiveGamePlan = ({ plays, gamePlan, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [] }) => {
+            const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
+            const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
+            const [showLayoutVersions, setShowLayoutVersions] = useState(false);
 
             const [viewMode, setViewMode] = useState('call-sheet'); // 'call-sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
@@ -32320,9 +32329,9 @@
 
             // Helper to get play objects for a set ID
             const getPlaysForSet = (setId) => {
-                let set = gamePlan.sets?.find(s => s.id === setId);
+                let set = gamePlan?.sets?.find(s => s.id === setId);
                 if (!set && setId.startsWith('ms_')) {
-                    set = gamePlan.miniScripts?.find(s => s.id === setId);
+                    set = gamePlan?.miniScripts?.find(s => s.id === setId);
                 }
                 if (!set) return [];
                 return set.playIds.map((item, idx) => {
@@ -32351,9 +32360,9 @@
 
             // Play Selector specific helper to get grid array (20 items)
             const getGridPlays = (setId) => {
-                let set = gamePlan.sets?.find(s => s.id === setId);
+                let set = gamePlan?.sets?.find(s => s.id === setId);
                 if (!set && setId && setId.startsWith('ms_')) {
-                    set = gamePlan.miniScripts?.find(s => s.id === setId);
+                    set = gamePlan?.miniScripts?.find(s => s.id === setId);
                 }
                 const rawIds = set ? [...set.playIds] : [];
                 // Pad to 20
@@ -32384,9 +32393,9 @@
             };
 
             const handleGridCellUpdate = (setId, index, playId) => {
-                let set = gamePlan.sets?.find(s => s.id === setId);
+                let set = gamePlan?.sets?.find(s => s.id === setId);
                 if (!set && setId.startsWith('ms_')) {
-                    set = gamePlan.miniScripts?.find(s => s.id === setId);
+                    set = gamePlan?.miniScripts?.find(s => s.id === setId);
                 }
                 const rawIds = set ? [...set.playIds] : [];
                 // Pad if needed
@@ -32397,18 +32406,18 @@
                 rawIds[index] = playId || 'GAP';
 
                 if (setId.startsWith('ms_')) {
-                    const newMiniScripts = (gamePlan.miniScripts || []).map(s =>
+                    const newMiniScripts = (gamePlan?.miniScripts || []).map(s =>
                         s.id === setId ? { ...s, playIds: rawIds } : s
                     );
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
-                    const existingSet = gamePlan.sets?.find(s => s.id === setId);
+                    const existingSet = gamePlan?.sets?.find(s => s.id === setId);
                     let newSets;
                     if (existingSet) {
                         newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: rawIds } : s);
                     } else {
                         // Implicit create
-                        newSets = [...(gamePlan.sets || []), { id: setId, name: setId, playIds: rawIds }];
+                        newSets = [...(gamePlan?.sets || []), { id: setId, name: setId, playIds: rawIds }];
                     }
                     onUpdateGamePlan({ ...gamePlan, sets: newSets });
                 }
@@ -32417,9 +32426,9 @@
             const handleGridMove = (fromIndex, toIndex) => {
                 const currentGrid = getGridPlays(activeCellSetId);
                 // We need the raw IDs not objects to save
-                let set = gamePlan.sets?.find(s => s.id === activeCellSetId);
+                let set = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                 if (!set && activeCellSetId.startsWith('ms_')) {
-                    set = gamePlan.miniScripts?.find(s => s.id === activeCellSetId);
+                    set = gamePlan?.miniScripts?.find(s => s.id === activeCellSetId);
                 }
                 const rawIds = set ? [...set.playIds] : [];
                 // Pad local rawIds to ensure indices exist
@@ -32436,27 +32445,27 @@
                 // Strip trailing GAPs? Maybe not, to preserve layout if user wanted gaps.
                 // But for now let's just save.
                 if (activeCellSetId.startsWith('ms_')) {
-                    const newMiniScripts = (gamePlan.miniScripts || []).map(s =>
+                    const newMiniScripts = (gamePlan?.miniScripts || []).map(s =>
                         s.id === activeCellSetId ? { ...s, playIds: rawIds } : s
                     );
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
-                    const existingSet = gamePlan.sets?.find(s => s.id === activeCellSetId);
+                    const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                     let newSets;
                     if (existingSet) {
                         newSets = gamePlan.sets.map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
                     } else {
                         // Should not happen in selector usually, but implicit create
-                        newSets = [...(gamePlan.sets || []), { id: activeCellSetId, name: activeCellSetId, playIds: rawIds }];
+                        newSets = [...(gamePlan?.sets || []), { id: activeCellSetId, name: activeCellSetId, playIds: rawIds }];
                     }
                     onUpdateGamePlan({ ...gamePlan, sets: newSets });
                 }
             };
 
             const handleGridAdd = (playId) => {
-                let set = gamePlan.sets?.find(s => s.id === activeCellSetId);
+                let set = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                 if (!set && activeCellSetId.startsWith('ms_')) {
-                    set = gamePlan.miniScripts?.find(s => s.id === activeCellSetId);
+                    set = gamePlan?.miniScripts?.find(s => s.id === activeCellSetId);
                 }
                 const rawIds = set ? [...set.playIds] : [];
 
@@ -32474,38 +32483,38 @@
 
                 // Save (Same logic as move basically)
                 if (activeCellSetId.startsWith('ms_')) {
-                    const newMiniScripts = (gamePlan.miniScripts || []).map(s =>
+                    const newMiniScripts = (gamePlan?.miniScripts || []).map(s =>
                         s.id === activeCellSetId ? { ...s, playIds: rawIds } : s
                     );
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
-                    const existingSet = gamePlan.sets?.find(s => s.id === activeCellSetId);
+                    const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                     let newSets;
                     if (existingSet) {
                         newSets = gamePlan.sets.map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
                     } else {
-                        newSets = [...(gamePlan.sets || []), { id: activeCellSetId, name: activeCellSetId, playIds: rawIds }];
+                        newSets = [...(gamePlan?.sets || []), { id: activeCellSetId, name: activeCellSetId, playIds: rawIds }];
                     }
                     onUpdateGamePlan({ ...gamePlan, sets: newSets });
                 }
             }
 
             const handleGridRemove = (index) => {
-                let set = gamePlan.sets?.find(s => s.id === activeCellSetId);
+                let set = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                 if (!set && activeCellSetId.startsWith('ms_')) {
-                    set = gamePlan.miniScripts?.find(s => s.id === activeCellSetId);
+                    set = gamePlan?.miniScripts?.find(s => s.id === activeCellSetId);
                 }
                 const rawIds = set ? [...set.playIds] : [];
                 if (rawIds[index]) {
                     rawIds[index] = 'GAP';
                     // Save
                     if (activeCellSetId.startsWith('ms_')) {
-                        const newMiniScripts = (gamePlan.miniScripts || []).map(s =>
+                        const newMiniScripts = (gamePlan?.miniScripts || []).map(s =>
                             s.id === activeCellSetId ? { ...s, playIds: rawIds } : s
                         );
                         onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                     } else {
-                        const existingSet = gamePlan.sets?.find(s => s.id === activeCellSetId);
+                        const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                         let newSets;
                         if (existingSet) {
                             newSets = gamePlan.sets.map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
@@ -32521,27 +32530,27 @@
             // Helper to get the set object (or create if implicit)
             const getSet = (setId) => {
                 if (setId.startsWith('ms_')) {
-                    return gamePlan.miniScripts?.find(s => s.id === setId);
+                    return gamePlan?.miniScripts?.find(s => s.id === setId);
                 }
-                return gamePlan.sets?.find(s => s.id === setId);
+                return gamePlan?.sets?.find(s => s.id === setId);
             };
 
             const handleAddPlayToSet = (setId, playId) => {
                 if (setId.startsWith('ms_')) {
                     // Handle Mini Script Update
-                    const newMiniScripts = (gamePlan.miniScripts || []).map(s =>
+                    const newMiniScripts = (gamePlan?.miniScripts || []).map(s =>
                         s.id === setId ? { ...s, playIds: [...s.playIds, playId] } : s
                     );
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
                     // Handle Standard Set Update
-                    const existingSet = gamePlan.sets?.find(s => s.id === setId);
+                    const existingSet = gamePlan?.sets?.find(s => s.id === setId);
                     let newSets;
                     if (existingSet) {
                         newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: [...s.playIds, playId] } : s);
                     } else {
                         // Implicit creation for grid cells
-                        newSets = [...(gamePlan.sets || []), { id: setId, name: setId, playIds: [playId] }];
+                        newSets = [...(gamePlan?.sets || []), { id: setId, name: setId, playIds: [playId] }];
                     }
                     onUpdateGamePlan({ ...gamePlan, sets: newSets });
                 }
@@ -32549,13 +32558,13 @@
 
             const handleRemovePlayFromSet = (setId, playId) => {
                 if (setId.startsWith('ms_')) {
-                    const existingScript = gamePlan.miniScripts?.find(s => s.id === setId);
+                    const existingScript = gamePlan?.miniScripts?.find(s => s.id === setId);
                     if (!existingScript) return;
                     const newPlayIds = existingScript.playIds.filter(id => id !== playId);
                     const newMiniScripts = gamePlan.miniScripts.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
-                    const existingSet = gamePlan.sets?.find(s => s.id === setId);
+                    const existingSet = gamePlan?.sets?.find(s => s.id === setId);
                     if (!existingSet) return;
                     const newPlayIds = existingSet.playIds.filter(id => id !== playId);
                     const newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
@@ -34122,59 +34131,129 @@
                                     <div style={{ position: 'relative', display: 'inline-block', marginRight: '0.5rem' }}>
                                         <button
                                             className="btn btn-sm"
-                                            onClick={(e) => {
-                                                const menu = e.currentTarget.nextElementSibling;
-                                                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                                            }}
-                                            onBlur={(e) => {
-                                                // Small delay to allow clicking items
-                                                setTimeout(() => {
-                                                    if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = 'none';
-                                                }, 200);
-                                            }}
+                                            onClick={() => setShowLayoutVersions(!showLayoutVersions)}
                                             style={{ fontSize: '0.75rem', background: '#e5e7eb', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}
                                         >
                                             <Icon name="Save" size={14} /> Layout Versions
                                         </button>
-                                        <div style={{ display: 'none', position: 'absolute', top: '100%', right: 0, zIndex: 50, background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minWidth: '200px', padding: '0.5rem' }}>
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem', paddingBottom: '0.25rem', borderBottom: '1px solid #e2e8f0' }}>SAVED LAYOUTS</div>
 
-                                            <button
-                                                className="btn btn-xs btn-primary"
-                                                style={{ width: '100%', marginBottom: '0.5rem', fontSize: '0.75rem' }}
-                                                onMouseDown={() => {
-                                                    const name = prompt("Name this layout version:");
-                                                    if (name && onSaveLayoutVersion) onSaveLayoutVersion(name);
-                                                }}
-                                            >
-                                                + Save Current Layout
-                                            </button>
+                                        {showLayoutVersions && (
+                                            <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 50, background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minWidth: '250px', padding: '0.5rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', paddingBottom: '0.25rem', borderBottom: '1px solid #e2e8f0' }}>
+                                                    <div style={{ fontWeight: 'bold', fontSize: '0.75rem', color: '#64748b' }}>SAVED LAYOUTS</div>
+                                                    <button
+                                                        onClick={() => setShowLayoutVersions(false)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                                                    >
+                                                        <Icon name="X" size={12} />
+                                                    </button>
+                                                </div>
 
-                                            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                                                {Object.keys(layoutVersions).length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.25rem' }}>No saved layouts</div>}
-                                                {Object.keys(layoutVersions).map(versionName => (
-                                                    <div key={versionName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.25rem', borderBottom: '1px solid #f1f5f9' }}>
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#334155' }}>{versionName}</span>
+                                                {/* Save Controls */}
+                                                {layoutSaveState.isSaving ? (
+                                                    <div style={{ marginBottom: '0.5rem' }}>
+                                                        <input
+                                                            autoFocus
+                                                            className="form-input"
+                                                            style={{ fontSize: '0.75rem', padding: '4px', width: '100%', marginBottom: '4px' }}
+                                                            placeholder="Version Name..."
+                                                            value={layoutSaveState.name}
+                                                            onChange={(e) => setLayoutSaveState({ ...layoutSaveState, name: e.target.value })}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && layoutSaveState.name && onSaveLayoutVersion) {
+                                                                    onSaveLayoutVersion(layoutSaveState.name);
+                                                                    setLayoutSaveState({ isSaving: false, name: '' });
+                                                                }
+                                                                if (e.key === 'Escape') setLayoutSaveState({ isSaving: false, name: '' });
+                                                            }}
+                                                        />
                                                         <div style={{ display: 'flex', gap: '4px' }}>
                                                             <button
-                                                                title="Load"
-                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', padding: '2px' }}
-                                                                onMouseDown={() => onLoadLayoutVersion && onLoadLayoutVersion(versionName)}
+                                                                className="btn btn-xs btn-primary"
+                                                                style={{ flex: 1 }}
+                                                                disabled={!layoutSaveState.name}
+                                                                onClick={() => {
+                                                                    if (layoutSaveState.name && onSaveLayoutVersion) {
+                                                                        onSaveLayoutVersion(layoutSaveState.name);
+                                                                        setLayoutSaveState({ isSaving: false, name: '' });
+                                                                    }
+                                                                }}
                                                             >
-                                                                <Icon name="Download" size={12} />
+                                                                Save
                                                             </button>
                                                             <button
-                                                                title="Delete"
-                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px' }}
-                                                                onMouseDown={() => onDeleteLayoutVersion && onDeleteLayoutVersion(versionName)}
+                                                                className="btn btn-xs"
+                                                                style={{ flex: 1, background: '#e2e8f0', color: '#475569' }}
+                                                                onClick={() => setLayoutSaveState({ isSaving: false, name: '' })}
                                                             >
-                                                                <Icon name="Trash2" size={12} />
+                                                                Cancel
                                                             </button>
                                                         </div>
                                                     </div>
-                                                ))}
+                                                ) : (
+                                                    <button
+                                                        className="btn btn-xs btn-primary"
+                                                        style={{ width: '100%', marginBottom: '0.5rem', fontSize: '0.75rem' }}
+                                                        onClick={() => setLayoutSaveState({ isSaving: true, name: '' })}
+                                                    >
+                                                        + Save Current Layout
+                                                    </button>
+                                                )}
+
+                                                <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                                    {Object.keys(layoutVersions).length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.25rem' }}>No saved layouts</div>}
+                                                    {Object.keys(layoutVersions).map(versionName => (
+                                                        <div key={versionName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.25rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#334155' }}>{versionName}</span>
+
+                                                            {/* Item Actions */}
+                                                            {layoutConfirmAction?.name === versionName ? (
+                                                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                                    <span style={{ fontSize: '0.65rem', color: layoutConfirmAction.type === 'delete' ? '#ef4444' : '#3b82f6', marginRight: '2px' }}>
+                                                                        {layoutConfirmAction.type === 'delete' ? 'Delete?' : 'Load?'}
+                                                                    </span>
+                                                                    <button
+                                                                        className="btn btn-icon"
+                                                                        style={{ color: 'var(--success)' }}
+                                                                        onClick={() => {
+                                                                            if (layoutConfirmAction.type === 'delete' && onDeleteLayoutVersion) onDeleteLayoutVersion(versionName);
+                                                                            if (layoutConfirmAction.type === 'load' && onLoadLayoutVersion) onLoadLayoutVersion(versionName);
+                                                                            setLayoutConfirmAction(null);
+                                                                        }}
+                                                                    >
+                                                                        <Icon name="Check" size={12} />
+                                                                    </button>
+                                                                    <button
+                                                                        className="btn btn-icon"
+                                                                        style={{ color: 'var(--text-secondary)' }}
+                                                                        onClick={() => setLayoutConfirmAction(null)}
+                                                                    >
+                                                                        <Icon name="X" size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                                    <button
+                                                                        title="Load"
+                                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', padding: '2px' }}
+                                                                        onClick={() => setLayoutConfirmAction({ type: 'load', name: versionName })}
+                                                                    >
+                                                                        <Icon name="Download" size={12} />
+                                                                    </button>
+                                                                    <button
+                                                                        title="Delete"
+                                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px' }}
+                                                                        onClick={() => setLayoutConfirmAction({ type: 'delete', name: versionName })}
+                                                                    >
+                                                                        <Icon name="Trash2" size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
 
                                     {confirmResetLayout ? (
@@ -40904,6 +40983,8 @@
                         scoutingReport: '',
                         isLocked: false,
                         practicePlans: createDefaultPracticePlans(),
+                        offensiveGamePlan: { sets: [] },
+                        pregamePlan: { kickoffTime: '19:00', segments: [] },
                         gameLog: []
                     };
                 });
@@ -40953,22 +41034,58 @@
             }, [dutyAssignments]);
 
             // Custom Focus Items State
-            const [customFocusItems, setCustomFocusItems] = useState(() => {
-                try {
-                    const saved = localStorage.getItem('oc-dashboard-custom-focus');
-                    return (saved && saved !== "null") ? JSON.parse(saved) : [];
-                } catch (e) { return []; }
+            // Custom Focus Items State - MIGRATED TO FULL LISTS
+            // We'll keep the storage key to migrate old data if needed, but primarily use practiceFocusItems
+
+            const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { list: 'segments'|'focus', item: 'name' }
+
+
+            const [practiceSegmentTypes, setPracticeSegmentTypes] = useState(() => {
+                const saved = localStorage.getItem('oc-dashboard-segment-types');
+                if (saved) return JSON.parse(saved);
+
+                // Default List
+                return ['Competition', 'Take-Off', 'Fundi', '7-on-7', 'Inside Run', 'Team', 'Team Stationary', 'Circuit', 'Specials', 'Conditioning', 'Ghost Script', 'One-on-Ones', 'Goal Line', 'Short Yardage', 'O FUNDI', 'Team O'];
             });
 
-            // Save custom focus items to localStorage
-            useEffect(() => {
-                localStorage.setItem('oc-dashboard-custom-focus', JSON.stringify(customFocusItems));
-            }, [customFocusItems]);
+            const [practiceFocusItems, setPracticeFocusItems] = useState(() => {
+                const saved = localStorage.getItem('oc-dashboard-focus-items');
 
-            // Add custom focus item
+                // Migrate legacy custom items if found and not yet saved to new list
+                let initialList = ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Onside', 'Hands Team'];
+
+                if (saved) {
+                    return JSON.parse(saved);
+                } else {
+                    // One-time migration
+                    const legacyCustom = localStorage.getItem('oc-dashboard-custom-focus');
+                    if (legacyCustom) {
+                        try {
+                            const parsedLegacy = JSON.parse(legacyCustom);
+                            if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+                                // Add unique deprecated items
+                                parsedLegacy.forEach(item => {
+                                    if (!initialList.includes(item)) initialList.push(item);
+                                });
+                            }
+                        } catch (e) { }
+                    }
+                    return initialList;
+                }
+            });
+
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-segment-types', JSON.stringify(practiceSegmentTypes));
+            }, [practiceSegmentTypes]);
+
+            useEffect(() => {
+                localStorage.setItem('oc-dashboard-focus-items', JSON.stringify(practiceFocusItems));
+            }, [practiceFocusItems]);
+
+            // Kept for backward compat in signature but unused
             const addCustomFocusItem = (item) => {
-                if (item && !customFocusItems.includes(item)) {
-                    setCustomFocusItems([...customFocusItems, item]);
+                if (item && !practiceFocusItems.includes(item)) {
+                    setPracticeFocusItems([...practiceFocusItems, item]);
                 }
             };
 
@@ -41390,7 +41507,6 @@
             };
 
             const deleteLayoutVersion = (name) => {
-                if (!confirm(`Delete layout version "${name}"?`)) return;
                 const newVersions = { ...layoutVersions };
                 delete newVersions[name];
                 setLayoutVersions(newVersions);
@@ -41399,9 +41515,7 @@
             const loadLayoutVersion = (name) => {
                 const version = layoutVersions[name];
                 if (!version) return;
-                if (confirm(`Load layout version "${name}"? This will overwrite your current layout structure.`)) {
-                    setGamePlanLayouts(version);
-                }
+                setGamePlanLayouts(version);
             };
 
             // Force update layout cols if they don't match constant (Migration for 4-col change)
@@ -42366,6 +42480,19 @@
                             >
                                 <Icon name="BookOpen" size={16} /> Term Library
                             </button>
+                            <button
+                                className={`btn-ghost`}
+                                style={{
+                                    borderRadius: 0,
+                                    padding: '1rem 1.5rem',
+                                    borderBottom: setupTab === 'practice-lists' ? '3px solid var(--accent)' : '3px solid transparent',
+                                    fontWeight: setupTab === 'practice-lists' ? 'bold' : 'normal',
+                                    color: setupTab === 'practice-lists' ? 'var(--text-primary)' : 'var(--text-secondary)'
+                                }}
+                                onClick={() => setSetupTab('practice-lists')}
+                            >
+                                <Icon name="List" size={16} /> Practice Lists
+                            </button>
                         </div>
 
                         <div style={{ padding: '1.5rem', flex: 1 }}>
@@ -42571,6 +42698,135 @@
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {setupTab === 'practice-lists' && (
+                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <h3 style={{ margin: 0 }}>Practice Lists</h3>
+                                        <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7 }}>Customize standard dropdown options for practice plans.</p>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                        {/* Segment Types Column */}
+                                        <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                            <h4 style={{ marginTop: 0, marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Segment Types</h4>
+
+                                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                                <input
+                                                    id="new-segment-type"
+                                                    className="form-input"
+                                                    placeholder="New Segment Type..."
+                                                />
+                                                <button className="btn btn-primary" onClick={() => {
+                                                    const val = document.getElementById('new-segment-type').value.trim();
+                                                    if (val) {
+                                                        if (!practiceSegmentTypes.includes(val)) {
+                                                            setPracticeSegmentTypes([...practiceSegmentTypes, val]);
+                                                        }
+                                                        document.getElementById('new-segment-type').value = '';
+                                                    }
+                                                }}>Add</button>
+                                            </div>
+
+                                            <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                {practiceSegmentTypes.map(item => (
+                                                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-panel)', borderRadius: '4px' }}>
+                                                        <span>{item}</span>
+                                                        {deleteConfirmation?.list === 'segments' && deleteConfirmation?.item === item ? (
+                                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                                <button
+                                                                    className="btn btn-icon"
+                                                                    style={{ color: 'var(--success)' }}
+                                                                    onClick={() => {
+                                                                        setPracticeSegmentTypes(practiceSegmentTypes.filter(t => t !== item));
+                                                                        setDeleteConfirmation(null);
+                                                                    }}
+                                                                >
+                                                                    <Icon name="Check" size={14} />
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-icon"
+                                                                    style={{ color: 'var(--text-secondary)' }}
+                                                                    onClick={() => setDeleteConfirmation(null)}
+                                                                >
+                                                                    <Icon name="X" size={14} />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                className="btn btn-icon"
+                                                                style={{ color: 'var(--danger)', opacity: 0.7 }}
+                                                                onClick={() => setDeleteConfirmation({ list: 'segments', item })}
+                                                            >
+                                                                <Icon name="Trash" size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Focus Items Column */}
+                                        <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                            <h4 style={{ marginTop: 0, marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Focus Items</h4>
+
+                                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                                <input
+                                                    id="new-focus-item"
+                                                    className="form-input"
+                                                    placeholder="New Focus Item..."
+                                                />
+                                                <button className="btn btn-primary" onClick={() => {
+                                                    const val = document.getElementById('new-focus-item').value.trim();
+                                                    if (val) {
+                                                        if (!practiceFocusItems.includes(val)) {
+                                                            setPracticeFocusItems([...practiceFocusItems, val]);
+                                                        }
+                                                        document.getElementById('new-focus-item').value = '';
+                                                    }
+                                                }}>Add</button>
+                                            </div>
+
+                                            <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                {practiceFocusItems.map(item => (
+                                                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-panel)', borderRadius: '4px' }}>
+                                                        <span>{item}</span>
+                                                        {deleteConfirmation?.list === 'focus' && deleteConfirmation?.item === item ? (
+                                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                                <button
+                                                                    className="btn btn-icon"
+                                                                    style={{ color: 'var(--success)' }}
+                                                                    onClick={() => {
+                                                                        setPracticeFocusItems(practiceFocusItems.filter(t => t !== item));
+                                                                        setDeleteConfirmation(null);
+                                                                    }}
+                                                                >
+                                                                    <Icon name="Check" size={14} />
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-icon"
+                                                                    style={{ color: 'var(--text-secondary)' }}
+                                                                    onClick={() => setDeleteConfirmation(null)}
+                                                                >
+                                                                    <Icon name="X" size={14} />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                className="btn btn-icon"
+                                                                style={{ color: 'var(--danger)', opacity: 0.7 }}
+                                                                onClick={() => setDeleteConfirmation({ list: 'focus', item })}
+                                                            >
+                                                                <Icon name="Trash" size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -43980,11 +44236,12 @@
                                 plans={currentWeek.practicePlans || {}}
                                 onUpdatePlans={(updated) => handleUpdateWeek(currentWeek.id, 'practicePlans', updated)}
                                 staff={staff}
-                                customFocusItems={customFocusItems}
                                 addCustomFocusItem={addCustomFocusItem}
                                 user={currentUser}
                                 isLocked={currentWeek.isLocked}
                                 isSiteAdmin={false}
+                                segmentTypes={practiceSegmentTypes}
+                                focusItems={practiceFocusItems}
                             />
                         )}
                         {view === 'pregame' && (
@@ -44012,11 +44269,12 @@
                                 plans={currentWeek.practicePlans || {}}
                                 onUpdatePlans={(updated) => handleUpdateWeek(currentWeek.id, 'practicePlans', updated)}
                                 staff={staff}
-                                customFocusItems={customFocusItems}
                                 addCustomFocusItem={addCustomFocusItem}
                                 user={currentUser}
                                 isLocked={currentWeek.isLocked}
                                 isSiteAdmin={false}
+                                segmentTypes={practiceSegmentTypes}
+                                focusItems={practiceFocusItems}
                             />
                         )}
                         {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} />}
