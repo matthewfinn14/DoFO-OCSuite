@@ -4238,7 +4238,7 @@
         // Play Name Parser Utility
         const parsePlayName = (playName) => {
             if (!playName || typeof playName !== 'string') {
-                return { numbers: [], formations: [], directions: [], tags: [], special: [], quoted: [], unassigned: [] };
+                return { numbers: [], formations: [], directions: [], tags: [], special: [], quoted: [], unassigned: [], orderedTokens: [] };
             }
 
             const result = {
@@ -4248,19 +4248,15 @@
                 tags: [],
                 special: [],
                 quoted: [],
-                unassigned: []
+                unassigned: [],
+                orderedTokens: []
             };
 
-            // Common formations (case-insensitive)
             const formationPatterns = [
                 'DIAMOND', 'BUNCH', 'GRN', 'GREEN', 'RED', 'BLUE', 'BRT', 'BRIGHT',
                 'ORNG', 'ORANGE', 'GOLD', 'BRN', 'BROWN', 'METAL', 'OVER', 'TANK'
             ];
-
-            // Directions
             const directionPatterns = ['RT', 'LT', 'RIP', 'LIZ', 'RN'];
-
-            // Common tags/concepts
             const tagPatterns = [
                 'GAMBLE', 'BOOMER', 'KNIFE', 'SMOKE', 'WILLY', 'CAPONE', 'SUPER', 'RPO',
                 'STICK', 'JET', 'RICE', 'SHALLOW', 'LEAK', 'GOT7', 'ARC', 'MUSTANG',
@@ -4269,49 +4265,63 @@
                 'BULLS', 'TAG', 'DEPOT', 'NOLES'
             ];
 
-            // Extract quoted strings first
-            const quotedRegex = /"([^"]+)"/g;
-            let match;
-            while ((match = quotedRegex.exec(playName)) !== null) {
-                result.quoted.push(match[1]);
-            }
+            // Ordered tokenization
+            const tokens = [];
+            let current = "";
+            let inQuotes = false;
 
-            // Split by spaces and special characters, but keep the special chars
-            const tokens = playName.split(/(\s+|\+|\*|\(|\)|")/g).filter(t => t.trim());
+            for (let i = 0; i < playName.length; i++) {
+                const char = playName[i];
+                if (char === '"') {
+                    if (inQuotes) {
+                        tokens.push(current);
+                        current = "";
+                        inQuotes = false;
+                    } else {
+                        if (current.trim()) tokens.push(current.trim());
+                        current = "";
+                        inQuotes = true;
+                    }
+                } else if (!inQuotes && (/\s/.test(char) || ['+', '*', '(', ')'].includes(char))) {
+                    if (current.trim()) tokens.push(current.trim());
+                    if (['+', '*', '(', ')'].includes(char)) tokens.push(char);
+                    current = "";
+                } else {
+                    current += char;
+                }
+            }
+            if (current.trim()) tokens.push(current.trim());
 
             tokens.forEach(token => {
                 const upperToken = token.toUpperCase().trim();
-                if (!upperToken || token === '"') return;
+                let type = 'unassigned';
 
-                // Check for numbers (including alphanumeric like "36A", "4Y", "5G")
+                if (!upperToken) return;
+
                 if (/^\d+[A-Z]?$/.test(upperToken)) {
+                    type = 'number';
                     result.numbers.push(token);
-                }
-                // Check for formations
-                else if (formationPatterns.includes(upperToken)) {
+                } else if (formationPatterns.includes(upperToken)) {
+                    type = 'formation';
                     result.formations.push(token);
-                }
-                // Check for directions
-                else if (directionPatterns.includes(upperToken)) {
+                } else if (directionPatterns.includes(upperToken)) {
+                    type = 'direction';
                     result.directions.push(token);
-                }
-                // Check for tags
-                else if (tagPatterns.includes(upperToken)) {
+                } else if (tagPatterns.includes(upperToken)) {
+                    type = 'tag';
                     result.tags.push(token);
-                }
-                // Check for special characters
-                else if (['+', '*', '(', ')'].includes(token)) {
+                } else if (['+', '*', '(', ')'].includes(token)) {
+                    type = 'special';
                     result.special.push(token);
+                } else if (playName.includes(`"${token}"`)) {
+                    type = 'quoted';
+                    result.quoted.push(token);
+                } else {
+                    type = 'unassigned';
+                    result.unassigned.push(token);
                 }
-                // If it's a longer word not in our patterns
-                else {
-                    // Check if it's currently inside a quoted string we already extracted
-                    const isInQuoted = result.quoted.some(q => q.includes(token));
 
-                    if (!isInQuoted) {
-                        result.unassigned.push(token);
-                    }
-                }
+                result.orderedTokens.push({ text: token, type });
             });
 
             return result;
@@ -4397,12 +4407,24 @@
                     const newFormation = formationComp ? ((formData.syntaxValues && formData.syntaxValues[formationComp.id]) || '') : formData.formation;
 
                     setFormData(prev => {
-                        // Only update if changed to avoid loops (though check is cheap)
+                        // FIX: If no syntax values are selected (nameParts empty), DO NOT wipe out the existing name.
+                        if (nameParts.length === 0) return prev;
+
+                        // Only update if changed to avoid loops
                         if (prev.name === newName && prev.formation === newFormation) return prev;
+
+                        // GUARD: If we are in "parsing mode" (have used some components but not all), 
+                        // do not overwrite the full name with just the currently assigned parts.
+                        // This prevents the "disappearing tags" issue.
+                        const totalParsable = parsedComponents?.orderedTokens?.filter(t => t.type !== 'special')?.length || 0;
+                        if (usedComponents.size > 0 && usedComponents.size < totalParsable) {
+                            return { ...prev, formation: newFormation };
+                        }
+
                         return { ...prev, name: newName, formation: newFormation };
                     });
                 }
-            }, [formData.syntaxValues, playSyntax]);
+            }, [formData.syntaxValues, playSyntax, usedComponents.size, parsedComponents]);
 
             // If initialData has diagramData but no image, we can render it? 
             // Currently the system uses 'image' for display. We might need to generate an SVG string as image or support rendering diagramData.
@@ -4825,163 +4847,44 @@
                                                 Parsed Components (drag to fields below)
                                             </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                {parsedComponents.numbers.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                                        {parsedComponents.numbers.map((num, idx) => (
-                                                            !usedComponents.has(num) && (
-                                                                <div
-                                                                    key={`num-${idx}`}
-                                                                    draggable
-                                                                    onDragStart={() => handleDragStart(num, 'number')}
-                                                                    style={{
-                                                                        padding: '0.25rem 0.5rem',
-                                                                        background: '#3b82f6',
-                                                                        color: 'white',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '0.8rem',
-                                                                        cursor: 'grab',
-                                                                        userSelect: 'none',
-                                                                        opacity: usedComponents.has(num) ? 0.3 : 1
-                                                                    }}
-                                                                >
-                                                                    {num}
-                                                                </div>
-                                                            )
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {parsedComponents.formations.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                                        {parsedComponents.formations.map((form, idx) => (
-                                                            !usedComponents.has(form) && (
-                                                                <div
-                                                                    key={`form-${idx}`}
-                                                                    draggable
-                                                                    onDragStart={() => handleDragStart(form, 'formation')}
-                                                                    style={{
-                                                                        padding: '0.25rem 0.5rem',
-                                                                        background: '#10b981',
-                                                                        color: 'white',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '0.8rem',
-                                                                        cursor: 'grab',
-                                                                        userSelect: 'none',
-                                                                        opacity: usedComponents.has(form) ? 0.3 : 1
-                                                                    }}
-                                                                >
-                                                                    {form}
-                                                                </div>
-                                                            )
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {parsedComponents.directions.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                                        {parsedComponents.directions.map((dir, idx) => (
-                                                            !usedComponents.has(dir) && (
-                                                                <div
-                                                                    key={`dir-${idx}`}
-                                                                    draggable
-                                                                    onDragStart={() => handleDragStart(dir, 'direction')}
-                                                                    style={{
-                                                                        padding: '0.25rem 0.5rem',
-                                                                        background: '#f97316',
-                                                                        color: 'white',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '0.8rem',
-                                                                        cursor: 'grab',
-                                                                        userSelect: 'none',
-                                                                        opacity: usedComponents.has(dir) ? 0.3 : 1
-                                                                    }}
-                                                                >
-                                                                    {dir}
-                                                                </div>
-                                                            )
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {parsedComponents.tags.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                                        {parsedComponents.tags.map((tag, idx) => (
-                                                            !usedComponents.has(tag) && (
-                                                                <div
-                                                                    key={`tag-${idx}`}
-                                                                    draggable
-                                                                    onDragStart={() => handleDragStart(tag, 'tag')}
-                                                                    style={{
-                                                                        padding: '0.25rem 0.5rem',
-                                                                        background: '#8b5cf6',
-                                                                        color: 'white',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '0.8rem',
-                                                                        cursor: 'grab',
-                                                                        userSelect: 'none',
-                                                                        opacity: usedComponents.has(tag) ? 0.3 : 1
-                                                                    }}
-                                                                >
-                                                                    {tag}
-                                                                </div>
-                                                            )
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {parsedComponents.quoted.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                                        {parsedComponents.quoted.map((quoted, idx) => (
-                                                            !usedComponents.has(quoted) && (
-                                                                <div
-                                                                    key={`quoted-${idx}`}
-                                                                    draggable
-                                                                    onDragStart={() => handleDragStart(quoted, 'quoted')}
-                                                                    style={{
-                                                                        padding: '0.25rem 0.5rem',
-                                                                        background: '#6b7280',
-                                                                        color: 'white',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '0.8rem',
-                                                                        cursor: 'grab',
-                                                                        userSelect: 'none',
-                                                                        opacity: usedComponents.has(quoted) ? 0.3 : 1
-                                                                    }}
-                                                                >
-                                                                    "{quoted}"
-                                                                </div>
-                                                            )
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {parsedComponents.unassigned && parsedComponents.unassigned.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                                        {parsedComponents.unassigned.map((token, idx) => (
-                                                            !usedComponents.has(token) && (
-                                                                <div
-                                                                    key={`unassigned-${idx}`}
-                                                                    draggable
-                                                                    onDragStart={() => handleDragStart(token, 'unassigned')}
-                                                                    style={{
-                                                                        padding: '0.25rem 0.5rem',
-                                                                        background: '#94a3b8',
-                                                                        color: 'white',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '0.8rem',
-                                                                        cursor: 'grab',
-                                                                        userSelect: 'none',
-                                                                        opacity: usedComponents.has(token) ? 0.3 : 1
-                                                                    }}
-                                                                >
-                                                                    {token}
-                                                                </div>
-                                                            )
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {!parsedComponents.numbers.length && !parsedComponents.formations.length &&
-                                                    !parsedComponents.directions.length && !parsedComponents.tags.length &&
-                                                    !parsedComponents.quoted.length && !parsedComponents.unassigned?.length && (
-                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                                                            No recognizable components detected
+                                                {parsedComponents.orderedTokens && parsedComponents.orderedTokens.map((token, idx) => {
+                                                    const isUsed = usedComponents.has(token.text);
+                                                    if (isUsed || token.type === 'special') return null;
+
+                                                    // Use the same color scheme as before
+                                                    let bgColor = '#94a3b8'; // unassigned
+                                                    if (token.type === 'number') bgColor = '#3b82f6';
+                                                    else if (token.type === 'formation') bgColor = '#10b981';
+                                                    else if (token.type === 'direction') bgColor = '#f97316';
+                                                    else if (token.type === 'tag') bgColor = '#8b5cf6';
+                                                    else if (token.type === 'quoted') bgColor = '#6b7280';
+
+                                                    return (
+                                                        <div
+                                                            key={`${token.text}-${idx}`}
+                                                            draggable
+                                                            onDragStart={() => handleDragStart(token.text, token.type)}
+                                                            style={{
+                                                                padding: '0.25rem 0.65rem',
+                                                                background: bgColor,
+                                                                color: 'white',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.85rem',
+                                                                fontWeight: '600',
+                                                                cursor: 'grab',
+                                                                userSelect: 'none',
+                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                                            }}
+                                                        >
+                                                            {token.type === 'quoted' ? `"${token.text}"` : token.text}
                                                         </div>
-                                                    )}
+                                                    );
+                                                })}
+                                                {(!parsedComponents.orderedTokens || parsedComponents.orderedTokens.filter(t => t.type !== 'special' && !usedComponents.has(t.text)).length === 0) && (
+                                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                                        All components assigned or no components found
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -5066,18 +4969,35 @@
                                                 Parsed Components (drag to fields below)
                                             </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                {parsedComponents.numbers && parsedComponents.numbers.map((num, idx) => (
-                                                    !usedComponents.has(num) && <div key={`num-${idx}`} draggable onDragStart={() => handleDragStart(num, 'number')} style={{ padding: '0.25rem 0.5rem', background: '#3b82f6', color: 'white', borderRadius: '4px', fontSize: '0.8rem', cursor: 'grab' }}>{num}</div>
-                                                ))}
-                                                {parsedComponents.formations && parsedComponents.formations.map((form, idx) => (
-                                                    !usedComponents.has(form) && <div key={`form-${idx}`} draggable onDragStart={() => handleDragStart(form, 'formation')} style={{ padding: '0.25rem 0.5rem', background: '#10b981', color: 'white', borderRadius: '4px', fontSize: '0.8rem', cursor: 'grab' }}>{form}</div>
-                                                ))}
-                                                {parsedComponents.directions && parsedComponents.directions.map((dir, idx) => (
-                                                    !usedComponents.has(dir) && <div key={`dir-${idx}`} draggable onDragStart={() => handleDragStart(dir, 'direction')} style={{ padding: '0.25rem 0.5rem', background: '#f97316', color: 'white', borderRadius: '4px', fontSize: '0.8rem', cursor: 'grab' }}>{dir}</div>
-                                                ))}
-                                                {parsedComponents.tags && parsedComponents.tags.map((tag, idx) => (
-                                                    !usedComponents.has(tag) && <div key={`tag-${idx}`} draggable onDragStart={() => handleDragStart(tag, 'tag')} style={{ padding: '0.25rem 0.5rem', background: '#8b5cf6', color: 'white', borderRadius: '4px', fontSize: '0.8rem', cursor: 'grab' }}>{tag}</div>
-                                                ))}
+                                                {parsedComponents.orderedTokens && parsedComponents.orderedTokens.map((token, idx) => {
+                                                    const isUsed = usedComponents.has(token.text);
+                                                    if (isUsed || token.type === 'special') return null;
+
+                                                    let bgColor = '#94a3b8';
+                                                    if (token.type === 'number') bgColor = '#3b82f6';
+                                                    else if (token.type === 'formation') bgColor = '#10b981';
+                                                    else if (token.type === 'direction') bgColor = '#f97316';
+                                                    else if (token.type === 'tag') bgColor = '#8b5cf6';
+                                                    else if (token.type === 'quoted') bgColor = '#6b7280';
+
+                                                    return (
+                                                        <div
+                                                            key={`${token.text}-${idx}`}
+                                                            draggable
+                                                            onDragStart={() => handleDragStart(token.text, token.type)}
+                                                            style={{
+                                                                padding: '0.25rem 0.5rem',
+                                                                background: bgColor,
+                                                                color: 'white',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.8rem',
+                                                                cursor: 'grab'
+                                                            }}
+                                                        >
+                                                            {token.type === 'quoted' ? `"${token.text}"` : token.text}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}
@@ -5176,151 +5096,62 @@
                             </div>
                         </div>
 
-                        {/* THIRD SECTION: METADATA & PLAYER ASSIGNMENT */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
-                            {/* Left: Metadata */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                    {/* Metadata Inputs */}
-                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                        <label className="form-label">Play Call Code</label>
-                                        <input className="form-input" value={formData.playCallCode || ''} onChange={e => setFormData({ ...formData, playCallCode: e.target.value })} placeholder="e.g. 123" />
-                                    </div>
-                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                        <label className="form-label">Look-A-Like</label>
-                                        <input className="form-input" value={formData.lookALike || ''} onChange={e => setFormData({ ...formData, lookALike: e.target.value })} placeholder="e.g. Similar Play" />
-                                    </div>
-                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                        <label className="form-label">Sequence (Order)</label>
-                                        <input className="form-input" type="number" value={formData.sequenceOrder || ''} onChange={e => setFormData({ ...formData, sequenceOrder: e.target.value })} placeholder="e.g. 1" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                            <input type="checkbox" checked={formData.isInstall || false} onChange={e => setFormData({ ...formData, isInstall: e.target.checked })} />
-                                            Add to Install Slide
-                                        </label>
-                                    </div>
+                        {/* SECTION: PLAYER ASSIGNMENT NOTES */}
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <div style={{
+                                padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)',
+                                display: 'flex', flexDirection: 'column'
+                            }}>
+                                <label className="form-label" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>Player Assignment Notes</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.75rem', flex: 1, overflowY: 'auto', maxHeight: '500px' }}>
+                                    {(() => {
+                                        // 1. Get default/configured positions + any extra from diagram
+                                        const standardKeys = ['QB', 'RB', 'X', 'Z', 'Y', 'A', 'F', 'H', 'LT', 'LG', 'C', 'RG', 'RT'];
+                                        const defaultPos = standardKeys.map(key => positionNames[key] || key);
+
+                                        // 2. Extract unique player labels from diagramData
+                                        const diagramPlayers = (formData.diagramData?.elements || [])
+                                            .filter(el => el.type === 'player' && el.label)
+                                            .map(el => el.label);
+
+                                        // Merge and dedupe
+                                        const allPositions = Array.from(new Set([...defaultPos, ...diagramPlayers]));
+
+                                        return allPositions.map(pos => (
+                                            <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <span style={{ width: '40px', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)', flexShrink: 0 }}>{pos}</span>
+                                                <input
+                                                    className="form-input"
+                                                    style={{ padding: '0.4rem 0.6rem', flex: 1, fontSize: '0.9rem' }}
+                                                    placeholder={`Notes for ${pos}...`}
+                                                    value={formData.playerNotes?.[pos] || ''}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        playerNotes: { ...prev.playerNotes, [pos]: e.target.value }
+                                                    }))}
+                                                />
+                                                <select
+                                                    style={{ width: '120px', fontSize: '0.8rem', padding: '0.2rem' }}
+                                                    value={formData.playerLinks?.[pos] || ''}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        playerLinks: { ...prev.playerLinks, [pos]: e.target.value }
+                                                    }))}
+                                                >
+                                                    <option value="">Link Drill...</option>
+                                                    {drills.map(drill => (
+                                                        <option key={drill.id} value={drill.videoUrl || drill.youtubeId || ''}>
+                                                            {drill.category}: {drill.title}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        ));
+                                    })()}
                                 </div>
                             </div>
-                            {/* Right: Player Assignment Notes */}
-                            < div style={{ height: '100%' }}>
-                                <div style={{
-                                    height: '100%', padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)',
-                                    display: 'flex', flexDirection: 'column'
-                                }}>
-                                    <label className="form-label" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>Player Assignment Notes</label>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem', flex: 1, overflowY: 'auto', maxHeight: '500px' }}>
-                                        {(() => {
-                                            // 1. Get default/configured positions + any extra from diagram
-                                            const standardKeys = ['QB', 'RB', 'X', 'Z', 'Y', 'A', 'F', 'H', 'LT', 'LG', 'C', 'RG', 'RT'];
-                                            const defaultPos = standardKeys.map(key => positionNames[key] || key);
+                        </div>
 
-                                            // 2. Extract unique player labels from diagramData
-                                            const diagramPlayers = (formData.diagramData?.elements || [])
-                                                .filter(el => el.type === 'player' && el.label)
-                                                .map(el => el.label);
-
-                                            // Merge and dedupe
-                                            const allPositions = Array.from(new Set([...defaultPos, ...diagramPlayers]));
-
-                                            return allPositions.map(pos => (
-                                                <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                    <span style={{ width: '40px', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)', flexShrink: 0 }}>{pos}</span>
-                                                    <input
-                                                        className="form-input"
-                                                        style={{ padding: '0.4rem 0.6rem', flex: 1, fontSize: '0.9rem' }}
-                                                        placeholder={`Notes for ${pos}...`}
-                                                        value={formData.playerNotes?.[pos] || ''}
-                                                        onChange={(e) => setFormData(prev => ({
-                                                            ...prev,
-                                                            playerNotes: { ...prev.playerNotes, [pos]: e.target.value }
-                                                        }))}
-                                                    />
-                                                    <select
-                                                        style={{ width: '120px', fontSize: '0.8rem', padding: '0.2rem' }}
-                                                        value={formData.playerLinks?.[pos] || ''}
-                                                        onChange={(e) => setFormData(prev => ({
-                                                            ...prev,
-                                                            playerLinks: { ...prev.playerLinks, [pos]: e.target.value }
-                                                        }))}
-                                                    >
-                                                        <option value="">Link Drill...</option>
-                                                        {drills.map(drill => (
-                                                            <option key={drill.id} value={drill.videoUrl || drill.youtubeId || ''}>
-                                                                {drill.category}: {drill.title}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div >
-                                            ));
-                                        })()}
-                                    </div >
-                                </div >
-                            </div >
-                        </div >
-
-                        {/* Related Drills Section */}
-                        < div style={{ marginTop: '1.5rem', padding: '1.5rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                            <h3 style={{
-                                fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-primary)',
-                                display: 'flex', alignItems: 'center', gap: '0.5rem'
-                            }}>
-                                <Icon name="Activity" size={18} style={{ color: 'var(--accent)' }} />
-                                Related Drills
-                            </h3>
-                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                                <select
-                                    className="form-select"
-                                    onChange={(e) => {
-                                        const drillId = e.target.value;
-                                        const drill = drills.find(d => d.id === drillId);
-                                        if (drill && (!formData.relatedDrills || !formData.relatedDrills.some(d => d.id === drill.id))) {
-                                            setFormData({
-                                                ...formData,
-                                                relatedDrills: [...(formData.relatedDrills || []), { id: drill.id, title: drill.title }]
-                                            });
-                                        }
-                                        e.target.value = '';
-                                    }}
-                                >
-                                    <option value="">+ Add Linked Drill</option>
-                                    {drills.map(drill => (
-                                        <option key={drill.id} value={drill.id}>
-                                            {drill.category}: {drill.title}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {
-                                formData.relatedDrills && formData.relatedDrills.length > 0 ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.5rem' }}>
-                                        {formData.relatedDrills.map((drill, idx) => (
-                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.9rem', background: 'var(--bg-input)', borderRadius: '8px', fontSize: '0.9rem', border: '1px solid var(--border)' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
-                                                    <Icon name="Link" size={14} style={{ color: 'var(--accent)' }} />
-                                                    {drill.title}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFormData({
-                                                        ...formData,
-                                                        relatedDrills: formData.relatedDrills.filter(d => d.id !== drill.id)
-                                                    })}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-error)', display: 'flex', alignItems: 'center' }}
-                                                >
-                                                    <Icon name="X" size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                        No drills linked yet.
-                                    </div>
-                                )
-                            }
-                        </div >
 
                         <div className="form-group" style={{ marginTop: '1.5rem', background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
                             <label className="form-label" style={{ marginBottom: '1rem' }}>Situational Tags (or drag tags here)</label>
@@ -5355,7 +5186,7 @@
             );
         };
 
-        const PlayCard = ({ play, onEdit, isSelected, onToggleSelect }) => {
+        const PlayCard = ({ play, onEdit, isSelected, onToggleSelect = () => { } }) => {
             return (
                 <div
                     className={`play-card ${isSelected ? 'selected' : ''}`}
@@ -5481,18 +5312,45 @@
                             {play.wristbandSlot && <span className="mini-tag" style={{ background: 'var(--accent)', color: '#000' }}>#{play.wristbandSlot}</span>} {play.staplesSlot && <span className="mini-tag" style={{ background: '#f59e0b', color: '#000', marginLeft: '2px' }}>S:{play.staplesSlot}</span>}
                         </div>
                         <div className="play-meta">
-                            {play.formation} {play.formationTag && `(${play.formationTag})`} • {play.color}
+                            {(() => {
+                                const nameLower = play.name.toLowerCase();
+                                const parts = [];
+                                // Logic for Formation & Formation Tag
+                                const showForm = play.formation && !nameLower.includes(play.formation.toLowerCase());
+                                const showFormTag = play.formationTag && !nameLower.includes(play.formationTag.toLowerCase());
+
+                                if (showForm) {
+                                    let txt = play.formation;
+                                    if (showFormTag) txt += ` (${play.formationTag})`;
+                                    parts.push(txt);
+                                } else if (showFormTag) {
+                                    parts.push(`(${play.formationTag})`);
+                                }
+
+                                // Logic for Color
+                                if (play.color && !nameLower.includes(play.color.toLowerCase())) {
+                                    parts.push(play.color);
+                                }
+
+                                return parts.map((part, i) => (
+                                    <React.Fragment key={i}>
+                                        {i > 0 && " • "}
+                                        {part}
+                                    </React.Fragment>
+                                ));
+                            })()}
                         </div>
                         <div className="play-tags">
                             {/* Tag 1 */}
-                            {play.tag1 && (
+                            {/* Tag 1 */}
+                            {play.tag1 && !play.name.toLowerCase().includes(play.tag1.toLowerCase()) && (
                                 <span className="mini-tag">
                                     {(TAG_CATEGORIES["Motion"] || []).includes(play.tag1) ? `"${play.tag1}"` : play.tag1}
                                 </span>
                             )}
 
                             {/* Tag 2 */}
-                            {play.tag2 && (
+                            {play.tag2 && !play.name.toLowerCase().includes(play.tag2.toLowerCase()) && (
                                 <span className="mini-tag">
                                     ({play.tag2})
                                 </span>
@@ -5500,8 +5358,9 @@
 
                             {/* Other Tags array (deduplicated) */}
                             {play.tags && play.tags.map(tag => {
-                                // Deduplicate if tag matches fields
+                                // Deduplicate if tag matches fields OR Play Name
                                 if (tag === play.tag1 || tag === play.tag2) return null;
+                                if (play.name.toLowerCase().includes(tag.toLowerCase())) return null;
 
                                 const isMotion = (TAG_CATEGORIES["Motion"] || []).includes(tag);
                                 return <span key={tag} className="mini-tag">{isMotion ? `"${tag}"` : tag}</span>
@@ -5695,6 +5554,7 @@
             const [quickAddValue, setQuickAddValue] = useState('');
             const [quickAddSuggestions, setQuickAddSuggestions] = useState([]);
             const [selectedDay, setSelectedDay] = useState('Monday');
+            const [staplesInputs, setStaplesInputs] = useState({}); // Track input values for Staples slots
 
             // Layout constants
             const rowHeight = 11;
@@ -5777,6 +5637,53 @@
                 return map;
             }, [plays]);
 
+            // Initialize Staples inputs based on current play assignments
+            useEffect(() => {
+                const inputs = {};
+                for (let slot = 10; slot <= 89; slot++) {
+                    const play = slotMap[slot];
+                    if (play) {
+                        inputs[slot] = getPlaySignature(play);
+                    }
+                }
+                setStaplesInputs(inputs);
+            }, [slotMap]);
+
+
+            // Helper to match Staples concept + color
+            const getPlaySignature = (p) => {
+                if (!p.name) return '';
+
+                let s = p.name.trim();
+                const form = (p.formation || '').trim();
+
+                // 1. Strip structural formations from start
+                // We define "Structural" as anything not in the usual color list
+                const colors = ['RED', 'BLUE', 'GRN', 'GREEN', 'BRIGHT', 'BRT', 'ORNG', 'ORANGE', 'GOLD', 'BRN', 'BROWN', 'TEAL', 'PINK', 'PURPLE', 'YELLOW'];
+                const isColorFormation = colors.includes(form.toUpperCase());
+
+                if (form && !isColorFormation) {
+                    // Case-insensitive strip from start
+                    const regex = new RegExp('^' + form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+', 'i');
+                    s = s.replace(regex, '');
+                }
+
+                // 2. Strip explicit tags if they are in the tags array
+                if (p.tags && p.tags.length > 0) {
+                    p.tags.forEach(tag => {
+                        if (tag) {
+                            // Strip tag as a word everywhere
+                            const regex = new RegExp('\\b' + tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+                            s = s.replace(regex, '');
+                        }
+                    });
+                }
+
+                // 3. Final cleanup: strip common non-concept chars but keep + for variations
+                // We keep + because the user specifically said "+ TRIBE" should stay distinct.
+                return s.replace(/\s+/g, ' ').replace(/\*$/, '').trim();
+            };
+
             const handleAssignSlot = (slot) => {
                 if (!selectedPlayId) return;
                 const play = plays.find(p => p.id === selectedPlayId);
@@ -5784,7 +5691,17 @@
                     // Update play with new slot - Check for Staples
                     const card = wbSettings[selectedCardId];
                     if (card && card.type === 'staples') {
-                        onUpdatePlay({ ...play, staplesSlot: slot.toString() });
+                        // NEW: Update ALL plays with matching signature
+                        const signature = getPlaySignature(play);
+                        const matchingPlays = plays.filter(p => getPlaySignature(p) === signature);
+
+                        // Create update objects for all matching plays
+                        const updates = matchingPlays.map(p => ({
+                            ...p,
+                            staplesSlot: slot.toString()
+                        }));
+
+                        onUpdatePlay(updates);
                     } else {
                         onUpdatePlay({ ...play, wristbandSlot: slot.toString() });
                     }
@@ -6000,6 +5917,49 @@
                 setQuickAddSuggestions([]);
             };
 
+            // Staples Input Handlers
+            const handleStaplesInputChange = (slot, value) => {
+                setStaplesInputs(prev => ({ ...prev, [slot]: value }));
+            };
+
+            const handleStaplesInputBlur = (slot) => {
+                const inputValue = (staplesInputs[slot] || '').trim().toUpperCase();
+
+                if (!inputValue) {
+                    // Clear the slot if input is empty
+                    const playsToUpdate = plays.filter(p => p.staplesSlot === slot.toString());
+                    if (playsToUpdate.length > 0) {
+                        const updates = playsToUpdate.map(p => ({ ...p, staplesSlot: '' }));
+                        onUpdatePlay(updates);
+                    }
+                    return;
+                }
+
+                // Find all plays that match this signature (excluding formation)
+                const matchingPlays = plays.filter(p => {
+                    const playSignature = getPlaySignature(p).toUpperCase();
+                    return playSignature === inputValue;
+                });
+
+                if (matchingPlays.length > 0) {
+                    // Update all matching plays
+                    const updates = matchingPlays.map(p => ({
+                        ...p,
+                        staplesSlot: slot.toString()
+                    }));
+                    onUpdatePlay(updates);
+                } else {
+                    // No matches found - optionally show warning
+                    console.warn(`No plays found matching signature: ${inputValue}`);
+                }
+            };
+
+            const handleStaplesInputKeyDown = (e, slot) => {
+                if (e.key === 'Enter') {
+                    e.target.blur(); // Trigger blur handler
+                }
+            };
+
 
             // Generate slots for tables
             const slots100 = [];
@@ -6007,53 +5967,10 @@
             for (let i = 101; i <= 148; i++) slots100.push(i);
             for (let i = 201; i <= 248; i++) slots200.push(i);
 
-            const handleExportToClipboard = () => {
-                const lines = ['Slot\tPlay Name\tFormation\tConcept\tPrimary Tag'];
-                const sortedSlots = Object.keys(slotMap).sort((a, b) => Number(a) - Number(b));
-
-                sortedSlots.forEach(slot => {
-                    const play = slotMap[slot];
-                    let tagStr = play.tags && play.tags.length > 0 ? play.tags[0] : '';
-                    let concept = play.concept || '';
-
-                    // Simple Tab-Separated format for easy pasting
-                    lines.push(`${slot}\t${play.name}\t${play.formation}\t${concept}\t${tagStr}`);
-                });
-
-                const content = lines.join('\n');
-
-                // Copy to clipboard
-                navigator.clipboard.writeText(content).then(() => {
-                    const sheetUrl = localStorage.getItem('hc_wristband_sheet_url');
-                    if (sheetUrl && sheetUrl.startsWith('http')) {
-                        // If user has a sheet saved, open it
-                        window.open(sheetUrl, '_blank');
-                        alert('Data copied! Your Google Sheet has been opened.\n\nClick cell A1 and press Cmd+V (Paste).');
-                    } else {
-                        // Prompt to set URL if not set
-                        const url = prompt('Data copied to clipboard!\n\nTo skip this step next time, enter your Google Sheet URL here to auto-open it:', '');
-                        if (url && url.startsWith('http')) {
-                            localStorage.setItem('hc_wristband_sheet_url', url);
-                            if (currentUser) syncToFirestore(currentUser.uid, 'wbSettings', {
-                                wb1Opp: localStorage.getItem('hc_wb1_opponent'),
-                                wb1Iter: localStorage.getItem('hc_wb1_iteration'),
-                                wb2Opp: localStorage.getItem('hc_wb2_opponent'),
-                                wb2Iter: localStorage.getItem('hc_wb2_iteration'),
-                                sheetUrl: url
-                            });
-                            window.open(url, '_blank');
-                        } else {
-                            alert('Data copied! Paste it into your spreadsheet.');
-                        }
-                    }
-                }).catch(err => {
-                    console.error('Failed to copy: ', err);
-                    alert('Failed to copy. ' + err);
-                });
-            };
 
             const renderSpreadsheetTable = (slots, rangeClass, cardId, title = '') => {
                 const card = wbSettings[cardId];
+                if (!card) return null;
                 const isMiniScripts = card.type === 'mini-scripts';
                 const isModular = card.type === 'modular';
 
@@ -6216,7 +6133,7 @@
 
                                             // Determine background shade
                                             let rowBackground = 'inherit';
-                                            if (card.color && card.color !== 'none') {
+                                            if (card && card.color && card.color !== 'none') {
                                                 const shades = ['light', 'medium'];
                                                 const shade = shades[rowIndex % 2];
                                                 const colorMap = {
@@ -6278,7 +6195,7 @@
 
                 // ---------------------------------------------------------
 
-                if (card.type === 'staples') {
+                if (card && card.type === 'staples') {
                     // STAPLES LAYOUT: 4 Columns x 20 Rows (Slots 10-89)
                     // Col 1: 10-29
                     // Col 2: 30-49
@@ -6336,7 +6253,7 @@
                                         {tableRows.map((rowGroup, rowIndex) => {
                                             // Calculate color background
                                             let cellBackground = 'inherit';
-                                            if (card.color && card.color !== 'none') {
+                                            if (card && card.color && card.color !== 'none') {
                                                 const shades = ['light', 'medium'];
                                                 const shade = shades[rowIndex % 2];
                                                 const colorMap = {
@@ -6395,7 +6312,23 @@
                                                                         cursor: isClickable ? 'pointer' : 'default',
                                                                         backgroundColor: isClickable ? '#dbeafe' : cellBackground
                                                                     }}>
-                                                                    {cellData.text}
+                                                                    <input
+                                                                        type="text"
+                                                                        value={staplesInputs[cellData.slot] || ''}
+                                                                        onChange={(e) => handleStaplesInputChange(cellData.slot, e.target.value)}
+                                                                        onBlur={() => handleStaplesInputBlur(cellData.slot)}
+                                                                        onKeyDown={(e) => handleStaplesInputKeyDown(e, cellData.slot)}
+                                                                        placeholder="Type play..."
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            border: 'none',
+                                                                            background: 'transparent',
+                                                                            fontSize: 'inherit',
+                                                                            padding: '0',
+                                                                            outline: 'none',
+                                                                            fontFamily: 'inherit'
+                                                                        }}
+                                                                    />
                                                                 </td>
                                                             </React.Fragment>
                                                         );
@@ -6484,7 +6417,7 @@
 
                                             // Calculate color background for this row
                                             let cellBackground = 'inherit';
-                                            if (card.color && card.color !== 'none') {
+                                            if (card && card.color && card.color !== 'none') {
                                                 const colorBase = card.color;
                                                 const shadeIndex = rowIndex % 2;
                                                 const shades = ['light', 'medium'];
@@ -6626,6 +6559,7 @@
             // Audible wristband: Coordinate in left column, two play columns on right
             const renderAudibleTable = (slots, rangeClass, cardId, title = '') => {
                 const card = wbSettings[cardId];
+                if (!card) return null;
 
                 // Get all plays for the slots
                 const displayRows = slots.map(slot => {
@@ -6672,7 +6606,7 @@
                                 {tableRows.map((row, rowIndex) => {
                                     // Calculate color background for this row
                                     let cellBackground = 'inherit';
-                                    if (card.color && card.color !== 'none') {
+                                    if (card && card.color && card.color !== 'none') {
                                         const colorBase = card.color;
                                         const shadeIndex = rowIndex % 2;
                                         const shades = ['light', 'medium'];
@@ -6982,13 +6916,13 @@
             const getSlotsForCard = (cardId) => {
                 const card = wbSettings[cardId];
 
-                if (card.type === 'staples') {
+                if (card && card.type === 'staples') {
                     const slots = [];
                     for (let i = 10; i <= 89; i++) slots.push(i);
                     return slots;
                 }
 
-                if (card.type === 'rooski') {
+                if (card && card.type === 'rooski') {
                     // Rooski uses 16 slots: X01-X16 where X is the series number
                     const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : (cardId === 'card3' ? 3 : (cardId === 'card4' ? 4 : (cardId === 'card5' ? 5 : 6))));
                     const slots = [];
@@ -7194,7 +7128,7 @@
                                         <div
                                             key={play.id}
                                             onClick={() => {
-                                                if (activeCard.type === 'mini-scripts' || activeCard.type === 'modular') {
+                                                if (activeCard && (activeCard.type === 'mini-scripts' || activeCard.type === 'modular')) {
                                                     handleAddPlayRow(selectedCardId, play);
                                                 } else {
                                                     setSelectedPlayId(play.id);
@@ -7294,123 +7228,133 @@
                                 ))}
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button className="btn btn-secondary" onClick={handleExportToClipboard}>Copy Data</button>
                                 <button className="btn btn-secondary" onClick={() => onNavigate && onNavigate('print-hub')}>Print</button>
                                 <button className="btn btn-danger" onClick={() => handleClearCard(selectedCardId)}>Clear Card</button>
                                 <button className="btn btn-danger" onClick={handleClearBoth} style={{ fontWeight: 'bold' }}>Clear All</button>
                             </div>
                         </div>
 
+
                         {/* Card Settings Bar */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '1.5rem',
-                            padding: '0.75rem',
-                            background: 'var(--bg-panel)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '4px',
-                            marginBottom: '1rem'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Layout:</label>
-                                <select
-                                    className="form-input"
-                                    style={{ width: 'auto', padding: '4px 8px' }}
-                                    value={activeCard.type}
-                                    onChange={e => updateCard(selectedCardId, { type: e.target.value })}
-                                    disabled={selectedCardId === 'staples'}
-                                >
-                                    <option value="standard">Standard (Traditional)</option>
-                                    <option value="staples">STAPLES (10-89)</option>
-                                    <option value="mini-scripts">Mini-Scripts (Old Modular)</option>
-                                    <option value="modular">Modular (Mixed Headers)</option>
-                                    <option value="rooski">Rooski (16-slot grid)</option>
-                                    <option value="audible">Audible (Coordinate + 2 Plays)</option>
-                                </select>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
-                                <input
-                                    className="form-input"
-                                    style={{ width: '120px', padding: '4px 8px' }}
-                                    onChange={e => updateCard(selectedCardId, { opp: e.target.value })}
-                                    placeholder="Opponent"
-                                />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iter:</label>
-                                <input
-                                    style={{ width: '50px', padding: '4px 8px' }}
-                                    value={activeCard.iter}
-                                    onChange={e => updateCard(selectedCardId, { iter: e.target.value })}
-                                    placeholder="1"
-                                />
-                            </div>
-                            {(activeCard.type === 'standard' || activeCard.type === 'audible') && (
+                        {activeCard && (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '1.5rem',
+                                padding: '0.75rem',
+                                background: 'var(--bg-panel)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '4px',
+                                marginBottom: '1rem'
+                            }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Color:</label>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Layout:</label>
                                     <select
                                         className="form-input"
                                         style={{ width: 'auto', padding: '4px 8px' }}
-                                        value={activeCard.color || 'none'}
-                                        onChange={e => updateCard(selectedCardId, { color: e.target.value })}
+                                        value={activeCard.type}
+                                        onChange={e => updateCard(selectedCardId, { type: e.target.value })}
+                                        disabled={selectedCardId === 'staples'}
                                     >
-                                        <option value="none">None (White)</option>
-                                        <option value="green">Green (alternating shades)</option>
-                                        <option value="orange">Orange (alternating shades)</option>
-                                        <option value="red">Red (alternating shades)</option>
-                                        <option value="blue">Blue (alternating shades)</option>
-                                        <option value="yellow">Yellow (alternating shades)</option>
-                                        <option value="purple">Purple (alternating shades)</option>
-                                        <option value="teal">Teal (alternating shades)</option>
-                                        <option value="pink">Pink (alternating shades)</option>
+                                        <option value="standard">Standard (Traditional)</option>
+                                        <option value="staples">STAPLES (10-89)</option>
+                                        <option value="mini-scripts">Mini-Scripts (Old Modular)</option>
+                                        <option value="modular">Modular (Mixed Headers)</option>
+                                        <option value="rooski">Rooski (16-slot grid)</option>
+                                        <option value="audible">Audible (Coordinate + 2 Plays)</option>
                                     </select>
                                 </div>
-                            )}
-                            {activeCard.type === 'rooski' && (
-                                <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
+                                    <input
+                                        className="form-input"
+                                        style={{ width: '120px', padding: '4px 8px' }}
+                                        onChange={e => updateCard(selectedCardId, { opp: e.target.value })}
+                                        placeholder="Opponent"
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iter:</label>
+                                    <input
+                                        style={{ width: '50px', padding: '4px 8px' }}
+                                        value={activeCard.iter}
+                                        onChange={e => updateCard(selectedCardId, { iter: e.target.value })}
+                                        placeholder="1"
+                                    />
+                                </div>
+                                {(activeCard.type === 'standard' || activeCard.type === 'audible') && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>View:</label>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Color:</label>
                                         <select
                                             className="form-input"
                                             style={{ width: 'auto', padding: '4px 8px' }}
-                                            value={activeCard.rooskiView || 'skill'}
-                                            onChange={e => updateCard(selectedCardId, { rooskiView: e.target.value })}
+                                            value={activeCard.color || 'none'}
+                                            onChange={e => updateCard(selectedCardId, { color: e.target.value })}
                                         >
-                                            <option value="skill">Skill Positions</option>
-                                            <option value="oline">O-Line</option>
+                                            <option value="none">None (White)</option>
+                                            <option value="green">Green (alternating shades)</option>
+                                            <option value="orange">Orange (alternating shades)</option>
+                                            <option value="red">Red (alternating shades)</option>
+                                            <option value="blue">Blue (alternating shades)</option>
+                                            <option value="yellow">Yellow (alternating shades)</option>
+                                            <option value="purple">Purple (alternating shades)</option>
+                                            <option value="teal">Teal (alternating shades)</option>
+                                            <option value="pink">Pink (alternating shades)</option>
                                         </select>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            style={{ width: '120px', padding: '4px 8px' }}
-                                            value={activeCard.opponent || ''}
-                                            onChange={(e) => updateCard(selectedCardId, { opponent: e.target.value })}
-                                            placeholder="e.g., Oelwein"
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iteration:</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            className="form-input"
-                                            style={{ width: '60px', padding: '4px 8px' }}
-                                            value={activeCard.iteration || 1}
-                                            onChange={(e) => updateCard(selectedCardId, { iteration: parseInt(e.target.value) || 1 })}
-                                        />
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                                )}
+                                {activeCard.type === 'rooski' && (
+                                    <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>View:</label>
+                                            <select
+                                                className="form-input"
+                                                style={{ width: 'auto', padding: '4px 8px' }}
+                                                value={activeCard.rooskiView || 'skill'}
+                                                onChange={e => updateCard(selectedCardId, { rooskiView: e.target.value })}
+                                            >
+                                                <option value="skill">Skill Positions</option>
+                                                <option value="oline">O-Line</option>
+                                            </select>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                style={{ width: '120px', padding: '4px 8px' }}
+                                                value={activeCard.opponent || ''}
+                                                onChange={(e) => updateCard(selectedCardId, { opponent: e.target.value })}
+                                                placeholder="e.g., Oelwein"
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iteration:</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="form-input"
+                                                style={{ width: '60px', padding: '4px 8px' }}
+                                                value={activeCard.iteration || 1}
+                                                onChange={(e) => updateCard(selectedCardId, { iteration: parseInt(e.target.value) || 1 })}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
 
                         {/* Rendering Logic */}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-                            {(activeCard.type === 'mini-scripts' || activeCard.type === 'modular') ? (
+                            {selectedCardId === 'staples' ? (
+                                <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
+                                        <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>STAPLES</span>
+                                        <span style={{ fontWeight: 'bold' }}>10-89</span>
+                                    </div>
+                                    {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, 'STAPLES')}
+                                </div>
+                            ) : (activeCard.type === 'mini-scripts' || activeCard.type === 'modular') ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                         <button className="btn btn-secondary" onClick={() => handleAddHeaderRow(selectedCardId)} style={{ fontSize: '0.8rem' }}>+ Add Section Header</button>
@@ -7473,7 +7417,7 @@
                                         )}
                                     </div>
                                 </div>
-                            ) : (
+                            ) : activeCard ? (
                                 <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
                                         <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
@@ -7497,11 +7441,32 @@
                                         renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
                                     )}
                                 </div>
-                            )}\n                        </div>
+                            ) : null}\n                        </div>
                     </div>
 
                     {/* Print Layout (hidden on screen, shown when printing) */}
-                    {activeCard.type === 'rooski' ? (
+                    {selectedCardId === 'staples' ? (
+                        <div className="wristband-print-container" style={{ display: 'none' }}>
+                            <div className="wristband-print-grid">
+                                {/* Render 4 identical copies of the Staples card */}
+                                {[1, 2, 3, 4].map(copyNum => (
+                                    <div key={copyNum} className="wristband-print-card">
+                                        <>
+                                            {/* Header */}
+                                            <div className="print-card-header">
+                                                <span>STAPLES</span>
+                                                <span>10-89</span>
+                                            </div>
+                                            {/* Content */}
+                                            <div className="print-card-content">
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, 'STAPLES')}
+                                            </div>
+                                        </>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : activeCard && activeCard.type === 'rooski' ? (
                         <>
                             {/* Skill Version - Page 1 */}
                             <div className="wristband-print-container" style={{ display: 'none', pageBreakAfter: 'always' }}>
@@ -7533,7 +7498,7 @@
                                 </div>
                             </div>
                         </>
-                    ) : (
+                    ) : activeCard ? (
                         <div className="wristband-print-container" style={{ display: 'none' }}>
                             <div className="wristband-print-grid">
                                 {/* Render 4 identical copies of the active card */}
@@ -7559,7 +7524,7 @@
                                 })}
                             </div>
                         </div>
-                    )}
+                    ) : null}
                 </div>
             );
 
@@ -8581,7 +8546,15 @@
                                         <div style={{ display: 'flex', gap: '0.25rem' }}>
                                             <select
                                                 className="form-select"
-                                                style={{ width: 'auto', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--accent)' }}
+                                                style={{
+                                                    height: '36px',
+                                                    width: 'auto',
+                                                    backgroundColor: 'var(--bg-panel)',
+                                                    border: '1px solid var(--accent)',
+                                                    fontSize: '0.85rem',
+                                                    padding: '0 2rem 0 0.75rem',
+                                                    borderRadius: '6px'
+                                                }}
                                                 onChange={(e) => {
                                                     loadTemplate(e.target.value);
                                                     e.target.value = ""; // Reset
@@ -8600,7 +8573,15 @@
                                                     className="btn btn-secondary"
                                                     onClick={saveAsGlobalTemplate}
                                                     title="Save Current Plan as Global Template"
-                                                    style={{ padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                                    style={{
+                                                        height: '36px',
+                                                        padding: '0 0.75rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.25rem',
+                                                        fontSize: '0.85rem',
+                                                        borderRadius: '6px'
+                                                    }}
                                                 >
                                                     <Icon name="Globe" size={14} />
                                                 </button>
@@ -8609,7 +8590,16 @@
                                     )}
 
                                     {/* 2-Platoon Toggle */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--bg-panel)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                    <div style={{
+                                        height: '36px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        backgroundColor: 'var(--bg-panel)',
+                                        padding: '0 0.75rem',
+                                        borderRadius: '6px',
+                                        border: '1px solid var(--border)'
+                                    }}>
                                         <input
                                             type="checkbox"
                                             checked={plan.isTwoPlatoon || false}
@@ -8621,12 +8611,29 @@
                                     </div>
 
                                     {/* Time Control */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'var(--bg-panel)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                    <div style={{
+                                        height: '36px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        backgroundColor: 'var(--bg-panel)',
+                                        padding: '0 0.75rem',
+                                        borderRadius: '6px',
+                                        border: '1px solid var(--border)'
+                                    }}>
                                         <label style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Start:</label>
                                         <input
                                             type="time"
                                             className="form-input"
-                                            style={{ width: 'auto', padding: '0', border: 'none', background: 'transparent' }}
+                                            style={{
+                                                width: 'auto',
+                                                padding: '0',
+                                                border: 'none',
+                                                background: 'transparent',
+                                                fontSize: '0.85rem',
+                                                fontFamily: 'inherit',
+                                                height: 'auto'
+                                            }}
                                             value={plan.startTime}
                                             onChange={e => updateCurrentPlan({ ...plan, startTime: e.target.value })}
                                             disabled={isLocked}
@@ -8637,7 +8644,13 @@
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <select
                                             className="form-select"
-                                            style={{ width: 'auto', padding: '0.25rem 0.5rem' }}
+                                            style={{
+                                                height: '36px',
+                                                width: 'auto',
+                                                padding: '0 2rem 0 0.75rem',
+                                                fontSize: '0.85rem',
+                                                borderRadius: '6px'
+                                            }}
                                             value={selectedCoachFilter}
                                             onChange={e => setSelectedCoachFilter(e.target.value)}
                                             title="Filter Schedule by Coach"
@@ -8650,7 +8663,13 @@
 
                                         <select
                                             className="form-select"
-                                            style={{ width: 'auto', padding: '0.25rem 0.5rem' }}
+                                            style={{
+                                                height: '36px',
+                                                width: 'auto',
+                                                padding: '0 2rem 0 0.75rem',
+                                                fontSize: '0.85rem',
+                                                borderRadius: '6px'
+                                            }}
                                             value={selectedNotesCoach}
                                             onChange={e => setSelectedNotesCoach(e.target.value)}
                                             title="View Notes For"
@@ -8675,7 +8694,16 @@
 
                                         if (isScoutOffense || isDefense || isDefensePos) {
                                             return (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'var(--bg-panel)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                                <div style={{
+                                                    height: '36px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.5rem',
+                                                    backgroundColor: 'var(--bg-panel)',
+                                                    padding: '0 0.75rem',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid var(--border)'
+                                                }}>
                                                     <input
                                                         type="checkbox"
                                                         checked={includePlayCards}
@@ -8690,22 +8718,31 @@
                                         return null;
                                     })()}
 
-                                    <button className="btn btn-secondary" onClick={() => {
-                                        if (typeof includePlayCards !== 'undefined' && includePlayCards) {
-                                            const visibleSegments = plan.segments.filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter);
-                                            const urlsToOpen = new Set();
-                                            visibleSegments.forEach(seg => {
-                                                if (scoutCardUrls[seg.id]) {
-                                                    urlsToOpen.add(scoutCardUrls[seg.id]);
+                                    <button className="btn btn-secondary"
+                                        style={{
+                                            height: '36px',
+                                            padding: '0 1rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '6px'
+                                        }}
+                                        onClick={() => {
+                                            if (typeof includePlayCards !== 'undefined' && includePlayCards) {
+                                                const visibleSegments = plan.segments.filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter);
+                                                const urlsToOpen = new Set();
+                                                visibleSegments.forEach(seg => {
+                                                    if (scoutCardUrls[seg.id]) {
+                                                        urlsToOpen.add(scoutCardUrls[seg.id]);
+                                                    }
+                                                });
+                                                if (plan.warmupScoutCard && scoutCardUrls['WARMUP'] && (selectedCoachFilter === 'ALL' || plan.warmupStaffId === selectedCoachFilter)) {
+                                                    urlsToOpen.add(scoutCardUrls['WARMUP']);
                                                 }
-                                            });
-                                            if (plan.warmupScoutCard && scoutCardUrls['WARMUP'] && (selectedCoachFilter === 'ALL' || plan.warmupStaffId === selectedCoachFilter)) {
-                                                urlsToOpen.add(scoutCardUrls['WARMUP']);
+                                                urlsToOpen.forEach(url => window.open(url, '_blank'));
                                             }
-                                            urlsToOpen.forEach(url => window.open(url, '_blank'));
-                                        }
-                                        window.print();
-                                    }} title="Print Schedule">🖨️</button>
+                                            window.print();
+                                        }} title="Print Schedule">🖨️</button>
                                 </div>
                             </div>
 
@@ -9443,7 +9480,23 @@
                                                 background: 'var(--bg-app)'
                                             }}>
                                                 <div style={{ marginRight: '1rem', color: 'var(--accent)' }}>---</div>
-                                                <div style={{ fontWeight: 'bold' }}>Shake it up</div>
+                                                <div style={{ fontWeight: 'bold' }}>
+                                                    Shake it up
+                                                    {plan.startTime && (() => {
+                                                        const [startH, startM] = plan.startTime.split(':').map(Number);
+                                                        const warmup = parseInt(plan.warmupDuration) || 0;
+                                                        const segmentsDuration = (plan.segments || []).reduce((acc, s) => acc + (parseInt(s.duration) || 0), 0);
+                                                        const totalMinutes = warmup + segmentsDuration;
+
+                                                        const date = new Date();
+                                                        date.setHours(startH, startM + totalMinutes);
+
+                                                        let hours = date.getHours();
+                                                        const minutes = date.getMinutes();
+                                                        hours = hours % 12 || 12;
+                                                        return ` (End: ${hours}:${minutes.toString().padStart(2, '0')})`;
+                                                    })()}
+                                                </div>
                                                 <div style={{ marginLeft: '1rem', color: 'var(--accent)' }}>---</div>
                                             </div>
                                         </td>
@@ -9472,7 +9525,7 @@
                                 </div>
                                 <textarea
                                     className="form-input no-print"
-                                    style={{ width: '100%', minHeight: '100px' }}
+                                    style={{ width: '100%', minHeight: '100px', fontFamily: 'inherit' }}
                                     value={plan.postPracticeNotes || ''}
                                     onChange={e => updateCurrentPlan({ ...plan, postPracticeNotes: e.target.value })}
                                     placeholder="Post-practice thoughts or ideas for tomorrow..."
@@ -25182,7 +25235,7 @@
                                 {availableCards.map(cardId => {
                                     const card = wbSettings[cardId];
                                     const cardNumber = cardId.replace('card', '');
-                                    const cardTypeLabel = card.type === 'rooski' ? 'ROOSKI' : card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL';
+                                    const cardTypeLabel = card && card.type === 'rooski' ? 'ROOSKI' : card && card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL';
                                     const opponent = card.opp || card.opponent || 'No Opponent';
 
                                     return (
@@ -33982,7 +34035,10 @@
             const renderCallSheet = () => {
 
                 const layout = gamePlanLayouts.CALL_SHEET;
-                const miniScripts = gamePlan.miniScripts || [];
+
+                // Safety check for gamePlan
+                const safeGamePlan = gamePlan || { miniScripts: [] };
+                const miniScripts = safeGamePlan.miniScripts || [];
 
                 return (
                     <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', background: 'white', borderRadius: '8px', position: 'relative' }}>
@@ -37957,7 +38013,7 @@
                                     placeholder="Enter the motivational focus for the week..."
                                     value={overview.message}
                                     onChange={(e) => handleChange(null, 'message', e.target.value)}
-                                    style={{ fontSize: '1.1rem', fontStyle: 'italic' }}
+                                    // style={{ fontSize: '1.1rem', fontStyle: 'italic' }} <- REMOVED for uniformity
                                     disabled={isLocked}
                                 />
                             </div>
@@ -38039,7 +38095,10 @@
                                 <h2>Uniforms</h2>
                                 <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginTop: '1rem' }}>
                                     <div style={{ textAlign: 'center' }}>
-                                        <label className="form-label">Helmet</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <Icon name="Shield" size={16} style={{ color: 'var(--text-secondary)' }} />
+                                            <label className="form-label" style={{ marginBottom: 0 }}>Helmet</label>
+                                        </div>
                                         <select
                                             className="form-select"
                                             value={overview.uniforms.helmet}
@@ -38048,10 +38107,13 @@
                                         >
                                             {HELMET_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
-                                        <div style={{ marginTop: '10px', width: '50px', height: '50px', borderRadius: '50%', background: overview.uniforms.helmet === 'Chrome' ? 'linear-gradient(135deg, #e0e0e0 0%, #ffffff 50%, #a0a0a0 100%)' : overview.uniforms.helmet.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto' }}></div>
+                                        <div style={{ marginTop: '10px', width: '60px', height: '60px', borderRadius: '12px', background: overview.uniforms.helmet === 'Chrome' ? 'linear-gradient(135deg, #e0e0e0 0%, #ffffff 50%, #a0a0a0 100%)' : overview.uniforms.helmet.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}></div>
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
-                                        <label className="form-label">Jersey</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <Icon name="Shirt" size={16} style={{ color: 'var(--text-secondary)' }} />
+                                            <label className="form-label" style={{ marginBottom: 0 }}>Jersey</label>
+                                        </div>
                                         <select
                                             className="form-select"
                                             value={overview.uniforms.jersey}
@@ -38060,10 +38122,13 @@
                                         >
                                             {JERSEY_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
-                                        <div style={{ marginTop: '10px', width: '60px', height: '70px', borderRadius: '10px', background: overview.uniforms.jersey.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto' }}></div>
+                                        <div style={{ marginTop: '10px', width: '60px', height: '60px', borderRadius: '12px', background: overview.uniforms.jersey.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}></div>
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
-                                        <label className="form-label">Pants</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <Icon name="Columns" size={16} style={{ color: 'var(--text-secondary)' }} />
+                                            <label className="form-label" style={{ marginBottom: 0 }}>Pants</label>
+                                        </div>
                                         <select
                                             className="form-select"
                                             value={overview.uniforms.pants}
@@ -38072,7 +38137,7 @@
                                         >
                                             {PANT_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
-                                        <div style={{ marginTop: '10px', width: '40px', height: '80px', borderRadius: '6px', background: overview.uniforms.pants.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto' }}></div>
+                                        <div style={{ marginTop: '10px', width: '60px', height: '60px', borderRadius: '12px', background: overview.uniforms.pants.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}></div>
                                     </div>
                                 </div>
                             </div>
@@ -40188,6 +40253,9 @@
 
 
             // Settings State
+            const [searchTerm, setSearchTerm] = useState('');
+
+
             const [activeYear, setActiveYear] = useState(() => {
                 return localStorage.getItem('hc-active-year') || '2025';
             });
@@ -40387,8 +40455,18 @@
 
             // Multi-Card Wristband Settings
             const [wbSettings, setWbSettings] = useState(() => {
+                const defaultSettings = {
+                    card1: { type: 'standard', opp: '', iter: '1', rows: [] },
+                    card2: { type: 'standard', opp: '', iter: '1', rows: [] },
+                    card3: { type: 'rooski-skill', opp: '', iter: '1', rows: [] },
+                    staples: { type: 'staples', opp: '', iter: '1', rows: [] }
+                };
                 const saved = localStorage.getItem('hc_wb_settings_v3');
-                if (saved) return JSON.parse(saved);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Ensure staples exists and fill other defaults
+                    return { ...defaultSettings, ...parsed };
+                }
 
                 // Migration from legacy flat keys
                 return {
@@ -41180,6 +41258,7 @@
             const [accentColor, setAccentColor] = useState(() => {
                 return localStorage.getItem('oc-dashboard-accent') || '#38bdf8';
             });
+            const handleUpdateAccentColor = setAccentColor;
 
             // UI Theme State
             const [theme, setTheme] = useState(() => {
@@ -41208,7 +41287,10 @@
             const [programLevels, setProgramLevels] = useLocalStorage('oc-dashboard-levels', ['Varsity', 'JV', 'JV2']);
 
             // Offense Setup State
-            const [playSyntax, setPlaySyntax] = useLocalStorage('oc-dashboard-play-syntax', []);
+            const [playSyntax, setPlaySyntax] = useLocalStorage('oc-dashboard-play-syntax', [
+                { id: 'pres_form', label: 'Formation', type: 'text' },
+                { id: 'pres_conc', label: 'Concept', type: 'text' }
+            ]);
             const [defensePlaySyntax, setDefensePlaySyntax] = useLocalStorage('oc-dashboard-play-syntax-defense', []);
             const [stPlaySyntax, setStPlaySyntax] = useLocalStorage('oc-dashboard-play-syntax-st', []);
             const [termLibrary, setTermLibrary] = useLocalStorage('oc-dashboard-term-library', {});
@@ -41642,7 +41724,14 @@
             };
 
             const handleUpdatePlay = (updatedPlay) => {
-                setPlays(plays.map(p => p.id === updatedPlay.id ? updatedPlay : p));
+                if (Array.isArray(updatedPlay)) {
+                    // Batch update
+                    const updateMap = new Map(updatedPlay.map(p => [p.id, p]));
+                    setPlays(prev => prev.map(p => updateMap.has(p.id) ? updateMap.get(p.id) : p));
+                } else {
+                    // Single update
+                    setPlays(prev => prev.map(p => p.id === updatedPlay.id ? updatedPlay : p));
+                }
             };
 
             const handleDeletePlay = (playId) => {
@@ -43586,6 +43675,7 @@
                         }
 
                         {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} />}
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} />}
 
                         {
                             view === 'playbook' && (
@@ -43595,7 +43685,7 @@
                                         <div style={{ display: 'flex', gap: '1rem' }}>
                                             {selectedPlays.length > 0 && (
                                                 <button className="btn" style={{ backgroundColor: '#ef4444', color: 'white' }} onClick={handleDeleteSelected}>
-                                                    Delete Selected ({selectedPlays.length})
+                                                    <Icon name="Trash2" /> Delete Selected ({selectedPlays.length})
                                                 </button>
                                             )}
                                             <button className="btn" style={{ backgroundColor: '#10b981', color: 'white' }} onClick={() => setIsBatchImportOpen(true)}>
@@ -43607,80 +43697,133 @@
                                         </div>
                                     </div>
 
-                                    {/* Filter Bar */}
-                                    <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <h4 style={{ margin: 0, color: 'var(--text-secondary)' }}>Filters</h4>
-                                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <div style={{
+                                        marginBottom: '2rem',
+                                        padding: '1.5rem',
+                                        background: 'var(--bg-panel)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '12px'
+                                    }}>
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            marginBottom: '1.25rem',
+                                            paddingBottom: '0.75rem',
+                                            borderBottom: '1px solid var(--border)'
+                                        }}>
+                                            <h4 style={{
+                                                margin: 0,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 'bold',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.05em',
+                                                color: 'var(--text-secondary)'
+                                            }}>
+                                                <Icon name="Filter" size={14} style={{ color: 'var(--accent)' }} />
+                                                Search & Filter Playbook
+                                            </h4>
+                                            <div style={{ display: 'flex', gap: '0.75rem' }}>
                                                 {selectedPlays.length > 0 && (
                                                     <button
                                                         className="btn"
-                                                        style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}
+                                                        style={{
+                                                            fontSize: '0.8rem',
+                                                            padding: '0.4rem 0.8rem',
+                                                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                                            color: '#ef4444',
+                                                            border: '1px solid rgba(239, 68, 68, 0.2)'
+                                                        }}
                                                         onClick={() => setSelectedPlays([])}
                                                     >
-                                                        Clear Selection
+                                                        Clear Selection ({selectedPlays.length})
                                                     </button>
                                                 )}
                                                 <button
                                                     className="btn"
-                                                    style={{ fontSize: '0.9rem', color: 'var(--accent)' }}
-                                                    onClick={() => setPlaybookFilters({ formation: '', concept: '', tag: '', situation: '' })}
+                                                    style={{
+                                                        fontSize: '0.8rem',
+                                                        padding: '0.4rem 0.8rem',
+                                                        color: 'var(--accent)',
+                                                        background: 'rgba(var(--accent-rgb), 0.1)',
+                                                        border: '1px solid rgba(var(--accent-rgb), 0.2)'
+                                                    }}
+                                                    onClick={() => setPlaybookFilters({ formation: '', concept: '', situation: '', tag: '' })}
                                                 >
+                                                    <Icon name="XCircle" size={14} style={{ marginRight: '4px' }} />
                                                     Clear Filters
                                                 </button>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                                            {/* Formation Filter */}
-                                            <div>
-                                                <label className="form-label">Formation</label>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Search Plays</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <Icon name="Search" size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                                    <input
+                                                        className="form-input"
+                                                        placeholder="Name or formation..."
+                                                        value={searchTerm}
+                                                        onChange={e => setSearchTerm(e.target.value)}
+                                                        style={{ paddingLeft: '2.25rem', width: '100%' }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Formation</label>
                                                 <select
-                                                    className="form-select"
+                                                    className="form-input"
                                                     value={playbookFilters.formation}
                                                     onChange={e => setPlaybookFilters({ ...playbookFilters, formation: e.target.value })}
                                                 >
                                                     <option value="">All Formations</option>
-                                                    {uniqueFormations.map(f => (
+                                                    {Array.from(new Set(plays.map(p => p.formation).filter(Boolean))).sort().map(f => (
                                                         <option key={f} value={f}>{f}</option>
                                                     ))}
                                                 </select>
                                             </div>
 
-                                            {/* Concept Filter */}
-                                            <div>
-                                                <label className="form-label">Concept</label>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Concept</label>
                                                 <select
-                                                    className="form-select"
+                                                    className="form-input"
                                                     value={playbookFilters.concept}
                                                     onChange={e => setPlaybookFilters({ ...playbookFilters, concept: e.target.value })}
                                                 >
                                                     <option value="">All Concepts</option>
-                                                    {uniqueConcepts.map(c => (
+                                                    {Array.from(new Set(plays.map(p => p.concept).filter(Boolean))).sort().map(c => (
                                                         <option key={c} value={c}>{c}</option>
                                                     ))}
                                                 </select>
                                             </div>
 
-                                            {/* Situation Filter */}
-                                            <div>
-                                                <label className="form-label">Situation</label>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Situation</label>
                                                 <select
-                                                    className="form-select"
+                                                    className="form-input"
                                                     value={playbookFilters.situation}
                                                     onChange={e => setPlaybookFilters({ ...playbookFilters, situation: e.target.value })}
                                                 >
                                                     <option value="">All Situations</option>
-                                                    {situationTags.map(s => (
-                                                        <option key={s} value={s}>{s}</option>
+                                                    {Object.keys(TAG_CATEGORIES).filter(cat => ["Situation", "Field Position", "Down & Distance"].includes(cat)).map(cat => (
+                                                        <optgroup key={cat} label={cat}>
+                                                            {TAG_CATEGORIES[cat].map(tag => (
+                                                                <option key={tag} value={tag}>{tag}</option>
+                                                            ))}
+                                                        </optgroup>
                                                     ))}
                                                 </select>
                                             </div>
 
-                                            {/* General Tag Filter */}
-                                            <div>
-                                                <label className="form-label">Any Tag</label>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tag</label>
                                                 <select
-                                                    className="form-select"
+                                                    className="form-input"
                                                     value={playbookFilters.tag}
                                                     onChange={e => setPlaybookFilters({ ...playbookFilters, tag: e.target.value })}
                                                 >
@@ -43693,512 +43836,270 @@
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
                                         {filteredPlaybook.map(play => (
                                             <PlayCard
                                                 key={play.id}
                                                 play={play}
-                                                onEdit={handleEditPlay}
                                                 isSelected={selectedPlays.includes(play.id)}
-                                                onToggleSelection={togglePlaySelection}
+                                                onToggleSelect={() => handleToggleSelect(play.id)}
+                                                onEdit={() => { setEditingPlay(play); setView('new-play'); }}
                                             />
                                         ))}
-                                        {filteredPlaybook.length === 0 && (
-                                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-                                                No plays match your filters.
-                                            </div>
-                                        )}
                                     </div>
-
-                                    {/* Batch Import Modal */}
-                                    {isBatchImportOpen && (
-                                        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                            <div style={{ background: 'white', borderRadius: '8px', width: '800px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                                    <h2>Batch Add Plays</h2>
-                                                    <button className="btn-ghost" onClick={() => { setIsBatchImportOpen(false); setParsedImport([]); setImportData(''); }}>
-                                                        <Icon name="X" />
-                                                    </button>
-                                                </div>
-
-                                                {!parsedImport.length ? (
-                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                        <p style={{ marginBottom: '1rem', color: '#666' }}>Paste your spreadsheet data below. We'll automatically detect columns (Name, Formation, etc.).</p>
-                                                        <textarea
-                                                            className="form-input"
-                                                            style={{ flex: 1, minHeight: '300px', fontFamily: 'monospace', fontSize: '0.9rem' }}
-                                                            placeholder={`Name\tFormation\tType\nPower Right\tI-Right\tRun\nSpider 2 Y Banana\tSingleback\tPass`}
-                                                            value={importData}
-                                                            onChange={e => setImportData(e.target.value)}
-                                                        />
-                                                        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                                            <button className="btn btn-secondary" onClick={() => setIsBatchImportOpen(false)}>Cancel</button>
-                                                            <button className="btn btn-primary" disabled={!importData.trim()} onClick={handleParseImport}>
-                                                                Parse Data
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                                        <div style={{ marginBottom: '1rem', padding: '0.5rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px' }}>
-                                                            <strong>Map Columns:</strong> Assign each column to a Play Syntax field.
-                                                        </div>
-
-                                                        <div style={{ overflow: 'auto', flex: 1, border: '1px solid #ddd', borderRadius: '4px' }}>
-                                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                                                <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 10 }}>
-                                                                    <tr>
-                                                                        {parsedImport[0].map((_, colIndex) => (
-                                                                            <th key={colIndex} style={{ padding: '0.5rem', borderBottom: '2px solid #ddd', textAlign: 'left', minWidth: '150px' }}>
-                                                                                <select
-                                                                                    className="form-select"
-                                                                                    style={{ width: '100%', fontSize: '0.8rem' }}
-                                                                                    value={columnMapping[String(colIndex)] || ''}
-                                                                                    onChange={(e) => {
-                                                                                        const val = e.target.value;
-                                                                                        if (!val) {
-                                                                                            const newMap = { ...columnMapping };
-                                                                                            delete newMap[String(colIndex)];
-                                                                                            setColumnMapping(newMap);
-                                                                                            return;
-                                                                                        }
-                                                                                        setColumnMapping(prev => ({ ...prev, [String(colIndex)]: val }));
-                                                                                    }}
-                                                                                >
-                                                                                    <option value="">- Ignore -</option>
-                                                                                    <optgroup label="Core Fields">
-                                                                                        <option value="name_override">Full Play Name</option>
-                                                                                        <option value="formation">Formation</option>
-                                                                                        <option value="type">Type (Run/Pass)</option>
-                                                                                    </optgroup>
-                                                                                    <optgroup label="Play Syntax">
-                                                                                        {playSyntax.map(field => (
-                                                                                            <option key={field.id} value={field.id}>{field.name}</option>
-                                                                                        ))}
-                                                                                    </optgroup>
-                                                                                </select>
-                                                                            </th>
-                                                                        ))}
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {parsedImport.slice(0, 50).map((row, rIndex) => (
-                                                                        <tr key={rIndex} style={{ borderBottom: '1px solid #eee' }}>
-                                                                            {row.map((cell, cIndex) => (
-                                                                                <td key={cIndex} style={{ padding: '0.5rem' }}>{cell}</td>
-                                                                            ))}
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-
-                                                        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <button className="btn btn-secondary" onClick={() => setParsedImport([])}>Back to Paste</button>
-                                                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                                                <button className="btn btn-secondary" onClick={() => handleBatchCreate(false)}>
-                                                                    Import {parsedImport.length} Plays
-                                                                </button>
-                                                                <button className="btn btn-primary" onClick={() => handleBatchCreate(true)}>
-                                                                    Import & Add to Install
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             )
                         }
 
 
-                        {view === 'formations-offense' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="OFFENSE" />}
-                        {view === 'formations-defense' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="DEFENSE" />}
-                        {view === 'formations-st' && <FormationManager formations={formations} onAddFormation={handleAddFormation} onUpdateFormation={handleUpdateFormation} onDeleteFormation={handleDeleteFormation} positionNames={positionNames} phase="SPECIAL_TEAMS" />}
-
-                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan || { sets: [], miniScripts: [] }} onUpdatePlay={handleUpdatePlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} />}
-                        {
-                            view === 'install-slideshow' && <RenderInstallSlideshow plays={plays} rooskiLibrary={rooskiLibrary} positionNames={positionNames} />
-                        }
-                        {
-                            view === 'game-plan' && <OffensiveGamePlan
-                                plays={plays}
-                                gamePlan={currentWeek.offensiveGamePlan || { sets: [] }}
-                                onUpdateGamePlan={setGamePlan}
-                                onQuickAddPlay={handleQuickAddPlay}
-                                onUpdatePlay={handleUpdatePlay}
-                                gamePlanLayouts={gamePlanLayouts}
-                                onUpdateLayouts={setGamePlanLayouts}
-                                isLocked={currentWeek.isLocked}
-                                layoutVersions={layoutVersions}
-                                onSaveLayoutVersion={saveLayoutVersion}
-                                onDeleteLayoutVersion={deleteLayoutVersion}
-                                onLoadLayoutVersion={loadLayoutVersion}
-                                wbSettings={wbSettings}
-                                drills={drills}
-                            />
-                        }
-
-                        {view === 'practice' && <PracticeScriptBuilder mode="plan" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
-                        {view === 'practice-scripts' && <PracticeScriptBuilder mode="script" plays={plays} plans={currentWeek.practicePlans} onUpdatePlans={setPracticePlans} teamLogo={teamLogo} staff={staff} customFocusItems={customFocusItems} addCustomFocusItem={addCustomFocusItem} user={authUser} isLocked={currentWeek.isLocked} isSiteAdmin={isSiteAdmin} />}
-                        {view === 'game-week-overview' && <GameWeekOverview week={currentWeek} onUpdateWeek={handleUpdateWeek} teamLogo={teamLogo} isLocked={currentWeek.isLocked} />}
-                        {view === 'pregame' && <PregameTimeline plan={currentWeek.pregamePlan} onUpdatePlan={setPregamePlan} teamLogo={teamLogo} staff={staff} user={authUser} isLocked={currentWeek.isLocked} />}
+                        {view === 'formations-defense' && <div>Formation Management (Coming Soon)</div>}
                         {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} depthChart={depthChart} />}
+                        {view === 'player-profiles' && <PlayerProfileGallery roster={roster} onUpdateRoster={setRoster} attendance={attendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} updateWeightLog={updateWeightLog} deleteWeightLog={deleteWeightLog} />}
+
+                        {view === 'staff-roster' && <StaffManager view="roster" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
+                        {view === 'staff-tasks' && <StaffManager view="tasks" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
+                        {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
+                        {view === 'depth' && <DepthChart roster={roster} depthChart={depthCharts[depthChartType] || {}} onUpdateDepthChart={(updated) => setDepthCharts({ ...depthCharts, [depthChartType]: updated })} chartType={depthChartType} positionNames={positionNames} />}
+
+
                         {
-                            view === 'player-profiles' && <PlayerProfileGallery
-                                roster={roster}
-                                onUpdateRoster={setRoster}
-                                attendance={attendance}
-                                getPlayerWeightLogs={getPlayerWeightLogs}
-                                addWeightLog={addWeightLog}
-                                updateWeightLog={updateWeightLog}
-                                deleteWeightLog={deleteWeightLog}
-                                depthChart={depthChart}
-                            />
-                        }
-                        {
-                            view === 'depth' && <DepthChart
-                                roster={roster}
-                                depthChart={currentWeek.depthChart || {}}
-                                onUpdateDepthChart={(dc) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthChart: dc } : w))}
-                                chartType={depthChartType}
-                                teamLogo={teamLogo}
-                                savedLayout={formationLayouts[depthChartType] || {}}
-                                onUpdateLayout={(posId, x, y) => updateFormationLayout(depthChartType, posId, x, y)}
-                                positionNames={positionNames}
-                                onUpdatePositionNames={setPositionNames}
-                                onResetLayout={() => resetFormationLayout(depthChartType)}
-                                depthStrings={currentWeek.depthStrings || {}}
-                                onUpdateDepthStrings={(ds) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthStrings: ds } : w))}
-                                depthRowCounts={currentWeek.depthRowCounts || {}}
-                                onUpdateDepthRowCounts={(drc) => setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthRowCounts: drc } : w))}
-                            />
-                        }
-                        {
-                            view === 'staff-roster' && (
-                                <StaffManager
-                                    currentUser={currentUser}
-                                    staff={staff}
-                                    onUpdateStaff={setStaff}
-                                    dutyAssignments={dutyAssignments}
-                                    onUpdateDuties={setDutyAssignments}
-                                    view="roster"
-                                    masterTasks={masterTasks}
-                                    onUpdateMasterTasks={setMasterTasks}
-                                />
-                            )
-                        }
-                        {
-                            view === 'archive' && (
-                                <ArchiveManager
-                                    roster={roster}
-                                    staff={staff}
-                                    onUpdateRoster={setRoster}
-                                    onUpdateStaff={setStaff}
-                                />
-                            )
-                        }
-                        {
-                            view === 'staff-meeting' && (
-                                <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
-                                    <Icon name="Presentation" size={48} color="var(--accent)" style={{ marginBottom: '1rem' }} />
-                                    <h2>Staff Meeting</h2>
-                                    <p style={{ color: 'var(--text-secondary)' }}>Coming Soon: Organize agendas, meeting notes, and staff action items.</p>
-                                </div>
-                            )
-                        }
-                        {
-                            view === 'staff-tasks' && (
-                                <StaffTasksView
-                                    tasks={masterTasks}
-                                    onUpdateTasks={setMasterTasks}
-                                    staff={staff}
-                                    roster={roster}
-                                    currentUser={currentUser}
+                            view === 'settings' && (
+                                <Settings
+                                    teamLogo={teamLogo}
+                                    onUpdateLogo={setTeamLogo}
+                                    accentColor={accentColor}
+                                    onUpdateAccentColor={handleUpdateAccentColor}
+                                    theme={theme}
+                                    onUpdateTheme={setTheme}
+                                    positionNames={positionNames}
+                                    onUpdatePositionNames={setPositionNames}
+                                    activeYear={activeYear}
+                                    onUpdateActiveYear={setActiveYear}
+                                    visibleFeatures={visibleFeatures}
+                                    onUpdateVisibleFeatures={setVisibleFeatures}
+                                    isAdmin={isSiteAdmin}
+                                    siteAdmins={siteAdmins}
+                                    schoolData={{ id: localStorage.getItem('hc_school_id') }}
+                                    currentSchoolId={localStorage.getItem('hc_school_id')}
+                                    programLevels={programLevels}
+                                    onUpdateProgramLevels={setProgramLevels}
                                 />
                             )
                         }
 
-
-                        {view === 'testing-records' && <TestingRecords roster={roster} programRecords={programRecords} />}
-
-                        {view === 'summer-comp' && <SummerCompetitionManager roster={roster} compData={summerCompData} onUpdateComp={setSummerCompData} />}
-                        {
-                            view === 'attendance-app' && (
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    padding: '2rem',
-                                    background: '#1a1a1a', // Dark background for contrast
-                                    minHeight: '100vh',
-                                    alignItems: 'flex-start'
-                                }}>
-                                    <div style={{
-                                        width: '375px',
-                                        height: '812px',
-                                        background: 'black',
-                                        borderRadius: '40px',
-                                        padding: '12px',
-                                        boxShadow: '0 0 0 10px #333, 0 20px 40px rgba(0,0,0,0.5)',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        flexShrink: 0
-                                    }}>
-                                        {/* iPhone Notch */}
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '0',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            width: '50%',
-                                            height: '30px',
-                                            background: '#333',
-                                            borderBottomLeftRadius: '20px',
-                                            borderBottomRightRadius: '20px',
-                                            zIndex: 1000
-                                        }}></div>
-
-                                        {/* Status Bar Mockup */}
-                                        <div style={{
-                                            height: '44px',
-                                            width: '100%',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            padding: '0 20px',
-                                            alignItems: 'center',
-                                            color: 'white',
-                                            fontSize: '12px',
-                                            fontWeight: 'bold',
-                                            paddingTop: '10px',
-                                            flexShrink: 0
-                                        }}>
-                                            <span>9:41</span>
-                                            <div style={{ display: 'flex', gap: '5px' }}>
-                                                <Icon name="Signal" size={12} />
-                                                <Icon name="Wifi" size={12} />
-                                                <Icon name="Battery" size={12} />
-                                            </div>
-                                        </div>
-
-                                        {/* App Screen Content */}
-                                        <div style={{
-                                            background: 'var(--bg-app)', // Use app theme background
-                                            flex: 1,
-                                            overflow: 'hidden', // Let component handle scroll
-                                            borderRadius: '30px',
-                                            position: 'relative',
-                                            display: 'flex',
-                                            flexDirection: 'column'
-                                        }}>
-                                            <MobileAttendanceApp roster={roster} attendance={attendance} setAttendance={setAttendance} />
-                                        </div>
-
-                                        {/* Home Indicator */}
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: '8px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            width: '134px',
-                                            height: '5px',
-                                            background: 'white',
-                                            borderRadius: '100px',
-                                            zIndex: 1000
-                                        }}></div>
-                                    </div>
-                                </div>
-                            )
-                        }
-                        {view === 'testing' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="combine" />}
+                        {view === 'testing' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} />}
                         {view === 'ironman' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="ironman" />}
-                        {view === 'ratings' && <MaddenRatings roster={roster} ratings={ratings} onUpdateRatings={setRatings} metrics={metrics} />}
-                        {view === 'pressbox' && <PressboxTracker plays={plays} gameLog={currentWeek.gameLog} onUpdateGameLog={handleUpdateGameLog} roster={roster} depthChart={currentWeek.depthChart || {}} situation={situation} onUpdateSituation={setSituation} formations={formations} activePlay={activePlay} setActivePlay={setActivePlay} />}
-                        {view === 'grading' && <GameGradingView gameLog={currentWeek.gameLog} roster={roster} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} valhallaData={valhallaData} onUpdateValhalla={setValhallaData} />}
-                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setRoster={setRoster} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} setCulturalCalibration={setCulturalCalibration} />}
-                        {view === 'coach-app' && <PracticeCoachApp staff={staff} roster={roster} plans={currentWeek.practicePlans || []} plays={plays} drills={drills} />}
-                        {view === 'self-assessment' && <AthleteSelfAssessment roster={roster} staff={staff} currentUser={currentUser} onSync={(data) => syncToFirestore(currentUser?.uid, 'athleteAssessments', data)} />}
-                        {view === 'callsheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan || {}} situation={situation} plays={plays} onUpdateSituation={setSituation} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} onUpdateGamePlan={setGamePlan} onQuickAddPlay={handleQuickAddPlay} activePlay={activePlay} setActivePlay={setActivePlay} gamePlanLayouts={gamePlanLayouts} />}
-                        {view === 'dumb-callsheet' && <DumbCallSheet data={dumbCallSheetData} onUpdateData={setDumbCallSheetData} gamePlanLayouts={gamePlanLayouts} plays={plays} gamePlan={currentWeek.offensiveGamePlan || {}} />}
-                        {view === 'simulator' && <PlayCallSimulator plays={plays} roster={roster} gamePlan={currentWeek.offensiveGamePlan || {}} onUpdateGamePlan={setGamePlan} />}
-                        {
-                            view === 'special-teams' && (
-                                <SpecialTeamsDashboard
-                                    roster={roster}
-                                    depthCharts={currentWeek.depthChart || {}}
-                                    onUpdateDepthChart={(chartType, updated) => {
-                                        const newDepthChart = { ...(currentWeek.depthChart || {}), [chartType]: updated };
-                                        setWeeks(weeks.map(w => w.id === currentWeek.id ? { ...w, depthChart: newDepthChart } : w));
-                                    }}
-                                    savedLayouts={formationLayouts}
-                                    onUpdateLayout={(chartType, posId, x, y) => updateFormationLayout(chartType, posId, x, y)}
-                                    onResetLayout={(chartType) => resetFormationLayout(chartType)}
-                                    opponentData={currentWeek.opponentData || {}}
-                                    onUpdateOpponentData={(data) => {
-                                        const updatedWeeks = weeks.map(w =>
-                                            w.id === currentWeek.id ? { ...w, opponentData: data } : w
-                                        );
-                                        setWeeks(updatedWeeks);
-                                    }}
-                                />
-                            )
-                        }
+                        {view === 'madden-ratings' && <MaddenRatings roster={roster} ratings={metrics} onUpdateRatings={setMetrics} />}
+                        {view === 'pressbox' && <Pressbox plays={plays} gameLog={gameLog} onUpdateGameLog={handleUpdateGameLog} currentWeek={currentWeek} teamLogo={teamLogo} opponentLogo={currentWeek.opponentData?.logo || ''} gameStart={currentWeek.gameStart || {}} situation={currentWeek.situation} onUpdateSituation={handleUpdateSituation} formations={formations} activePlay={activePlay} onUpdateActivePlay={setActivePlay} />}
+
+                        {view === 'grading' && <GameGradingView roster={roster} gameLog={currentWeek.gameLog} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} valhallaData={valhallaData} onUpdateValhalla={setValhallaData} />}
+                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} />}
+                        {view === 'attendance-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} />}
+                        {view === 'practice' && (
+                            <PracticeScriptBuilder
+                                mode="plan"
+                                plays={plays}
+                                plans={currentWeek.practicePlans || {}}
+                                onUpdatePlans={(updated) => handleUpdateWeek(currentWeek.id, 'practicePlans', updated)}
+                                staff={staff}
+                                customFocusItems={customFocusItems}
+                                addCustomFocusItem={addCustomFocusItem}
+                                user={currentUser}
+                                isLocked={currentWeek.isLocked}
+                                isSiteAdmin={false}
+                            />
+                        )}
+                        {view === 'pregame' && (
+                            <PregameTimeline
+                                plan={currentWeek.pregamePlan || { kickoffTime: '19:00', segments: [] }}
+                                onUpdatePlan={(updated) => handleUpdateWeek(currentWeek.id, 'pregamePlan', updated)}
+                                teamLogo={teamLogo}
+                                staff={staff}
+                                user={currentUser}
+                                isLocked={currentWeek.isLocked}
+                            />
+                        )}
+                        {view === 'game-week-overview' && (
+                            <GameWeekOverview
+                                week={currentWeek}
+                                onUpdateWeek={handleUpdateWeek}
+                                teamLogo={teamLogo}
+                                isLocked={currentWeek.isLocked}
+                            />
+                        )}
+                        {view === 'practice-scripts' && (
+                            <PracticeScriptBuilder
+                                mode="script"
+                                plays={plays}
+                                plans={currentWeek.practicePlans || {}}
+                                onUpdatePlans={(updated) => handleUpdateWeek(currentWeek.id, 'practicePlans', updated)}
+                                staff={staff}
+                                customFocusItems={customFocusItems}
+                                addCustomFocusItem={addCustomFocusItem}
+                                user={currentUser}
+                                isLocked={currentWeek.isLocked}
+                                isSiteAdmin={false}
+                            />
+                        )}
+                        {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} />}
+                        {view === 'staff-app' && <StaffApp staff={staff} currentUser={currentUser} dutyAssignments={dutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} onUpdateStaff={(updatedStaff) => syncToFirestore('staff', updatedStaff)} />}
+                        {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophy={zonePhilosophy} onUpdateZonePhilosophy={setZonePhilosophy} />}
+                        {view === 'dumb-call-sheet' && <DumbCallSheet gamePlan={currentWeek.offensiveGamePlan} dumbCallSheetData={dumbCallSheetData} onUpdateData={setDumbCallSheetData} />}
+                        {view === 'play-call-simulator' && <PlayCallSimulator plays={plays} gamePlan={currentWeek.offensiveGamePlan} />}
+                        {view === 'special-teams-setup' && renderSetup('SPECIAL_TEAMS')}
+                        {view === 'formations-offense' && <FormationManager formations={formations} onUpdateFormations={setFormations} formationLayouts={formationLayouts} onUpdateFormationLayout={(chartType, posId, x, y) => updateFormationLayout(chartType, posId, x, y)} onResetLayout={(chartType, formation) => resetFormationLayout(chartType, formation)} positionNames={positionNames} phase="OFFENSE" />}
+                        {view === 'formations-defense' && <FormationManager formations={formations} onUpdateFormations={setFormations} formationLayouts={formationLayouts} onUpdateFormationLayout={(chartType, posId, x, y) => updateFormationLayout(chartType, posId, x, y)} onResetLayout={(chartType, formation) => resetFormationLayout(chartType, formation)} positionNames={positionNames} phase="DEFENSE" />}
+                        {view === 'formations-st' && <FormationManager formations={formations} onUpdateFormations={setFormations} formationLayouts={formationLayouts} onUpdateFormationLayout={(chartType, posId, x, y) => updateFormationLayout(chartType, posId, x, y)} onResetLayout={(chartType, formation) => resetFormationLayout(chartType, formation)} positionNames={positionNames} phase="SPECIAL TEAMS" />}
+                        {view === 'opponent-scouting' && <OpponentScouting opponentData={currentWeek.opponentData || {}} onUpdateOpponentData={(data) => {
+                            const updatedWeeks = weeks.map(w =>
+                                w.id === currentWeek.id ? { ...w, opponentData: data } : w
+                            );
+                            setWeeks(updatedWeeks);
+                        }} />}
                         {
                             view.startsWith('equipment-') && (
                                 <EquipmentManager
+                                    equipment={equipment}
+                                    onUpdateEquipment={setEquipment}
+                                    equipmentCheckouts={equipmentCheckouts}
+                                    onUpdateEquipmentCheckouts={setEquipmentCheckouts}
+                                    equipmentIssues={equipmentIssues}
+                                    onUpdateEquipmentIssues={setEquipmentIssues}
+                                    equipmentWishlist={equipmentWishlist}
+                                    onUpdateEquipmentWishlist={setEquipmentWishlist}
                                     equipmentDueDate={equipmentDueDate}
                                     setEquipmentDueDate={setEquipmentDueDate}
                                     view={view}
                                     roster={roster}
                                     inventory={inventory}
                                     onUpdateInventory={setInventory}
-                                    checkouts={checkouts} // Legacy checks, mostly unused now but kept for compatibility
-                                    onUpdateCheckouts={setCheckouts}
-                                    issuance={issuance}
-                                    onUpdateIssuance={setIssuance}
-                                    wishlist={wishlist}
-                                    onUpdateWishlist={setWishlist}
+                                    checkouts={equipmentCheckouts}
+                                    onUpdateCheckouts={setEquipmentCheckouts}
+                                    issues={equipmentIssues}
+                                    onUpdateIssues={setEquipmentIssues}
+                                    wishlist={equipmentWishlist}
+                                    onUpdateWishlist={setEquipmentWishlist}
                                     lotteryData={lotteryData}
                                     onUpdateLottery={setLotteryData}
                                 />
                             )
                         }
-                        {view === 'settings' && (
-                            <Settings
-                                teamLogo={teamLogo}
-                                onUpdateLogo={setTeamLogo}
-                                accentColor={accentColor}
-                                onUpdateAccentColor={setAccentColor}
-                                theme={theme}
-                                onUpdateTheme={setTheme}
-                                positionNames={positionNames}
-                                onUpdatePositionNames={setPositionNames}
-                                activeYear={activeYear}
-                                onUpdateActiveYear={setActiveYear}
-                                visibleFeatures={visibleFeatures}
-                                onUpdateVisibleFeatures={setVisibleFeatures}
-                                isAdmin={isSiteAdmin}
-                                siteAdmins={siteAdmins}
-                                schoolData={{ id: localStorage.getItem('hc_school_id') }}
-                                currentSchoolId={localStorage.getItem('hc_school_id')}
-                                programLevels={programLevels}
-                                onUpdateProgramLevels={setProgramLevels}
-                            />
-                        )}
+
+                        {/* Duplicate settings block removed */}
 
                         {view === 'help' && <UserGuide />}
 
-                        {showLogoutConfirm && (
-                            <div style={{
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                background: 'rgba(0, 0, 0, 0.7)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 10000
-                            }}>
+                        {
+                            showLogoutConfirm && (
                                 <div style={{
-                                    background: 'white',
-                                    padding: '2rem',
-                                    borderRadius: '8px',
-                                    maxWidth: '400px',
-                                    width: '90%',
-                                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                                    border: '1px solid rgba(0,0,0,0.1)'
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    background: 'rgba(0, 0, 0, 0.7)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10000
                                 }}>
-                                    <h3 style={{ marginTop: 0, color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '1.25rem' }}>Log Out?</h3>
-                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                                        Are you sure you want to sign out?
-                                    </p>
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                        <button
-                                            onClick={() => setShowLogoutConfirm(false)}
-                                            style={{
-                                                padding: '0.75rem 1.5rem',
-                                                borderRadius: '6px',
-                                                border: '1px solid #e2e8f0',
-                                                background: 'white',
-                                                color: 'var(--text-secondary)',
-                                                fontWeight: '600',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowLogoutConfirm(false);
-                                                logout();
-                                            }}
-                                            style={{
-                                                padding: '0.75rem 1.5rem',
-                                                borderRadius: '6px',
-                                                border: 'none',
-                                                background: '#ef4444',
-                                                color: 'white',
-                                                fontWeight: '600',
-                                                cursor: 'pointer',
-                                                boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.4)'
-                                            }}
-                                        >
-                                            Log Out
-                                        </button>
+                                    <div style={{
+                                        background: 'white',
+                                        padding: '2rem',
+                                        borderRadius: '8px',
+                                        maxWidth: '400px',
+                                        width: '90%',
+                                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                                        border: '1px solid rgba(0,0,0,0.1)'
+                                    }}>
+                                        <h3 style={{ marginTop: 0, color: '#111827', marginBottom: '1rem', fontSize: '1.25rem' }}>Log Out?</h3>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                                            Are you sure you want to sign out?
+                                        </p>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                            <button
+                                                onClick={() => setShowLogoutConfirm(false)}
+                                                style={{
+                                                    padding: '0.75rem 1.5rem',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #e2e8f0',
+                                                    background: 'white',
+                                                    color: 'var(--text-secondary)',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowLogoutConfirm(false);
+                                                    logout();
+                                                }}
+                                                style={{
+                                                    padding: '0.75rem 1.5rem',
+                                                    borderRadius: '6px',
+                                                    border: 'none',
+                                                    background: '#ef4444',
+                                                    color: 'white',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.4)'
+                                                }}
+                                            >
+                                                Log Out
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
 
                         {/* Invite Acceptance Modal */}
-                        {inviteData && (
-                            <div style={{
-                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                                background: 'rgba(0,0,0,0.85)', zIndex: 10001,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                                <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
-                                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
-                                        {inviteData.type === 'domain_match' ? '🏫' : '📩'}
+                        {
+                            inviteData && (
+                                <div style={{
+                                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                    background: 'rgba(0,0,0,0.85)', zIndex: 10001,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
+                                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                                            {inviteData.type === 'domain_match' ? '🏫' : '📩'}
+                                        </div>
+                                        <h2 style={{ marginBottom: '0.5rem' }}>
+                                            {inviteData.type === 'domain_match' ? 'Join Your Team?' : "You're Invited!"}
+                                        </h2>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                            {inviteData.type === 'domain_match'
+                                                ? <span>Your email matches <strong>{inviteData.schoolName}</strong>.<br />Join now as a <strong>{inviteData.role}</strong>?</span>
+                                                : <span>To join <strong>{inviteData.schoolName}</strong> as a <strong>{inviteData.role}</strong>.</span>
+                                            }                          </p>
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
+                                            onClick={handleAcceptInvite}
+                                        >
+                                            Accept & Join Team
+                                        </button>
+                                        <button
+                                            className="btn btn-secondary"
+                                            style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
+                                            onClick={() => {
+                                                if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
+                                                    setInviteData(null);
+                                                    setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
+                                                }
+                                            }}
+                                        >
+                                            No, Create New School Instead
+                                        </button>
                                     </div>
-                                    <h2 style={{ marginBottom: '0.5rem' }}>
-                                        {inviteData.type === 'domain_match' ? 'Join Your Team?' : 'You\'re Invited!'}
-                                    </h2>
-                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                                        {inviteData.type === 'domain_match'
-                                            ? <span>Your email matches <strong>{inviteData.schoolName}</strong>.<br />Join now as a <strong>{inviteData.role}</strong>?</span>
-                                            : <span>To join <strong>{inviteData.schoolName}</strong> as a <strong>{inviteData.role}</strong>.</span>
-                                        }
-                                    </p>
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
-                                        onClick={handleAcceptInvite}
-                                    >
-                                        Accept & Join Team
-                                    </button>
-                                    <button
-                                        className="btn btn-secondary"
-                                        style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
-                                        onClick={() => {
-                                            if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
-                                                setInviteData(null);
-                                                setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
-                                            }
-                                        }}
-                                    >
-                                        No, Create New School Instead
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </main>
-                </div>
+                                </div >
+                            )
+                        }
+                    </main >
+                </div >
             );
         };
 
