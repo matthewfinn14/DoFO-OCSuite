@@ -5737,10 +5737,11 @@
             const handleAddPlayRow = (cardId, play) => {
                 const card = wbSettings[cardId];
                 const newRow = {
-                    id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    type: 'play',
-                    playId: play.id,
-                    playName: play.name
+                    id: Date.now().toString(),
+                    type: 'play-row',
+                    col1: play.name,
+                    col2: '',
+                    col3: ''
                 };
                 updateCard(cardId, { rows: [...card.rows, newRow] });
             };
@@ -5770,10 +5771,12 @@
 
             const handleAddHeaderRow = (cardId) => {
                 const card = wbSettings[cardId];
+                if (!card) return;
+
                 const newRow = {
-                    id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    id: Date.now().toString(),
                     type: 'header',
-                    label: 'New Section',
+                    label: '',
                     color: 'gray'
                 };
                 updateCard(cardId, { rows: [...card.rows, newRow] });
@@ -5972,7 +5975,7 @@
                 const card = wbSettings[cardId];
                 if (!card) return null;
                 const isMiniScripts = card.type === 'mini-scripts';
-                const isModular = card.type === 'modular';
+
 
                 // Determine row source
                 let displayRows = [];
@@ -6002,72 +6005,6 @@
                             };
                         }
                     });
-                } else if (isModular) {
-                    // Modular: Standard Layout (2 cols) but defined by rows (Plays & Headers)
-                    const startSlot = slots[0];
-                    let logicalSlot = startSlot;
-                    let displaySlotCounter = startSlot;
-
-                    displayRows = [];
-                    card.rows.forEach(row => {
-                        const isHeader = row.type === 'header' || row.type === 'tempo';
-
-                        // Force Header to start on Odd slot (New Row)
-                        if (isHeader && logicalSlot % 2 === 0) {
-                            // Current is Even (Right). Fill it with spacer to move to next row.
-                            displayRows.push({
-                                slot: logicalSlot,
-                                type: 'spacer',
-                                text: ''
-                            });
-                            logicalSlot++;
-                        }
-
-                        const currentLogical = logicalSlot;
-
-                        if (isHeader) {
-                            // Header consumes Odd slot
-                            let text = (row.type === 'header') ? (row.label || 'SECTION') : (row.label || row.tempoType || 'TEMPO');
-                            displayRows.push({
-                                slot: currentLogical,
-                                displaySlot: '',
-                                type: row.type,
-                                text: text,
-                                isHeader: isHeader,
-                                playId: row.playId,
-                                color: row.color
-                            });
-
-                            // Also consume the Even slot as whitespace/spacer to keep alignment
-                            displayRows.push({
-                                slot: currentLogical + 1,
-                                type: 'spacer',
-                                text: ''
-                            });
-
-                            logicalSlot += 2;
-                        } else {
-                            // Standard Play
-                            let slotDisplay = displaySlotCounter;
-                            displaySlotCounter++;
-
-                            let text = '';
-                            const play = plays.find(p => p.id === row.playId);
-                            text = play ? (row.playName || play.name) : 'Unknown';
-                            if (play && play.formation) text += ' - ' + play.formation;
-
-                            displayRows.push({
-                                slot: currentLogical,
-                                displaySlot: slotDisplay,
-                                type: row.type,
-                                text: text,
-                                isHeader: false,
-                                playId: row.playId,
-                                color: row.color
-                            });
-                            logicalSlot++;
-                        }
-                    });
                 } else {
                     // Standard uses the absolute slots
                     displayRows = slots.map(slot => {
@@ -6085,13 +6022,11 @@
                     // ---------------------------------------------------------
                     // MINI-SCRIPTS LAYOUT: 1 Coord Column + 3 Play Columns
                     // ---------------------------------------------------------
-                    const chunks = [];
-                    const chunkSize = 3;
-                    for (let i = 0; i < displayRows.length; i += chunkSize) {
-                        chunks.push(displayRows.slice(i, i + chunkSize));
-                    }
-                    // Ensure at least some empty rows if empty
-                    if (chunks.length === 0) chunks.push([null, null, null]);
+
+                    // Calculate start index for coord if not provided
+                    // Calculate start index for coord if not provided
+                    const startCoord = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
+                    let currentCoord = startCoord;
 
                     return (
                         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
@@ -6110,81 +6045,129 @@
                                 <span>{title}</span>
                             </div>
 
-                            {/* Column Headers */}
-                            <div style={{ display: 'flex', borderBottom: '1px solid #000', background: '#e5e5e5', fontSize: '9pt', fontWeight: 'bold', textAlign: 'center' }}>
-                                <div style={{ width: '30px', borderRight: '1px solid #000' }}>#</div>
-                                <div style={{ flex: 1, borderRight: '1px solid #000' }}>A</div>
-                                <div style={{ flex: 1, borderRight: '1px solid #000' }}>B</div>
-                                <div style={{ flex: 1 }}>C</div>
-                            </div>
-
                             {/* Table */}
                             <div style={{ flex: 1, overflow: 'hidden' }}>
                                 <table className="wristband-spreadsheet-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                                     <colgroup>
-                                        <col style={{ width: '30px' }} />
-                                        <col style={{ width: '33%' }} />
-                                        <col style={{ width: '33%' }} />
-                                        <col style={{ width: '33%' }} />
+                                        <col style={{ width: '38px' }} />
+                                        <col style={{ width: 'auto' }} />
+                                        <col style={{ width: '45px' }} />
+                                        <col style={{ width: 'auto' }} />
                                     </colgroup>
+                                    <thead>
+                                        <tr style={{ background: '#e5e5e5', fontSize: '8pt', fontWeight: 'bold', textAlign: 'center', height: 'auto' }}>
+                                            <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>#</th>
+                                            <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>PLAY 1</th>
+                                            <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>TEMPO</th>
+                                            <th style={{ borderBottom: '1px solid #000', padding: 0, textAlign: 'center' }}>PLAY 2</th>
+                                        </tr>
+                                    </thead>
                                     <tbody>
-                                        {chunks.map((chunk, rowIndex) => {
-                                            const startSlot = chunk[0]?.slot || (displayRows.length > 0 ? displayRows[displayRows.length - 1].slot + 1 : slots[0] + (rowIndex * 3));
+                                        {card.rows && card.rows.map((row, rowIndex) => {
+                                            if (row.type === 'header') {
+                                                // Header Row
+                                                const bg = row.color === 'black' ? '#000' :
+                                                    row.color === 'red' ? '#ef4444' :
+                                                        row.color === 'blue' ? '#3b82f6' :
+                                                            row.color === 'green' ? '#22c55e' :
+                                                                row.color === 'orange' ? '#f97316' : '#d1d5db';
+                                                const fg = row.color === 'black' || row.color === 'blue' || row.color === 'red' ? '#fff' : '#000';
 
-                                            // Determine background shade
-                                            let rowBackground = 'inherit';
-                                            if (card && card.color && card.color !== 'none') {
-                                                const shades = ['light', 'medium'];
-                                                const shade = shades[rowIndex % 2];
-                                                const colorMap = {
-                                                    'green-light': '#d1fae5', 'green-medium': '#a7f3d0',
-                                                    'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
-                                                    'red-light': '#fecaca', 'red-medium': '#fca5a5',
-                                                    'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
-                                                    'yellow-light': '#fef08a', 'yellow-medium': '#fde047',
-                                                    'purple-light': '#e9d5ff', 'purple-medium': '#d8b4fe',
-                                                    'teal-light': '#99f6e4', 'teal-medium': '#5eead4',
-                                                    'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
-                                                };
-                                                rowBackground = colorMap[`${card.color}-${shade}`] || 'inherit';
+                                                return (
+                                                    <tr key={row.id}>
+                                                        <td colSpan="4" style={{
+                                                            background: bg,
+                                                            color: fg,
+                                                            fontWeight: 'bold',
+                                                            textAlign: 'center',
+                                                            padding: '2px 8px',
+                                                            border: '1px solid #333',
+                                                            fontSize: `${fontSize}rem`
+                                                        }}>
+                                                            {row.label}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            } else {
+                                                // Play Row
+                                                const thisCoord = currentCoord++;
+
+                                                // Determine background shade
+                                                let rowBackground = 'inherit';
+                                                const effectiveColor = row.color || (card && card.color) || 'none';
+
+                                                if (effectiveColor && effectiveColor !== 'none') {
+                                                    const shades = ['light', 'medium'];
+                                                    const shade = shades[rowIndex % 2]; // Use rowIndex for alternating colors
+                                                    const colorMap = {
+                                                        'green-light': '#d1fae5', 'green-medium': '#a7f3d0',
+                                                        'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
+                                                        'red-light': '#fecaca', 'red-medium': '#fca5a5',
+                                                        'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
+                                                        'yellow-light': '#fef08a', 'yellow-medium': '#fde047',
+                                                        'purple-light': '#e9d5ff', 'purple-medium': '#d8b4fe',
+                                                        'teal-light': '#99f6e4', 'teal-medium': '#5eead4',
+                                                        'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
+                                                    };
+                                                    rowBackground = colorMap[`${effectiveColor}-${shade}`] || 'inherit';
+                                                }
+
+                                                return (
+                                                    <tr key={row.id} style={{ height: `${rowHeight}px` }}>
+                                                        {/* Coord */}
+                                                        <td style={{
+                                                            border: '1px solid #333',
+                                                            textAlign: 'center',
+                                                            fontWeight: 'bold',
+                                                            fontSize: `${fontSize}rem`,
+                                                            background: rowBackground
+                                                        }}>
+                                                            {thisCoord}
+                                                        </td>
+                                                        {/* Play 1 */}
+                                                        <td style={{
+                                                            border: '1px solid #333',
+                                                            padding: '0 2px',
+                                                            fontSize: `${fontSize}rem`,
+                                                            verticalAlign: 'middle',
+                                                            overflow: 'hidden',
+                                                            whiteSpace: 'nowrap',
+                                                            textOverflow: 'ellipsis',
+                                                            background: rowBackground
+                                                        }}>
+                                                            {row.col1}
+                                                        </td>
+                                                        {/* Tempo */}
+                                                        <td style={{
+                                                            border: '1px solid #333',
+                                                            padding: '0 2px',
+                                                            fontSize: `${fontSize}rem`,
+                                                            verticalAlign: 'middle',
+                                                            overflow: 'hidden',
+                                                            whiteSpace: 'nowrap',
+                                                            textOverflow: 'ellipsis',
+                                                            fontWeight: 'bold',
+                                                            textAlign: 'center',
+                                                            background: '#ffedd5' // Always light orange for tempo? Or maybe just inherit? Keeping tempo distinct is usually good.
+                                                        }}>
+                                                            {row.col2}
+                                                        </td>
+                                                        {/* Play 2 */}
+                                                        <td style={{
+                                                            border: '1px solid #333',
+                                                            padding: '0 2px',
+                                                            fontSize: `${fontSize}rem`,
+                                                            verticalAlign: 'middle',
+                                                            overflow: 'hidden',
+                                                            whiteSpace: 'nowrap',
+                                                            textOverflow: 'ellipsis',
+                                                            background: rowBackground
+                                                        }}>
+                                                            {row.col3}
+                                                        </td>
+                                                    </tr>
+                                                );
                                             }
-
-                                            return (
-                                                <tr key={rowIndex} className={rangeClass} style={{ height: `${rowHeight}px` }}>
-                                                    {/* Coord Cell */}
-                                                    <td style={{
-                                                        border: '1px solid #333',
-                                                        textAlign: 'center',
-                                                        fontWeight: 'bold',
-                                                        fontSize: `${fontSize}rem`,
-                                                        background: rowBackground
-                                                    }}>
-                                                        {startSlot}
-                                                    </td>
-
-                                                    {/* Play Cells */}
-                                                    {[0, 1, 2].map(colIdx => {
-                                                        const cellData = chunk[colIdx];
-                                                        const bgColor = cellData && cellData.type === 'tempo' ? '#ffedd5' : rowBackground;
-
-                                                        return (
-                                                            <td key={colIdx} style={{
-                                                                border: '1px solid #333',
-                                                                padding: '0 2px',
-                                                                fontSize: `${fontSize}rem`,
-                                                                verticalAlign: 'middle',
-                                                                overflow: 'hidden',
-                                                                whiteSpace: 'nowrap',
-                                                                textOverflow: 'ellipsis',
-                                                                fontWeight: cellData && cellData.type === 'tempo' ? 'bold' : 'normal',
-                                                                background: bgColor
-                                                            }}>
-                                                                {cellData ? cellData.text : ''}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            );
                                         })}
                                     </tbody>
                                 </table>
@@ -6939,149 +6922,109 @@
                 return slots;
             };
 
-            const renderModularEditorRows = (card) => {
+            const renderMiniScriptEditorRows = (card, cardId) => {
                 const rows = [];
-                const startCoord = card.id === 'card1' ? 101 : (card.id === 'card2' ? 201 : (card.id === 'card3' ? 301 : (card.id === 'card4' ? 401 : (card.id === 'card5' ? 501 : 601))));
+                const startCoord = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
 
                 let currentCoord = startCoord;
-                let buffer = [];
 
-                // Iterate through all rows
-                for (let i = 0; i < card.rows.length; i++) {
-                    const item = card.rows[i];
-
-                    if (item.type === 'header') {
-                        // Flush buffer if any
-                        if (buffer.length > 0) {
-                            const paddedBuffer = [...buffer];
-                            while (paddedBuffer.length < 2) paddedBuffer.push(null);
-
+                // Iterate through all rows directly
+                if (card.rows && card.rows.length > 0) {
+                    card.rows.forEach((item, i) => {
+                        if (item.type === 'header') {
+                            // Render Header
                             rows.push(
-                                <div key={`play-row-${i}`} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr', gap: '0.5rem', alignItems: 'start', marginBottom: '0.5rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
-                                        {currentCoord}
+                                <div key={item.id} style={{ padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-input)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                        <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Header Label</label>
+                                        <input
+                                            value={item.label}
+                                            onChange={(e) => handleUpdateRow(selectedCardId, item.id, { label: e.target.value })}
+                                            style={{ width: '100%', fontWeight: 'bold', fontSize: '0.9rem', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                            placeholder="SECTION HEADER"
+                                        />
                                     </div>
-                                    {paddedBuffer.map((cell, idx) => {
-                                        if (!cell) return <div key={idx} style={{ background: 'var(--bg-panel)', border: '1px dashed var(--border)', borderRadius: '4px', height: '100%', minHeight: '40px' }}></div>;
-                                        return (
-                                            <div key={idx} style={{
-                                                position: 'relative',
-                                                background: 'var(--bg-panel)',
-                                                border: '1px solid var(--border)',
-                                                borderRadius: '4px',
-                                                padding: '0.25rem',
-                                                fontSize: '0.7rem'
-                                            }}>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '2px', lineHeight: '1.2' }}>{cell.type === 'play' ? cell.playName : cell.label}</div>
-                                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                                                    <button className="btn btn-danger" style={{ padding: '0px 4px', fontSize: '0.6rem', height: '16px', lineHeight: '14px' }} onClick={() => handleRemoveRow(selectedCardId, cell.id)}>×</button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Color</label>
+                                        <select
+                                            value={item.color || 'gray'}
+                                            onChange={(e) => handleUpdateRow(selectedCardId, item.id, { color: e.target.value })}
+                                            style={{ fontSize: '0.8rem', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                        >
+                                            <option value="gray">Gray</option>
+                                            <option value="black">Black</option>
+                                            <option value="red">Red</option>
+                                            <option value="blue">Blue</option>
+                                            <option value="green">Green</option>
+                                            <option value="orange">Orange</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '2px', alignSelf: 'flex-end', paddingBottom: '2px' }}>
+                                        <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, -1)} title="Move Up">↑</button>
+                                        <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, 1)} title="Move Down">↓</button>
+                                        <button className="btn btn-danger" style={{ padding: '4px 8px' }} onClick={() => handleRemoveRow(selectedCardId, item.id)} title="Delete Header">×</button>
+                                    </div>
                                 </div>
                             );
-                            currentCoord++;
-                            buffer = [];
-                        }
+                        } else {
+                            // Render Play Row (3 Inputs: Play1, Tempo, Play2)
+                            rows.push(
+                                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 1fr 80px', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                            {currentCoord}
+                                        </div>
+                                        <select
+                                            value={item.color || ''}
+                                            onChange={(e) => handleUpdateRow(selectedCardId, item.id, { color: e.target.value })}
+                                            style={{ width: '100%', fontSize: '0.6rem', padding: '1px', border: '1px solid var(--border)', borderRadius: '2px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                            title="Row Color"
+                                        >
+                                            <option value="">Default</option>
+                                            <option value="blue">Blue</option>
+                                            <option value="orange">Tan</option>
+                                            <option value="green">Green</option>
+                                            <option value="red">Red</option>
+                                            <option value="yellow">Yel</option>
+                                            <option value="purple">Purp</option>
+                                        </select>
+                                    </div>
 
-                        // Render Header
-                        rows.push(
-                            <div key={item.id} style={{ padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-input)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Header Label</label>
+                                    {/* Play 1 */}
                                     <input
-                                        value={item.label}
-                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { label: e.target.value })}
-                                        style={{ width: '100%', fontWeight: 'bold', fontSize: '0.9rem', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                        value={item.col1 || ''}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col1: e.target.value })}
+                                        placeholder="Play 1"
+                                        style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
                                     />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Color</label>
-                                    <select
-                                        value={item.color || 'gray'}
-                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { color: e.target.value })}
-                                        style={{ fontSize: '0.8rem', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
-                                    >
-                                        <option value="gray">Gray</option>
-                                        <option value="black">Black</option>
-                                        <option value="red">Red</option>
-                                        <option value="blue">Blue</option>
-                                        <option value="green">Green</option>
-                                        <option value="orange">Orange</option>
-                                    </select>
-                                </div>
-                                <div style={{ display: 'flex', gap: '2px', alignSelf: 'flex-end', paddingBottom: '2px' }}>
-                                    <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, -1)} title="Move Up">↑</button>
-                                    <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, 1)} title="Move Down">↓</button>
-                                    <button className="btn btn-danger" style={{ padding: '4px 8px' }} onClick={() => handleRemoveRow(selectedCardId, item.id)} title="Delete Header">×</button>
-                                </div>
-                            </div>
-                        );
 
-                    } else {
-                        // It's a play or tempo
-                        buffer.push(item);
-                        if (buffer.length === 2) {
-                            // Render row
-                            const rowBuffer = [...buffer];
-                            rows.push(
-                                <div key={`play-row-full-${i}`} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr', gap: '0.5rem', alignItems: 'start', marginBottom: '0.5rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
-                                        {currentCoord}
+                                    {/* Tempo */}
+                                    <input
+                                        value={item.col2 || ''}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col2: e.target.value })}
+                                        placeholder="Tempo"
+                                        style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem', textAlign: 'center', fontWeight: 'bold' }}
+                                    />
+
+                                    {/* Play 2 */}
+                                    <input
+                                        value={item.col3 || ''}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col3: e.target.value })}
+                                        placeholder="Play 2"
+                                        style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    />
+
+                                    {/* Actions */}
+                                    <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-end' }}>
+                                        <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, -1)} title="Move Up">↑</button>
+                                        <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, 1)} title="Move Down">↓</button>
+                                        <button className="btn btn-danger" style={{ padding: '4px 8px' }} onClick={() => handleRemoveRow(selectedCardId, item.id)} title="Delete">×</button>
                                     </div>
-                                    {rowBuffer.map((cell, idx) => (
-                                        <div key={idx} style={{
-                                            position: 'relative',
-                                            background: 'var(--bg-panel)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '4px',
-                                            padding: '0.25rem',
-                                            fontSize: '0.7rem'
-                                        }}>
-                                            <div style={{ fontWeight: 'bold', marginBottom: '2px', lineHeight: '1.2' }}>{cell.type === 'play' ? cell.playName : cell.label}</div>
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                                                <button className="btn btn-danger" style={{ padding: '0px 4px', fontSize: '0.6rem', height: '16px', lineHeight: '14px' }} onClick={() => handleRemoveRow(selectedCardId, cell.id)}>×</button>
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             );
                             currentCoord++;
-                            buffer = [];
                         }
-                    }
-                }
-
-                // Flush remaining buffer
-                if (buffer.length > 0) {
-                    const paddedBuffer = [...buffer];
-                    while (paddedBuffer.length < 2) paddedBuffer.push(null);
-                    rows.push(
-                        <div key={`play-row-last`} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr', gap: '0.5rem', alignItems: 'start', marginBottom: '0.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
-                                {currentCoord}
-                            </div>
-                            {paddedBuffer.map((cell, idx) => {
-                                if (!cell) return <div key={idx} style={{ background: 'var(--bg-panel)', border: '1px dashed var(--border)', borderRadius: '4px', height: '100%', minHeight: '40px' }}></div>;
-                                return (
-                                    <div key={idx} style={{
-                                        position: 'relative',
-                                        background: 'var(--bg-panel)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '4px',
-                                        padding: '0.25rem',
-                                        fontSize: '0.7rem'
-                                    }}>
-                                        <div style={{ fontWeight: 'bold', marginBottom: '2px', lineHeight: '1.2' }}>{cell.type === 'play' ? cell.playName : cell.label}</div>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                                            <button className="btn btn-danger" style={{ padding: '0px 4px', fontSize: '0.6rem', height: '16px', lineHeight: '14px' }} onClick={() => handleRemoveRow(selectedCardId, cell.id)}>×</button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    );
+                    });
                 }
 
                 return rows;
@@ -7259,7 +7202,7 @@
                                         <option value="standard">Standard (Traditional)</option>
                                         <option value="staples">STAPLES (10-89)</option>
                                         <option value="mini-scripts">Mini-Scripts (Old Modular)</option>
-                                        <option value="modular">Modular (Mixed Headers)</option>
+
                                         <option value="rooski">Rooski (16-slot grid)</option>
                                         <option value="audible">Audible (Coordinate + 2 Plays)</option>
                                     </select>
@@ -7354,7 +7297,7 @@
                                     </div>
                                     {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, 'STAPLES')}
                                 </div>
-                            ) : (activeCard.type === 'mini-scripts' || activeCard.type === 'modular') ? (
+                            ) : (activeCard.type === 'mini-scripts') ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                         <button className="btn btn-secondary" onClick={() => handleAddHeaderRow(selectedCardId)} style={{ fontSize: '0.8rem' }}>+ Add Section Header</button>
@@ -7363,23 +7306,15 @@
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {/* Header */}
-                                            {activeCard.type === 'mini-scripts' ? (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 1fr', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
-                                                    <div style={{ textAlign: 'center' }}>Coord</div>
-                                                    <div>Column A</div>
-                                                    <div>Column B</div>
-                                                    <div>Column C</div>
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
-                                                    <div style={{ textAlign: 'center' }}>Coord</div>
-                                                    <div>Play 1</div>
-                                                    <div>Play 2</div>
-                                                </div>
-                                            )}
-
+                                            <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 1fr 80px', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                                <div style={{ textAlign: 'center' }}>#</div>
+                                                <div>Play 1</div>
+                                                <div style={{ textAlign: 'center' }}>Tempo</div>
+                                                <div>Play 2</div>
+                                                <div></div>
+                                            </div>
                                             {/* Rows */}
-                                            {renderModularEditorRows(activeCard)}
+                                            {renderMiniScriptEditorRows(activeCard, selectedCardId)}
                                         </div>
                                     </div>
 
