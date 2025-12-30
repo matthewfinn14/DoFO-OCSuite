@@ -8640,6 +8640,38 @@
                                         />
                                     </div>
 
+                                    {/* Transition Time Input */}
+                                    <div style={{
+                                        height: '36px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        backgroundColor: 'var(--bg-panel)',
+                                        padding: '0 0.75rem',
+                                        borderRadius: '6px',
+                                        border: '1px solid var(--border)'
+                                    }}>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Trans:</label>
+                                        <input
+                                            type="number"
+                                            className="form-input"
+                                            style={{
+                                                width: '40px',
+                                                padding: '0',
+                                                border: 'none',
+                                                background: 'transparent',
+                                                fontSize: '0.85rem',
+                                                fontFamily: 'inherit',
+                                                height: 'auto'
+                                            }}
+                                            value={plan.transitionTime || 0}
+                                            onChange={e => updateCurrentPlan({ ...plan, transitionTime: Math.max(0, parseInt(e.target.value) || 0) })}
+                                            disabled={isLocked}
+                                            min="0"
+                                        />
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>m</span>
+                                    </div>
+
                                     {/* Filters: Staff & Notes */}
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <select
@@ -9107,7 +9139,39 @@
                                                         </button>
                                                     )}
                                                 </td>
-                                                <td style={{ padding: '0.5rem' }}>{seg.startTime}</td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    {plan.startTime ? (() => {
+                                                        const [startH, startM] = plan.startTime.split(':').map(Number);
+                                                        const warmup = parseInt(plan.warmupDuration) || 0;
+                                                        const transition = parseInt(plan.transitionTime) || 0;
+
+                                                        // Calculate time elapsed before this segment
+                                                        let elapsedMinutes = warmup;
+
+                                                        // Add durations of prior segments
+                                                        for (let i = 0; i < index; i++) {
+                                                            elapsedMinutes += (parseInt(plan.segments[i].duration) || 0);
+                                                        }
+
+                                                        // Add transitions:
+                                                        // User req: No transition between Warmup (Seg 0) and Seg 1.
+                                                        // So transitions start applying AFTER Seg 1 (between 1 and 2, etc.)
+                                                        // If index is 0 (Seg 1), 0 transitions.
+                                                        // If index is 1 (Seg 2), 1 transition (between 1 and 2).
+                                                        // Transitions = index.
+                                                        if (index > 0) {
+                                                            elapsedMinutes += (index * transition);
+                                                        }
+
+                                                        const date = new Date();
+                                                        date.setHours(startH, startM + elapsedMinutes);
+
+                                                        let hours = date.getHours();
+                                                        const minutes = date.getMinutes();
+                                                        hours = hours % 12 || 12;
+                                                        return `${hours}:${minutes.toString().padStart(2, '0')}`;
+                                                    })() : seg.startTime}
+                                                </td>
                                                 <td style={{ padding: '0.5rem' }}>
                                                     <span className="print-only-text">{seg.duration}</span>
                                                     {!isLocked && (
@@ -9485,8 +9549,35 @@
                                                     {plan.startTime && (() => {
                                                         const [startH, startM] = plan.startTime.split(':').map(Number);
                                                         const warmup = parseInt(plan.warmupDuration) || 0;
-                                                        const segmentsDuration = (plan.segments || []).reduce((acc, s) => acc + (parseInt(s.duration) || 0), 0);
-                                                        const totalMinutes = warmup + segmentsDuration;
+                                                        const transition = parseInt(plan.transitionTime) || 0;
+
+                                                        const segments = plan.segments || [];
+                                                        const segmentCount = segments.length;
+                                                        const segmentsDuration = segments.reduce((acc, s) => acc + (parseInt(s.duration) || 0), 0);
+
+                                                        // Transitions:
+                                                        // 0 -> 1: No
+                                                        // 1 -> 2: Yes
+                                                        // ...
+                                                        // Last Seg -> Shake it up: Yes (User implied it adheres to space between *each* segment, usually applies to shake it up too as a block)
+                                                        // User said "Universal between periods".
+                                                        // If we have N segments (1..N).
+                                                        // Transitions exist after 1, 2, ..., N-1.
+                                                        // Does it exist after N (before Shake it up)?
+                                                        // Assuming "Shake it up" is a segment-like block, there should probably be a transition into it.
+                                                        // Let's assume standard practice: Period 1 -> Trans -> Period 2.
+                                                        // If Shake it up follows last period, it likely needs a transition too.
+                                                        // Total transitions = (segmentCount > 0 ? segmentCount : 0) ? - Wait, 0->1 is NO.
+                                                        // Seg 1 -> Seg 2 (1 trans).
+                                                        // Seg 2 -> Seg 3 (2 trans).
+                                                        // Seg N -> Shake it up (N trans).
+                                                        // If N=1: Warmup->Seg1->(Trans)->Shake. 1 Transition?
+                                                        // If N=2: Warmup->Seg1->(Trans)->Seg2->(Trans)->Shake. 2 Transitions.
+                                                        // So Total Transitions = segmentCount.
+
+                                                        const totalTransitionTime = segmentCount * transition;
+
+                                                        const totalMinutes = warmup + segmentsDuration + totalTransitionTime;
 
                                                         const date = new Date();
                                                         date.setHours(startH, startM + totalMinutes);
