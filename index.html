@@ -2273,7 +2273,7 @@
                     {localItems.map(play => (
                         <div
                             key={play.id}
-                            style={{ padding: '0.4rem', background: 'white', border: '1px solid var(--border)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isLocked ? 'default' : 'grab', marginBottom: '4px' }}
+                            style={{ padding: '0.4rem', background: 'white', color: '#1f2937', border: '1px solid var(--border)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isLocked ? 'default' : 'grab', marginBottom: '4px' }}
                         >
                             <div style={{ overflow: 'hidden' }}>
                                 <div style={{ fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.name}</div>
@@ -35869,7 +35869,7 @@
                     { id: 'screen', label: 'Screen' }
                 ];
 
-                const priorityCategories = gamePlan.priorityCategories || {};
+                const priorityCategories = gamePlan?.priorityCategories || {};
 
                 // Determine assigned IDs to filter Inbox
                 const getAllAssignedIds = () => Object.values(priorityCategories).flat();
