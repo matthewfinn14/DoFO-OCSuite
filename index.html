@@ -7040,22 +7040,7 @@
                 <div style={{ display: 'flex', height: 'calc(100vh - 100px)', gap: '2rem' }}>
                     {/* Left: Sidebar (Plays or Scripts) */}
                     <div style={{ width: '250px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                            <button
-                                className={`btn ${sidebarMode === 'plays' ? 'btn-primary' : 'btn-secondary'}`}
-                                onClick={() => setSidebarMode('plays')}
-                                style={{ flex: 1, fontSize: '0.8rem' }}
-                            >
-                                Plays
-                            </button>
-                            <button
-                                className={`btn ${sidebarMode === 'scripts' ? 'btn-primary' : 'btn-secondary'}`}
-                                onClick={() => setSidebarMode('scripts')}
-                                style={{ flex: 1, fontSize: '0.8rem' }}
-                            >
-                                Scripts
-                            </button>
-                        </div>
+
 
                         {sidebarMode === 'plays' ? (
                             <>
@@ -7204,7 +7189,7 @@
                                         <option value="mini-scripts">Mini-Scripts (Old Modular)</option>
 
                                         <option value="rooski">Rooski (16-slot grid)</option>
-                                        <option value="audible">Audible (Coordinate + 2 Plays)</option>
+
                                     </select>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
