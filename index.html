@@ -225,8 +225,8 @@
             }
 
             .wristband-card {
-                width: 5in;
-                height: 3in;
+                width: 4.75in;
+                height: 2.75in;
                 border: 2px solid black !important;
                 display: flex;
                 flex-direction: column;
@@ -236,7 +236,7 @@
             }
 
             .wristband-card-header {
-                font-size: 10pt;
+                font-size: 9.5pt;
                 font-weight: bold;
                 background: black !important;
                 color: white !important;
@@ -277,9 +277,9 @@
             }
 
             .wristband-num {
-                width: 28px;
+                width: 27px;
                 /* Fixed width */
-                font-size: 8pt;
+                font-size: 7.5pt;
                 font-weight: bold;
                 background: #f0f0f0 !important;
                 /* Light grey for numbers */
@@ -293,7 +293,7 @@
 
             .wristband-play {
                 flex: 1;
-                font-size: 8pt;
+                font-size: 7.5pt;
                 /* Smaller font to fit */
                 font-weight: bold;
                 padding: 0 4px;
@@ -325,8 +325,8 @@
 
             /* Grid Card (Diagrams) */
             .wristband-grid-card {
-                width: 5in;
-                height: 3in;
+                width: 4.75in;
+                height: 2.75in;
                 border: 2px solid black !important;
                 background: white;
                 display: grid;
@@ -364,7 +364,7 @@
              */
 
             .wristband-grid-cell-header {
-                font-size: 6pt;
+                font-size: 5.5pt;
                 font-weight: bold;
                 background: #eee;
                 border-bottom: 1px solid #ccc;
@@ -383,7 +383,7 @@
             }
 
             .wristband-grid-cell-footer {
-                font-size: 7pt;
+                font-size: 6.5pt;
                 font-weight: 800;
                 text-align: center;
                 background: black;
@@ -417,7 +417,7 @@
             .wristband-card.text-list .wristband-card-header {
                 background: black !important;
                 color: white !important;
-                font-size: 11pt;
+                font-size: 10.5pt;
                 text-transform: uppercase;
                 padding: 4px 0;
             }
@@ -433,12 +433,12 @@
                 background: black !important;
                 color: white !important;
                 font-weight: bold;
-                font-size: 9pt;
-                width: 32px;
+                font-size: 8.5pt;
+                width: 30px;
             }
 
             .wristband-card.text-list .wristband-play {
-                font-size: 9pt;
+                font-size: 8.5pt;
                 font-weight: bold;
                 color: black;
             }
@@ -606,24 +606,24 @@
             /* 2x2 Grid Layout - Centered on page */
             .wristband-print-grid {
                 display: grid;
-                grid-template-columns: 3in 3in;
-                grid-template-rows: 5in 5in;
+                grid-template-columns: 2.75in 2.75in;
+                grid-template-rows: 4.75in 4.75in;
                 gap: 0.5in 0.5in;
-                width: 6.5in;
-                /* 2 cards × 3in + 1 gap × 0.5in */
-                height: 10.5in;
-                /* 2 cards × 5in + 1 gap × 0.5in */
-                /* Center on page: (11 - 6.5) / 2 = 2.25in horizontal, (8.5 - 10.5) / 2 = -1in vertical */
-                margin: -1in auto 0;
-                margin-left: 2.25in;
-                margin-right: 2.25in;
+                width: 6in;
+                /* 2 cards × 2.75in + 1 gap × 0.5in */
+                height: 10in;
+                /* 2 cards × 4.75in + 1 gap × 0.5in */
+                /* Center on page: (11 - 6) / 2 = 2.5in horizontal */
+                margin: -0.75in auto 0;
+                margin-left: 2.5in;
+                margin-right: 2.5in;
                 page-break-inside: avoid;
             }
 
-            /* Individual Wristband Card - 5in × 3in landscape */
+            /* Individual Wristband Card - 4.75in × 2.75in landscape */
             .wristband-print-card {
-                width: 5in;
-                height: 3in;
+                width: 4.75in;
+                height: 2.75in;
                 border: 2px solid black;
                 background: white;
                 overflow: hidden;
@@ -2205,8 +2205,6 @@
                         <div
                             key={play.id}
                             className="card"
-                            onDoubleClick={(e) => { e.stopPropagation(); handleTogglePriority(play.id); }}
-                            title="Double-click to toggle priority ⭐"
                             style={{
                                 padding: '0.5rem',
                                 marginBottom: '0.5rem',
@@ -2231,6 +2229,49 @@
                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.name}</span>
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{play.formation}</div>
+
+                                    {/* Flags: Rooski / Mini Script */}
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.7rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!play.priority}
+                                                onChange={(e) => {
+                                                    handleTogglePriority(play.id);
+                                                }}
+                                                onClick={e => e.stopPropagation()}
+                                                onMouseDown={e => e.stopPropagation()}
+                                                style={{ cursor: 'pointer', margin: 0 }}
+                                            />
+                                            <span style={{ color: '#64748b' }}>Star</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!play.isRooski}
+                                                onChange={(e) => {
+                                                    onUpdatePlay(play.id, { isRooski: e.target.checked });
+                                                }}
+                                                onClick={e => e.stopPropagation()}
+                                                onMouseDown={e => e.stopPropagation()}
+                                                style={{ cursor: 'pointer', margin: 0 }}
+                                            />
+                                            <span style={{ color: '#64748b' }}>Rooski</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!play.isMiniScript}
+                                                onChange={(e) => {
+                                                    onUpdatePlay(play.id, { isMiniScript: e.target.checked });
+                                                }}
+                                                onClick={e => e.stopPropagation()}
+                                                onMouseDown={e => e.stopPropagation()}
+                                                style={{ cursor: 'pointer', margin: 0 }}
+                                            />
+                                            <span style={{ color: '#64748b' }}>Mini Script</span>
+                                        </div>
+                                    </div>
 
                                     {/* Status Badges */}
                                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', fontSize: '0.7rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -5663,7 +5704,7 @@
             );
         };
 
-        const WristbandBuilder = ({ plays, weeks, gamePlan, onUpdatePlay, wbSettings, setWbSettings, onNavigate }) => {
+        const WristbandBuilder = ({ plays, weeks, gamePlan, onUpdatePlay, wbSettings, setWbSettings, onNavigate, installList = [] }) => {
             const { currentUser } = useAuth();
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
@@ -5741,11 +5782,31 @@
 
             // Filter plays for the sidebar list
             const filteredPlays = useMemo(() => {
-                return plays.filter(p =>
+                // 1. Filter
+                const filtered = plays.filter(p =>
                     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     p.formation.toLowerCase().includes(searchTerm.toLowerCase())
                 );
-            }, [plays, searchTerm]);
+
+                // 2. Sort: Priority > Install > Rest
+                return filtered.sort((a, b) => {
+                    // Tier 1: Priority (Stars)
+                    if (a.priority && !b.priority) return -1;
+                    if (!a.priority && b.priority) return 1;
+
+                    // Tier 2: Install List (if priorities are equal)
+                    // Only check this if both are NOT priority (or both ARE priority, but usually priority > install)
+                    if (!a.priority && !b.priority) {
+                        const aInstalled = installList.includes(a.id);
+                        const bInstalled = installList.includes(b.id);
+                        if (aInstalled && !bInstalled) return -1;
+                        if (!aInstalled && bInstalled) return 1;
+                    }
+
+                    // Tier 3: Alphabetical Name
+                    return a.name.localeCompare(b.name);
+                });
+            }, [plays, searchTerm, installList]);
 
             // Group plays by slot for easy lookup
             const slotMap = useMemo(() => {
@@ -7192,9 +7253,42 @@
                                                 opacity: play.wristbandSlot ? 0.5 : 1
                                             }}
                                         >
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                                                <span>{play.name}</span>
-                                                {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>} {play.staplesSlot && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '4px' }}>[{play.staplesSlot}]</span>}
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    {play.priority && <Icon name="Star" size={12} style={{ fill: '#eab308', color: '#eab308' }} />}
+
+                                                    {/* Rooski Badge */}
+                                                    {play.isRooski && (
+                                                        <span style={{
+                                                            fontSize: '0.6rem',
+                                                            background: '#fee2e2',
+                                                            color: '#991b1b',
+                                                            padding: '1px 3px',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 'bold',
+                                                            border: '1px solid #fecaca'
+                                                        }}>R</span>
+                                                    )}
+
+                                                    {/* Mini Script Badge */}
+                                                    {play.isMiniScript && (
+                                                        <span style={{
+                                                            fontSize: '0.6rem',
+                                                            background: '#e0e7ff',
+                                                            color: '#3730a3',
+                                                            padding: '1px 3px',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 'bold',
+                                                            border: '1px solid #c7d2fe'
+                                                        }}>MS</span>
+                                                    )}
+
+                                                    <span>{play.name}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                    {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>}
+                                                    {play.staplesSlot && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '4px' }}>[{play.staplesSlot}]</span>}
+                                                </div>
                                             </div>
 
                                         </div>
@@ -7288,7 +7382,8 @@
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '1.5rem',
+                                gap: '1rem',
+                                flexWrap: 'wrap',
                                 padding: '0.75rem',
                                 background: 'var(--bg-panel)',
                                 border: '1px solid var(--border)',
@@ -41146,8 +41241,31 @@
                 return newPlay;
             };
 
-            const handlePatchPlay = (playId, updates) => {
-                setPlays(prev => prev.map(p => p.id === playId ? { ...p, ...updates } : p));
+            const handlePatchPlay = (arg1, arg2) => {
+                if (Array.isArray(arg1)) {
+                    // Bulk Update (Array of objects)
+                    const updatesMap = new Map();
+                    arg1.forEach(p => {
+                        if (p && p.id) updatesMap.set(p.id, p);
+                    });
+                    setPlays(prev => prev.map(p => updatesMap.has(p.id) ? { ...p, ...updatesMap.get(p.id) } : p));
+                } else if (typeof arg1 === 'object' && arg1 !== null && arg1.id) {
+                    // Single Object (Update or Create)
+                    const updatedPlay = arg1;
+                    setPlays(prev => {
+                        const exists = prev.some(p => p.id === updatedPlay.id);
+                        if (exists) {
+                            return prev.map(p => p.id === updatedPlay.id ? { ...p, ...updatedPlay } : p);
+                        } else {
+                            // Verify it's not a zombie play (has name)
+                            if (!updatedPlay.name) return prev;
+                            return [...prev, updatedPlay];
+                        }
+                    });
+                } else {
+                    // Standard (id, updates)
+                    setPlays(prev => prev.map(p => p.id === arg1 ? { ...p, ...arg2 } : p));
+                }
             };
 
             // RBAC State
@@ -44472,7 +44590,7 @@
                         {view === 'staff-tasks' && <StaffManager view="tasks" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
                         {view === 'depth' && <DepthChart roster={roster} depthChart={depthCharts[depthChartType] || {}} onUpdateDepthChart={(updated) => setDepthCharts({ ...depthCharts, [depthChartType]: updated })} chartType={depthChartType} positionNames={positionNames} />}
-                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} installList={currentWeek?.installList || []} />}
 
 
                         {
