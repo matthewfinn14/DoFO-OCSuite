@@ -2167,17 +2167,28 @@
         // -------------------------------------------------------------------------
 
         // Install Sortable Column
-        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount, handleTogglePriority }) => {
+        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount, handleTogglePriority, availableSlots = [] }) => {
             const [localItems, setLocalItems] = React.useState(items);
 
+            const [editingWbId, setEditingWbId] = React.useState(null);
+
             // Sync local state when props change (force update from external source)
-            const itemsSignature = items.map(p => `${p.id}-${p.priority}`).join(',');
+            const itemsSignature = items.map(p => `${p.id}-${p.priority}-${p.wristbandSlot}`).join(',');
             React.useEffect(() => {
-                const localSignature = localItems.map(p => `${p.id}-${p.priority}`).join(',');
+                const localSignature = localItems.map(p => `${p.id}-${p.priority}-${p.wristbandSlot}`).join(',');
                 if (itemsSignature !== localSignature) {
                     setLocalItems(items);
                 }
             }, [itemsSignature]);
+
+            // Handle outside click to close dropdowns
+            React.useEffect(() => {
+                const closeDropdown = () => setEditingWbId(null);
+                if (editingWbId) {
+                    window.addEventListener('click', closeDropdown);
+                }
+                return () => window.removeEventListener('click', closeDropdown);
+            }, [editingWbId]);
 
             return (
                 <ReactSortable
@@ -2222,9 +2233,79 @@
                                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{play.formation}</div>
 
                                     {/* Status Badges */}
-                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', fontSize: '0.7rem', flexWrap: 'wrap' }}>
-                                        {getGamePlanStatus(play.id) && <span style={{ color: '#10b981' }}>● In Plan</span>}
-                                        {getScriptCount(play.id) > 0 && <span>📄 {getScriptCount(play.id)}x</span>}
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', fontSize: '0.7rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                        {/* WB Slot UI */}
+                                        <div style={{ position: 'relative' }}>
+                                            <button
+                                                className="btn-xs"
+                                                onMouseDown={e => e.stopPropagation()}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingWbId(editingWbId === play.id ? null : play.id);
+                                                }}
+                                                style={{
+                                                    background: play.wristbandSlot ? '#eff6ff' : '#f1f5f9',
+                                                    border: '1px solid #cbd5e1',
+                                                    borderRadius: '4px',
+                                                    padding: '1px 4px',
+                                                    fontSize: '0.7rem',
+                                                    color: play.wristbandSlot ? '#1d4ed8' : '#64748b',
+                                                    cursor: 'pointer',
+                                                    minWidth: '40px',
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                {play.wristbandSlot ? `#${play.wristbandSlot}` : '+ WB'}
+                                            </button>
+
+                                            {editingWbId === play.id && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '100%',
+                                                        left: 0,
+                                                        zIndex: 100,
+                                                        background: 'white',
+                                                        border: '1px solid #cbd5e1',
+                                                        borderRadius: '4px',
+                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                                        maxHeight: '200px',
+                                                        width: '100px',
+                                                        overflowY: 'auto'
+                                                    }}
+                                                    onMouseDown={e => e.stopPropagation()}
+                                                    onClick={e => e.stopPropagation()}
+                                                >
+                                                    {play.wristbandSlot && (
+                                                        <div
+                                                            onClick={() => {
+                                                                onUpdatePlay(play.id, { wristbandSlot: null });
+                                                                setEditingWbId(null);
+                                                            }}
+                                                            style={{ padding: '4px 8px', cursor: 'pointer', color: '#ef4444', borderBottom: '1px solid #eee', fontSize: '0.75rem' }}
+                                                        >
+                                                            Unassign
+                                                        </div>
+                                                    )}
+                                                    {availableSlots.length > 0 ? availableSlots.map(slot => (
+                                                        <div
+                                                            key={slot}
+                                                            onClick={() => {
+                                                                onUpdatePlay(play.id, { wristbandSlot: slot });
+                                                                setEditingWbId(null);
+                                                            }}
+                                                            style={{ padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                                            onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                                                        >
+                                                            {slot}
+                                                        </div>
+                                                    )) : (
+                                                        <div style={{ padding: '4px 8px', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.75rem' }}>No slots</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -24842,6 +24923,24 @@
                 return null;
             };
 
+            // Calculate Available Wristband Slots
+            const availableSlots = React.useMemo(() => {
+                if (!wbSettings) return [];
+                const slots = [];
+                Object.keys(wbSettings).filter(k => k.startsWith('card')).forEach(cardKey => {
+                    const card = wbSettings[cardKey];
+                    if (card.type === 'rooski') {
+                        const series = cardKey.replace('card', '');
+                        for (let i = 1; i <= 16; i++) slots.push(`${series}${String(i).padStart(2, '0')}`);
+                    } else {
+                        const start = (parseInt(cardKey.replace('card', '')) * 100) + 1;
+                        for (let i = 0; i < 48; i++) slots.push(String(start + i));
+                    }
+                });
+                const assigned = new Set(plays.filter(p => p.wristbandSlot).map(p => String(p.wristbandSlot)));
+                return slots.filter(s => !assigned.has(s)).sort((a, b) => parseInt(a) - parseInt(b));
+            }, [wbSettings, plays]);
+
 
             // Filtered Master List (Exclude already installed)
             const masterList = plays.filter(p => {
@@ -25117,6 +25216,7 @@
                                         handleTogglePriority={handleTogglePriority}
                                         getGamePlanStatus={getGamePlanStatus}
                                         getScriptCount={getScriptCount}
+                                        availableSlots={availableSlots}
                                     />
                                 </div>
                             </div>
@@ -25139,6 +25239,7 @@
                                         handleTogglePriority={handleTogglePriority}
                                         getGamePlanStatus={getGamePlanStatus}
                                         getScriptCount={getScriptCount}
+                                        availableSlots={availableSlots}
                                     />
                                 </div>
                             </div>
@@ -28077,7 +28178,7 @@
             );
         };
 
-        const PlayerApp = ({ roster, attendance, setRoster, setAttendance, getPlayerWeightLogs, addWeightLog, tasks, onUpdateTasks, dailyConnections, setDailyConnections, currentWeek, culturalCalibration, setCulturalCalibration }) => {
+        const PlayerApp = ({ roster, attendance, setRoster, setAttendance, getPlayerWeightLogs, addWeightLog, tasks, onUpdateTasks, dailyConnections, setDailyConnections, currentWeek, culturalCalibration, setCulturalCalibration, depthCharts = {}, positionNames = {} }) => {
             const [selectedPlayerId, setSelectedPlayerId] = useState(roster.length > 0 ? roster[0].id : '');
             const [activeTab, setActiveTab] = useState('wellness'); // wellness, profile, attendance, achievements, culture
             const [showCoachAlert, setShowCoachAlert] = useState(false);
@@ -28429,8 +28530,9 @@
                                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)', overflowX: 'auto' }}>
                                     {[
                                         { id: 'wellness', label: 'Daily Check-In', icon: 'Heart' },
-                                        { id: 'culture', label: 'Culture', icon: 'Zap' },
+                                        { id: 'checklist', label: 'To-Do List', icon: 'CheckSquare' },
                                         { id: 'gameweek', label: 'Game Week', icon: 'Calendar' },
+                                        { id: 'depth', label: 'Depth Chart', icon: 'Layers' },
                                         { id: 'profile', label: 'My Profile', icon: 'User' },
                                         { id: 'attendance', label: 'Attendance', icon: 'Calendar' },
                                         { id: 'achievements', label: 'Progress', icon: 'Award' }
@@ -28461,175 +28563,7 @@
                                 </div>
 
 
-                                {/* CULTURE TAB */}
-                                {activeTab === 'culture' && (
-                                    <div style={{ paddingBottom: '2rem' }}>
-                                        {/* Header */}
-                                        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(245, 158, 11, 0.1))', border: '1px solid rgba(249, 115, 22, 0.3)' }}>
-                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#f97316' }}>Culture Calibration</h3>
-                                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                                Stay aligned with our program's values and standards.
-                                            </p>
-                                        </div>
 
-                                        {(() => {
-                                            // Helper to find active item (copied logic from main app)
-                                            const getTodayDateString = () => {
-                                                const d = new Date();
-                                                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-                                            };
-                                            const todayKey = getTodayDateString();
-
-                                            const findActiveItem = (items) => {
-                                                if (!items || !Array.isArray(items)) return null;
-                                                return items.find(i => {
-                                                    if (i.date === todayKey) return true;
-                                                    if (i.recurring) {
-                                                        const itemDate = new Date(i.date + 'T00:00:00');
-                                                        const today = new Date();
-                                                        // Simple check for same month/day (ignoring leap year nuances for now)
-                                                        return itemDate.getMonth() === today.getMonth() && itemDate.getDate() === today.getDate();
-                                                    }
-                                                    return false;
-                                                });
-                                            };
-
-                                            const activeQuote = findActiveItem(culturalCalibration?.quotes);
-                                            const activeChallenge = findActiveItem(culturalCalibration?.challenges);
-
-                                            return (
-                                                <>
-                                                    {/* Quote Card */}
-                                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                                                        <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <Icon name="Quote" size={18} color="#3b82f6" />
-                                                            Today's Quote
-                                                        </h3>
-                                                        {activeQuote ? (
-                                                            <div style={{ fontSize: '1.1rem' }}>
-                                                                <div style={{ fontStyle: 'italic', marginBottom: '0.75rem', lineHeight: '1.5' }}>"{activeQuote.text}"</div>
-                                                                <div style={{ textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>— {activeQuote.author}</div>
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', textAlign: 'center' }}>No active quote for today</div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Challenge Card */}
-                                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                                                        <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <Icon name="Zap" size={18} color="#f59e0b" />
-                                                            Today's Challenge
-                                                        </h3>
-                                                        {activeChallenge ? (
-                                                            <div style={{ fontSize: '1.05rem', lineHeight: '1.5' }}>
-                                                                {activeChallenge.text}
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', textAlign: 'center' }}>No active challenge for today</div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Feedback Form */}
-                                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                                                        <h3 style={{ margin: '0 0 1rem 0' }}>Your Feedback</h3>
-
-                                                        <div style={{ marginBottom: '1.5rem' }}>
-                                                            <label className="form-label">How are you feeling about our program's culture? What's on your mind?</label>
-                                                            <textarea
-                                                                className="form-input"
-                                                                rows={4}
-                                                                placeholder="Share your thoughts, reflections, or concerns..."
-                                                                value={cultureReflection}
-                                                                onChange={e => setCultureReflection(e.target.value)}
-                                                            />
-                                                        </div>
-
-                                                        <div style={{ marginBottom: '1.5rem' }}>
-                                                            <label className="form-label">Current Culture Score (1-10)</label>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                                <input
-                                                                    type="range"
-                                                                    min="1"
-                                                                    max="10"
-                                                                    value={cultureCurrentScore}
-                                                                    onChange={e => setCultureCurrentScore(parseInt(e.target.value))}
-                                                                    style={{ flex: 1 }}
-                                                                />
-                                                                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#f97316' }}>{cultureCurrentScore}</span>
-                                                            </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                                                                <span>Toxic</span>
-                                                                <span>Elite</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div style={{ marginBottom: '1.5rem' }}>
-                                                            <label className="form-label">Desired Culture Score (1-10)</label>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                                <input
-                                                                    type="range"
-                                                                    min="1"
-                                                                    max="10"
-                                                                    value={cultureDesiredScore}
-                                                                    onChange={e => setCultureDesiredScore(parseInt(e.target.value))}
-                                                                    style={{ flex: 1 }}
-                                                                />
-                                                                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#10b981' }}>{cultureDesiredScore}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div style={{ marginBottom: '1.5rem' }}>
-                                                            <label className="form-label">Additional Feedback (Optional)</label>
-                                                            <textarea
-                                                                className="form-input"
-                                                                rows={3}
-                                                                placeholder="Any suggestions or thoughts on how we can improve?"
-                                                                value={cultureFeedback}
-                                                                onChange={e => setCultureFeedback(e.target.value)}
-                                                            />
-                                                        </div>
-
-                                                        <button
-                                                            className="btn btn-primary"
-                                                            disabled={!cultureReflection.trim()}
-                                                            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
-                                                            onClick={() => {
-                                                                // Create response object
-                                                                const newResponse = {
-                                                                    id: Date.now().toString(),
-                                                                    playerId: selectedPlayerId,
-                                                                    playerName: `${selectedPlayer.firstName} ${selectedPlayer.lastName}`,
-                                                                    date: new Date().toISOString(),
-                                                                    reflection: cultureReflection,
-                                                                    currentCultureScore: cultureCurrentScore,
-                                                                    desiredCultureScore: cultureDesiredScore,
-                                                                    additionalFeedback: cultureFeedback
-                                                                };
-
-                                                                // Update state
-                                                                setCulturalCalibration(prev => ({
-                                                                    ...prev,
-                                                                    responses: [...(prev.responses || []), newResponse]
-                                                                }));
-
-                                                                // Reset form
-                                                                setCultureReflection('');
-                                                                setCultureFeedback('');
-                                                                setCultureCurrentScore(5);
-                                                                setCultureDesiredScore(5);
-
-                                                                alert('Thank you! Your feedback has been recorded.');
-                                                            }}
-                                                        >
-                                                            <Icon name="Send" size={16} /> Submit Response
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                )}
 
                                 {/* WELLNESS TAB */}
                                 {activeTab === 'wellness' && (
@@ -28681,6 +28615,159 @@
                                                     </div>
                                                 </div>
                                             )}
+                                        </div>
+
+                                        {/* Culture Calibration Section */}
+                                        <div style={{ paddingBottom: '1.5rem' }}>
+                                            {/* Header */}
+                                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(245, 158, 11, 0.1))', border: '1px solid rgba(249, 115, 22, 0.3)' }}>
+                                                <h3 style={{ margin: '0 0 0.5rem 0', color: '#f97316', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Icon name="Zap" size={20} /> Culture Calibration
+                                                </h3>
+                                                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                                    Stay aligned with our program's values and standards.
+                                                </p>
+                                            </div>
+
+                                            {(() => {
+                                                // Helper to find active item
+                                                const getTodayDateString = () => {
+                                                    const d = new Date();
+                                                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                                                };
+                                                const todayKey = getTodayDateString();
+
+                                                const findActiveItem = (items) => {
+                                                    if (!items || !Array.isArray(items)) return null;
+                                                    return items.find(i => {
+                                                        if (i.date === todayKey) return true;
+                                                        if (i.recurring) {
+                                                            const itemDate = new Date(i.date + 'T00:00:00');
+                                                            const today = new Date();
+                                                            return itemDate.getMonth() === today.getMonth() && itemDate.getDate() === today.getDate();
+                                                        }
+                                                        return false;
+                                                    });
+                                                };
+
+                                                const activeQuote = findActiveItem(culturalCalibration?.quotes);
+                                                const activeChallenge = findActiveItem(culturalCalibration?.challenges);
+
+                                                return (
+                                                    <>
+                                                        {/* Quote & Challenge Group */}
+                                                        <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem', gridTemplateColumns: '1fr' }}>
+                                                            {/* Quote Card */}
+                                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3b82f6' }}>
+                                                                    <Icon name="Quote" size={16} /> Today's Quote
+                                                                </h4>
+                                                                {activeQuote ? (
+                                                                    <div style={{ fontSize: '1rem' }}>
+                                                                        <div style={{ fontStyle: 'italic', marginBottom: '0.5rem', lineHeight: '1.4' }}>"{activeQuote.text}"</div>
+                                                                        <div style={{ textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>— {activeQuote.author}</div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem' }}>No active quote for today</div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Challenge Card */}
+                                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f59e0b' }}>
+                                                                    <Icon name="Zap" size={16} /> Today's Challenge
+                                                                </h4>
+                                                                {activeChallenge ? (
+                                                                    <div style={{ fontSize: '1rem', lineHeight: '1.4' }}>
+                                                                        {activeChallenge.text}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem' }}>No active challenge for today</div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Feedback Form */}
+                                                        <div className="card" style={{ padding: '1.5rem' }}>
+                                                            <h3 style={{ margin: '0 0 1rem 0' }}>Your Feedback</h3>
+
+                                                            <div style={{ marginBottom: '1.5rem' }}>
+                                                                <label className="form-label">How are you feeling about our program's culture? What's on your mind?</label>
+                                                                <textarea
+                                                                    className="form-input"
+                                                                    rows={3}
+                                                                    placeholder="Share your thoughts..."
+                                                                    value={cultureReflection}
+                                                                    onChange={e => setCultureReflection(e.target.value)}
+                                                                />
+                                                            </div>
+
+                                                            <div style={{ marginBottom: '1.5rem' }}>
+                                                                <label className="form-label">Current Culture (1-10)</label>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                                    <input
+                                                                        type="range"
+                                                                        min="1"
+                                                                        max="10"
+                                                                        value={cultureCurrentScore}
+                                                                        onChange={e => setCultureCurrentScore(parseInt(e.target.value))}
+                                                                        style={{ flex: 1 }}
+                                                                    />
+                                                                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#f97316' }}>{cultureCurrentScore}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div style={{ marginBottom: '1.5rem' }}>
+                                                                <label className="form-label">Desired Culture (1-10)</label>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                                    <input
+                                                                        type="range"
+                                                                        min="1"
+                                                                        max="10"
+                                                                        value={cultureDesiredScore}
+                                                                        onChange={e => setCultureDesiredScore(parseInt(e.target.value))}
+                                                                        style={{ flex: 1 }}
+                                                                    />
+                                                                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', minWidth: '3ch', color: '#10b981' }}>{cultureDesiredScore}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <button
+                                                                className="btn btn-primary"
+                                                                disabled={!cultureReflection.trim()}
+                                                                style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
+                                                                onClick={() => {
+                                                                    const newResponse = {
+                                                                        id: Date.now().toString(),
+                                                                        playerId: selectedPlayerId,
+                                                                        playerName: `${selectedPlayer.firstName} ${selectedPlayer.lastName}`,
+                                                                        date: new Date().toISOString(),
+                                                                        reflection: cultureReflection,
+                                                                        currentCultureScore: cultureCurrentScore,
+                                                                        desiredCultureScore: cultureDesiredScore,
+                                                                        additionalFeedback: cultureFeedback
+                                                                    };
+
+                                                                    setCulturalCalibration(prev => ({
+                                                                        ...prev,
+                                                                        responses: [...(prev.responses || []), newResponse]
+                                                                    }));
+
+                                                                    setCultureReflection('');
+                                                                    setCultureFeedback('');
+                                                                    setCultureCurrentScore(5);
+                                                                    setCultureDesiredScore(5);
+
+                                                                    alert('Thank you! Your feedback has been recorded. Proceeding to your tasks.');
+                                                                    setActiveTab('checklist');
+                                                                }}
+                                                            >
+                                                                <Icon name="Send" size={16} /> Submit & View Tasks
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
 
                                         {/* Weight Logging Card */}
@@ -28923,6 +29010,74 @@
                                 )}
 
 
+                                {/* TO-DO LIST TAB */}
+                                {activeTab === 'checklist' && (
+                                    <div style={{ paddingBottom: '2rem' }}>
+                                        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                            <h2 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Icon name="CheckSquare" size={24} color="var(--accent)" />
+                                                My Tasks
+                                            </h2>
+                                            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                                Assignments from your coaches. Stay precise.
+                                            </p>
+
+                                            {tasks.filter(t => t.assignedTo?.includes(selectedPlayerId) || t.assignedTo?.includes('ALL')).length === 0 ? (
+                                                <div style={{ textAlign: 'center', padding: '2rem', background: 'var(--surface)', borderRadius: '8px', color: 'var(--text-secondary)' }}>
+                                                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>✓</div>
+                                                    <p>All caught up! No tasks assigned.</p>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'grid', gap: '1rem' }}>
+                                                    {tasks
+                                                        .filter(t => t.assignedTo?.includes(selectedPlayerId) || t.assignedTo?.includes('ALL'))
+                                                        .map(task => (
+                                                            <div key={task.id} style={{
+                                                                padding: '1rem',
+                                                                background: 'var(--surface)',
+                                                                borderRadius: '8px',
+                                                                borderLeft: `4px solid ${task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#f59e0b' : '#3b82f6'}`
+                                                            }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                                    <span style={{
+                                                                        fontSize: '0.75rem',
+                                                                        fontWeight: 'bold',
+                                                                        textTransform: 'uppercase',
+                                                                        color: task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#f59e0b' : '#3b82f6'
+                                                                    }}>
+                                                                        {task.priority} Priority
+                                                                    </span>
+                                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                                        Due: {task.dueDate || 'No Date'}
+                                                                    </span>
+                                                                </div>
+                                                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                                                                    {task.title}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                                                    {task.description}
+                                                                </div>
+                                                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                                    <button style={{
+                                                                        padding: '0.5rem 1rem',
+                                                                        borderRadius: '6px',
+                                                                        border: '1px solid var(--border)',
+                                                                        background: 'transparent',
+                                                                        color: 'var(--text)',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '0.85rem'
+                                                                    }}>
+                                                                        Mark Complete
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* GAME WEEK TAB */}
                                 {activeTab === 'gameweek' && currentWeek && (
                                     <div style={{ paddingBottom: '2rem' }}>
@@ -29090,6 +29245,91 @@
                                         )}
                                     </div>
                                 )}
+
+                                {/* DEPTH CHART TAB */}
+                                {activeTab === 'depth' && (() => {
+                                    const myAssignments = [];
+                                    // Iterate through all depth charts
+                                    Object.entries(depthCharts).forEach(([key, positions]) => {
+                                        // key example: "V_OFFENSE", "JV_DEFENSE"
+                                        const parts = key.split('_');
+                                        const level = parts[0]; // V, JV, J2, SCOUT
+                                        const squad = parts[1]; // OFFENSE, DEFENSE, ST, etc.
+
+                                        if (!positions) return;
+
+                                        Object.entries(positions).forEach(([posKey, playerIds]) => {
+                                            if (!Array.isArray(playerIds)) return;
+
+                                            // playerIds is array of IDs, index 0 = starter
+                                            // Support for potential non-existent playerIds
+                                            const rankIndex = playerIds.indexOf(selectedPlayerId);
+                                            if (rankIndex !== -1) {
+                                                // Retrieve readable name if available
+                                                // Some position keys might be custom, check positionNames
+                                                const posName = positionNames[posKey] || posKey.replace(/^(OFF_|DEF_|KO_|KR_|P_|PR_|HT_|OS_|PB_)/, '');
+
+                                                myAssignments.push({
+                                                    level,
+                                                    squad,
+                                                    posName,
+                                                    rank: rankIndex + 1 // 1st string, 2nd string
+                                                });
+                                            }
+                                        });
+                                    });
+
+                                    // Helper for level display
+                                    const getLevelLabel = (l) => {
+                                        if (l === 'V') return 'Varsity';
+                                        if (l === 'JV') return 'Junior Varsity';
+                                        if (l === 'J2') return 'Fresh/Soph';
+                                        return l;
+                                    };
+
+                                    // Sort by Level then Squad
+                                    myAssignments.sort((a, b) => {
+                                        const levelOrder = { 'V': 1, 'JV': 2, 'J2': 3 };
+                                        const la = levelOrder[a.level] || 99;
+                                        const lb = levelOrder[b.level] || 99;
+                                        if (la !== lb) return la - lb;
+                                        return a.squad.localeCompare(b.squad);
+                                    });
+
+                                    return (
+                                        <div className="card" style={{ padding: '1.5rem', background: 'var(--card-bg)', color: 'var(--text)' }}>
+                                            <h2 style={{ marginBottom: '1.5rem', color: 'var(--text)' }}>My Depth Chart</h2>
+
+                                            {myAssignments.length === 0 ? (
+                                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--surface)', borderRadius: '8px' }}>
+                                                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📋</div>
+                                                    <p>No depth chart assignments found.</p>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                                                    {myAssignments.map((assignment, idx) => (
+                                                        <div key={idx} style={{
+                                                            padding: '1rem',
+                                                            background: 'var(--surface)',
+                                                            borderRadius: '8px',
+                                                            borderLeft: `4px solid ${assignment.rank === 1 ? '#22c55e' : '#eab308'}`
+                                                        }}>
+                                                            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                                                {getLevelLabel(assignment.level)} • {assignment.squad}
+                                                            </div>
+                                                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                                                                {assignment.posName}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.9rem', color: assignment.rank === 1 ? '#22c55e' : '#eab308', fontWeight: 'bold' }}>
+                                                                {assignment.rank === 1 ? 'Starter' : `${assignment.rank === 2 ? '2nd' : assignment.rank + 'rd'} String`}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* PROFILE TAB */}
                                 {
@@ -44266,8 +44506,8 @@
                         {view === 'pressbox' && <Pressbox plays={plays} gameLog={gameLog} onUpdateGameLog={handleUpdateGameLog} currentWeek={currentWeek} teamLogo={teamLogo} opponentLogo={currentWeek.opponentData?.logo || ''} gameStart={currentWeek.gameStart || {}} situation={currentWeek.situation} onUpdateSituation={handleUpdateSituation} formations={formations} activePlay={activePlay} onUpdateActivePlay={setActivePlay} />}
 
                         {view === 'grading' && <GameGradingView roster={roster} gameLog={currentWeek.gameLog} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} valhallaData={valhallaData} onUpdateValhalla={setValhallaData} />}
-                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} />}
-                        {view === 'attendance-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} />}
+                        {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} depthCharts={depthCharts} positionNames={positionNames} />}
+                        {view === 'attendance-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} depthCharts={depthCharts} positionNames={positionNames} />}
                         {view === 'practice' && (
                             <PracticeScriptBuilder
                                 mode="plan"
@@ -44438,7 +44678,7 @@
                                     background: 'rgba(0,0,0,0.85)', zIndex: 10001,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}>
-                                    <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
+                                    <div classNamard={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
                                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
                                             {inviteData.type === 'domain_match' ? '🏫' : '📩'}
                                         </div>

@@ -1,7 +1,7 @@
 // ============================================
 // PLAYER-FACING APP PREVIEW
 // ============================================
-const PlayerApp = ({ roster, attendance, setRoster, setAttendance, tasks = [], onUpdateTasks = () => { } }) => {
+const PlayerApp = ({ roster, attendance, setRoster, setAttendance, tasks = [], onUpdateTasks = () => { }, depthCharts = {}, positionNames = {} }) => {
     const [selectedPlayerId, setSelectedPlayerId] = useState(roster.length > 0 ? roster[0].id : '');
     const [activeTab, setActiveTab] = useState('wellness'); // wellness, profile, attendance, achievements
     const [showCoachAlert, setShowCoachAlert] = useState(false);
@@ -316,6 +316,7 @@ const PlayerApp = ({ roster, attendance, setRoster, setAttendance, tasks = [], o
                             {[
                                 { id: 'wellness', label: 'Daily Check-In', icon: 'Heart' },
                                 { id: 'checklist', label: 'My Checklist', icon: 'CheckSquare' },
+                                { id: 'depth', label: 'Depth Chart', icon: 'Layers' },
                                 { id: 'profile', label: 'My Profile', icon: 'User' },
                                 { id: 'attendance', label: 'Attendance', icon: 'Calendar' },
                                 { id: 'achievements', label: 'Progress', icon: 'Award' }
@@ -640,6 +641,93 @@ const PlayerApp = ({ roster, attendance, setRoster, setAttendance, tasks = [], o
                                 })()}
                             </div>
                         )}
+
+                        {/* DEPTH CHART TAB */}
+                        {activeTab === 'depth' && (() => {
+                            const myAssignments = [];
+                            // Iterate through all depth charts
+                            Object.entries(depthCharts).forEach(([key, positions]) => {
+                                // key example: "V_OFFENSE", "JV_DEFENSE"
+                                const parts = key.split('_');
+                                const level = parts[0]; // V, JV, J2, SCOUT
+                                const squad = parts[1]; // OFFENSE, DEFENSE, ST, etc.
+
+                                if (!positions) return;
+
+                                Object.entries(positions).forEach(([posKey, playerIds]) => {
+                                    if (!Array.isArray(playerIds)) return;
+                                    
+                                    // playerIds is array of IDs, index 0 = starter
+                                    // Support for potential non-existent playerIds
+                                    const rankIndex = playerIds.indexOf(selectedPlayerId);
+                                    if (rankIndex !== -1) {
+                                        // Retrieve readable name if available
+                                        // Some position keys might be custom, check positionNames
+                                        // Also handle the case where positionNames uses keys like "OFF_QB" vs just "QB" relative to the map?
+                                        // Based on DepthChart component, keys are like "OFF_LWR", and positionNames uses those keys.
+                                        const posName = positionNames[posKey] || posKey.replace(/^(OFF_|DEF_|KO_|KR_|P_|PR_|HT_|OS_|PB_)/, ''); 
+                                        
+                                        myAssignments.push({
+                                            level,
+                                            squad,
+                                            posName,
+                                            rank: rankIndex + 1 // 1st string, 2nd string
+                                        });
+                                    }
+                                });
+                            });
+
+                            // Helper for level display
+                            const getLevelLabel = (l) => {
+                                if (l === 'V') return 'Varsity';
+                                if (l === 'JV') return 'Junior Varsity';
+                                if (l === 'J2') return 'Fresh/Soph';
+                                return l;
+                            };
+
+                            // Sort by Level then Squad
+                            myAssignments.sort((a, b) => {
+                                const levelOrder = { 'V': 1, 'JV': 2, 'J2': 3 };
+                                const la = levelOrder[a.level] || 99;
+                                const lb = levelOrder[b.level] || 99;
+                                if (la !== lb) return la - lb;
+                                return a.squad.localeCompare(b.squad);
+                            });
+
+                            return (
+                                <div className="card" style={{ padding: '1.5rem', background: 'var(--card-bg)', color: 'var(--text)' }}>
+                                    <h2 style={{ marginBottom: '1.5rem', color: 'var(--text)' }}>My Depth Chart</h2>
+                                    
+                                    {myAssignments.length === 0 ? (
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--surface)', borderRadius: '8px' }}>
+                                            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📋</div>
+                                            <p>No depth chart assignments found.</p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                                            {myAssignments.map((assignment, idx) => (
+                                                <div key={idx} style={{ 
+                                                    padding: '1rem', 
+                                                    background: 'var(--surface)', 
+                                                    borderRadius: '8px', 
+                                                    borderLeft: `4px solid ${assignment.rank === 1 ? '#22c55e' : '#eab308'}`
+                                                }}>
+                                                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                                        {getLevelLabel(assignment.level)} • {assignment.squad}
+                                                    </div>
+                                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                                                        {assignment.posName}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.9rem', color: assignment.rank === 1 ? '#22c55e' : '#eab308', fontWeight: 'bold' }}>
+                                                        {assignment.rank === 1 ? 'Starter' : `${assignment.rank === 2 ? '2nd' : assignment.rank + 'rd'} String`}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                         {/* Low Score Alert Modal */}
                         {showCoachAlert && (
