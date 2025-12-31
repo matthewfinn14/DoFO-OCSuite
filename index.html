@@ -7727,21 +7727,30 @@
         };
 
         // --- NOTES MODAL COMPONENT (Re-implemented as top-level) ---
-        const NotesModal = ({ plan, updateCurrentPlan, staff, segmentId, onClose }) => {
-            if (!segmentId) return null;
+        const NotesModal = ({ plan, updateCurrentPlan, staff, segmentId, onClose, segment: providedSegment, onUpdateNotes }) => {
+            if (!segmentId && !providedSegment) return null;
 
-            const segment = segmentId === 'WARMUP'
-                ? { id: 'WARMUP', notes: plan.warmupNotes || {} }
-                : plan.segments.find(s => s.id == segmentId);
+            // Use provided segment OR find it in the plan (safely)
+            const segment = providedSegment || (
+                segmentId === 'WARMUP'
+                    ? { id: 'WARMUP', notes: plan?.warmupNotes || {} }
+                    : plan?.segments?.find(s => s.id == segmentId)
+            );
 
             if (!segment) return null;
 
             const migrated = segmentId === 'WARMUP'
-                ? { notes: plan.warmupNotes || {} }
+                ? { notes: plan?.warmupNotes || {} }
                 : migrateSegmentNotes(segment);
 
             // Helper to update notes
             const handleUpdateNotes = (staffId, value) => {
+                // If a custom callback is provided, use it (e.g. for Pre-game Timeline)
+                if (onUpdateNotes) {
+                    onUpdateNotes(segment.id, staffId, value);
+                    return;
+                }
+
                 const newNotes = { ...migrated.notes, [staffId]: value };
 
                 if (segmentId === 'WARMUP') {
@@ -10548,13 +10557,7 @@
                         </div>
                     </div>
 
-                    {/* Notes Modal */}
-                    {notesModalSegmentId && (
-                        <NotesModal
-                            segmentId={notesModalSegmentId}
-                            onClose={() => setNotesModalSegmentId(null)}
-                        />
-                    )}
+
                 </div>
             );
         };
@@ -20628,7 +20631,8 @@
                                                 { key: 'addPlay', label: 'Add a New Play' },
                                                 { key: 'wristband', label: 'Wristband Builder' },
                                                 { key: 'practiceScripts', label: 'Practice Scripts' },
-                                                { key: 'dumbCallsheet', label: 'Dumb Call Sheet' }
+                                                { key: 'dumbCallsheet', label: 'Dumb Call Sheet' },
+                                                { key: 'smartCallsheet', label: 'Smart Call Sheet' }
                                             ]
                                         },
                                         {
@@ -37309,351 +37313,380 @@
         };
 
         const GameWeekOverview = ({ week, onUpdateWeek, teamLogo, isLocked }) => {
-            const overview = week.overview || {
-                isHomeGame: false,
-                practiceSchedule: [
-                    { day: 'Monday', start: '', end: '', notes: '' },
-                    { day: 'Tuesday', start: '', end: '', notes: '' },
-                    { day: 'Wednesday', start: '', end: '', notes: '' },
-                    { day: 'Thursday', start: '', end: '', notes: '' },
-                    { day: 'Friday', start: '', end: '', notes: '' }
-                ],
-                distribution: {
-                    showOverview: true,
-                    showSchedule: true,
-                    showDepthChart: false,
-                    showScoutReport: false,
-                    showGamePlan: false
-                },
-                travel: { location: '', departure: '', notes: '' },
-                uniforms: { jersey: 'Red', pants: 'Red', helmet: 'Red' },
-                message: '',
-                improvement: '',
-                meal: { host: '', location: '', time: '' },
-                context: ''
-            };
+            const [addEventModal, setAddEventModal] = useState(null); // { day: 'monday' } or null
+            const [editingEvent, setEditingEvent] = useState(null); // { day, eventId, event } or null
+            const [exportMode, setExportMode] = useState(false);
 
-            const handleChange = (section, field, value) => {
-                const newOverview = { ...overview };
-                if (section) {
-                    newOverview[section] = { ...newOverview[section], [field]: value };
-                } else {
-                    newOverview[field] = value;
+            const overview = week.overview || {};
+
+            // Ensure structure
+            if (!overview.dailySchedule) {
+                overview.dailySchedule = {
+                    monday: { events: [] },
+                    tuesday: { events: [] },
+                    wednesday: { events: [] },
+                    thursday: { events: [] },
+                    friday: { events: [] },
+                    saturday: { events: [] }
+                };
+            }
+
+            // Sync practices from practice plans
+            useEffect(() => {
+                if (!week.practicePlans) return;
+
+                const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                let hasChanges = false;
+                const newDailySchedule = JSON.parse(JSON.stringify(overview.dailySchedule));
+
+                DAYS.forEach(day => {
+                    const plan = week.practicePlans[day];
+                    const autoId = `auto-practice-${day}`;
+                    const existingIndex = newDailySchedule[day].events.findIndex(e => e.id === autoId);
+
+                    if (plan && plan.startTime) {
+                        // Calculate end time
+                        let endTime = '';
+                        try {
+                            const [h, m] = plan.startTime.split(':').map(Number);
+                            let totalMinutes = (h * 60) + m;
+                            totalMinutes += parseInt(plan.warmupDuration || 0);
+                            if (plan.segments && Array.isArray(plan.segments)) {
+                                plan.segments.forEach(s => totalMinutes += parseInt(s.duration || 0));
+                            }
+                            const endH = Math.floor(totalMinutes / 60);
+                            const endM = totalMinutes % 60;
+                            endTime = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+                        } catch (e) { endTime = 'TBD'; }
+
+                        const practiceEvent = {
+                            id: autoId,
+                            type: 'practice',
+                            level: 'Varsity',
+                            start: plan.startTime,
+                            end: endTime,
+                            notes: plan.focus || '',
+                            autoPopulated: true
+                        };
+
+                        if (existingIndex >= 0) {
+                            const existing = newDailySchedule[day].events[existingIndex];
+                            if (existing.start !== practiceEvent.start || existing.end !== practiceEvent.end || existing.notes !== practiceEvent.notes) {
+                                newDailySchedule[day].events[existingIndex] = practiceEvent;
+                                hasChanges = true;
+                            }
+                        } else {
+                            newDailySchedule[day].events.unshift(practiceEvent);
+                            hasChanges = true;
+                        }
+                    } else if (existingIndex >= 0) {
+                        // Remove if plan was cleared
+                        newDailySchedule[day].events.splice(existingIndex, 1);
+                        hasChanges = true;
+                    }
+                });
+
+                if (hasChanges) {
+                    onUpdateWeek(week.id, 'overview', { ...overview, dailySchedule: newDailySchedule });
                 }
-                onUpdateWeek(week.id, 'overview', newOverview);
+            }, [week.practicePlans]);
+
+            const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const DAY_LABELS = { monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday', thursday: 'Thursday', friday: 'Friday', saturday: 'Saturday' };
+
+            const handleExport = () => {
+                setExportMode(true);
+                setTimeout(() => {
+                    window.print();
+                    setExportMode(false);
+                }, 500);
             };
 
-            // Helpers for Uniform Colors
-            const JERSEY_COLORS = ['Red', 'White', 'Black', 'Grey'];
-            const PANT_COLORS = ['Red', 'White', 'Black', 'Grey'];
-            const HELMET_COLORS = ['Red', 'White', 'Black', 'Grey', 'Chrome'];
+            const getEventColor = (type) => {
+                if (type === 'practice') return '#3b82f6';
+                if (type === 'game') return '#ef4444';
+                return '#10b981';
+            };
 
             return (
-                <div style={{ height: 'calc(100vh - 100px)', overflowY: 'auto', padding: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                        <div>
-                            <h1>Game Week Overview</h1>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <span>Week {week.weekNum}: {week.opponent}</span>
-                                <button
-                                    className={`btn ${overview.isHomeGame ? 'btn-primary' : ''}`}
-                                    style={{ padding: '0.25rem 0.75rem', fontSize: '0.9rem', border: '1px solid var(--border)' }}
-                                    onClick={() => handleChange(null, 'isHomeGame', !overview.isHomeGame)}
-                                    disabled={isLocked}
-                                >
-                                    {overview.isHomeGame ? '🏠 Home Game' : '🚌 Away Game'}
-                                </button>
-                            </div>
-                        </div>
-                        {teamLogo && <img src={teamLogo} alt="Logo" style={{ height: '60px' }} />}
+                <div style={{ padding: '1rem', maxWidth: '1000px', margin: '0 auto' }}>
+                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h1>Week {week.weekNum} Overview</h1>
+                        <button className="btn btn-primary" onClick={handleExport}>
+                            <Icon name="Printer" size={18} style={{ marginRight: '8px' }} />
+                            Export for SportsYou
+                        </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-
-                        {/* LEFT COLUMN */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-
-                            {/* Message of the Week */}
-                            <div className="card">
-                                <h2>Message of the Week</h2>
+                    <div id="game-week-print-area">
+                        {/* Header Info */}
+                        <div style={{ background: '#1e293b', color: 'white', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)', fontWeight: '800', marginBottom: '0.5rem' }}>
+                                Motivational Focus
+                            </div>
+                            <div className="no-print">
                                 <textarea
                                     className="form-input"
-                                    rows="3"
-                                    placeholder="Enter the motivational focus for the week..."
-                                    value={overview.message}
-                                    onChange={(e) => handleChange(null, 'message', e.target.value)}
-                                    // style={{ fontSize: '1.1rem', fontStyle: 'italic' }} <- REMOVED for uniformity
-                                    disabled={isLocked}
+                                    style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', textAlign: 'center', fontSize: '1.25rem', fontWeight: 'bold' }}
+                                    value={overview.messageOfWeek || ''}
+                                    placeholder="Enter Message of the Week..."
+                                    onChange={(e) => onUpdateWeek(week.id, 'overview', { ...overview, messageOfWeek: e.target.value })}
                                 />
                             </div>
-
-                            {/* Logistics & Travel */}
-                            <div className="card">
-                                <h2>Logistics & {overview.isHomeGame ? 'Arrival' : 'Travel'}</h2>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                    <div>
-                                        <label className="form-label">Location</label>
-                                        <input
-                                            type="text" className="form-input"
-                                            value={overview.travel.location}
-                                            onChange={(e) => handleChange('travel', 'location', e.target.value)}
-                                            placeholder="Stadium / Field"
-                                            disabled={isLocked}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">{overview.isHomeGame ? 'Arrival Time' : 'Departure Time'}</label>
-                                        <input
-                                            type="text" className="form-input"
-                                            value={overview.travel.departure}
-                                            onChange={(e) => handleChange('travel', 'departure', e.target.value)}
-                                            placeholder="Time"
-                                            disabled={isLocked}
-                                        />
-                                    </div>
-                                </div>
-                                {!overview.isHomeGame && (
-                                    <div>
-                                        <label className="form-label">Travel Notes</label>
-                                        <textarea
-                                            className="form-input"
-                                            rows="2"
-                                            value={overview.travel.notes}
-                                            onChange={(e) => handleChange('travel', 'notes', e.target.value)}
-                                            placeholder="Bus details, stops, etc."
-                                            disabled={isLocked}
-                                        />
-                                    </div>
-                                )}
+                            <div className="print-only" style={{ fontSize: '1.5rem', fontWeight: 'bold', fontStyle: 'italic' }}>
+                                "{overview.messageOfWeek || 'Win The Day'}"
                             </div>
-
-                            {/* Team Meal */}
-                            <div className="card">
-                                <h2>Team Meal</h2>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div>
-                                        <label className="form-label">Host / Location</label>
-                                        <input
-                                            type="text" className="form-input"
-                                            value={overview.meal.host}
-                                            onChange={(e) => handleChange('meal', 'host', e.target.value)}
-                                            placeholder="Family or Restaurant"
-                                            disabled={isLocked}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Time</label>
-                                        <input
-                                            type="text" className="form-input"
-                                            value={overview.meal.time}
-                                            onChange={(e) => handleChange('meal', 'time', e.target.value)}
-                                            placeholder="Meal Time"
-                                            disabled={isLocked}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
                         </div>
 
-                        {/* RIGHT COLUMN */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        {/* Daily Schedule */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {DAYS.map(day => {
+                                const daySchedule = overview.dailySchedule[day];
+                                const hasMeal = day === 'thursday' && overview.meal && (overview.meal.host || overview.meal.time);
 
-                            {/* Uniforms */}
-                            <div className="card">
-                                <h2>Uniforms</h2>
-                                <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginTop: '1rem' }}>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                            <Icon name="Shield" size={16} style={{ color: 'var(--text-secondary)' }} />
-                                            <label className="form-label" style={{ marginBottom: 0 }}>Helmet</label>
+                                return (
+                                    <div key={day} className="card" style={{ padding: '1.25rem', borderLeft: '6px solid var(--accent)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{DAY_LABELS[day]}</h2>
+                                            <button className="btn no-print" onClick={() => setAddEventModal({ day })} disabled={isLocked}>
+                                                <Icon name="Plus" size={16} style={{ marginRight: '6px' }} />
+                                                Add Event
+                                            </button>
                                         </div>
-                                        <select
-                                            className="form-select"
-                                            value={overview.uniforms.helmet}
-                                            onChange={(e) => handleChange('uniforms', 'helmet', e.target.value)}
-                                            disabled={isLocked}
-                                        >
-                                            {HELMET_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                        <div style={{ marginTop: '10px', width: '60px', height: '60px', borderRadius: '12px', background: overview.uniforms.helmet === 'Chrome' ? 'linear-gradient(135deg, #e0e0e0 0%, #ffffff 50%, #a0a0a0 100%)' : overview.uniforms.helmet.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}></div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            {daySchedule.events.map(event => (
+                                                <div key={event.id} style={{
+                                                    padding: '1rem',
+                                                    background: 'var(--bg-panel)',
+                                                    borderRadius: '10px',
+                                                    borderLeft: `5px solid ${getEventColor(event.type)}`,
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}>
+                                                    <div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                                            <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', background: getEventColor(event.type), color: 'white', padding: '2px 8px', borderRadius: '4px' }}>
+                                                                {event.type === 'practice' ? 'Practice' : event.type === 'game' ? `${event.level} Game` : 'Event'}
+                                                            </span>
+                                                            {event.autoPopulated && <span style={{ fontSize: '0.75em', color: 'var(--text-secondary)', fontStyle: 'italic' }}>(Auto)</span>}
+                                                        </div>
+
+                                                        {event.type === 'practice' && (
+                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800' }}>
+                                                                {event.start} - {event.end} {event.notes && <span style={{ fontWeight: 'normal', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>| {event.notes}</span>}
+                                                            </div>
+                                                        )}
+
+                                                        {event.type === 'game' && (
+                                                            <div>
+                                                                <div style={{ fontSize: '1.1rem', fontWeight: '800' }}>
+                                                                    {event.isHome ? '🏠 Home' : '🚌 Away'} vs {event.opponent}
+                                                                </div>
+                                                                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                                                                    <span>⏱️ Kickoff: <strong>{event.kickoff}</strong></span>
+                                                                    {!event.isHome && <span>🚌 Bus: <strong>{event.busTime}</strong></span>}
+                                                                    {!event.isHome && event.dismissalTime && <span style={{ color: '#f59e0b', fontWeight: '800' }}>⚠️ Dismiss: {event.dismissalTime}</span>}
+                                                                    <span style={{ color: 'var(--text-secondary)' }}>📍 {event.location}</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                                    <span style={{ fontSize: '0.8rem', background: 'var(--bg-app)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: '4px' }}>👕 {event.uniforms?.jersey} Jersey</span>
+                                                                    <span style={{ fontSize: '0.8rem', background: 'var(--bg-app)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: '4px' }}>👖 {event.uniforms?.pants} Pants</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {event.type === 'custom' && (
+                                                            <div>
+                                                                <div style={{ fontSize: '1.1rem', fontWeight: '800' }}>{event.title}</div>
+                                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                                                    ⏰ {event.time} | 📍 {event.location}
+                                                                </div>
+                                                                {event.notes && <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>{event.notes}</div>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {!event.autoPopulated && !isLocked && (
+                                                        <div className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <button className="btn" onClick={() => setEditingEvent({ day, eventId: event.id, event })} style={{ padding: '4px 8px' }}>
+                                                                <Icon name="Edit" size={14} />
+                                                            </button>
+                                                            <button className="btn" style={{ padding: '4px 8px', color: '#ef4444' }} onClick={() => {
+                                                                if (confirm('Delete event?')) {
+                                                                    const newSchedule = { ...overview.dailySchedule };
+                                                                    newSchedule[day].events = newSchedule[day].events.filter(e => e.id !== event.id);
+                                                                    onUpdateWeek(week.id, 'overview', { ...overview, dailySchedule: newSchedule });
+                                                                }
+                                                            }}>
+                                                                <Icon name="Trash2" size={14} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+
+                                            {hasMeal && (
+                                                <div style={{ padding: '1rem', background: '#fefce8', borderRadius: '10px', borderLeft: '5px solid #eab308' }}>
+                                                    <div style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', background: '#eab308', color: 'white', padding: '2px 8px', borderRadius: '4px', width: 'fit-content', marginBottom: '0.5rem' }}>
+                                                        Team Meal
+                                                    </div>
+                                                    <div style={{ fontSize: '1.1rem', fontWeight: '800' }}>
+                                                        🍴 {overview.meal.time} {overview.meal.host && <span style={{ fontWeight: 'normal', color: '#854d0e', marginLeft: '0.5rem' }}>@ {overview.meal.host}</span>}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                            <Icon name="Shirt" size={16} style={{ color: 'var(--text-secondary)' }} />
-                                            <label className="form-label" style={{ marginBottom: 0 }}>Jersey</label>
-                                        </div>
-                                        <select
-                                            className="form-select"
-                                            value={overview.uniforms.jersey}
-                                            onChange={(e) => handleChange('uniforms', 'jersey', e.target.value)}
-                                            disabled={isLocked}
-                                        >
-                                            {JERSEY_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {(addEventModal || editingEvent) && (
+                        <EventModal
+                            day={addEventModal?.day || editingEvent?.day}
+                            event={editingEvent?.event}
+                            onClose={() => { setAddEventModal(null); setEditingEvent(null); }}
+                            onSave={(data) => {
+                                const newSchedule = { ...overview.dailySchedule };
+                                if (editingEvent) {
+                                    const idx = newSchedule[editingEvent.day].events.findIndex(e => e.id === editingEvent.eventId);
+                                    newSchedule[editingEvent.day].events[idx] = { ...data, id: editingEvent.eventId };
+                                } else {
+                                    newSchedule[addEventModal.day].events.push({ ...data, id: `manual-${Date.now()}` });
+                                }
+                                onUpdateWeek(week.id, 'overview', { ...overview, dailySchedule: newSchedule });
+                                setAddEventModal(null);
+                                setEditingEvent(null);
+                            }}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        const EventModal = ({ day, event, onClose, onSave }) => {
+            const [type, setType] = useState(event?.type || 'game');
+            const [level, setLevel] = useState(event?.level || 'JV');
+            const [isHome, setIsHome] = useState(event?.isHome !== undefined ? event.isHome : true);
+            const [opponent, setOpponent] = useState(event?.opponent || '');
+            const [kickoff, setKickoff] = useState(event?.kickoff || '');
+            const [busTime, setBusTime] = useState(event?.busTime || '');
+            const [dismissalTime, setDismissalTime] = useState(event?.dismissalTime || '');
+            const [location, setLocation] = useState(event?.location || '');
+            const [uniforms, setUniforms] = useState(event?.uniforms || { jersey: 'White', pants: 'Red' });
+            const [title, setTitle] = useState(event?.title || '');
+            const [time, setTime] = useState(event?.time || '');
+            const [notes, setNotes] = useState(event?.notes || '');
+
+            return (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+                    <div className="card" style={{ width: '500px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <h2>{event ? 'Edit' : 'Add'} Event for {day.toUpperCase()}</h2>
+
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label className="form-label">Type</label>
+                            <div className="btn-group">
+                                <button className={`btn ${type === 'game' ? 'btn-primary' : ''}`} onClick={() => setType('game')}>Game</button>
+                                <button className={`btn ${type === 'custom' ? 'btn-primary' : ''}`} onClick={() => setType('custom')}>Custom</button>
+                            </div>
+                        </div>
+
+                        {type === 'game' && (
+                            <>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div>
+                                        <label className="form-label">Level</label>
+                                        <select className="form-select" value={level} onChange={(e) => setLevel(e.target.value)}>
+                                            <option>JV</option>
+                                            <option>JV2</option>
+                                            <option>Varsity</option>
+                                            <option>Freshman</option>
                                         </select>
-                                        <div style={{ marginTop: '10px', width: '60px', height: '60px', borderRadius: '12px', background: overview.uniforms.jersey.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}></div>
                                     </div>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                            <Icon name="Columns" size={16} style={{ color: 'var(--text-secondary)' }} />
-                                            <label className="form-label" style={{ marginBottom: 0 }}>Pants</label>
+                                    <div>
+                                        <label className="form-label">Location Type</label>
+                                        <div className="btn-group">
+                                            <button className={`btn ${isHome ? 'btn-primary' : ''}`} onClick={() => setIsHome(true)}>Home</button>
+                                            <button className={`btn ${!isHome ? 'btn-primary' : ''}`} onClick={() => setIsHome(false)}>Away</button>
                                         </div>
-                                        <select
-                                            className="form-select"
-                                            value={overview.uniforms.pants}
-                                            onChange={(e) => handleChange('uniforms', 'pants', e.target.value)}
-                                            disabled={isLocked}
-                                        >
-                                            {PANT_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                        <div style={{ marginTop: '10px', width: '60px', height: '60px', borderRadius: '12px', background: overview.uniforms.pants.toLowerCase(), border: '2px solid var(--border)', margin: '10px auto', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}></div>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Improvement Notes */}
-                            <div className="card" style={{ flex: 1 }}>
-                                <h2>Keys to Improve</h2>
-                                <textarea
-                                    className="form-input"
-                                    rows="6"
-                                    placeholder="- Win 1st Down&#10;- Eliminate Pre-snap penalties&#10;- ..."
-                                    value={overview.improvement}
-                                    onChange={(e) => handleChange(null, 'improvement', e.target.value)}
-                                    style={{ height: '100%' }}
-                                    disabled={isLocked}
-                                />
-                            </div>
-
-
-
-                            {/* Practice Schedule */}
-                            <div className="card">
-                                <h2>Practice Schedule</h2>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                                    <thead>
-                                        <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                                            <th style={{ padding: '0.5rem' }}>Day</th>
-                                            <th style={{ padding: '0.5rem' }}>Start</th>
-                                            <th style={{ padding: '0.5rem' }}>End</th>
-                                            <th style={{ padding: '0.5rem' }}>Notes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(overview.practiceSchedule || []).map((day, index) => {
-                                            // Autopopulate from Practice Plan
-                                            const plan = (week.practicePlans || {})[day.day.toLowerCase()];
-                                            let autoStart = '';
-                                            let autoEnd = '';
-                                            let autoNotes = '';
-
-                                            if (plan) {
-                                                autoStart = plan.startTime || '';
-                                                if (autoStart) {
-                                                    try {
-                                                        const [h, m] = autoStart.split(':').map(Number);
-                                                        let totalMinutes = (h * 60) + m;
-                                                        totalMinutes += parseInt(plan.warmupDuration || 0);
-                                                        if (plan.segments && Array.isArray(plan.segments)) {
-                                                            plan.segments.forEach(s => totalMinutes += parseInt(s.duration || 0));
-                                                        }
-                                                        const endH = Math.floor(totalMinutes / 60);
-                                                        const endM = totalMinutes % 60;
-                                                        autoEnd = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
-                                                    } catch (err) { console.error('Time calc error', err); }
-                                                }
-
-                                                const noteParts = [];
-                                                if (plan.focus) noteParts.push(`Focus: ${plan.focus}`);
-                                                if (plan.message) noteParts.push(`"${plan.message}"`);
-                                                autoNotes = noteParts.join(' | ');
-                                            }
-
-                                            return (
-                                                <tr key={day.day} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>{day.day}</td>
-                                                    <td style={{ padding: '0.5rem' }}>
-                                                        <input
-                                                            className="form-input"
-                                                            value={day.start || autoStart}
-                                                            placeholder={autoStart || 'Start time'}
-                                                            onChange={(e) => {
-                                                                const newSchedule = [...(overview.practiceSchedule || [])];
-                                                                newSchedule[index] = { ...day, start: e.target.value };
-                                                                handleChange(null, 'practiceSchedule', newSchedule);
-                                                            }}
-                                                            disabled={isLocked}
-                                                            style={{ padding: '0.25rem' }}
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: '0.5rem' }}>
-                                                        <input
-                                                            className="form-input"
-                                                            value={day.end || autoEnd}
-                                                            placeholder={autoEnd || 'End time'}
-                                                            onChange={(e) => {
-                                                                const newSchedule = [...(overview.practiceSchedule || [])];
-                                                                newSchedule[index] = { ...day, end: e.target.value };
-                                                                handleChange(null, 'practiceSchedule', newSchedule);
-                                                            }}
-                                                            disabled={isLocked}
-                                                            style={{ padding: '0.25rem' }}
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: '0.5rem' }}>
-                                                        <input
-                                                            className="form-input"
-                                                            value={day.notes || autoNotes}
-                                                            placeholder={autoNotes || 'Notes'}
-                                                            onChange={(e) => {
-                                                                const newSchedule = [...(overview.practiceSchedule || [])];
-                                                                newSchedule[index] = { ...day, notes: e.target.value };
-                                                                handleChange(null, 'practiceSchedule', newSchedule);
-                                                            }}
-                                                            disabled={isLocked}
-                                                            style={{ padding: '0.25rem' }}
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Player App Distribution */}
-                            <div className="card">
-                                <h2>Player App Distribution</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Control what information players can see in their app.</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-                                    {[
-                                        { key: 'showOverview', label: 'Overview' },
-                                        { key: 'showSchedule', label: 'Schedule' },
-                                        { key: 'showDepthChart', label: 'Depth Chart' },
-                                        { key: 'showScoutReport', label: 'Scout Report' },
-                                        { key: 'showGamePlan', label: 'Game Plan' }
-                                    ].map(item => (
-                                        <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={overview.distribution?.[item.key] || false}
-                                                onChange={(e) => {
-                                                    const newDist = { ...(overview.distribution || {}), [item.key]: e.target.checked };
-                                                    handleChange(null, 'distribution', newDist);
-                                                }}
-                                                disabled={isLocked}
-                                            />
-                                            {item.label}
-                                        </label>
-                                    ))}
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label className="form-label">Opponent</label>
+                                    <input className="form-input" value={opponent} onChange={(e) => setOpponent(e.target.value)} placeholder="Central High" />
                                 </div>
-                            </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div>
+                                        <label className="form-label">Kickoff</label>
+                                        <input className="form-input" value={kickoff} onChange={(e) => setKickoff(e.target.value)} placeholder="6:00 PM" />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Location</label>
+                                        <input className="form-input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Stadium" />
+                                    </div>
+                                </div>
+                                {!isHome && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                        <div>
+                                            <label className="form-label">Bus Departure</label>
+                                            <input className="form-input" value={busTime} onChange={(e) => setBusTime(e.target.value)} placeholder="4:30 PM" />
+                                        </div>
+                                        <div>
+                                            <label className="form-label">Dismissal</label>
+                                            <input className="form-input" value={dismissalTime} onChange={(e) => setDismissalTime(e.target.value)} placeholder="2:30 PM" />
+                                        </div>
+                                    </div>
+                                )}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div>
+                                        <label className="form-label">Jersey</label>
+                                        <select className="form-select" value={uniforms.jersey} onChange={(e) => setUniforms({ ...uniforms, jersey: e.target.value })}>
+                                            <option>White</option><option>Red</option><option>Black</option><option>Grey</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Pants</label>
+                                        <select className="form-select" value={uniforms.pants} onChange={(e) => setUniforms({ ...uniforms, pants: e.target.value })}>
+                                            <option>White</option><option>Red</option><option>Black</option><option>Grey</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
+                        {type === 'custom' && (
+                            <>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label className="form-label">Title</label>
+                                    <input className="form-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="High-Five Friday" />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div>
+                                        <label className="form-label">Time</label>
+                                        <input className="form-input" value={time} onChange={(e) => setTime(e.target.value)} placeholder="7:30 AM" />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Location</label>
+                                        <input className="form-input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Elementary" />
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label className="form-label">Notes</label>
+                                    <textarea className="form-input" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                                </div>
+                            </>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                            <button className="btn" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+                            <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => onSave({ type, level, isHome, opponent, kickoff, busTime, dismissalTime, location, uniforms, title, time, notes })}>Save</button>
                         </div>
                     </div>
                 </div>
             );
-
         };
 
 
@@ -39712,7 +39745,8 @@
                             addPlay: true,
                             wristband: true,
                             practiceScripts: true,
-                            dumbCallsheet: true
+                            dumbCallsheet: true,
+                            smartCallsheet: true
                         }
                     },
                     program: {
@@ -42354,6 +42388,8 @@
                             )}
 
 
+
+                            {/* REPORTS CATEGORY */}
                             {currentPermissions.dashboard.view && (
                                 <button
                                     className={`nav-item ${view === 'reports' ? 'active' : ''}`}
@@ -42375,24 +42411,29 @@
                                     {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>REPORTS</span>}
                                 </button>
                             )}
-                            {/* PERSONNEL CATEGORY */}
-                            {currentPermissions.staff.view && (
-                                <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
-                                    <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="UserCog" size={16} style={{ marginRight: '8px' }} /> Staff & Roles
-                                    </button>
-                                    <button className={`nav-item ${view === 'player-profiles' ? 'active' : ''}`} onClick={() => setView('player-profiles')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="User" size={16} style={{ marginRight: '8px' }} /> Player Profiles
-                                    </button>
-                                    <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
-                                    </button>
-                                    <button className={`nav-item ${view === 'archive' ? 'active' : ''}`} onClick={() => setView('archive')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                        <Icon name="Archive" size={16} style={{ marginRight: '8px' }} /> Archive
-                                    </button>
 
-                                </CollapsibleCategory>
+                            {/* PLAYER PROFILES (Moved) */}
+                            {currentPermissions.staff.view && (
+                                <button
+                                    className={`nav-item ${view === 'player-profiles' ? 'active' : ''}`}
+                                    onClick={() => setView('player-profiles')}
+                                    style={{
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        border: 'none',
+                                        background: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                        gap: '0.75rem',
+                                        padding: sidebarCollapsed ? '0.75rem 0' : '0.75rem 1rem',
+                                        marginBottom: '0.5rem'
+                                    }}>
+                                    <Icon name="User" size={18} color="var(--accent)" />
+                                    {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PLAYER PROFILES</span>}
+                                </button>
                             )}
+
 
                             {/* STAFF MEETING CATEGORY */}
                             {/* STAFF MEETING CATEGORY */}
@@ -42563,7 +42604,14 @@
                                         </button>
                                     )}
 
-                                    {/* 8. Dumb Call Sheet */}
+                                    {/* 8. Smart Call Sheet */}
+                                    {visibleFeatures.gameWeek?.items?.smartCallsheet && (
+                                        <button className={`nav-item ${view === 'smart-call-sheet' ? 'active' : ''}`} onClick={() => setView('smart-call-sheet')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Smartphone" size={16} style={{ marginRight: '8px' }} /> Smart Call Sheet
+                                        </button>
+                                    )}
+
+                                    {/* 9. Dumb Call Sheet */}
                                     {visibleFeatures.gameWeek?.items?.dumbCallsheet && (
                                         <button className={`nav-item ${view === 'dumb-callsheet' ? 'active' : ''}`} onClick={() => setView('dumb-callsheet')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="FileText" size={16} style={{ marginRight: '8px' }} /> Dumb Call Sheet
@@ -42636,6 +42684,7 @@
                                 </CollapsibleCategory>
                             )}
 
+
                             {/* SPECIAL TEAMS CATEGORY */}
                             {visibleFeatures.gameWeek?.enabled && (
                                 <CollapsibleCategory title="SPECIAL TEAMS" icon="Compass" defaultOpen={false}>
@@ -42695,6 +42744,23 @@
                                             <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
                                         </button>
                                     )}
+                                </CollapsibleCategory>
+                            )}
+
+                            {/* PERSONNEL CATEGORY (Moved from top) */}
+                            {currentPermissions.staff.view && (
+                                <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
+                                    <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="UserCog" size={16} style={{ marginRight: '8px' }} /> Staff & Roles
+                                    </button>
+                                    {/* Player Profiles moved to top level */}
+                                    <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
+                                    </button>
+                                    <button className={`nav-item ${view === 'archive' ? 'active' : ''}`} onClick={() => setView('archive')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Archive" size={16} style={{ marginRight: '8px' }} /> Archive
+                                    </button>
+
                                 </CollapsibleCategory>
                             )}
 
@@ -43569,7 +43635,7 @@
                         )}
                         {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} />}
                         {view === 'staff-app' && <StaffApp staff={staff} currentUser={currentUser} dutyAssignments={dutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} onUpdateStaff={(updatedStaff) => syncToFirestore('staff', updatedStaff)} />}
-                        {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophy={zonePhilosophy} onUpdateZonePhilosophy={setZonePhilosophy} />}
+                        {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} />}
                         {view === 'dumb-call-sheet' && <DumbCallSheet gamePlan={currentWeek.offensiveGamePlan} dumbCallSheetData={dumbCallSheetData} onUpdateData={setDumbCallSheetData} />}
                         {view === 'play-call-simulator' && <PlayCallSimulator plays={plays} gamePlan={currentWeek.offensiveGamePlan} />}
                         {view === 'special-teams-setup' && renderSetup('SPECIAL_TEAMS')}
