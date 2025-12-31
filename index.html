@@ -37540,50 +37540,83 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(overview.practiceSchedule || []).map((day, index) => (
-                                            <tr key={day.day} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>{day.day}</td>
-                                                <td style={{ padding: '0.5rem' }}>
-                                                    <input
-                                                        className="form-input"
-                                                        value={day.start}
-                                                        onChange={(e) => {
-                                                            const newSchedule = [...(overview.practiceSchedule || [])];
-                                                            newSchedule[index] = { ...day, start: e.target.value };
-                                                            handleChange(null, 'practiceSchedule', newSchedule);
-                                                        }}
-                                                        disabled={isLocked}
-                                                        style={{ padding: '0.25rem' }}
-                                                    />
-                                                </td>
-                                                <td style={{ padding: '0.5rem' }}>
-                                                    <input
-                                                        className="form-input"
-                                                        value={day.end}
-                                                        onChange={(e) => {
-                                                            const newSchedule = [...(overview.practiceSchedule || [])];
-                                                            newSchedule[index] = { ...day, end: e.target.value };
-                                                            handleChange(null, 'practiceSchedule', newSchedule);
-                                                        }}
-                                                        disabled={isLocked}
-                                                        style={{ padding: '0.25rem' }}
-                                                    />
-                                                </td>
-                                                <td style={{ padding: '0.5rem' }}>
-                                                    <input
-                                                        className="form-input"
-                                                        value={day.notes}
-                                                        onChange={(e) => {
-                                                            const newSchedule = [...(overview.practiceSchedule || [])];
-                                                            newSchedule[index] = { ...day, notes: e.target.value };
-                                                            handleChange(null, 'practiceSchedule', newSchedule);
-                                                        }}
-                                                        disabled={isLocked}
-                                                        style={{ padding: '0.25rem' }}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {(overview.practiceSchedule || []).map((day, index) => {
+                                            // Autopopulate from Practice Plan
+                                            const plan = (week.practicePlans || {})[day.day.toLowerCase()];
+                                            let autoStart = '';
+                                            let autoEnd = '';
+                                            let autoNotes = '';
+
+                                            if (plan) {
+                                                autoStart = plan.startTime || '';
+                                                if (autoStart) {
+                                                    try {
+                                                        const [h, m] = autoStart.split(':').map(Number);
+                                                        let totalMinutes = (h * 60) + m;
+                                                        totalMinutes += parseInt(plan.warmupDuration || 0);
+                                                        if (plan.segments && Array.isArray(plan.segments)) {
+                                                            plan.segments.forEach(s => totalMinutes += parseInt(s.duration || 0));
+                                                        }
+                                                        const endH = Math.floor(totalMinutes / 60);
+                                                        const endM = totalMinutes % 60;
+                                                        autoEnd = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+                                                    } catch (err) { console.error('Time calc error', err); }
+                                                }
+
+                                                const noteParts = [];
+                                                if (plan.focus) noteParts.push(`Focus: ${plan.focus}`);
+                                                if (plan.message) noteParts.push(`"${plan.message}"`);
+                                                autoNotes = noteParts.join(' | ');
+                                            }
+
+                                            return (
+                                                <tr key={day.day} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>{day.day}</td>
+                                                    <td style={{ padding: '0.5rem' }}>
+                                                        <input
+                                                            className="form-input"
+                                                            value={day.start || autoStart}
+                                                            placeholder={autoStart || 'Start time'}
+                                                            onChange={(e) => {
+                                                                const newSchedule = [...(overview.practiceSchedule || [])];
+                                                                newSchedule[index] = { ...day, start: e.target.value };
+                                                                handleChange(null, 'practiceSchedule', newSchedule);
+                                                            }}
+                                                            disabled={isLocked}
+                                                            style={{ padding: '0.25rem' }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: '0.5rem' }}>
+                                                        <input
+                                                            className="form-input"
+                                                            value={day.end || autoEnd}
+                                                            placeholder={autoEnd || 'End time'}
+                                                            onChange={(e) => {
+                                                                const newSchedule = [...(overview.practiceSchedule || [])];
+                                                                newSchedule[index] = { ...day, end: e.target.value };
+                                                                handleChange(null, 'practiceSchedule', newSchedule);
+                                                            }}
+                                                            disabled={isLocked}
+                                                            style={{ padding: '0.25rem' }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: '0.5rem' }}>
+                                                        <input
+                                                            className="form-input"
+                                                            value={day.notes || autoNotes}
+                                                            placeholder={autoNotes || 'Notes'}
+                                                            onChange={(e) => {
+                                                                const newSchedule = [...(overview.practiceSchedule || [])];
+                                                                newSchedule[index] = { ...day, notes: e.target.value };
+                                                                handleChange(null, 'practiceSchedule', newSchedule);
+                                                            }}
+                                                            disabled={isLocked}
+                                                            style={{ padding: '0.25rem' }}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
