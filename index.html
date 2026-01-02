@@ -7348,7 +7348,7 @@
                         {/* Header Tabs */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                {['card1', 'card2', 'card3', 'card4', 'card5', 'card6', 'staples'].map(id => (
+                                {['staples', 'card1', 'card2', 'card3', 'card4', 'card5', 'card6'].map(id => (
                                     <button
                                         key={id}
                                         onClick={() => setSelectedCardId(id)}
@@ -20663,7 +20663,7 @@
                                             key: 'development', label: 'Player Development', items: [
                                                 { key: 'testing', label: 'Combine / Testing' },
                                                 { key: 'ironman', label: 'Iron Man' },
-                                                { key: 'ratings', label: 'Madden Ratings' },
+                                                { key: 'ratings', label: 'Impact Ratings' },
                                                 { key: 'summerComp', label: 'Summer Competition' },
 
                                                 { key: 'testingRecords', label: 'Program Records' },
@@ -22841,6 +22841,166 @@
                                 <p style={{ marginTop: '1rem' }}>Select a player to manage testing data</p>
                             </div>
                         )}
+                    </div>
+                </div>
+            );
+        };
+
+        const ImpactRatings = ({ roster, ratings, onUpdateRatings }) => {
+            const [searchTerm, setSearchTerm] = useState('');
+            const [localRatings, setLocalRatings] = useState(ratings || {});
+
+            useEffect(() => {
+                setLocalRatings(ratings || {});
+            }, [ratings]);
+
+            const handleRatingChange = (playerId, field, value) => {
+                const numericValue = parseInt(value) || 0;
+                // Clamp between 0-99
+                const clamped = Math.min(99, Math.max(0, numericValue));
+
+                const updated = {
+                    ...localRatings,
+                    [playerId]: {
+                        ...localRatings[playerId],
+                        [field]: clamped
+                    }
+                };
+                setLocalRatings(updated);
+
+                // Debounce or immediate update? For now immediate to keep it simple, 
+                // but in a real app better to debounce. 
+                // We'll trust the parent update handler isn't too slow.
+                onUpdateRatings(updated);
+            };
+
+            const RATING_FIELDS = [
+                { id: 'speed', label: 'SPD', color: '#3b82f6' },
+                { id: 'strength', label: 'STR', color: '#ef4444' },
+                { id: 'agility', label: 'AGI', color: '#eab308' },
+                { id: 'acceleration', label: 'ACC', color: '#10b981' },
+                { id: 'awareness', label: 'AWR', color: '#8b5cf6' },
+                { id: 'catching', label: 'CTH', color: '#f97316' },
+                { id: 'tackling', label: 'TAK', color: '#6366f1' },
+                { id: 'football_iq', label: 'IQ', color: '#cecece' }
+            ];
+
+            const filteredRoster = roster.filter(p =>
+                p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (p.jersey && p.jersey.toString().includes(searchTerm))
+            );
+
+            const calculateOverall = (playerRatings) => {
+                if (!playerRatings) return 0;
+                let total = 0;
+                let count = 0;
+                RATING_FIELDS.forEach(f => {
+                    total += (playerRatings[f.id] || 0);
+                    count++;
+                });
+                return count === 0 ? 0 : Math.round(total / count);
+            };
+
+            return (
+                <div style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <div>
+                            <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <Icon name="Gamepad2" size={40} color="var(--accent)" />
+                                Impact Ratings
+                            </h1>
+                            <p style={{ color: 'var(--text-secondary)' }}>Manage player attributes and ratings</p>
+                        </div>
+                        <div>
+                            <input
+                                className="form-input"
+                                placeholder="Search players..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                style={{ width: '250px' }}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="card" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
+                        <div style={{ overflow: 'auto', flex: 1 }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-panel)', zIndex: 10 }}>
+                                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <th style={{ padding: '1rem', textAlign: 'left', width: '60px' }}>#</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left' }}>Player</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', width: '80px' }}>Pos</th>
+                                        {RATING_FIELDS.map(f => (
+                                            <th key={f.id} style={{ padding: '1rem', textAlign: 'center', width: '60px', color: f.color }}>{f.label}</th>
+                                        ))}
+                                        <th style={{ padding: '1rem', textAlign: 'center', width: '80px', fontWeight: 'bold' }}>OVR</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredRoster.map(player => {
+                                        const pRatings = localRatings[player.id] || {};
+                                        const ovr = calculateOverall(pRatings);
+                                        // Calculate OVR color
+                                        let ovrColor = '#ef4444'; // < 60
+                                        if (ovr >= 90) ovrColor = '#eab308'; // Gold (Elite)
+                                        else if (ovr >= 80) ovrColor = '#10b981'; // Green (Good)
+                                        else if (ovr >= 70) ovrColor = '#3b82f6'; // Blue (Average)
+                                        else if (ovr >= 60) ovrColor = '#f97316'; // Orange (Developing)
+
+                                        return (
+                                            <tr key={player.id} style={{ borderBottom: '1px solid var(--border)' }} className="table-row-hover">
+                                                <td style={{ padding: '0.75rem 1rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{player.jersey}</td>
+                                                <td style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>{player.name}</td>
+                                                <td style={{ padding: '0.75rem 1rem' }}>
+                                                    <span style={{ fontSize: '0.75rem', padding: '2px 6px', background: 'var(--bg-Main)', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                                        {player.position || 'ATH'}
+                                                    </span>
+                                                </td>
+                                                {RATING_FIELDS.map(f => (
+                                                    <td key={f.id} style={{ padding: '0.5rem', textAlign: 'center' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={pRatings[f.id] || ''}
+                                                            onChange={(e) => handleRatingChange(player.id, f.id, e.target.value)}
+                                                            className="form-input"
+                                                            style={{
+                                                                width: '100%',
+                                                                textAlign: 'center',
+                                                                padding: '4px',
+                                                                fontSize: '0.9rem',
+                                                                border: '1px solid transparent',
+                                                                background: pRatings[f.id] > 89 ? 'rgba(234, 179, 8, 0.1)' : 'transparent',
+                                                                color: pRatings[f.id] > 89 ? '#d97706' : 'inherit',
+                                                                fontWeight: pRatings[f.id] > 89 ? 'bold' : 'normal'
+                                                            }}
+                                                            placeholder="-"
+                                                        />
+                                                    </td>
+                                                ))}
+                                                <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                                    <div style={{
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        borderRadius: '50%',
+                                                        background: ovrColor,
+                                                        color: 'white',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontWeight: 'bold',
+                                                        margin: '0 auto',
+                                                        fontSize: '0.9rem',
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                    }}>
+                                                        {ovr}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             );
@@ -25036,38 +25196,36 @@
                         <p style={{ color: 'var(--text-secondary)' }}>Central hub for printing all coaching documents.</p>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
                         {categories.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategory(cat.id)}
-                                className={`btn ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'} `}
-                                style={{ padding: '1rem 2rem', fontSize: '1.1rem' }}
-                            >
-                                <Icon name={cat.icon} size={20} />
-                                {cat.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                        {printOptions[selectedCategory].map(option => (
-                            <div key={option.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'pointer' }}
-                                onClick={() => handlePrint(option.id)}
-                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
-                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                            >
-                                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                                    <Icon name={option.icon} size={24} />
+                            <div key={cat.id}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                    <div style={{ color: 'var(--accent)' }}>
+                                        <Icon name={cat.icon} size={24} />
+                                    </div>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{cat.label}</h2>
                                 </div>
-                                <div>
-                                    <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{option.label}</h3>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>{option.desc}</p>
-                                </div>
-                                <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
-                                    <button className="btn btn-secondary" style={{ width: '100%' }}>
-                                        <Icon name="Printer" size={16} /> Print
-                                    </button>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                                    {printOptions[cat.id].map(option => (
+                                        <div key={option.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'pointer' }}
+                                            onClick={() => handlePrint(option.id)}
+                                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
+                                            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                        >
+                                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                                <Icon name={option.icon} size={24} />
+                                            </div>
+                                            <div>
+                                                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{option.label}</h3>
+                                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>{option.desc}</p>
+                                            </div>
+                                            <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+                                                <button className="btn btn-secondary" style={{ width: '100%' }}>
+                                                    <Icon name="Printer" size={16} /> Print
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}
@@ -39800,6 +39958,10 @@
                         // 2. Ensure ALL keys from DEFAULT_FEATURES exist in the result (deep merge)
 
                         const merged = { ...DEFAULT_FEATURES };
+                        // Force enable ratings per user request
+                        if (parsed.development && parsed.development.items) {
+                            parsed.development.items.ratings = true;
+                        }
 
                         // Helper to safely merge category
                         const mergeCategory = (catName, legacySource = null) => {
@@ -42925,7 +43087,7 @@
                                     )}
                                     {visibleFeatures.development?.items?.ratings && (
                                         <button className={`nav-item ${view === 'ratings' ? 'active' : ''}`} onClick={() => setView('ratings')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                            <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Madden Ratings
+                                            <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Impact Ratings
                                         </button>
                                     )}
                                     {visibleFeatures.development?.items?.summerComp && (
@@ -43577,7 +43739,7 @@
 
                         {view === 'testing' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} />}
                         {view === 'ironman' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="ironman" />}
-                        {view === 'madden-ratings' && <MaddenRatings roster={roster} ratings={metrics} onUpdateRatings={setMetrics} />}
+                        {view === 'ratings' && <ImpactRatings roster={roster} ratings={metrics} onUpdateRatings={setMetrics} />}
                         {view === 'pressbox' && <Pressbox plays={plays} gameLog={gameLog} onUpdateGameLog={handleUpdateGameLog} currentWeek={currentWeek} teamLogo={teamLogo} opponentLogo={currentWeek.opponentData?.logo || ''} gameStart={currentWeek.gameStart || {}} situation={currentWeek.situation} onUpdateSituation={handleUpdateSituation} formations={formations} activePlay={activePlay} onUpdateActivePlay={setActivePlay} />}
 
                         {view === 'grading' && <GameGradingView roster={roster} gameLog={currentWeek.gameLog} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} />}
