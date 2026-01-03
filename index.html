@@ -20351,40 +20351,9 @@
 
                     {activeTab === 'members' && currentSchoolId && (
                         <div className="animation-fade-in card">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                                <div>
-                                    <h3>Team Members</h3>
-                                    <p style={{ color: 'var(--text-secondary)' }}>Manage coaches and staff access.</p>
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input placeholder="New Member Email" className="form-input" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
-                                    <select className="form-select" value={inviteRole} onChange={e => setInviteRole(e.target.value)}>
-                                        <option value="coach">Coach</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="viewer">Viewer</option>
-                                    </select>
-                                    <button className="btn btn-primary" onClick={handleSendInvite}>Invite</button>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {loadingMembers ? <p>Loading...</p> : members
-                                    .filter(m => m.email !== currentUser?.email)
-                                    .map((m, idx) => (
-                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-body)', borderRadius: '8px' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 'bold' }}>{m.email}</div>
-                                                <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Role: {m.role} • Joined: {new Date(m.joinedAt).toLocaleDateString()}</div>
-                                            </div>
-                                            <button className="btn" style={{ color: '#ef4444' }} onClick={() => handleRemoveMember(m)}>Remove</button>
-                                        </div>
-                                    ))}
-                                {!loadingMembers && members.filter(m => m.email !== currentUser?.email).length === 0 && <p style={{ opacity: 0.5, fontStyle: 'italic' }}>No other members found.</p>}
-                            </div>
-
                             {/* Domain Management UI */}
                             {(isAdmin || members.find(m => m.uid === currentUser.uid)?.role === 'admin') && (
-                                <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+                                <div style={{ borderTop: 'none', paddingTop: 0, marginTop: 0 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
                                         <div>
                                             <h3 style={{ margin: 0 }}>Approved Domains</h3>
@@ -43350,7 +43319,7 @@
 
                                         {/* GAME WEEK CATEGORY */}
                                         {visibleFeatures.gameWeek?.enabled && (
-                                            <CollapsibleCategory title="MASTER OFFENSE" icon="Zap" defaultOpen={false}>
+                                            <CollapsibleCategory title={`${activeYear || 'MASTER'} OFFENSE`} icon="Zap" defaultOpen={false}>
                                                 {visibleFeatures.gameWeek?.items?.offenseSetup && (
                                                     <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                                         <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
@@ -43381,7 +43350,7 @@
 
                                         {/* DEFENSE CATEGORY */}
                                         {visibleFeatures.gameWeek?.enabled && (
-                                            <CollapsibleCategory title="DEFENSE" icon="Shield" defaultOpen={false}>
+                                            <CollapsibleCategory title={`${activeYear || 'MASTER'} DEFENSE`} icon="Shield" defaultOpen={false}>
                                                 {visibleFeatures.gameWeek?.items?.defenseSetup && (
                                                     <button className={`nav-item ${view === 'defense-setup' ? 'active' : ''}`} onClick={() => setView('defense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                                         <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Defense Setup
@@ -43411,7 +43380,7 @@
 
                                         {/* SPECIAL TEAMS CATEGORY */}
                                         {visibleFeatures.gameWeek?.enabled && (
-                                            <CollapsibleCategory title="SPECIAL TEAMS" icon="Compass" defaultOpen={false}>
+                                            <CollapsibleCategory title={`${activeYear || 'MASTER'} SPECIAL TEAMS`} icon="Compass" defaultOpen={false}>
                                                 {visibleFeatures.gameWeek?.items?.stSetup && (
                                                     <button className={`nav-item ${view === 'st-setup' ? 'active' : ''}`} onClick={() => setView('st-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                                         <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Special Teams Setup
