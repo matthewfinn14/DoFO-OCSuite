@@ -23007,20 +23007,12 @@
         };
 
 
-        const CollapsibleCategory = ({ title, icon, children, defaultOpen = false, nested = false, onTitleClick }) => {
+        const CollapsibleCategory = ({ title, icon, children, defaultOpen = false, nested = false }) => {
             const [isOpen, setIsOpen] = useState(defaultOpen);
-
-            const handleClick = () => {
-                if (onTitleClick) {
-                    onTitleClick();
-                }
-                setIsOpen(!isOpen);
-            };
-
             return (
                 <div style={{ marginBottom: '0.5rem' }}>
                     <div
-                        onClick={handleClick}
+                        onClick={() => setIsOpen(!isOpen)}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -30511,110 +30503,156 @@
                             </div>
                         </div>
 
-                        {/* 3. WARRIOR DIAL (WELLNESS) WIDGET */}
-                        <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                                <Icon name="HardHat" size={20} /> Warrior Dial
-                                {(wellnessAlerts.length + loadAlerts.length) > 0 && <span className="badge badge-red">{wellnessAlerts.length + loadAlerts.length}</span>}
-                            </h2>
-                            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px' }}>
-                                {(wellnessAlerts.length === 0 && loadAlerts.length === 0) ? (
-                                    <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.6, fontStyle: 'italic' }}>
-                                        All systems go.
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {[...wellnessAlerts, ...loadAlerts].map(alert => (
-                                            <div key={alert.id} style={{
-                                                padding: '0.5rem', borderRadius: '4px',
-                                                background: alert.level === 'high' ? '#fef2f2' : '#fffbeb',
-                                                border: `1px solid ${alert.level === 'high' ? '#fee2e2' : '#fef3c7'}`
-                                            }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span style={{ fontWeight: '600' }}>{alert.player.firstName} {alert.player.lastName}</span>
-                                                    <span style={{ fontSize: '0.75rem', color: alert.level === 'high' ? '#dc2626' : '#d97706', fontWeight: 'bold' }}>{alert.type}</span>
+
+                        {/* 1. HORIZONTAL WEEK SCHEDULE (Only if NOT Offseason) */}
+                        {/* 1. HORIZONTAL WEEK SCHEDULE (Only if NOT Offseason) */}
+                        {currentWeek.phase !== 'Offseason' && (
+                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', overflowX: 'auto' }}>
+                                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Icon name="Calendar" size={20} /> Week Schedule
+                                </h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', minWidth: '800px' }}>
+                                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => {
+                                        // Get Date
+                                        const sundayDate = new Date(currentWeek.sundayDate);
+                                        const date = new Date(sundayDate);
+                                        date.setDate(sundayDate.getDate() + idx);
+                                        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                        const dayKey = day.toLowerCase();
+
+                                        const dayEvents = (currentWeek.overview?.dailySchedule?.[dayKey]?.events || []);
+                                        
+                                        return (
+                                            <div key={day} style={{ border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-card)', display: 'flex', flexDirection: 'column' }}>
+                                                {/* Header */}
+                                                <div style={{ padding: '0.5rem', background: 'var(--surface)', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
+                                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{day.substring(0, 3)}</div>
+                                                    <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>{dateStr}</div>
                                                 </div>
-                                                <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '2px' }}>{alert.message}</div>
+
+                                                {/* Events */}
+                                                <div style={{ padding: '0.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minHeight: '80px' }}>
+                                                     {dayEvents.length === 0 && <div style={{ fontSize: '0.75rem', opacity: 0.4, fontStyle: 'italic', textAlign: 'center', marginTop: '1rem' }}>Off</div>}
+                                                     
+                                                     {dayEvents.map(event => (
+                                                         <div key={event.id} style={{ 
+                                                             fontSize: '0.7rem', 
+                                                             padding: '2px 4px', 
+                                                             borderRadius: '3px',
+                                                             background: event.type === 'game' ? '#fee2e2' : event.type === 'practice' ? '#dbeafe' : '#ecfccb',
+                                                             color: event.type === 'game' ? '#dc2626' : event.type === 'practice' ? '#1d4ed8' : '#15803d',
+                                                             border: `1px solid ${event.type === 'game' ? '#fecaca' : event.type === 'practice' ? '#bfdbfe' : '#d9f99d'}`
+                                                         }}>
+                                                             <div style={{ fontWeight: 'bold' }}>{event.start}</div>
+                                                             <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                 {event.type === 'game' ? (event.isHome ? 'vs ' : '@ ') + event.opponent : event.type === 'practice' ? 'Practice' : event.title || 'Event'}
+                                                             </div>
+                                                         </div>
+                                                     ))}
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
-                        {/* 4. EQUIPMENT & INVENTORY ALERTS WIDGET */}
-                        <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                                <Icon name="Key" size={20} /> Equipment
-                                {(inventoryAlerts.length + checkoutAlerts.length) > 0 && <span className="badge badge-red">{inventoryAlerts.length + checkoutAlerts.length}</span>}
-                            </h2>
-                            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px' }}>
-                                {(inventoryAlerts.length === 0 && checkoutAlerts.length === 0) ? (
-                                    <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.6, fontStyle: 'italic' }}>
-                                        Stock levels active. No overdue items.
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {/* Overdue Checkouts */}
-                                        {checkoutAlerts.map(alert => (
-                                            <div key={alert.id} style={{
-                                                padding: '0.5rem', borderRadius: '4px',
-                                                background: '#fef2f2', border: '1px solid #fee2e2'
-                                            }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span style={{ fontWeight: '600' }}>{alert.player.name}</span>
-                                                    <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 'bold' }}>OVERDUE</span>
+                        {/* 2. DASHBOARD WIDGETS GRID */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+
+                            {/* 3. WARRIOR DIAL (WELLNESS) WIDGET */}
+                            <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                    <Icon name="HardHat" size={20} /> Warrior Dial
+                                    {(wellnessAlerts.length + loadAlerts.length) > 0 && <span className="badge badge-red">{wellnessAlerts.length + loadAlerts.length}</span>}
+                                </h2>
+                                <div style={{ flex: 1, overflowY: 'auto' }}>
+                                    {(wellnessAlerts.length === 0 && loadAlerts.length === 0) ? (
+                                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                            All systems go.
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {[...wellnessAlerts, ...loadAlerts].map((alert, idx) => (
+                                                <div key={idx} style={{ 
+                                                    padding: '0.5rem', 
+                                                    borderRadius: '4px',
+                                                    background: alert.level === 'high' ? '#fee2e2' : '#fffbeb',
+                                                    border: `1px solid ${alert.level === 'high' ? '#fee2e2' : '#fef3c7'}`
+                                                }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span style={{ fontWeight: '600' }}>{alert.player.firstName} {alert.player.lastName}</span>
+                                                        <span style={{ fontSize: '0.75rem', color: alert.level === 'high' ? '#dc2626' : '#d97706', fontWeight: 'bold' }}>{alert.type}</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '2px' }}>{alert.message}</div>
                                                 </div>
-                                                <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '2px' }}>{alert.message}</div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
-                                        {/* Inventory Low Stock */}
-                                        {inventoryAlerts.map((alert, idx) => (
-                                            <div key={idx} style={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                padding: '0.5rem', borderRadius: '4px',
-                                                background: alert.severity === 'high' ? '#fef2f2' : '#fffbeb',
-                                                border: `1px solid ${alert.severity === 'high' ? '#fee2e2' : '#fef3c7'}`
-                                            }}>
-                                                <div>
-                                                    <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{alert.item} ({alert.size})</div>
-                                                    <div style={{ fontSize: '0.8rem', color: alert.severity === 'high' ? '#dc2626' : '#d97706' }}>
-                                                        {alert.message}
+                            {/* 4. EQUIPMENT & INVENTORY ALERTS */}
+                            <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                    <Icon name="Key" size={20} /> Equipment
+                                    {(inventoryAlerts.length + checkoutAlerts.length) > 0 && <span className="badge badge-red">{inventoryAlerts.length + checkoutAlerts.length}</span>}
+                                </h2>
+                                <div style={{ flex: 1, overflowY: 'auto' }}>
+                                    {(inventoryAlerts.length === 0 && checkoutAlerts.length === 0) ? (
+                                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                            No alerts.
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {/* Overdue Checkouts */}
+                                            {checkoutAlerts.map(alert => (
+                                                <div key={alert.id} style={{ 
+                                                    padding: '0.5rem', 
+                                                    borderRadius: '4px',
+                                                    background: '#fee2e2',
+                                                    border: '1px solid #fee2e2' 
+                                                }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span style={{ fontWeight: '600' }}>{alert.player.name}</span>
+                                                        <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 'bold' }}>OVERDUE</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '2px' }}>
+                                                        {alert.item} ({alert.size}) - Due: {alert.dueDate}
                                                     </div>
                                                 </div>
-                                                <Icon name="AlertCircle" size={16} color={alert.severity === 'high' ? '#dc2626' : '#d97706'} />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+
                         </div>
-                    </div>
 
-                    {/* 4-COLUMN DASHBOARD (Task List) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', flex: 1, minHeight: 0 }}>
-                        {
-                            ['today', 'thisWeek', 'thisMonth', 'someday'].map(col => {
-                                const titleMap = { today: 'Today', thisWeek: 'This Week', thisMonth: 'This Month', someday: 'Someday' };
-                                const personalList = lists[col];
-                                const assignedList = assignedBuckets[col];
+                        {/* 4-COLUMN DASHBOARD (Task List) */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', flex: 1, minHeight: 0 }}>
+                            {
+                                ['today', 'thisWeek', 'thisMonth', 'someday'].map(col => {
+                                    const titleMap = { today: 'Today', thisWeek: 'This Week', thisMonth: 'This Month', someday: 'Someday' };
+                                    const personalList = lists[col];
+                                    const assignedList = assignedBuckets[col];
+    
+                                    return (
+                                        <div
+                                            key={col}
+                                            className="card"
+                                            style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-panel)', border: '1px solid var(--border)' }}
+                                            onDragOver={handleDragOver}
+                                            onDrop={(e) => handleDrop(e, col)}
+                                        >
+                                            <h3 style={{ fontSize: '1.2rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                                                {titleMap[col]}
+                                                <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{personalList.length + assignedList.length}</span>
+                                            </h3>
+    
+                                            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', minHeight: '200px', padding: '0.5rem' }}>
+                                                {/* Assigned Tasks (Auto-Populated) */}
 
-                                return (
-                                    <div
-                                        key={col}
-                                        className="card"
-                                        style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-panel)', border: '1px solid var(--border)' }}
-                                        onDragOver={handleDragOver}
-                                        onDrop={(e) => handleDrop(e, col)}
-                                    >
-                                        <h3 style={{ fontSize: '1.2rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                                            {titleMap[col]}
-                                            <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{personalList.length + assignedList.length}</span>
-                                        </h3>
-
-                                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', minHeight: '200px', padding: '0.5rem' }}>
-                                            {/* Assigned Tasks (Auto-Populated) */}
                                             {assignedList.map((task, idx) => (
                                                 <div
                                                     key={task.id}
@@ -30716,6 +30754,7 @@
                                             </div>
                                         )}
                                     </div>
+
                                 );
                             })
                         }
@@ -30804,95 +30843,7 @@
                 </div>
             );
         };
-
-
-
-        const GAME_PLAN_LAYOUTS = {
-            CALL_SHEET: {
-                id: 'CALL_SHEET',
-                name: 'Call Sheet',
-                sections: [
-                    {
-                        id: 'section_scripts',
-                        title: 'SCRIPTS',
-                        color: '#1e293b',
-                        boxes: [
-                            { header: 'OPENING SCRIPT', setId: 'opening_script', type: 'script', colSpan: 1, color: '#10b981' },
-                            { header: '2ND HALF OPENER', setId: 'second_half_openers', type: 'script', colSpan: 1, color: '#f97316' },
-                            { header: 'P&10', setId: 'p_and_10', type: 'script', colSpan: 1, color: '#ef4444' },
-                            { header: '2ND & XL (LH)', setId: '2nd_xl_lh', type: 'script', colSpan: 1, color: '#3b82f6' },
-                        ]
-                    },
-                    {
-                        id: 'section_down_distance',
-                        title: 'DOWN AND DISTANCE',
-                        color: '#1e293b',
-                        boxes: [
-                            { header: '1 WORD', setId: 'one_word', type: 'grid', colSpan: 1, color: '#f59e0b' },
-                            { header: 'FORM ADJ', setId: 'form_adj', type: 'grid', colSpan: 1, color: '#f59e0b' },
-                            { header: 'MOTION', setId: 'motion', type: 'grid', colSpan: 1, color: '#f59e0b' },
-                            { header: 'TAG', setId: 'tag', type: 'grid', colSpan: 1, color: '#f59e0b' },
-                            { header: '3RD & SHORT', setId: '3rd_short', type: 'grid', colSpan: 1, color: '#10b981' },
-                            { header: '3RD & MED', setId: '3rd_med', type: 'grid', colSpan: 1, color: '#10b981' },
-                            { header: '3RD & LONG', setId: '3rd_long', type: 'grid', colSpan: 1, color: '#10b981' },
-                            { header: '3RD & XL', setId: '3rd_xl', type: 'grid', colSpan: 1, color: '#10b981' },
-                            { header: 'BACKED UP', setId: 'backed_up', type: 'grid', colSpan: 1, color: '#dc2626' },
-                            { header: 'COMING OUT', setId: 'coming_out', type: 'grid', colSpan: 1, color: '#ea580c' },
-                            { header: 'OPEN FIELD', setId: 'open_field', type: 'grid', colSpan: 1, color: '#16a34a' },
-                            { header: 'FRINGE (+45-25)', setId: 'fringe', type: 'grid', colSpan: 1, color: '#ca8a04' },
-                            { header: 'HIGH RED (25-15)', setId: 'high_red', type: 'grid', colSpan: 1, color: '#ef4444' },
-                            { header: 'LOW RED (15-6)', setId: 'low_red', type: 'grid', colSpan: 1, color: '#ef4444' },
-                            { header: 'GOAL LINE (5-GL)', setId: 'goal_line', type: 'grid', colSpan: 1, color: '#ef4444' },
-                            { header: '2-POINT', setId: 'two_point', type: 'grid', colSpan: 1, color: '#8b5cf6' },
-                            { header: '2-MIN: OOB/YAC', setId: 'two_minute_oob_yac', type: 'grid', colSpan: 1, color: '#8b5cf6' },
-                            { header: '2-MIN: 1st DOWN', setId: 'two_minute_first_down', type: 'grid', colSpan: 1, color: '#8b5cf6' },
-                            { header: '2-MIN: TD', setId: 'two_minute_touchdown', type: 'grid', colSpan: 1, color: '#8b5cf6' },
-                            { header: '2-MIN: FINAL PLAY', setId: 'two_minute_final_play', type: 'grid', colSpan: 1, color: '#8b5cf6' },
-                            { header: '4-MINUTE', setId: 'four_minute', type: 'grid', colSpan: 1, color: '#8b5cf6' },
-                        ]
-                    },
-                    {
-                        id: 'section_mini_scripts',
-                        title: 'MINI SCRIPTS',
-                        color: '#1e293b',
-                        boxes: []
-                    }
-                ]
-            },
-            MATRIX: {
-                id: 'MATRIX',
-                name: "Strike 'Em Out",
-                cols: [
-                    { id: 'FB_L', label: 'FB L', fullLabel: 'Base/Initial Left' },
-                    { id: 'FB_R', label: 'FB R', fullLabel: 'Base/Initial Right' },
-                    { id: 'CB_L', label: 'CB L', fullLabel: 'Base w/ Dressing Left' },
-                    { id: 'CB_R', label: 'CB R', fullLabel: 'Base w/ Dressing Right' },
-                    { id: 'CU_L', label: 'CU L', fullLabel: 'Convert Left' },
-                    { id: 'CU_R', label: 'CU R', fullLabel: 'Convert Right' },
-                    { id: 'SO_L', label: 'SO L', fullLabel: 'Explosive Left' },
-                    { id: 'SO_R', label: 'SO R', fullLabel: 'Explosive Right' }
-                ],
-                formations: [
-                    { id: '887', label: '887', color: '#ef4444' },
-                    { id: '888', label: '888', color: '#ef4444' },
-                    { id: '687', label: '687', color: '#fbbf24' },
-                    { id: '688', label: '688', color: '#fbbf24' },
-                    { id: '881', label: '881', color: '#facc15' },
-                    { id: '984', label: '984', color: '#4ade80' },
-                    { id: '983', label: '983', color: '#4ade80' },
-                    { id: '488', label: '488', color: '#60a5fa' },
-                    { id: '487', label: '487', color: '#60a5fa' },
-                    { id: 'jets', label: 'Jets/Specials', color: '#a8a29e' }
-                ],
-                playTypes: [
-                    { id: 'strong_run', label: 'STRONG RUN' },
-                    { id: 'weak_run', label: 'WEAK RUN' },
-                    { id: 'quick_game', label: 'QUICK GAME' },
-                    { id: 'drop_back', label: 'DROPBACK' },
-                    { id: 'gadget', label: 'GADGET' }
-                ]
-            }
-        };
+        const GAME_PLAN_LAYOUTS = {};
 
         const PLAY_PROTOCOLS = [
             { id: 'REGULAR', label: 'Regular', color: '#64748b', code: 'R' },
@@ -40314,118 +40265,6 @@
                 return newPlay;
             };
 
-            const renderWeeklyTools = (weekId) => {
-                const isActive = currentWeekId === weekId;
-                return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', padding: '0.25rem 0 0.5rem 0' }}>
-                        <button className={`nav-item ${isActive && view === 'staff-meeting' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('staff-meeting'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="LayoutDashboard" size={12} /> Meeting Home
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'practice' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('practice'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Megaphone" size={12} /> Practice Plans
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'install-manager' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('install-manager'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Layers" size={12} /> Install
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'scouting' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('scouting'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Search" size={12} /> Scouting
-                        </button>
-                        {/* Expanded Depth Charts */}
-                        <CollapsibleCategory
-                            title={<span style={{ fontSize: '0.75rem', opacity: 0.85 }}>Depth Charts</span>}
-                            icon="Users"
-                            defaultOpen={false}
-                            nested={true}
-                        >
-                            <button className={`nav-item ${isActive && view === 'depth' && depthChartType === 'OFFENSE' ? 'active' : ''}`}
-                                onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('OFFENSE'); }}
-                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                Offense
-                            </button>
-                            <button className={`nav-item ${isActive && view === 'depth' && depthChartType === 'DEFENSE' ? 'active' : ''}`}
-                                onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('DEFENSE'); }}
-                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                Defense
-                            </button>
-
-                            {/* Special Teams Sub-items */}
-                            <CollapsibleCategory title="Special Teams" defaultOpen={false} nested={true} style={{ fontSize: '0.7rem', paddingLeft: '2rem' }}>
-                                {[
-                                    { id: 'KICKOFF', name: 'Kickoff' },
-                                    { id: 'KICK_RETURN', name: 'Kick Return' },
-                                    { id: 'PUNT', name: 'Punt' },
-                                    { id: 'PUNT_RETURN', name: 'Punt Return' },
-                                    { id: 'PAT_BLOCK', name: 'PAT/FG Block' }
-                                ].map(st => (
-                                    <button key={st.id} className={`nav-item ${isActive && view === 'depth' && depthChartType === st.id ? 'active' : ''}`}
-                                        onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType(st.id); }}
-                                        style={{ paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                        {st.name}
-                                    </button>
-                                ))}
-                            </CollapsibleCategory>
-
-                            {/* Scout Sub-items */}
-                            <CollapsibleCategory title="Scout Teams" defaultOpen={false} nested={true} style={{ fontSize: '0.7rem', paddingLeft: '2rem' }}>
-                                <button className={`nav-item ${isActive && view === 'depth' && depthChartType === 'SCOUT_OFFENSE' ? 'active' : ''}`}
-                                    onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('SCOUT_OFFENSE'); }}
-                                    style={{ paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                    Scout Offense
-                                </button>
-                                <button className={`nav-item ${isActive && view === 'depth' && depthChartType === 'SCOUT_DEFENSE' ? 'active' : ''}`}
-                                    onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('SCOUT_DEFENSE'); }}
-                                    style={{ paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                    Scout Defense
-                                </button>
-                            </CollapsibleCategory>
-                        </CollapsibleCategory>
-                        <button className={`nav-item ${isActive && view === 'game-plan' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('game-plan'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Clipboard" size={12} /> Game Plans
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'wristband' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('wristband'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Watch" size={12} /> Wristbands
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'practice-scripts' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('practice-scripts'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="FileText" size={12} /> Practice Scripts
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'smart-call-sheet' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('smart-call-sheet'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Smartphone" size={12} /> Smart Call Sheet
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'dumb-call-sheet' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('dumb-call-sheet'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="FileText" size={12} /> Dumb Call Sheet
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'pregame' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('pregame'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Clock" size={12} /> Pre-Game Timeline
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'grading' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('grading'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Award" size={12} /> Game Gradeouts
-                        </button>
-                    </div>
-                );
-            };
-
             const handlePatchPlay = (arg1, arg2) => {
                 if (Array.isArray(arg1)) {
                     // Bulk Update (Array of objects)
@@ -40566,9 +40405,9 @@
                         isLocked: false,
                         practicePlans: createDefaultPracticePlans(),
                         offensiveGamePlan: { sets: [] },
-                        dumbCallSheetData: {},
                         pregamePlan: { kickoffTime: '19:00', segments: [] },
-                        gameLog: []
+                        gameLog: [],
+                        dumbCallSheetData: {}
                     };
                 });
 
@@ -40761,8 +40600,6 @@
                     scoutingReport: '',
                     isLocked: false,
                     // Copy practice plans structure but maybe clear specific details? For now, full copy is safest/easiest base.
-                    // Actually, let's keep the structure but maybe reset dates? 
-                    // User asked for "saves practice plans... but allows you to edit". Copying is best.
                     practicePlans: JSON.parse(JSON.stringify(prevWeek.practicePlans)),
                     pregamePlan: JSON.parse(JSON.stringify(prevWeek.pregamePlan)),
                     offensiveGamePlan: prevWeek.offensiveGamePlan ? JSON.parse(JSON.stringify(prevWeek.offensiveGamePlan)) : { sets: [] },
@@ -40811,7 +40648,7 @@
                     name: name.trim(),
                     practicePlans: JSON.parse(JSON.stringify(currentWeek.practicePlans)),
                     offensiveGamePlan: JSON.parse(JSON.stringify(currentWeek.offensiveGamePlan)),
-                    dumbCallSheetData: JSON.parse(JSON.stringify(currentWeek.dumbCallSheetData || {})),
+                    dumbCallSheetData: currentWeek.dumbCallSheetData ? JSON.parse(JSON.stringify(currentWeek.dumbCallSheetData)) : {},
                     pregamePlan: currentWeek.pregamePlan ? JSON.parse(JSON.stringify(currentWeek.pregamePlan)) : null,
                     createdAt: new Date().toISOString(),
                     createdBy: authUser.uid
@@ -40840,7 +40677,7 @@
                         ...w,
                         practicePlans: JSON.parse(JSON.stringify(template.practicePlans)),
                         offensiveGamePlan: JSON.parse(JSON.stringify(template.offensiveGamePlan)),
-                        dumbCallSheetData: JSON.parse(JSON.stringify(template.dumbCallSheetData || {})),
+                        dumbCallSheetData: template.dumbCallSheetData ? JSON.parse(JSON.stringify(template.dumbCallSheetData)) : w.dumbCallSheetData,
                         pregamePlan: template.pregamePlan ? JSON.parse(JSON.stringify(template.pregamePlan)) : w.pregamePlan
                     } : w));
                 }
@@ -41077,9 +40914,6 @@
             const [programLevels, setProgramLevels] = useLocalStorage('oc-dashboard-levels', ['Varsity', 'JV', 'JV2']);
 
             // Offense Setup State
-            const [customPositions, setCustomPositions] = useLocalStorage('oc-dashboard-custom-positions', { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] });
-            const [hiddenPositions, setHiddenPositions] = useLocalStorage('oc-dashboard-hidden-positions', { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] });
-            const [positionDescriptions, setPositionDescriptions] = useLocalStorage('oc-dashboard-position-descriptions', {});
             const [playSyntax, setPlaySyntax] = useLocalStorage('oc-dashboard-play-syntax', [
                 { id: 'pres_form', label: 'Formation', type: 'text' },
                 { id: 'pres_conc', label: 'Concept', type: 'text' }
@@ -41091,16 +40925,6 @@
             const [stTermLibrary, setStTermLibrary] = useLocalStorage('oc-dashboard-term-library-st', {});
             const [setupTab, setSetupTab] = useState('positions');
             const [setupCategory, setSetupCategory] = useState(null);
-
-            // Weekly Task Management State (must be at top level, not conditional)
-            const [weeklyToday, setWeeklyToday] = useLocalStorage(`weekly-tasks-today-${currentWeekId}`, []);
-            const [weeklyThisWeek, setWeeklyThisWeek] = useLocalStorage(`weekly-tasks-thisweek-${currentWeekId}`, []);
-            const [weeklyThisMonth, setWeeklyThisMonth] = useLocalStorage(`weekly-tasks-thismonth-${currentWeekId}`, []);
-            const [weeklySomeday, setWeeklySomeday] = useLocalStorage(`weekly-tasks-someday-${currentWeekId}`, []);
-            const [weeklyTaskInputs, setWeeklyTaskInputs] = useState({ today: '', thisWeek: '', thisMonth: '', someday: '' });
-            const [weeklyDraggedTask, setWeeklyDraggedTask] = useState(null);
-
-
 
 
             // Layout Persistence
@@ -42099,64 +41923,12 @@
                             {setupTab === 'positions' && (
                                 <div>
                                     <h3 style={{ marginBottom: '1rem' }}>Position Names</h3>
-
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
-                                        {[...defaultPositions.filter(p => !(hiddenPositions[phase] || []).includes(p.key)), ...(customPositions[phase] || [])].map(pos => (
-                                            <div key={pos.key} style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', position: 'relative' }}>
-                                                {pos.isCustom && (
-                                                    <button
-                                                        onClick={() => {
-                                                            if (confirm(`Permanently delete custom position ${pos.default}?`)) {
-                                                                const newCustom = (customPositions[phase] || []).filter(p => p.key !== pos.key);
-                                                                setCustomPositions({ ...customPositions, [phase]: newCustom });
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: '4px',
-                                                            right: '4px',
-                                                            background: 'none',
-                                                            border: 'none',
-                                                            color: '#ef4444',
-                                                            cursor: 'pointer',
-                                                            opacity: 0.6,
-                                                            padding: '4px'
-                                                        }}
-                                                        onMouseOver={e => e.currentTarget.style.opacity = '1'}
-                                                        onMouseOut={e => e.currentTarget.style.opacity = '0.6'}
-                                                        title="Delete Position"
-                                                    >
-                                                        <Icon name="X" size={14} />
-                                                    </button>
-                                                )}
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingRight: pos.isCustom ? '1rem' : '0', alignItems: 'center' }}>
-                                                    <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{positionNames[pos.key] || pos.default}</label>
-                                                    <input
-                                                        type="text"
-                                                        value={positionDescriptions[pos.key] !== undefined ? positionDescriptions[pos.key] : pos.description}
-                                                        onChange={(e) => setPositionDescriptions({ ...positionDescriptions, [pos.key]: e.target.value })}
-                                                        placeholder={pos.description}
-                                                        style={{
-                                                            fontSize: '0.8rem',
-                                                            color: 'var(--text-primary)',
-                                                            borderBottom: '1px dashed var(--accent)',
-                                                            background: 'transparent',
-                                                            textAlign: 'right',
-                                                            width: '140px',
-                                                            outline: 'none',
-                                                            cursor: 'text',
-                                                            paddingRight: '2px',
-                                                            fontWeight: '500'
-                                                        }}
-                                                        onFocus={(e) => {
-                                                            e.target.style.background = 'var(--bg-panel)';
-                                                            e.target.style.borderBottom = '1px solid var(--accent)';
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            e.target.style.background = 'transparent';
-                                                            e.target.style.borderBottom = '1px dashed var(--accent)';
-                                                        }}
-                                                    />
+                                        {defaultPositions.map(pos => (
+                                            <div key={pos.key} style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                    <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{pos.default}</label>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{pos.description}</span>
                                                 </div>
                                                 <input
                                                     type="text"
@@ -42165,99 +41937,12 @@
                                                     onChange={(e) => setPositionNames({ ...positionNames, [pos.key]: e.target.value.toUpperCase().slice(0, 3) })}
                                                     placeholder={pos.default}
                                                     maxLength="3"
-                                                    style={{ padding: '0.5rem', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', marginTop: '0.5rem' }}
+                                                    style={{ padding: '0.5rem', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}
                                                     title={`Customize ${pos.description} label`}
                                                 />
                                             </div>
                                         ))}
-
-                                        {/* Add Position Button */}
-                                        <button
-                                            onClick={() => {
-                                                const key = prompt("Enter Position Key (1-3 letters, e.g., 'F' or 'S2'):");
-                                                if (!key) return;
-
-                                                const cleanKey = key.toUpperCase().trim().slice(0, 3);
-                                                if (!cleanKey) return;
-
-                                                // Check for duplicates
-                                                const allKeys = [...defaultPositions, ...(customPositions[phase] || [])].map(p => p.key);
-                                                if (allKeys.includes(cleanKey)) {
-                                                    alert("That position key already exists!");
-                                                    return;
-                                                }
-
-                                                const desc = prompt("Enter Description (e.g., 'Flex Tight End'):") || cleanKey;
-
-                                                const newPos = {
-                                                    key: cleanKey,
-                                                    default: cleanKey,
-                                                    description: desc,
-                                                    isCustom: true
-                                                };
-
-                                                setCustomPositions({
-                                                    ...customPositions,
-                                                    [phase]: [...(customPositions[phase] || []), newPos]
-                                                });
-                                            }}
-                                            style={{
-                                                background: 'var(--surface)',
-                                                border: '2px dashed var(--border)',
-                                                borderRadius: '8px',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                padding: '1rem',
-                                                minHeight: '100px',
-                                                color: 'var(--text-secondary)',
-                                                transition: 'all 0.2s'
-                                            }}
-                                            onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
-                                            onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                                        >
-                                            <Icon name="Plus" size={24} style={{ marginBottom: '0.5rem' }} />
-                                            <span style={{ fontWeight: '600' }}>Add Position</span>
-                                        </button>
                                     </div>
-
-                                    {(hiddenPositions[phase] || []).length > 0 && (
-                                        <div style={{ marginTop: '2rem', padding: '1rem', border: '1px dashed var(--border)', borderRadius: '8px', opacity: 0.8 }}>
-                                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Hidden Default Positions</h4>
-                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                                {(hiddenPositions[phase] || []).map(hiddenKey => {
-                                                    const original = defaultPositions.find(p => p.key === hiddenKey);
-                                                    if (!original) return null;
-                                                    return (
-                                                        <div key={hiddenKey} style={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '0.5rem',
-                                                            padding: '0.5rem 1rem',
-                                                            background: 'var(--bg-panel)',
-                                                            borderRadius: '4px',
-                                                            border: '1px solid var(--border)',
-                                                            fontSize: '0.85rem'
-                                                        }}>
-                                                            <span>{original.default} <span style={{ opacity: 0.5 }}>({original.description})</span></span>
-                                                            <button
-                                                                onClick={() => {
-                                                                    const newHidden = (hiddenPositions[phase] || []).filter(h => h !== hiddenKey);
-                                                                    setHiddenPositions({ ...hiddenPositions, [phase]: newHidden });
-                                                                }}
-                                                                className="btn-sm"
-                                                                style={{ color: 'var(--accent)', border: 'none', background: 'none', padding: '0', marginLeft: '4px', fontWeight: 'bold', cursor: 'pointer' }}
-                                                            >
-                                                                Restore
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             )}
 
@@ -42653,29 +42338,35 @@
                             </button>
                         </div>
 
-                        <div style={{ padding: sidebarCollapsed ? '0 0.25rem' : '0 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1rem' }}>
+                        {!sidebarCollapsed && (
+                            <div>
+                                {schoolName && (
+                                    <div style={{ animation: 'fadeIn 0.5s ease', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {teamLogo && (
+                                            <img
+                                                src={teamLogo}
+                                                alt="School Logo"
+                                                style={{ maxHeight: '60px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px', alignSelf: 'flex-start' }}
+                                            />
+                                        )}
+                                        <h2 style={{ fontSize: '1.2rem', fontWeight: '700', lineHeight: '1.2', color: 'var(--text-primary)' }}>
+                                            {schoolName}
+                                        </h2>
+                                    </div>
+                                )}
+
+                                {/* School Switcher */}
+                                <SchoolSwitcher userId={authUser.uid} currentSchoolId={localStorage.getItem('hc_school_id')} />
+                            </div>
+                        )}
+                        <nav style={{ flex: 1, overflowY: 'auto' }}>
+
+                            {/* SEASON CATEGORY */}
+                            {/* Week Selector */}
                             {!sidebarCollapsed && (
-                                <>
-                                    {schoolName && (
-                                        <div style={{ animation: 'fadeIn 0.5s ease', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                            {teamLogo && (
-                                                <img
-                                                    src={teamLogo}
-                                                    alt="School Logo"
-                                                    style={{ maxHeight: '60px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px', alignSelf: 'flex-start' }}
-                                                />
-                                            )}
-                                            <h2 style={{ fontSize: '1.2rem', fontWeight: '700', lineHeight: '1.2', color: 'var(--text-primary)' }}>
-                                                {schoolName}
-                                            </h2>
-                                        </div>
-                                    )}
-
-                                    {/* School Switcher */}
-                                    <SchoolSwitcher userId={authUser.uid} currentSchoolId={localStorage.getItem('hc_school_id')} />
-
-                                    {/* Active Season Display (Moved to Top/Sticky) */}
-                                    <div style={{ marginTop: '1rem' }}>
+                                <div style={{ padding: '0 0.5rem 1.5rem 0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }}>
+                                    {/* Active Year Display */}
+                                    <div style={{ marginBottom: '1rem' }}>
                                         <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem', display: 'block' }}>
                                             Active Season
                                         </label>
@@ -42684,26 +42375,62 @@
                                         </div>
                                     </div>
 
-                                    {/* Level Filter (Moved to Top/Sticky) */}
-                                    <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block' }}>
-                                            Level Filter
-                                        </label>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block' }}>
+                                        Active Week
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
                                         <select
                                             className="form-select"
-                                            value={selectedLevel}
-                                            onChange={(e) => setSelectedLevel(e.target.value)}
-                                            style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.2)' }}
+                                            value={currentWeekId}
+                                            onChange={(e) => {
+                                                if (e.target.value === 'NEW_WEEK') {
+                                                    handleAddWeek();
+                                                } else {
+                                                    setCurrentWeekId(e.target.value);
+                                                    setView('landing');
+                                                }
+                                            }}
+                                            style={{ flex: 1, padding: '0.5rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.2)' }}
                                         >
-                                            <option value="ALL">All Levels</option>
-                                            {programLevels && programLevels.length > 0 && programLevels.map((level) => (
-                                                <option key={level} value={level}>{level}</option>
+                                            {weeks.map(w => (
+                                                <option key={w.id} value={w.id}>
+                                                    {w.isLocked ? '🔒 ' : ''}{w.name} {w.opponent ? `vs ${w.opponent}` : ''}
+                                                </option>
                                             ))}
+                                            <option value="NEW_WEEK">+ Create New Week</option>
                                         </select>
+                                        <button
+                                            className="btn btn-icon"
+                                            onClick={(e) => { e.stopPropagation(); toggleWeekLock(); }}
+                                            title={currentWeek.isLocked ? "Unlock Week" : "Lock Week"}
+                                            style={{
+                                                padding: '0.5rem',
+                                                background: currentWeek.isLocked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                                                border: `1px solid ${currentWeek.isLocked ? '#ef4444' : 'rgba(255,255,255,0.2)'}`,
+                                                color: currentWeek.isLocked ? '#f87171' : 'var(--text-secondary)'
+                                            }}
+                                        >
+                                            <Icon name={currentWeek.isLocked ? "Lock" : "Unlock"} size={16} />
+                                        </button>
                                     </div>
 
-                                    {/* Week Template Actions (Moved to Top/Sticky) */}
-                                    <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block', marginTop: '1rem' }}>
+                                        Level Filter
+                                    </label>
+                                    <select
+                                        className="form-select"
+                                        value={selectedLevel}
+                                        onChange={(e) => setSelectedLevel(e.target.value)}
+                                        style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.2)' }}
+                                    >
+                                        <option value="ALL">All Levels</option>
+                                        {(programLevels || []).map(level => (
+                                            <option key={level} value={level}>{level}</option>
+                                        ))}
+                                    </select>
+
+                                    {/* Week Template Actions */}
+                                    <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                         {globalWeekTemplates.length > 0 && (
                                             <select
                                                 className="form-select"
@@ -42722,11 +42449,45 @@
                                                 ))}
                                             </select>
                                         )}
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            style={{ fontSize: '0.75rem', width: '100%', padding: '0.25rem' }}
+                                            onClick={() => {
+                                                const name = prompt("Save current week as template?", currentWeek.name + " Master");
+                                                if (name) handleSaveWeekToTemplates(name);
+                                            }}
+                                        >
+                                            Save Week as Template
+                                        </button>
                                     </div>
-                                </>
+
+                                    {/* RBAC View As Selector - NOW STAFF CENTRIC - ADMIN ONLY */}
+                                    {isSiteAdmin && (
+                                        <select
+                                            className="form-select"
+                                            value={currentUserId}
+                                            onChange={(e) => {
+                                                setCurrentUserId(e.target.value);
+                                                // Default to landing page on user switch for safety
+                                                setView('landing');
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                fontSize: '0.8rem',
+                                                padding: '0.4rem',
+                                                background: 'rgba(255,255,255,0.05)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                color: 'var(--accent)'
+                                            }}
+                                        >
+                                            {staff.map(s => (
+                                                <option key={s.id} value={s.id}>View as: {s.name}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
                             )}
 
-                            {/* Core Navigation Buttons (Dashboard/Reports - Moved to Top/Sticky) */}
                             {currentPermissions.dashboard.view && (
                                 <button
                                     className={`nav-item ${view === 'landing' ? 'active' : ''}`}
@@ -42741,7 +42502,7 @@
                                         justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                                         gap: '0.75rem',
                                         padding: sidebarCollapsed ? '0.75rem 0' : '0.75rem 1rem',
-                                        marginBottom: '0.25rem'
+                                        marginBottom: '0.5rem'
                                     }}
                                 >
                                     <Icon name="Home" size={18} color="var(--accent)" />
@@ -42749,6 +42510,9 @@
                                 </button>
                             )}
 
+
+
+                            {/* REPORTS CATEGORY */}
                             {currentPermissions.dashboard.view && (
                                 <button
                                     className={`nav-item ${view === 'reports' ? 'active' : ''}`}
@@ -42763,7 +42527,7 @@
                                         justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                                         gap: '0.75rem',
                                         padding: sidebarCollapsed ? '0.75rem 0' : '0.75rem 1rem',
-                                        marginBottom: '0.25rem'
+                                        marginBottom: '0.5rem'
                                     }}
                                 >
                                     <Icon name="FileBarChart" size={18} color="var(--accent)" />
@@ -42771,433 +42535,555 @@
                                 </button>
                             )}
 
-                            {!sidebarCollapsed && isSiteAdmin && (
-                                <div style={{ marginTop: '0.25rem' }}>
-                                    <select
-                                        className="form-select"
-                                        value={currentUserId}
-                                        onChange={(e) => {
-                                            setCurrentUserId(e.target.value);
-                                            setView('landing');
-                                        }}
-                                        style={{
-                                            width: '100%',
-                                            fontSize: '0.8rem',
-                                            padding: '0.4rem',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: 'var(--accent)'
-                                        }}
-                                    >
-                                        {staff.map(s => (
-                                            <option key={s.id} value={s.id}>View as: {s.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                            {/* PLAYER PROFILES (Moved) */}
+                            {currentPermissions.staff.view && (
+                                <button
+                                    className={`nav-item ${view === 'player-profiles' ? 'active' : ''}`}
+                                    onClick={() => setView('player-profiles')}
+                                    style={{
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        border: 'none',
+                                        background: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                        gap: '0.75rem',
+                                        padding: sidebarCollapsed ? '0.75rem 0' : '0.75rem 1rem',
+                                        marginBottom: '0.5rem'
+                                    }}>
+                                    <Icon name="User" size={18} color="var(--accent)" />
+                                    {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PLAYER PROFILES</span>}
+                                </button>
                             )}
 
-                            {!sidebarCollapsed && <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', marginTop: '0.5rem', marginBottom: '0.5rem' }}></div>}
-                        </div>
-                        <nav style={{ flex: 1, overflowY: 'auto' }}>
 
-                            {/* Week Selector Section (Phase Breakdown) */}
-                            {!sidebarCollapsed && (
-                                <>
-                                    <div style={{ padding: '0 0.5rem 1.5rem 0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }}>
-                                        <div style={{ marginBottom: '1rem' }}>
-                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block' }}>
-                                                Phases / Weeks
-                                            </label>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                {/* Offseason Phase */}
-                                                <CollapsibleCategory title="OFFSEASON" icon="Calendar" defaultOpen={false}>
-                                                    {weeks.filter(w => ["November", "December", "January", "February", "March", "April", "May"].includes(w.name)).map(w => (
-                                                        <CollapsibleCategory
-                                                            key={w.id}
-                                                            title={w.name}
-                                                            icon={w.isLocked ? "Lock" : "Calendar"}
-                                                            defaultOpen={currentWeekId === w.id}
-                                                            nested={true}
-                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
-                                                        >
-                                                            {renderWeeklyTools(w.id)}
-                                                        </CollapsibleCategory>
-                                                    ))}
+                            {/* STAFF MEETING CATEGORY */}
+                            {/* STAFF MEETING CATEGORY */}
+                            {visibleFeatures.staffMeeting?.enabled && (
+                                <CollapsibleCategory title="Staff Meeting" icon="Clipboard" defaultOpen={false}>
+
+                                    {/* END LEVEL FILTER */}
+                                    {visibleFeatures.staffMeeting?.items?.meetingHome && (
+                                        <button className={`nav-item ${view === 'staff-meeting' ? 'active' : ''}`} onClick={() => setView('staff-meeting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="LayoutDashboard" size={16} style={{ marginRight: '8px' }} /> Meeting Home
+                                        </button>
+                                    )}
+                                    {currentPermissions.callsheet.view && visibleFeatures.staffMeeting?.items?.scouting && (
+                                        <button className={`nav-item ${view === 'scouting' ? 'active' : ''}`} onClick={() => setView('scouting')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Search" size={16} style={{ marginRight: '8px' }} /> Scouting
+                                        </button>
+                                    )}
+                                    {visibleFeatures.staffMeeting?.items?.weekOverview && (
+                                        <button className={`nav-item ${view === 'game-week-overview' ? 'active' : ''}`} onClick={() => setView('game-week-overview')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Eye" size={16} style={{ marginRight: '8px' }} /> Week Overview
+                                        </button>
+                                    )}
+                                    {currentPermissions.install.view && visibleFeatures.staffMeeting?.items?.practice && (
+                                        <button className={`nav-item ${view === 'practice' ? 'active' : ''}`} onClick={() => setView('practice')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Megaphone" size={16} style={{ marginRight: '8px' }} /> Practice Plans
+                                        </button>
+                                    )}
+                                    {visibleFeatures.staffMeeting?.items?.pregame && (
+                                        <button className={`nav-item ${view === 'pregame' ? 'active' : ''}`} onClick={() => setView('pregame')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Clock" size={16} style={{ marginRight: '8px' }} /> Pre-game Timeline
+                                        </button>
+                                    )}
+                                    {visibleFeatures.staffMeeting?.items?.grading && (
+                                        <button className={`nav-item ${view === 'grading' ? 'active' : ''}`} onClick={() => setView('grading')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Award" size={16} style={{ marginRight: '8px' }} /> Game Grade Outs
+                                        </button>
+                                    )}
+
+                                </CollapsibleCategory>
+                            )}
+
+                            {/* GAME WEEK CATEGORY */}
+                            {visibleFeatures.gameWeek?.enabled && (
+                                <CollapsibleCategory title="OFFENSE" icon="Zap" defaultOpen={false}>
+
+                                    {/* 1. Offensive System */}
+                                    <CollapsibleCategory title="Offensive System" icon="Database" defaultOpen={false} nested={true}>
+                                        {visibleFeatures.gameWeek?.items?.offenseSetup && (
+                                            <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
+                                                Offense Setup
+                                            </button>
+                                        )}
+                                        {visibleFeatures.gameWeek?.items?.playbook && (
+                                            <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
+                                                Master Playbook
+                                            </button>
+                                        )}
+                                        {visibleFeatures.gameWeek?.items?.formations && (
+                                            <button className={`nav-item ${view === 'formations-offense' ? 'active' : ''}`} onClick={() => setView('formations-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
+                                                Formations
+                                            </button>
+                                        )}
+                                        {visibleFeatures.gameWeek?.items?.glossary && (
+                                            <button className={`nav-item ${view === 'glossary-offense' ? 'active' : ''}`} onClick={() => setView('glossary-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
+                                                Glossary
+                                            </button>
+                                        )}
+                                        {visibleFeatures.gameWeek?.items?.drillLibrary && (
+                                            <button className={`nav-item ${view === 'drill-library-offense' ? 'active' : ''}`} onClick={() => setView('drill-library-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
+                                                Drill Library
+                                            </button>
+                                        )}
+                                    </CollapsibleCategory>
+
+                                    {/* 2. Depth Charts */}
+                                    {currentPermissions.depth.view && visibleFeatures.gameWeek?.items?.depthCharts && (
+                                        <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
+                                            {(selectedLevel === 'ALL' || selectedLevel === 'Varsity') && (
+                                                <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
+                                                    <button key="V_OFFENSE" className={`nav-item ${view === 'depth' && depthChartType === 'V_OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('V_OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        Offense
+                                                    </button>
                                                 </CollapsibleCategory>
-
-                                                {/* Summer Phase */}
-                                                <CollapsibleCategory title="SUMMER" icon="Sun" defaultOpen={false}>
-                                                    {weeks.filter(w => w.name.includes("Summer")).map(w => (
-                                                        <CollapsibleCategory
-                                                            key={w.id}
-                                                            title={w.name}
-                                                            icon={w.isLocked ? "Lock" : "Sun"}
-                                                            defaultOpen={currentWeekId === w.id}
-                                                            nested={true}
-                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
-                                                        >
-                                                            {renderWeeklyTools(w.id)}
-                                                        </CollapsibleCategory>
-                                                    ))}
+                                            )}
+                                            {(selectedLevel === 'ALL' || selectedLevel === 'JV') && (
+                                                <CollapsibleCategory title="Junior Varsity" icon="Zap" defaultOpen={false} nested={true}>
+                                                    <button key="JV_OFFENSE" className={`nav-item ${view === 'depth' && depthChartType === 'JV_OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('JV_OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        Offense
+                                                    </button>
                                                 </CollapsibleCategory>
-
-                                                {/* Pre-Season Phase */}
-                                                <CollapsibleCategory title="PRE-SEASON" icon="Zap" defaultOpen={false}>
-                                                    {weeks.filter(w => ["Family Week", "Camp Week", "First Week of Practice", "Week 0"].includes(w.name)).map(w => (
-                                                        <CollapsibleCategory
-                                                            key={w.id}
-                                                            title={w.name}
-                                                            icon={w.isLocked ? "Lock" : "Zap"}
-                                                            defaultOpen={currentWeekId === w.id}
-                                                            nested={true}
-                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
-                                                        >
-                                                            {renderWeeklyTools(w.id)}
-                                                        </CollapsibleCategory>
-                                                    ))}
+                                            )}
+                                            {(selectedLevel === 'ALL' || selectedLevel === 'JV2') && (
+                                                <CollapsibleCategory title="JV2" icon="PawPrint" defaultOpen={false} nested={true}>
+                                                    <button key="J2_OFFENSE" className={`nav-item ${view === 'depth' && depthChartType === 'J2_OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('J2_OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        Offense
+                                                    </button>
                                                 </CollapsibleCategory>
+                                            )}
 
-                                                {/* Regular Season Phase */}
-                                                <CollapsibleCategory title="SEASON" icon="Trophy" defaultOpen={true}>
-                                                    {weeks.filter(w => (w.name.startsWith("Week ") && !w.name.includes("Summer") && w.name !== "Week 0") || w.name === "First Week with No Game").map(w => (
-                                                        <CollapsibleCategory
-                                                            key={w.id}
-                                                            title={`${w.name}${w.opponent ? ` vs ${w.opponent}` : ''}`}
-                                                            icon={w.isLocked ? "Lock" : "Trophy"}
-                                                            defaultOpen={currentWeekId === w.id}
-                                                            nested={true}
-                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
-                                                        >
-                                                            {renderWeeklyTools(w.id)}
-                                                        </CollapsibleCategory>
-                                                    ))}
-                                                </CollapsibleCategory>
-                                            </div>
-                                        </div>
-
-
-
-                                        {/* GAME WEEK CATEGORY */}
-                                        {visibleFeatures.gameWeek?.enabled && (
-                                            <CollapsibleCategory title="MASTER OFFENSE" icon="Zap" defaultOpen={false}>
-                                                {visibleFeatures.gameWeek?.items?.offenseSetup && (
-                                                    <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
+                                            {/* SCOUT DEFENSE START */}
+                                            <CollapsibleCategory title="Scout Defense" icon="Eye" defaultOpen={false} nested={true}>
+                                                {(selectedLevel === 'ALL' || selectedLevel === 'Varsity') && (
+                                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'V_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('V_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        Varsity
                                                     </button>
                                                 )}
-                                                {visibleFeatures.gameWeek?.items?.playbook && (
-                                                    <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Book" size={16} style={{ marginRight: '8px' }} /> Master Playbook
+                                                {(selectedLevel === 'ALL' || selectedLevel === 'JV') && (
+                                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'JV_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('JV_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        Junior Varsity
                                                     </button>
                                                 )}
-                                                {visibleFeatures.gameWeek?.items?.formations && (
-                                                    <button className={`nav-item ${view === 'formations-offense' ? 'active' : ''}`} onClick={() => setView('formations-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.gameWeek?.items?.glossary && (
-                                                    <button className={`nav-item ${view === 'glossary-offense' ? 'active' : ''}`} onClick={() => setView('glossary-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.gameWeek?.items?.drillLibrary && (
-                                                    <button className={`nav-item ${view === 'drill-library-offense' ? 'active' : ''}`} onClick={() => setView('drill-library-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                                {(selectedLevel === 'ALL' || selectedLevel === 'JV2') && (
+                                                    <button className={`nav-item ${view === 'depth' && depthChartType === 'J2_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('J2_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        JV2
                                                     </button>
                                                 )}
                                             </CollapsibleCategory>
-                                        )}
+                                            {/* SCOUT DEFENSE END */}
 
-                                        {/* DEFENSE CATEGORY */}
-                                        {visibleFeatures.gameWeek?.enabled && (
-                                            <CollapsibleCategory title="DEFENSE" icon="Shield" defaultOpen={false}>
-                                                {visibleFeatures.gameWeek?.items?.defenseSetup && (
-                                                    <button className={`nav-item ${view === 'defense-setup' ? 'active' : ''}`} onClick={() => setView('defense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Defense Setup
-                                                    </button>
-                                                )}
+                                        </CollapsibleCategory>
+                                    )}
 
-                                                {/* Weekly Depth Charts moved to Week selector above */}
+                                    {/* 3. This Week's Install */}
+                                    {visibleFeatures.gameWeek?.items?.gamePlan && (
+                                        <button className={`nav-item ${view === 'install-manager' ? 'active' : ''}`} onClick={() => setView('install-manager')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Layers" size={16} style={{ marginRight: '8px' }} /> This Week's Install
+                                        </button>
+                                    )}
 
-                                                {visibleFeatures.gameWeek?.items?.formations && (
-                                                    <button className={`nav-item ${view === 'formations-defense' ? 'active' : ''}`} onClick={() => setView('formations-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.gameWeek?.items?.glossary && (
-                                                    <button className={`nav-item ${view === 'glossary-defense' ? 'active' : ''}`} onClick={() => setView('glossary-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.gameWeek?.items?.drillLibrary && (
-                                                    <button className={`nav-item ${view === 'drill-library-defense' ? 'active' : ''}`} onClick={() => setView('drill-library-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
-                                                    </button>
-                                                )}
-                                            </CollapsibleCategory>
-                                        )}
+                                    {/* 4. Install Slideshow */}
+                                    {visibleFeatures.gameWeek?.items?.gamePlan && (
+                                        <button className={`nav-item ${view === 'install-slideshow' ? 'active' : ''}`} onClick={() => setView('install-slideshow')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Monitor" size={16} style={{ marginRight: '8px' }} /> Install Slideshow
+                                        </button>
+                                    )}
 
-
-                                        {/* SPECIAL TEAMS CATEGORY */}
-                                        {visibleFeatures.gameWeek?.enabled && (
-                                            <CollapsibleCategory title="SPECIAL TEAMS" icon="Compass" defaultOpen={false}>
-                                                {visibleFeatures.gameWeek?.items?.stSetup && (
-                                                    <button className={`nav-item ${view === 'st-setup' ? 'active' : ''}`} onClick={() => setView('st-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Special Teams Setup
-                                                    </button>
-                                                )}
-
-                                                {/* Weekly Depth Charts moved to Week selector above */}
-
-                                                {visibleFeatures.gameWeek?.items?.formations && (
-                                                    <button className={`nav-item ${view === 'formations-st' ? 'active' : ''}`} onClick={() => setView('formations-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.gameWeek?.items?.glossary && (
-                                                    <button className={`nav-item ${view === 'glossary-st' ? 'active' : ''}`} onClick={() => setView('glossary-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.gameWeek?.items?.drillLibrary && (
-                                                    <button className={`nav-item ${view === 'drill-library-st' ? 'active' : ''}`} onClick={() => setView('drill-library-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
-                                                    </button>
-                                                )}
-                                            </CollapsibleCategory>
-                                        )}
-
-                                        {/* PERSONNEL CATEGORY (Moved from top) */}
-                                        {currentPermissions.staff.view && (
-                                            <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
-                                                <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                    <Icon name="UserCog" size={16} style={{ marginRight: '8px' }} /> Staff & Roles
+                                    {/* 5. Game Plan & Add New Play */}
+                                    {currentPermissions.callsheet.view && (
+                                        <>
+                                            {visibleFeatures.gameWeek?.items?.gamePlan && (
+                                                <button className={`nav-item ${view === 'game-plan' ? 'active' : ''}`} onClick={() => setView('game-plan')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                    <Icon name="Clipboard" size={16} style={{ marginRight: '8px' }} /> Game Plan
                                                 </button>
-                                                {/* Player Profiles moved to top level */}
-                                                <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                    <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
+                                            )}
+                                            {visibleFeatures.gameWeek?.items?.addPlay && (
+                                                <button
+                                                    className={`nav-item ${view === 'new-play' ? 'active' : ''}`}
+                                                    onClick={() => { setEditingPlay(null); setView('new-play'); }}
+                                                    style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--accent)', fontWeight: '500' }}
+                                                >
+                                                    <Icon name="PlusCircle" size={16} style={{ marginRight: '8px' }} /> Add a New Play
                                                 </button>
-                                                <button className={`nav-item ${view === 'archive' ? 'active' : ''}`} onClick={() => setView('archive')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                    <Icon name="Archive" size={16} style={{ marginRight: '8px' }} /> Archive
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* 6. Wristband Builder */}
+                                    {currentPermissions.install.view && visibleFeatures.gameWeek?.items?.wristband && (
+                                        <button className={`nav-item ${view === 'wristband' ? 'active' : ''}`} onClick={() => setView('wristband')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Watch" size={16} style={{ marginRight: '8px' }} /> Wristband Builder
+                                        </button>
+                                    )}
+
+                                    {/* Smart Call Sheet */}
+                                    {visibleFeatures.gameWeek?.items?.smartCallsheet && (
+                                        <button className={`nav-item ${view === 'smart-call-sheet' ? 'active' : ''}`} onClick={() => setView('smart-call-sheet')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Smartphone" size={16} style={{ marginRight: '8px' }} /> Smart Call Sheet
+                                        </button>
+                                    )}
+
+                                    {/* Dumb Call Sheet */}
+                                    {visibleFeatures.gameWeek?.items?.dumbCallsheet && (
+                                        <button className={`nav-item ${view === 'dumb-call-sheet' ? 'active' : ''}`} onClick={() => setView('dumb-call-sheet')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="FileText" size={16} style={{ marginRight: '8px' }} /> Dumb Call Sheet
+                                        </button>
+                                    )}
+
+                                    {/* 7. Practice Scripts */}
+                                    {currentPermissions.scripts.view && visibleFeatures.gameWeek?.items?.practiceScripts && (
+                                        <button className={`nav-item ${view === 'practice-scripts' ? 'active' : ''}`} onClick={() => setView('practice-scripts')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="FileText" size={16} style={{ marginRight: '8px' }} /> Practice Scripts
+                                        </button>
+                                    )}
+
+
+
+                                </CollapsibleCategory>
+                            )}
+
+                            {/* DEFENSE CATEGORY */}
+                            {visibleFeatures.gameWeek?.enabled && (
+                                <CollapsibleCategory title="DEFENSE" icon="Shield" defaultOpen={false}>
+                                    {visibleFeatures.gameWeek?.items?.defenseSetup && (
+                                        <button className={`nav-item ${view === 'defense-setup' ? 'active' : ''}`} onClick={() => setView('defense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Defense Setup
+                                        </button>
+                                    )}
+
+                                    {/* Defense Depth Charts */}
+                                    {currentPermissions.depth.view && visibleFeatures.gameWeek?.items?.depthCharts && (
+                                        <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
+                                            <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
+                                                <button key="V_DEFENSE" className={`nav-item ${view === 'depth' && depthChartType === 'V_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('V_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                    Defense
                                                 </button>
-
                                             </CollapsibleCategory>
-                                        )}
-
-
-
-                                        {/* PROGRAM MANAGEMENT CATEGORY */}
-                                        {visibleFeatures.program?.enabled && (
-                                            <CollapsibleCategory title="Program Mgmt" icon="Briefcase" defaultOpen={false}>
-                                                {visibleFeatures.program?.items?.staffTasks && (
-                                                    <button className={`nav-item ${view === 'staff-tasks' ? 'active' : ''}`} onClick={() => setView('staff-tasks')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="ClipboardList" size={16} style={{ marginRight: '8px' }} /> Staff Tasks
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.program?.items?.calendar && (
-                                                    <button className={`nav-item ${view === 'calendar' ? 'active' : ''}`} onClick={() => setView('calendar')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Calendar" size={16} style={{ marginRight: '8px' }} /> Annual Calendar
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.program?.items?.budget && (
-                                                    <button className={`nav-item ${view === 'budget' ? 'active' : ''}`} onClick={() => setView('budget')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="DollarSign" size={16} style={{ marginRight: '8px' }} /> Budget
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.program?.items?.culturalCalibration && (
-                                                    <button className={`nav-item ${view === 'culturalCalibration' ? 'active' : ''}`} onClick={() => setView('culturalCalibration')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Heart" size={16} style={{ marginRight: '8px' }} /> Culture Calibration
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.program?.items?.onboarding && (
-                                                    <button className={`nav-item ${view === 'onboarding' ? 'active' : ''}`} onClick={() => setView('onboarding')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="UserPlus" size={16} style={{ marginRight: '8px' }} /> Onboarding
-                                                    </button>
-                                                )}
-                                                <CollapsibleCategory title="Equipment & Inv." icon="Package" defaultOpen={false} nested={true}>
-                                                    {visibleFeatures.program?.items?.equipmentCheckout && (
-                                                        <button className={`nav-item ${view === 'equipment-checkout' ? 'active' : ''}`} onClick={() => setView('equipment-checkout')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Checkout Form
-                                                        </button>
-                                                    )}
-                                                    {visibleFeatures.program?.items?.jerseyLottery && (
-                                                        <button className={`nav-item ${view === 'equipment-lottery' ? 'active' : ''}`} onClick={() => setView('equipment-lottery')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Jersey Lottery
-                                                        </button>
-                                                    )}
-                                                    {visibleFeatures.program?.items?.equipmentInventory && (
-                                                        <button className={`nav-item ${view === 'equipment-inventory' ? 'active' : ''}`} onClick={() => setView('equipment-inventory')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Current Inventory
-                                                        </button>
-                                                    )}
-                                                    {visibleFeatures.program?.items?.equipmentWishlist && (
-                                                        <button className={`nav-item ${view === 'equipment-wishlist' ? 'active' : ''}`} onClick={() => setView('equipment-wishlist')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="ShoppingCart" size={16} style={{ marginRight: '8px' }} /> Wishlist / Needs
-                                                        </button>
-                                                    )}
-                                                </CollapsibleCategory>
-
+                                            <CollapsibleCategory title="Junior Varsity" icon="Zap" defaultOpen={false} nested={true}>
+                                                <button key="JV_DEFENSE" className={`nav-item ${view === 'depth' && depthChartType === 'JV_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('JV_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                    Defense
+                                                </button>
                                             </CollapsibleCategory>
-                                        )}
-
-                                        {/* MOBILE/TABLET APPS CATEGORY */}
-                                        {visibleFeatures.apps?.enabled && (
-                                            <CollapsibleCategory title="Mobile/Tablet App" icon="Smartphone" defaultOpen={false}>
-                                                {visibleFeatures.apps?.items?.playerApp && (
-                                                    <button
-                                                        className={`nav-item ${view === 'player-app' ? 'active' : ''}`}
-                                                        onClick={() => setView('player-app')}
-                                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                                    >
-                                                        <Icon name="Smartphone" size={16} style={{ marginRight: '8px' }} /> Player App Preview
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.apps?.items?.attendanceApp && (
-                                                    <button
-                                                        className={`nav-item ${view === 'attendance-app' ? 'active' : ''}`}
-                                                        onClick={() => setView('attendance-app')}
-                                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                                    >
-                                                        <Icon name="UserCheck" size={16} style={{ marginRight: '8px' }} /> Attendance App
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.apps?.items?.coachApp && (
-                                                    <button
-                                                        className={`nav-item ${view === 'coach-app' ? 'active' : ''}`}
-                                                        onClick={() => setView('coach-app')}
-                                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                                    >
-                                                        <Icon name="Clipboard" size={16} style={{ marginRight: '8px' }} /> Practice Coach App
-                                                    </button>
-                                                )}
-
-                                                {/* ATHLETIC DEVELOPMENT CATEGORY */}
-                                                <div>
-
-                                                    {visibleFeatures.apps?.items?.simulator && (
-                                                        <button
-                                                            className={`nav-item ${view === 'simulator' ? 'active' : ''}`}
-                                                            onClick={() => setView('simulator')}
-                                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
-                                                        >
-                                                            <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Play-Calling Simulator
-                                                        </button>
-                                                    )}
-                                                    {visibleFeatures.apps?.items?.pressbox && (
-                                                        <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="Monitor" size={16} style={{ marginRight: '8px' }} /> Pressbox
-                                                        </button>
-                                                    )}
-
-                                                    {visibleFeatures.apps?.items?.specialTeams && (
-                                                        <button className={`nav-item ${view === 'special-teams' ? 'active' : ''}`} onClick={() => setView('special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="Target" size={16} style={{ marginRight: '8px' }} /> Special Teams
-                                                        </button>
-                                                    )}
-                                                </div>
-
+                                            <CollapsibleCategory title="JV2" icon="PawPrint" defaultOpen={false} nested={true}>
+                                                <button key="J2_DEFENSE" className={`nav-item ${view === 'depth' && depthChartType === 'J2_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('J2_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                    Defense
+                                                </button>
                                             </CollapsibleCategory>
-                                        )}
 
-                                        {currentPermissions.dashboard.view && (
+                                            {/* SCOUT OFFENSE START */}
+                                            <CollapsibleCategory title="Scout Offense" icon="Eye" defaultOpen={false} nested={true}>
+                                                <button className={`nav-item ${view === 'depth' && depthChartType === 'V_OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('V_OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                    Varsity
+                                                </button>
+                                                <button className={`nav-item ${view === 'depth' && depthChartType === 'JV_OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('JV_OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                    Junior Varsity
+                                                </button>
+                                                <button className={`nav-item ${view === 'depth' && depthChartType === 'J2_OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('J2_OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                    JV2
+                                                </button>
+                                            </CollapsibleCategory>
+                                            {/* SCOUT OFFENSE END */}
+
+                                        </CollapsibleCategory>
+                                    )}
+
+                                    {visibleFeatures.gameWeek?.items?.formations && (
+                                        <button className={`nav-item ${view === 'formations-defense' ? 'active' : ''}`} onClick={() => setView('formations-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.glossary && (
+                                        <button className={`nav-item ${view === 'glossary-defense' ? 'active' : ''}`} onClick={() => setView('glossary-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.drillLibrary && (
+                                        <button className={`nav-item ${view === 'drill-library-defense' ? 'active' : ''}`} onClick={() => setView('drill-library-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                        </button>
+                                    )}
+                                </CollapsibleCategory>
+                            )}
+
+
+                            {/* SPECIAL TEAMS CATEGORY */}
+                            {visibleFeatures.gameWeek?.enabled && (
+                                <CollapsibleCategory title="SPECIAL TEAMS" icon="Compass" defaultOpen={false}>
+                                    {visibleFeatures.gameWeek?.items?.stSetup && (
+                                        <button className={`nav-item ${view === 'st-setup' ? 'active' : ''}`} onClick={() => setView('st-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Special Teams Setup
+                                        </button>
+                                    )}
+
+                                    {/* Special Teams Depth Charts */}
+                                    {currentPermissions.depth.view && visibleFeatures.gameWeek?.items?.depthCharts && (
+                                        <CollapsibleCategory title={<span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>Depth Charts</span>} icon="LayoutDashboard" defaultOpen={false} nested={true}>
+                                            <CollapsibleCategory title="Varsity" icon="Trophy" defaultOpen={false} nested={true}>
+                                                {['KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
+                                                    <button key={`V_${type}`} className={`nav-item ${view === 'depth' && depthChartType === `V_${type}` ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType(`V_${type}`); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </button>
+                                                ))}
+                                            </CollapsibleCategory>
+                                            <CollapsibleCategory title="Junior Varsity" icon="Zap" defaultOpen={false} nested={true}>
+                                                {['KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
+                                                    <button key={`JV_${type}`} className={`nav-item ${view === 'depth' && depthChartType === `JV_${type}` ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType(`JV_${type}`); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </button>
+                                                ))}
+                                            </CollapsibleCategory>
+                                            <CollapsibleCategory title="JV2" icon="PawPrint" defaultOpen={false} nested={true}>
+                                                {['KICKOFF', 'KICK_RETURN', 'PUNT', 'PUNT_RETURN', 'HANDS_TEAM', 'ONSIDE_KICK', 'PAT_BLOCK'].map(type => (
+                                                    <button key={`J2_${type}`} className={`nav-item ${view === 'depth' && depthChartType === `J2_${type}` ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType(`J2_${type}`); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                        {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </button>
+                                                ))}
+                                            </CollapsibleCategory>
+
+                                            <div style={{ padding: '0.5rem 0 0.25rem 2rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>SCOUT TEAMS</div>
+                                            <button className={`nav-item ${view === 'depth' && depthChartType === 'SCOUT_OFFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('SCOUT_OFFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                Scout Offense
+                                            </button>
+                                            <button className={`nav-item ${view === 'depth' && depthChartType === 'SCOUT_DEFENSE' ? 'active' : ''}`} onClick={() => { setView('depth'); setDepthChartType('SCOUT_DEFENSE'); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', paddingLeft: '3.5rem', color: 'var(--text-secondary)' }}>
+                                                Scout Defense
+                                            </button>
+                                        </CollapsibleCategory>
+                                    )}
+
+                                    {visibleFeatures.gameWeek?.items?.formations && (
+                                        <button className={`nav-item ${view === 'formations-st' ? 'active' : ''}`} onClick={() => setView('formations-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.glossary && (
+                                        <button className={`nav-item ${view === 'glossary-st' ? 'active' : ''}`} onClick={() => setView('glossary-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                        </button>
+                                    )}
+                                    {visibleFeatures.gameWeek?.items?.drillLibrary && (
+                                        <button className={`nav-item ${view === 'drill-library-st' ? 'active' : ''}`} onClick={() => setView('drill-library-st')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                        </button>
+                                    )}
+                                </CollapsibleCategory>
+                            )}
+
+                            {/* PERSONNEL CATEGORY (Moved from top) */}
+                            {currentPermissions.staff.view && (
+                                <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
+                                    <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="UserCog" size={16} style={{ marginRight: '8px' }} /> Staff & Roles
+                                    </button>
+                                    {/* Player Profiles moved to top level */}
+                                    <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
+                                    </button>
+                                    <button className={`nav-item ${view === 'archive' ? 'active' : ''}`} onClick={() => setView('archive')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Archive" size={16} style={{ marginRight: '8px' }} /> Archive
+                                    </button>
+
+                                </CollapsibleCategory>
+                            )}
+
+
+
+                            {/* PROGRAM MANAGEMENT CATEGORY */}
+                            {visibleFeatures.program?.enabled && (
+                                <CollapsibleCategory title="Program Mgmt" icon="Briefcase" defaultOpen={false}>
+                                    {visibleFeatures.program?.items?.staffTasks && (
+                                        <button className={`nav-item ${view === 'staff-tasks' ? 'active' : ''}`} onClick={() => setView('staff-tasks')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="ClipboardList" size={16} style={{ marginRight: '8px' }} /> Staff Tasks
+                                        </button>
+                                    )}
+                                    {visibleFeatures.program?.items?.calendar && (
+                                        <button className={`nav-item ${view === 'calendar' ? 'active' : ''}`} onClick={() => setView('calendar')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Calendar" size={16} style={{ marginRight: '8px' }} /> Annual Calendar
+                                        </button>
+                                    )}
+                                    {visibleFeatures.program?.items?.budget && (
+                                        <button className={`nav-item ${view === 'budget' ? 'active' : ''}`} onClick={() => setView('budget')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="DollarSign" size={16} style={{ marginRight: '8px' }} /> Budget
+                                        </button>
+                                    )}
+                                    {visibleFeatures.program?.items?.culturalCalibration && (
+                                        <button className={`nav-item ${view === 'culturalCalibration' ? 'active' : ''}`} onClick={() => setView('culturalCalibration')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Heart" size={16} style={{ marginRight: '8px' }} /> Culture Calibration
+                                        </button>
+                                    )}
+                                    {visibleFeatures.program?.items?.onboarding && (
+                                        <button className={`nav-item ${view === 'onboarding' ? 'active' : ''}`} onClick={() => setView('onboarding')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="UserPlus" size={16} style={{ marginRight: '8px' }} /> Onboarding
+                                        </button>
+                                    )}
+                                    <CollapsibleCategory title="Equipment & Inv." icon="Package" defaultOpen={false} nested={true}>
+                                        {visibleFeatures.program?.items?.equipmentCheckout && (
+                                            <button className={`nav-item ${view === 'equipment-checkout' ? 'active' : ''}`} onClick={() => setView('equipment-checkout')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Checkout Form
+                                            </button>
+                                        )}
+                                        {visibleFeatures.program?.items?.jerseyLottery && (
+                                            <button className={`nav-item ${view === 'equipment-lottery' ? 'active' : ''}`} onClick={() => setView('equipment-lottery')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Jersey Lottery
+                                            </button>
+                                        )}
+                                        {visibleFeatures.program?.items?.equipmentInventory && (
+                                            <button className={`nav-item ${view === 'equipment-inventory' ? 'active' : ''}`} onClick={() => setView('equipment-inventory')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Current Inventory
+                                            </button>
+                                        )}
+                                        {visibleFeatures.program?.items?.equipmentWishlist && (
+                                            <button className={`nav-item ${view === 'equipment-wishlist' ? 'active' : ''}`} onClick={() => setView('equipment-wishlist')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="ShoppingCart" size={16} style={{ marginRight: '8px' }} /> Wishlist / Needs
+                                            </button>
+                                        )}
+                                    </CollapsibleCategory>
+
+                                </CollapsibleCategory>
+                            )}
+
+                            {/* MOBILE/TABLET APPS CATEGORY */}
+                            {visibleFeatures.apps?.enabled && (
+                                <CollapsibleCategory title="Mobile/Tablet App" icon="Smartphone" defaultOpen={false}>
+                                    {visibleFeatures.apps?.items?.playerApp && (
+                                        <button
+                                            className={`nav-item ${view === 'player-app' ? 'active' : ''}`}
+                                            onClick={() => setView('player-app')}
+                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                        >
+                                            <Icon name="Smartphone" size={16} style={{ marginRight: '8px' }} /> Player App Preview
+                                        </button>
+                                    )}
+                                    {visibleFeatures.apps?.items?.attendanceApp && (
+                                        <button
+                                            className={`nav-item ${view === 'attendance-app' ? 'active' : ''}`}
+                                            onClick={() => setView('attendance-app')}
+                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                        >
+                                            <Icon name="UserCheck" size={16} style={{ marginRight: '8px' }} /> Attendance App
+                                        </button>
+                                    )}
+                                    {visibleFeatures.apps?.items?.coachApp && (
+                                        <button
+                                            className={`nav-item ${view === 'coach-app' ? 'active' : ''}`}
+                                            onClick={() => setView('coach-app')}
+                                            style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                        >
+                                            <Icon name="Clipboard" size={16} style={{ marginRight: '8px' }} /> Practice Coach App
+                                        </button>
+                                    )}
+
+                                    {/* ATHLETIC DEVELOPMENT CATEGORY */}
+
+                                        {visibleFeatures.apps?.items?.simulator && (
                                             <button
-                                                className={`nav-item ${view === 'print-hub' ? 'active' : ''}`}
-                                                onClick={() => setView('print-hub')}
-                                                style={{
-                                                    width: '100%',
-                                                    textAlign: 'left',
-                                                    border: 'none',
-                                                    background: 'none',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                                                    gap: '0.75rem',
-                                                    padding: sidebarCollapsed ? '0.75rem 0' : '0.75rem 1rem',
-                                                    marginBottom: '0.5rem'
-                                                }}
+                                                className={`nav-item ${view === 'simulator' ? 'active' : ''}`}
+                                                onClick={() => setView('simulator')}
+                                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
                                             >
-                                                <Icon name="Printer" size={18} color="var(--accent)" />
-                                                {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PRINT CENTER</span>}
+                                                <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Play-Calling Simulator
+                                            </button>
+                                        )}
+                                        {visibleFeatures.apps?.items?.pressbox && (
+                                            <button className={`nav-item ${view === 'pressbox' ? 'active' : ''}`} onClick={() => setView('pressbox')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Monitor" size={16} style={{ marginRight: '8px' }} /> Pressbox
                                             </button>
                                         )}
 
-                                        {/* ATHLETIC DEVELOPMENT CATEGORY */}
-                                        {visibleFeatures.development?.enabled && (
-                                            <CollapsibleCategory title="Player Development" icon="Activity" defaultOpen={false}>
-                                                {visibleFeatures.development?.items?.testing && (
-                                                    <button className={`nav-item ${view === 'testing' ? 'active' : ''}`} onClick={() => setView('testing')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Timer" size={16} style={{ marginRight: '8px' }} /> Combine / Testing
-                                                    </button>
-                                                )}
-
-                                                {visibleFeatures.development?.items?.ironman && (
-                                                    <button className={`nav-item ${view === 'ironman' ? 'active' : ''}`} onClick={() => setView('ironman')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Dumbbell" size={16} style={{ marginRight: '8px' }} /> Iron Man
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.development?.items?.ratings && (
-                                                    <button className={`nav-item ${view === 'ratings' ? 'active' : ''}`} onClick={() => setView('ratings')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Impact Ratings
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.development?.items?.summerComp && (
-                                                    <button className={`nav-item ${view === 'summer-comp' ? 'active' : ''}`} onClick={() => setView('summer-comp')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Summer Competition
-                                                    </button>
-                                                )}
-
-                                                {visibleFeatures.development?.items?.testingRecords && (
-                                                    <button className={`nav-item ${view === 'testing-records' ? 'active' : ''}`} onClick={() => setView('testing-records')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Program Records
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.development?.items?.selfAssessment && (
-                                                    <button className={`nav-item ${view === 'self-assessment' ? 'active' : ''}`} onClick={() => setView('self-assessment')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Self-Assessment
-                                                    </button>
-                                                )}
-                                                {visibleFeatures.development?.items?.multiSport && (
-                                                    <button className={`nav-item ${view === 'multi-sport' ? 'active' : ''}`} onClick={() => setView('multi-sport')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Activity" size={16} style={{ marginRight: '8px' }} /> Multi-Sport Tracking
-                                                    </button>
-                                                )}
-                                            </CollapsibleCategory>
+                                        {visibleFeatures.apps?.items?.specialTeams && (
+                                            <button className={`nav-item ${view === 'special-teams' ? 'active' : ''}`} onClick={() => setView('special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Target" size={16} style={{ marginRight: '8px' }} /> Special Teams
+                                            </button>
                                         )}
                                     </div>
-                                </>
+
+                                </CollapsibleCategory>
+                            )}
+
+                            {currentPermissions.dashboard.view && (
+                                <button
+                                    className={`nav-item ${view === 'print-hub' ? 'active' : ''}`}
+                                    onClick={() => setView('print-hub')}
+                                    style={{
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        border: 'none',
+                                        background: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                        gap: '0.75rem',
+                                        padding: sidebarCollapsed ? '0.75rem 0' : '0.75rem 1rem',
+                                        marginBottom: '0.5rem'
+                                    }}
+                                >
+                                    <Icon name="Printer" size={18} color="var(--accent)" />
+                                    {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PRINT CENTER</span>}
+                                </button>
+                            )}
+
+                            {/* ATHLETIC DEVELOPMENT CATEGORY */}
+                            {visibleFeatures.development?.enabled && (
+                                <CollapsibleCategory title="Player Development" icon="Activity" defaultOpen={false}>
+                                    {visibleFeatures.development?.items?.testing && (
+                                        <button className={`nav-item ${view === 'testing' ? 'active' : ''}`} onClick={() => setView('testing')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Timer" size={16} style={{ marginRight: '8px' }} /> Combine / Testing
+                                        </button>
+                                    )}
+
+                                    {visibleFeatures.development?.items?.ironman && (
+                                        <button className={`nav-item ${view === 'ironman' ? 'active' : ''}`} onClick={() => setView('ironman')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Dumbbell" size={16} style={{ marginRight: '8px' }} /> Iron Man
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.ratings && (
+                                        <button className={`nav-item ${view === 'ratings' ? 'active' : ''}`} onClick={() => setView('ratings')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Gamepad2" size={16} style={{ marginRight: '8px' }} /> Impact Ratings
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.summerComp && (
+                                        <button className={`nav-item ${view === 'summer-comp' ? 'active' : ''}`} onClick={() => setView('summer-comp')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Summer Competition
+                                        </button>
+                                    )}
+
+                                    {visibleFeatures.development?.items?.testingRecords && (
+                                        <button className={`nav-item ${view === 'testing-records' ? 'active' : ''}`} onClick={() => setView('testing-records')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Trophy" size={16} style={{ marginRight: '8px' }} /> Program Records
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.selfAssessment && (
+                                        <button className={`nav-item ${view === 'self-assessment' ? 'active' : ''}`} onClick={() => setView('self-assessment')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="ClipboardCheck" size={16} style={{ marginRight: '8px' }} /> Self-Assessment
+                                        </button>
+                                    )}
+                                    {visibleFeatures.development?.items?.multiSport && (
+                                        <button className={`nav-item ${view === 'multi-sport' ? 'active' : ''}`} onClick={() => setView('multi-sport')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Activity" size={16} style={{ marginRight: '8px' }} /> Multi-Sport Tracking
+                                        </button>
+                                    )}
+                                </CollapsibleCategory>
                             )}
 
                             {/* EQUIPMENT CATEGORY */}
 
 
-                            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
                                 {(currentUser?.roles?.includes('Head Coach') || currentUser?.roles?.includes('Team Admin')) && (
-                                    <button
-                                        className={`nav-item ${view === 'settings' ? 'active' : ''}`}
-                                        onClick={() => setView('settings')}
-                                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem' }}
-                                    >
-                                        <Icon name="Settings" size={16} />
-                                        {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Settings</span>}
+                                    <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Settings
                                     </button>
                                 )}
                                 {currentUser && currentUser.roles && currentUser.roles.includes('Head Coach') && (
-                                    <button
-                                        className={`nav-item ${view === 'permissions' ? 'active' : ''}`}
-                                        onClick={() => setView('permissions')}
-                                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem', color: 'var(--text-secondary)' }}
-                                    >
-                                        <Icon name="Lock" size={16} />
-                                        {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Permissions</span>}
+                                    <button className={`nav-item ${view === 'permissions' ? 'active' : ''}`} onClick={() => setView('permissions')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
+                                        <Icon name="Lock" size={16} style={{ marginRight: '8px' }} /> Permissions
                                     </button>
                                 )}
-                                <button
-                                    className={`nav-item ${view === 'help' ? 'active' : ''}`}
-                                    onClick={() => setView('help')}
-                                    style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem' }}
-                                >
-                                    <Icon name="HelpCircle" size={16} />
-                                    {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>How to Use</span>}
+                                <button className={`nav-item ${view === 'help' ? 'active' : ''}`} onClick={() => setView('help')} style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', marginTop: '0.5rem' }}>
+                                    <Icon name="HelpCircle" size={16} style={{ marginRight: '8px' }} /> How to Use
                                 </button>
                                 <button
                                     className="nav-item"
@@ -43207,225 +43093,20 @@
                                         textAlign: 'left',
                                         border: 'none',
                                         background: 'none',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                                        padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem',
+                                        marginTop: '0.5rem',
                                         color: 'var(--danger)',
                                         opacity: 0.8
                                     }}
                                     onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
                                     onMouseOut={(e) => e.currentTarget.style.opacity = '0.8'}
                                 >
-                                    <Icon name="LogOut" size={16} />
-                                    {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Log Out</span>}
+                                    <Icon name="LogOut" size={16} style={{ marginRight: '8px' }} /> Log Out
                                 </button>
                             </div>
                         </nav>
                     </div >
 
                     <main className="main-content">
-                        {view === 'staff-meeting' && (
-                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
-                                {/* Header */}
-                                <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: 'white' }}>
-                                    <h2 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="LayoutDashboard" size={28} />
-                                        {currentWeek.name} Dashboard
-                                    </h2>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Week</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{currentWeek.name}</div>
-                                        </div>
-                                        {currentWeek.opponent && (
-                                            <div>
-                                                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Opponent</div>
-                                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{currentWeek.opponent}</div>
-                                            </div>
-                                        )}
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Practice Plans</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{currentWeek.practicePlans?.length || 0}</div>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Active Players</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{roster.filter(p => p.status === 'Active').length}</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Quick Links */}
-                                <div className="card" style={{ padding: '1.5rem' }}>
-                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="Zap" size={20} />
-                                        Quick Links
-                                    </h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                                        <button onClick={() => setView('practice')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <Icon name="Megaphone" size={18} />
-                                                <span style={{ fontWeight: 'bold' }}>Practice Plans</span>
-                                            </div>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>View and edit practice schedules</div>
-                                        </button>
-                                        <button onClick={() => setView('install-manager')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <Icon name="Layers" size={18} />
-                                                <span style={{ fontWeight: 'bold' }}>Install Manager</span>
-                                            </div>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Manage weekly installations</div>
-                                        </button>
-                                        <button onClick={() => setView('scouting')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <Icon name="Search" size={18} />
-                                                <span style={{ fontWeight: 'bold' }}>Scouting</span>
-                                            </div>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Scout opponent tendencies</div>
-                                        </button>
-                                        <button onClick={() => { setView('depth'); setDepthChartType('OFFENSE'); }} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <Icon name="Users" size={18} />
-                                                <span style={{ fontWeight: 'bold' }}>Depth Charts</span>
-                                            </div>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Manage player positions</div>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Task Management Columns */}
-                                {(() => {
-                                    // Use top-level state (hooks are at component level)
-                                    const weeklyLists = {
-                                        today: weeklyToday,
-                                        thisWeek: weeklyThisWeek,
-                                        thisMonth: weeklyThisMonth,
-                                        someday: weeklySomeday
-                                    };
-
-                                    const weeklySetters = {
-                                        today: setWeeklyToday,
-                                        thisWeek: setWeeklyThisWeek,
-                                        thisMonth: setWeeklyThisMonth,
-                                        someday: setWeeklySomeday
-                                    };
-
-                                    const addTaskItem = (col, text) => {
-                                        if (!text?.trim()) return;
-                                        weeklySetters[col]([...weeklyLists[col], text.trim()]);
-                                        setWeeklyTaskInputs(prev => ({ ...prev, [col]: '' }));
-                                    };
-
-                                    const handleTaskDragOver = (e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                    };
-
-                                    const handleTaskDrop = (e, targetCol, targetIndex = null) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (!weeklyDraggedTask) return;
-
-                                        const { type: sourceCol, index: sourceIndex, item } = weeklyDraggedTask;
-
-                                        // Remove from source
-                                        const sourceList = weeklyLists[sourceCol];
-                                        const newSourceList = sourceList.filter((_, i) => i !== sourceIndex);
-                                        weeklySetters[sourceCol](newSourceList);
-
-                                        // Add to target
-                                        const targetList = weeklyLists[targetCol];
-                                        if (targetIndex !== null) {
-                                            const newTargetList = [...targetList];
-                                            newTargetList.splice(targetIndex, 0, item);
-                                            weeklySetters[targetCol](newTargetList);
-                                        } else {
-                                            weeklySetters[targetCol]([...targetList, item]);
-                                        }
-
-                                        setWeeklyDraggedTask(null);
-                                    };
-
-                                    return (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                                            {['today', 'thisWeek', 'thisMonth', 'someday'].map(col => {
-                                                const titleMap = { today: 'Today', thisWeek: 'This Week', thisMonth: 'This Month', someday: 'Someday' };
-                                                const taskList = weeklyLists[col];
-
-                                                return (
-                                                    <div
-                                                        key={col}
-                                                        className="card"
-                                                        style={{ display: 'flex', flexDirection: 'column', minHeight: '400px', background: 'var(--surface)', border: '1px solid var(--border)' }}
-                                                        onDragOver={handleTaskDragOver}
-                                                        onDrop={(e) => handleTaskDrop(e, col)}
-                                                    >
-                                                        <h3 style={{ fontSize: '1.1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                                                            {titleMap[col]}
-                                                            <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{taskList.length}</span>
-                                                        </h3>
-
-                                                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', minHeight: '200px' }}>
-                                                            {taskList.map((item, idx) => (
-                                                                <div
-                                                                    key={idx}
-                                                                    draggable
-                                                                    onDragStart={(e) => {
-                                                                        setWeeklyDraggedTask({ type: col, index: idx, item });
-                                                                        e.dataTransfer.effectAllowed = "move";
-                                                                    }}
-                                                                    onDragOver={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                    }}
-                                                                    onDrop={(e) => handleTaskDrop(e, col, idx)}
-                                                                    style={{
-                                                                        padding: '0.75rem',
-                                                                        background: 'white',
-                                                                        borderRadius: '6px',
-                                                                        border: '1px solid var(--border)',
-                                                                        fontSize: '0.9rem',
-                                                                        cursor: 'grab',
-                                                                        display: 'flex',
-                                                                        justifyContent: 'space-between',
-                                                                        alignItems: 'center'
-                                                                    }}
-                                                                >
-                                                                    <span>{typeof item === 'string' ? item : item.task || JSON.stringify(item)}</span>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const newList = taskList.filter((_, i) => i !== idx);
-                                                                            weeklySetters[col](newList);
-                                                                        }}
-                                                                        style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }}
-                                                                    >
-                                                                        <Icon name="X" size={14} />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-
-                                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
-                                                            <input
-                                                                className="form-input"
-                                                                style={{ fontSize: '0.9rem', padding: '0.4rem' }}
-                                                                placeholder="Add item..."
-                                                                value={weeklyTaskInputs[col] || ''}
-                                                                onChange={e => setWeeklyTaskInputs(prev => ({ ...prev, [col]: e.target.value }))}
-                                                                onKeyDown={e => e.key === 'Enter' && addTaskItem(col, weeklyTaskInputs[col])}
-                                                            />
-                                                            <button className="btn-sm btn-primary" onClick={() => addTaskItem(col, weeklyTaskInputs[col])} style={{ padding: '0 0.5rem' }}>
-                                                                <Icon name="Plus" size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        )}
                         {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} currentUser={currentUser} positionFatigue={positionFatigue} setPositionFatigue={setPositionFatigue} />}
                         {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} roster={roster} inventory={inventory} attendance={attendance} checkouts={checkouts} equipmentDueDate={equipmentDueDate} userRole={(currentUser?.roles && currentUser.roles[0]) || 'Head Coach'} permissions={currentPermissions.dashboard} masterTasks={masterTasks} depthChart={depthChart} onUpdateTask={(updatedTask) => {
                             setMasterTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
@@ -43536,8 +43217,8 @@
                                                     ) : (
                                                         budgetData.expenditures.map(exp => (
                                                             <tr key={exp.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                                <td style={{ padding: '0.75rem' }}><input className="form-input" value={exp.name} onChange={(e) => setBudgetData({ ...budgetData, expenditures: budgetData.expenditures.map(e => e.id === exp.id ? { ...e, name: e.target.v } : e) })} style={{ minWidth: '150px' }} /></td>
-                                                                <td style={{ padding: '0.75rem' }}><select clase="put" value={exp.category} onChange={(e) => setBudgetData({ ...budgetData, expenditures: budgetData.expenditures.map(e => e.id === exp.id ? { ...e, category: e.target.value } : e) })}><option>Equipment</option><option>Travel</option><option>Facilities</option><option>Uniforms</option><option>Technology</option><option>Other</option></select></td>
+                                                                <td style={{ padding: '0.75rem' }}><input className="form-input" value={exp.name} onChange={(e) => setBudgetData({ ...budgetData, expenditures: budgetData.expenditures.map(e => e.id === exp.id ? { ...e, name: e.target.value } : e) })} style={{ minWidth: '150px' }} /></td>
+                                                                <td style={{ padding: '0.75rem' }}><select className="form-input" value={exp.category} onChange={(e) => setBudgetData({ ...budgetData, expenditures: budgetData.expenditures.map(e => e.id === exp.id ? { ...e, category: e.target.value } : e) })}><option>Equipment</option><option>Travel</option><option>Facilities</option><option>Uniforms</option><option>Technology</option><option>Other</option></select></td>
                                                                 <td style={{ padding: '0.75rem', textAlign: 'right' }}><input className="form-input" type="number" value={exp.amount} onChange={(e) => setBudgetData({ ...budgetData, expenditures: budgetData.expenditures.map(e => e.id === exp.id ? { ...e, amount: parseFloat(e.target.value) || 0 } : e) })} style={{ width: '100px', textAlign: 'right' }} /></td>
                                                                 <td style={{ padding: '0.75rem', textAlign: 'center' }}><select className="form-input" value={exp.priority} onChange={(e) => setBudgetData({ ...budgetData, expenditures: budgetData.expenditures.map(e => e.id === exp.id ? { ...e, priority: e.target.value } : e) })} style={{ background: getPriorityColor(exp.priority), color: 'white', fontWeight: 'bold' }}><option>High</option><option>Medium</option><option>Low</option></select></td>
                                                                 <td style={{ padding: '0.75rem', textAlign: 'center' }}><select className="form-input" value={exp.status} onChange={(e) => setBudgetData({ ...budgetData, expenditures: budgetData.expenditures.map(e => e.id === exp.id ? { ...e, status: e.target.value } : e) })} style={{ background: getStatusColor(exp.status), color: 'white', fontWeight: 'bold' }}><option>Planned</option><option>Approved</option><option>Purchased</option></select></td>
@@ -44070,8 +43751,30 @@
                         )}
                         {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} />}
                         {view === 'staff-app' && <StaffApp staff={staff} currentUser={currentUser} dutyAssignments={dutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} onUpdateStaff={(updatedStaff) => syncToFirestore('staff', updatedStaff)} />}
-                        {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} />}
-                        {view === 'dumb-call-sheet' && <DumbCallSheet gamePlan={currentWeek.offensiveGamePlan} dumbCallSheetData={currentWeek.dumbCallSheetData || {}} onUpdateData={(newData) => handleUpdateWeek(currentWeekId, 'dumbCallSheetData', newData)} />}
+                        {view === 'smart-call-sheet' && (
+                            <SmartCallSheet 
+                                gamePlan={currentWeek.offensiveGamePlan} 
+                                situation={currentWeek.situation} 
+                                playSyntax={playSyntax} 
+                                formations={formations} 
+                                positionNames={positionNames} 
+                                zonePhilosophies={zonePhilosophies} 
+                                onUpdatePhilosophy={setZonePhilosophies}
+                                onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)}
+                                onQuickAddPlay={handleQuickAddPlay}
+                                activePlay={activePlay}
+                                setActivePlay={setActivePlay}
+                                gamePlanLayouts={gamePlanLayouts}
+                            />
+                        )}
+                        {view === 'dumb-call-sheet' && (
+                            <DumbCallSheet 
+                                data={currentWeek.dumbCallSheetData || {}} 
+                                onUpdateData={(updated) => handleUpdateWeek(currentWeek.id, 'dumbCallSheetData', updated)}
+                                gamePlanLayouts={gamePlanLayouts}
+                                plays={plays}
+                            />
+                        )}
                         {view === 'play-call-simulator' && <PlayCallSimulator plays={plays} gamePlan={currentWeek.offensiveGamePlan} />}
                         {view === 'special-teams-setup' && renderSetup('SPECIAL_TEAMS')}
                         {view === 'formations-offense' && <FormationManager formations={formations} onUpdateFormations={setFormations} formationLayouts={formationLayouts} onUpdateFormationLayout={(chartType, posId, x, y) => updateFormationLayout(chartType, posId, x, y)} onResetLayout={(chartType, formation) => resetFormationLayout(chartType, formation)} positionNames={positionNames} phase="OFFENSE" />}
@@ -44190,7 +43893,7 @@
                                     background: 'rgba(0,0,0,0.85)', zIndex: 10001,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}>
-                                    <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
+                                    <div classNamard={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
                                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
                                             {inviteData.type === 'domain_match' ? '🏫' : '📩'}
                                         </div>
@@ -44263,7 +43966,7 @@
 
         ReactDOM.render(
             <ErrorBoundary>
-                <AuthProvider>
+     <AuthProvider>
                     <App />
                 </AuthProvider>
             </ErrorBoundary>,
