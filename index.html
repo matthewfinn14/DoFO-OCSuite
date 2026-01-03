@@ -42727,39 +42727,32 @@
 
                                         {/* GAME WEEK CATEGORY */}
                                         {visibleFeatures.gameWeek?.enabled && (
-                                            <CollapsibleCategory title="OFFENSE" icon="Zap" defaultOpen={false}>
-
-                                                {/* 1. Offensive System */}
-                                                <CollapsibleCategory title="Offensive System" icon="Database" defaultOpen={false} nested={true}>
-                                                    {visibleFeatures.gameWeek?.items?.offenseSetup && (
-                                                        <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
-                                                            Offense Setup
-                                                        </button>
-                                                    )}
-                                                    {visibleFeatures.gameWeek?.items?.playbook && (
-                                                        <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
-                                                            Master Playbook
-                                                        </button>
-                                                    )}
-                                                    {visibleFeatures.gameWeek?.items?.formations && (
-                                                        <button className={`nav-item ${view === 'formations-offense' ? 'active' : ''}`} onClick={() => setView('formations-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
-                                                            Formations
-                                                        </button>
-                                                    )}
-                                                    {visibleFeatures.gameWeek?.items?.glossary && (
-                                                        <button className={`nav-item ${view === 'glossary-offense' ? 'active' : ''}`} onClick={() => setView('glossary-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
-                                                            Glossary
-                                                        </button>
-                                                    )}
-                                                    {visibleFeatures.gameWeek?.items?.drillLibrary && (
-                                                        <button className={`nav-item ${view === 'drill-library-offense' ? 'active' : ''}`} onClick={() => setView('drill-library-offense')} style={{ paddingLeft: '3.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.85rem' }}>
-                                                            Drill Library
-                                                        </button>
-                                                    )}
-                                                </CollapsibleCategory>
-
-                                                {/* Redundant items (Install, Game Plan, etc.) removed since they are in weekly selector */}
-                                                <div style={{ padding: '0.5rem 2rem', fontSize: '0.8rem', opacity: 0.6 }}>Weekly tools (Install, Game Plan, Scripts, etc.) moved to Week selector above.</div>
+                                            <CollapsibleCategory title="MASTER OFFENSE" icon="Zap" defaultOpen={false}>
+                                                {visibleFeatures.gameWeek?.items?.offenseSetup && (
+                                                    <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                        <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
+                                                    </button>
+                                                )}
+                                                {visibleFeatures.gameWeek?.items?.playbook && (
+                                                    <button className={`nav-item ${view === 'playbook' ? 'active' : ''}`} onClick={() => setView('playbook')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                        <Icon name="Book" size={16} style={{ marginRight: '8px' }} /> Master Playbook
+                                                    </button>
+                                                )}
+                                                {visibleFeatures.gameWeek?.items?.formations && (
+                                                    <button className={`nav-item ${view === 'formations-offense' ? 'active' : ''}`} onClick={() => setView('formations-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                        <Icon name="LayoutGrid" size={16} style={{ marginRight: '8px' }} /> Formations
+                                                    </button>
+                                                )}
+                                                {visibleFeatures.gameWeek?.items?.glossary && (
+                                                    <button className={`nav-item ${view === 'glossary-offense' ? 'active' : ''}`} onClick={() => setView('glossary-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                        <Icon name="BookOpen" size={16} style={{ marginRight: '8px' }} /> Glossary
+                                                    </button>
+                                                )}
+                                                {visibleFeatures.gameWeek?.items?.drillLibrary && (
+                                                    <button className={`nav-item ${view === 'drill-library-offense' ? 'active' : ''}`} onClick={() => setView('drill-library-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                        <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
+                                                    </button>
+                                                )}
                                             </CollapsibleCategory>
                                         )}
 
