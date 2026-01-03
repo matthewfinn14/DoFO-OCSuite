@@ -41089,6 +41089,16 @@
             const [setupTab, setSetupTab] = useState('positions');
             const [setupCategory, setSetupCategory] = useState(null);
 
+            // Weekly Task Management State (must be at top level, not conditional)
+            const [weeklyToday, setWeeklyToday] = useLocalStorage(`weekly-tasks-today-${currentWeekId}`, []);
+            const [weeklyThisWeek, setWeeklyThisWeek] = useLocalStorage(`weekly-tasks-thisweek-${currentWeekId}`, []);
+            const [weeklyThisMonth, setWeeklyThisMonth] = useLocalStorage(`weekly-tasks-thismonth-${currentWeekId}`, []);
+            const [weeklySomeday, setWeeklySomeday] = useLocalStorage(`weekly-tasks-someday-${currentWeekId}`, []);
+            const [weeklyTaskInputs, setWeeklyTaskInputs] = useState({ today: '', thisWeek: '', thisMonth: '', someday: '' });
+            const [weeklyDraggedTask, setWeeklyDraggedTask] = useState(null);
+
+
+
 
             // Layout Persistence
 
@@ -42086,6 +42096,7 @@
                             {setupTab === 'positions' && (
                                 <div>
                                     <h3 style={{ marginBottom: '1rem' }}>Position Names</h3>
+
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                                         {defaultPositions.map(pos => (
                                             <div key={pos.key} style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
@@ -43143,14 +43154,7 @@
 
                                 {/* Task Management Columns */}
                                 {(() => {
-                                    // Task state management
-                                    const [weeklyToday, setWeeklyToday] = useLocalStorage(`weekly-tasks-today-${currentWeekId}`, []);
-                                    const [weeklyThisWeek, setWeeklyThisWeek] = useLocalStorage(`weekly-tasks-thisweek-${currentWeekId}`, []);
-                                    const [weeklyThisMonth, setWeeklyThisMonth] = useLocalStorage(`weekly-tasks-thismonth-${currentWeekId}`, []);
-                                    const [weeklySomeday, setWeeklySomeday] = useLocalStorage(`weekly-tasks-someday-${currentWeekId}`, []);
-                                    const [taskInputs, setTaskInputs] = React.useState({ today: '', thisWeek: '', thisMonth: '', someday: '' });
-                                    const [draggedTask, setDraggedTask] = React.useState(null);
-
+                                    // Use top-level state (hooks are at component level)
                                     const weeklyLists = {
                                         today: weeklyToday,
                                         thisWeek: weeklyThisWeek,
@@ -43168,7 +43172,7 @@
                                     const addTaskItem = (col, text) => {
                                         if (!text?.trim()) return;
                                         weeklySetters[col]([...weeklyLists[col], text.trim()]);
-                                        setTaskInputs(prev => ({ ...prev, [col]: '' }));
+                                        setWeeklyTaskInputs(prev => ({ ...prev, [col]: '' }));
                                     };
 
                                     const handleTaskDragOver = (e) => {
@@ -43179,9 +43183,9 @@
                                     const handleTaskDrop = (e, targetCol, targetIndex = null) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        if (!draggedTask) return;
+                                        if (!weeklyDraggedTask) return;
 
-                                        const { type: sourceCol, index: sourceIndex, item } = draggedTask;
+                                        const { type: sourceCol, index: sourceIndex, item } = weeklyDraggedTask;
 
                                         // Remove from source
                                         const sourceList = weeklyLists[sourceCol];
@@ -43198,7 +43202,7 @@
                                             weeklySetters[targetCol]([...targetList, item]);
                                         }
 
-                                        setDraggedTask(null);
+                                        setWeeklyDraggedTask(null);
                                     };
 
                                     return (
@@ -43226,7 +43230,7 @@
                                                                     key={idx}
                                                                     draggable
                                                                     onDragStart={(e) => {
-                                                                        setDraggedTask({ type: col, index: idx, item });
+                                                                        setWeeklyDraggedTask({ type: col, index: idx, item });
                                                                         e.dataTransfer.effectAllowed = "move";
                                                                     }}
                                                                     onDragOver={(e) => {
@@ -43265,11 +43269,11 @@
                                                                 className="form-input"
                                                                 style={{ fontSize: '0.9rem', padding: '0.4rem' }}
                                                                 placeholder="Add item..."
-                                                                value={taskInputs[col] || ''}
-                                                                onChange={e => setTaskInputs(prev => ({ ...prev, [col]: e.target.value }))}
-                                                                onKeyDown={e => e.key === 'Enter' && addTaskItem(col, taskInputs[col])}
+                                                                value={weeklyTaskInputs[col] || ''}
+                                                                onChange={e => setWeeklyTaskInputs(prev => ({ ...prev, [col]: e.target.value }))}
+                                                                onKeyDown={e => e.key === 'Enter' && addTaskItem(col, weeklyTaskInputs[col])}
                                                             />
-                                                            <button className="btn-sm btn-primary" onClick={() => addTaskItem(col, taskInputs[col])} style={{ padding: '0 0.5rem' }}>
+                                                            <button className="btn-sm btn-primary" onClick={() => addTaskItem(col, weeklyTaskInputs[col])} style={{ padding: '0 0.5rem' }}>
                                                                 <Icon name="Plus" size={16} />
                                                             </button>
                                                         </div>
