@@ -35946,20 +35946,10 @@
                             });
                             const uniquePlaysCount = allGamePlanPlayIds.size;
 
-                            // Calculate total practice script slots for the week
-                            let totalScriptSlots = 0;
-                            practicePlans.forEach(plan => {
-                                plan.segments.forEach(seg => {
-                                    if (seg.hasScript && seg.script && seg.script.length > 0) {
-                                        totalScriptSlots += seg.script.length;
-                                    }
-                                });
-                            });
-
                             return (
                                 <div style={{
                                     display: 'flex',
-                                    gap: '1rem',
+                                    gap: '0.5rem',
                                     padding: '0.5rem 1rem',
                                     background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
                                     borderRadius: '24px',
@@ -35972,15 +35962,6 @@
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                                             Unique Plays
-                                        </div>
-                                    </div>
-                                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#6366f1' }}>
-                                            {totalScriptSlots}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                            Script Slots
                                         </div>
                                     </div>
                                 </div>
