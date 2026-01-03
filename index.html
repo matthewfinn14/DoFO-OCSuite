@@ -2166,7 +2166,7 @@
         // -------------------------------------------------------------------------
 
         // Install Sortable Column
-        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount, handleTogglePriority, availableSlots = [] }) => {
+        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount, handleTogglePriority, availableSlots = [], handleToggleNewPlay, newInstallIds = [] }) => {
             const [localItems, setLocalItems] = React.useState(items);
 
             const [editingWbId, setEditingWbId] = React.useState(null);
@@ -2229,8 +2229,8 @@
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{play.formation}</div>
 
-                                    {/* Flags: Rooski / Mini Script */}
-                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.7rem' }}>
+                                    {/* Flags: Rooski / Mini Script / New? */}
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.7rem', flexWrap: 'wrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <input
                                                 type="checkbox"
@@ -2243,6 +2243,17 @@
                                                 style={{ cursor: 'pointer', margin: 0 }}
                                             />
                                             <span style={{ color: '#64748b' }}>Star</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={newInstallIds.includes(play.id)}
+                                                onChange={() => handleToggleNewPlay(play.id)}
+                                                onClick={e => e.stopPropagation()}
+                                                onMouseDown={e => e.stopPropagation()}
+                                                style={{ cursor: 'pointer', margin: 0 }}
+                                            />
+                                            <span style={{ color: '#64748b' }}>New?</span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <input
@@ -24598,25 +24609,18 @@
             });
 
             // Hydrated Install List
+            // Hydrated Install List
             const hydratedInstall = installList.map(id => plays.find(p => p.id === id)).filter(Boolean);
 
-            // Helper to check if play is "New" (created in current game week window)
-            const isNewPlay = (playId) => {
-                if (!week || !week.date || !playId.startsWith('play_')) return false;
-
-                const timestamp = parseInt(playId.replace('play_', ''));
-                if (isNaN(timestamp)) return false;
-
-                const gameDateObj = new Date(week.date);
-                // Set to end of game day
-                gameDateObj.setHours(23, 59, 59, 999);
-
-                const weekStartObj = new Date(gameDateObj);
-                weekStartObj.setDate(weekStartObj.getDate() - 6);
-                weekStartObj.setHours(0, 0, 0, 0);
-
-                const createdDate = new Date(timestamp);
-                return createdDate >= weekStartObj && createdDate <= gameDateObj;
+            const handleToggleNewPlay = (playId) => {
+                const currentNewIds = week.newInstallIds || [];
+                let newIds;
+                if (currentNewIds.includes(playId)) {
+                    newIds = currentNewIds.filter(id => id !== playId);
+                } else {
+                    newIds = [...currentNewIds, playId];
+                }
+                onUpdateWeek(week.id, 'newInstallIds', newIds);
             };
 
 
@@ -24782,17 +24786,6 @@
                                                     <div style={{ flex: 1, overflow: 'hidden' }}>
                                                         <div style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                             {play.name}
-                                                            {isNewPlay(play.id) && (
-                                                                <span style={{
-                                                                    fontSize: '0.6rem',
-                                                                    background: '#0ea5e9',
-                                                                    color: 'white',
-                                                                    padding: '1px 4px',
-                                                                    borderRadius: '4px',
-                                                                    fontWeight: 'bold',
-                                                                    lineHeight: '1'
-                                                                }}>NEW</span>
-                                                            )}
                                                         </div>
                                                         <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.formation}</div>
                                                     </div>
@@ -24897,6 +24890,8 @@
                                         getGamePlanStatus={getGamePlanStatus}
                                         getScriptCount={getScriptCount}
                                         availableSlots={availableSlots}
+                                        handleToggleNewPlay={handleToggleNewPlay}
+                                        newInstallIds={week.newInstallIds || []}
                                     />
                                 </div>
                             </div>
@@ -24920,6 +24915,8 @@
                                         getGamePlanStatus={getGamePlanStatus}
                                         getScriptCount={getScriptCount}
                                         availableSlots={availableSlots}
+                                        handleToggleNewPlay={handleToggleNewPlay}
+                                        newInstallIds={week.newInstallIds || []}
                                     />
                                 </div>
                             </div>
@@ -32191,7 +32188,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [] }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [] }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
@@ -35962,30 +35959,8 @@
 
                         {/* Game Plan Statistics Ticker */}
                         {(() => {
-                            // 1. Calculate New Plays (Created in the game week window)
-                            // Window = [Game Date - 6 days, Game Date]
-                            let newPlaysCount = 0;
-                            if (weekDate) {
-                                const gameDateObj = new Date(weekDate);
-                                // Set to end of game day
-                                gameDateObj.setHours(23, 59, 59, 999);
-
-                                const weekStartObj = new Date(gameDateObj);
-                                weekStartObj.setDate(weekStartObj.getDate() - 6);
-                                weekStartObj.setHours(0, 0, 0, 0);
-
-                                plays.forEach(p => {
-                                    if (p.id.startsWith('play_')) {
-                                        const timestamp = parseInt(p.id.replace('play_', ''));
-                                        if (!isNaN(timestamp)) {
-                                            const createdDate = new Date(timestamp);
-                                            if (createdDate >= weekStartObj && createdDate <= gameDateObj) {
-                                                newPlaysCount++;
-                                            }
-                                        }
-                                    }
-                                });
-                            }
+                            // 1. Calculate New Plays (Manually flagged in Install Manager)
+                            const newPlaysCount = (newInstallIds || []).length;
 
                             // 2. Calculate unique plays in game plan
                             const allGamePlanPlayIds = new Set();
@@ -36003,6 +35978,20 @@
                                     if (id) {
                                         allGamePlanPlayIds.add(id);
                                     }
+                                });
+                            });
+
+                            // Include plays from Layouts (Call Sheet)
+                            // Include plays from Layouts (Call Sheet)
+                            Object.values(gamePlanLayouts || {}).forEach(layout => {
+                                (layout.sections || []).forEach(section => {
+                                    (section.boxes || []).forEach(box => {
+                                        (box.rows || []).forEach(row => {
+                                            if (row.content) {
+                                                allGamePlanPlayIds.add(row.content);
+                                            }
+                                        });
+                                    });
                                 });
                             });
                             const uniquePlaysCount = allGamePlanPlayIds.size;
@@ -36044,7 +36033,7 @@
 
                                     {/* Unique Plays */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#374151' }}>
                                             {uniquePlaysCount}
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
@@ -38238,6 +38227,16 @@
                     <div id="game-week-print-area">
                         {/* Header Info */}
                         <div style={{ background: '#1e293b', color: 'white', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'center' }}>
+                            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem' }}>
+                                <label style={{ color: 'var(--accent)', fontWeight: 'bold' }}>Game Date:</label>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    style={{ width: 'auto', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--accent)' }}
+                                    value={week.date || ''}
+                                    onChange={(e) => onUpdateWeek(week.id, 'date', e.target.value)}
+                                />
+                            </div>
                             <div style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)', fontWeight: '800', marginBottom: '0.5rem' }}>
                                 Motivational Focus
                             </div>
@@ -41562,7 +41561,11 @@
             };
 
             const handleUpdateWeek = (id, field, value) => {
-                setWeeks(weeks.map(w => w.id === id ? { ...w, [field]: value } : w));
+                if (field === 'bulk_update' && typeof value === 'object') {
+                    setWeeks(weeks.map(w => w.id === id ? { ...w, ...value } : w));
+                } else {
+                    setWeeks(weeks.map(w => w.id === id ? { ...w, [field]: value } : w));
+                }
             };
 
             const handleUpdateGameLog = (newLog) => {
@@ -44894,7 +44897,7 @@
                         }
 
                         {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} />}
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} />}
 
                         {
                             view === 'playbook' && (
