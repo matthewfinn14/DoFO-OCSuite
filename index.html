@@ -23007,12 +23007,20 @@
         };
 
 
-        const CollapsibleCategory = ({ title, icon, children, defaultOpen = false, nested = false }) => {
+        const CollapsibleCategory = ({ title, icon, children, defaultOpen = false, nested = false, onTitleClick }) => {
             const [isOpen, setIsOpen] = useState(defaultOpen);
+
+            const handleClick = () => {
+                if (onTitleClick) {
+                    onTitleClick();
+                }
+                setIsOpen(!isOpen);
+            };
+
             return (
                 <div style={{ marginBottom: '0.5rem' }}>
                     <div
-                        onClick={() => setIsOpen(!isOpen)}
+                        onClick={handleClick}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -42562,16 +42570,6 @@
                                                 ))}
                                             </select>
                                         )}
-                                        <button
-                                            className="btn btn-secondary btn-sm"
-                                            style={{ fontSize: '0.75rem', width: '100%', padding: '0.25rem' }}
-                                            onClick={() => {
-                                                const name = prompt("Save current week as template?", currentWeek.name + " Master");
-                                                if (name) handleSaveWeekToTemplates(name);
-                                            }}
-                                        >
-                                            Save Week as Template
-                                        </button>
                                     </div>
                                 </>
                             )}
@@ -42662,7 +42660,14 @@
                                                 {/* Offseason Phase */}
                                                 <CollapsibleCategory title="OFFSEASON" icon="Calendar" defaultOpen={false}>
                                                     {weeks.filter(w => ["November", "December", "January", "February", "March", "April", "May"].includes(w.name)).map(w => (
-                                                        <CollapsibleCategory key={w.id} title={w.name} icon={w.isLocked ? "Lock" : "Calendar"} defaultOpen={currentWeekId === w.id} nested={true}>
+                                                        <CollapsibleCategory
+                                                            key={w.id}
+                                                            title={w.name}
+                                                            icon={w.isLocked ? "Lock" : "Calendar"}
+                                                            defaultOpen={currentWeekId === w.id}
+                                                            nested={true}
+                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
+                                                        >
                                                             {renderWeeklyTools(w.id)}
                                                         </CollapsibleCategory>
                                                     ))}
@@ -42671,7 +42676,14 @@
                                                 {/* Summer Phase */}
                                                 <CollapsibleCategory title="SUMMER" icon="Sun" defaultOpen={false}>
                                                     {weeks.filter(w => w.name.includes("Summer")).map(w => (
-                                                        <CollapsibleCategory key={w.id} title={w.name} icon={w.isLocked ? "Lock" : "Sun"} defaultOpen={currentWeekId === w.id} nested={true}>
+                                                        <CollapsibleCategory
+                                                            key={w.id}
+                                                            title={w.name}
+                                                            icon={w.isLocked ? "Lock" : "Sun"}
+                                                            defaultOpen={currentWeekId === w.id}
+                                                            nested={true}
+                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
+                                                        >
                                                             {renderWeeklyTools(w.id)}
                                                         </CollapsibleCategory>
                                                     ))}
@@ -42680,7 +42692,14 @@
                                                 {/* Pre-Season Phase */}
                                                 <CollapsibleCategory title="PRE-SEASON" icon="Zap" defaultOpen={false}>
                                                     {weeks.filter(w => ["Family Week", "Camp Week", "First Week of Practice", "Week 0"].includes(w.name)).map(w => (
-                                                        <CollapsibleCategory key={w.id} title={w.name} icon={w.isLocked ? "Lock" : "Zap"} defaultOpen={currentWeekId === w.id} nested={true}>
+                                                        <CollapsibleCategory
+                                                            key={w.id}
+                                                            title={w.name}
+                                                            icon={w.isLocked ? "Lock" : "Zap"}
+                                                            defaultOpen={currentWeekId === w.id}
+                                                            nested={true}
+                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
+                                                        >
                                                             {renderWeeklyTools(w.id)}
                                                         </CollapsibleCategory>
                                                     ))}
@@ -42689,7 +42708,14 @@
                                                 {/* Regular Season Phase */}
                                                 <CollapsibleCategory title="SEASON" icon="Trophy" defaultOpen={true}>
                                                     {weeks.filter(w => (w.name.startsWith("Week ") && !w.name.includes("Summer") && w.name !== "Week 0") || w.name === "First Week with No Game").map(w => (
-                                                        <CollapsibleCategory key={w.id} title={`${w.name}${w.opponent ? ` vs ${w.opponent}` : ''}`} icon={w.isLocked ? "Lock" : "Trophy"} defaultOpen={currentWeekId === w.id} nested={true}>
+                                                        <CollapsibleCategory
+                                                            key={w.id}
+                                                            title={`${w.name}${w.opponent ? ` vs ${w.opponent}` : ''}`}
+                                                            icon={w.isLocked ? "Lock" : "Trophy"}
+                                                            defaultOpen={currentWeekId === w.id}
+                                                            nested={true}
+                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
+                                                        >
                                                             {renderWeeklyTools(w.id)}
                                                         </CollapsibleCategory>
                                                     ))}
@@ -42698,13 +42724,6 @@
                                         </div>
 
 
-                                        {/* STAFF MEETING CATEGORY */}
-                                        {/* STAFF MEETING CATEGORY (Cleanup redundant items) */}
-                                        {visibleFeatures.staffMeeting?.enabled && (
-                                            <CollapsibleCategory title="Staff Meeting" icon="Clipboard" defaultOpen={false}>
-                                                <div style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', opacity: 0.6 }}>Weekly tools moved to Week selector above.</div>
-                                            </CollapsibleCategory>
-                                        )}
 
                                         {/* GAME WEEK CATEGORY */}
                                         {visibleFeatures.gameWeek?.enabled && (
