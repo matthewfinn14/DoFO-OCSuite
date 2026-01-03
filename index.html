@@ -43080,6 +43080,86 @@
                     </div >
 
                     <main className="main-content">
+                        {view === 'staff-meeting' && (
+                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
+                                {/* Header */}
+                                <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: 'white' }}>
+                                    <h2 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="LayoutDashboard" size={28} />
+                                        {currentWeek.name} Dashboard
+                                    </h2>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                                        <div>
+                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Week</div>
+                                            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{currentWeek.name}</div>
+                                        </div>
+                                        {currentWeek.opponent && (
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Opponent</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{currentWeek.opponent}</div>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Practice Plans</div>
+                                            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{currentWeek.practicePlans?.length || 0}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Active Players</div>
+                                            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{roster.filter(p => p.status === 'Active').length}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Quick Links */}
+                                <div className="card" style={{ padding: '1.5rem' }}>
+                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="Zap" size={20} />
+                                        Quick Links
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                                        <button onClick={() => setView('practice')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <Icon name="Megaphone" size={18} />
+                                                <span style={{ fontWeight: 'bold' }}>Practice Plans</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>View and edit practice schedules</div>
+                                        </button>
+                                        <button onClick={() => setView('install-manager')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <Icon name="Layers" size={18} />
+                                                <span style={{ fontWeight: 'bold' }}>Install Manager</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Manage weekly installations</div>
+                                        </button>
+                                        <button onClick={() => setView('scouting')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <Icon name="Search" size={18} />
+                                                <span style={{ fontWeight: 'bold' }}>Scouting</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Scout opponent tendencies</div>
+                                        </button>
+                                        <button onClick={() => { setView('depth'); setDepthChartType('OFFENSE'); }} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <Icon name="Users" size={18} />
+                                                <span style={{ fontWeight: 'bold' }}>Depth Charts</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Manage player positions</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Weekly Tasks */}
+                                <div className="card" style={{ padding: '1.5rem' }}>
+                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="CheckSquare" size={20} />
+                                        Weekly Tasks
+                                    </h3>
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                        Task management coming soon. Use the navigation to access specific tools for this week.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} currentUser={currentUser} positionFatigue={positionFatigue} setPositionFatigue={setPositionFatigue} />}
                         {view === 'landing' && <ProgramDashboard currentWeek={currentWeek} roster={roster} inventory={inventory} attendance={attendance} checkouts={checkouts} equipmentDueDate={equipmentDueDate} userRole={(currentUser?.roles && currentUser.roles[0]) || 'Head Coach'} permissions={currentPermissions.dashboard} masterTasks={masterTasks} depthChart={depthChart} onUpdateTask={(updatedTask) => {
                             setMasterTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
