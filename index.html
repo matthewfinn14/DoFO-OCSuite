@@ -13673,7 +13673,7 @@
                                             border: '1px solid var(--border)',
                                             gridColumn: isFamilyWeek ? '1 / -1' : 'auto' // Family Week spans full width
                                         }}>
-                                            <div style={{ background: 'var(--surface)', padding: '1rem', fontWeight: 'bold', fontSize: '1.2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
+                                            <div style={{ background: 'var(--surface)', padding: '0.75rem 1rem', fontWeight: 'bold', fontSize: '0.95rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
                                                 {month.month}
                                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>
                                                     {viewMode === 'full' ? (idx + 1) : ''}
@@ -31027,9 +31027,9 @@
                                         onDragOver={handleDragOver}
                                         onDrop={(e) => handleDrop(e, col)}
                                     >
-                                        <h3 style={{ fontSize: '1.2rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                                        <h3 style={{ fontSize: '1.2rem', padding: '0 1rem 0.5rem 1rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
                                             {titleMap[col]}
-                                            <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{personalList.length + assignedList.length}</span>
+                                            <span style={{ fontSize: '1rem', opacity: 0.7, fontWeight: 'normal' }}>{personalList.length + assignedList.length}</span>
                                         </h3>
 
                                         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', minHeight: '200px', padding: '0.5rem' }}>
@@ -31120,10 +31120,10 @@
                                         </div>
 
                                         {canEdit && (
-                                            <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+                                            <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', paddingLeft: '0.5rem', paddingRight: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
                                                 <input
                                                     className="form-input"
-                                                    style={{ fontSize: '0.9rem', padding: '0.4rem' }}
+                                                    style={{ fontSize: '0.9rem', padding: '0.75rem' }}
                                                     placeholder={`Add item...`}
                                                     value={inputs[col] || ''}
                                                     onChange={e => setInputs(prev => ({ ...prev, [col]: e.target.value }))}
@@ -40600,8 +40600,17 @@
                 }
             }, [wbSettings, authUser]);
             const [plays, setPlays] = useState(() => {
-                const saved = localStorage.getItem('oc-dashboard-plays');
-                return saved ? JSON.parse(saved) : INITIAL_PLAYS;
+                try {
+                    const saved = localStorage.getItem('oc-dashboard-plays');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        return Array.isArray(parsed) ? parsed : INITIAL_PLAYS;
+                    }
+                    return INITIAL_PLAYS;
+                } catch (error) {
+                    console.error('Error loading plays from localStorage:', error);
+                    return INITIAL_PLAYS;
+                }
             });
 
             useEffect(() => {
@@ -42291,6 +42300,10 @@
             };
 
             const getFilteredPlaybook = () => {
+                if (!Array.isArray(plays)) {
+                    console.error('plays is not an array:', plays);
+                    return [];
+                }
                 return plays.filter(play => {
                     const matchFormation = !playbookFilters.formation || play.formation === playbookFilters.formation;
                     const matchConcept = !playbookFilters.concept || (play.concept && play.concept === playbookFilters.concept);
@@ -43746,21 +43759,13 @@
                                                         <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
                                                     </button>
                                                 )}
+                                                <button className={`nav-item ${view === 'self-scout-offense' ? 'active' : ''}`} onClick={() => setView('self-scout-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                    <Icon name="BarChart2" size={16} style={{ marginRight: '8px' }} /> Offense Self-Scout
+                                                </button>
                                             </CollapsibleCategory>
                                         )}
 
-                                        {/* SELF-SCOUT CATEGORY */}
-                                        <CollapsibleCategory title="SELF-SCOUT" icon="BarChart2" defaultOpen={false}>
-                                            <button className={`nav-item ${view === 'self-scout-offense' ? 'active' : ''}`} onClick={() => setView('self-scout-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="TrendingUp" size={16} style={{ marginRight: '8px' }} /> Season Offense
-                                            </button>
-                                            <button className={`nav-item ${view === 'self-scout-defense' ? 'active' : ''}`} onClick={() => setView('self-scout-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Shield" size={16} style={{ marginRight: '8px' }} /> Season Defense
-                                            </button>
-                                            <button className={`nav-item ${view === 'self-scout-special-teams' ? 'active' : ''}`} onClick={() => setView('self-scout-special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Zap" size={16} style={{ marginRight: '8px' }} /> Season Special Teams
-                                            </button>
-                                        </CollapsibleCategory>
+
 
                                         {/* DEFENSE CATEGORY */}
                                         {visibleFeatures.gameWeek?.enabled && (
@@ -43788,6 +43793,9 @@
                                                         <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
                                                     </button>
                                                 )}
+                                                <button className={`nav-item ${view === 'self-scout-defense' ? 'active' : ''}`} onClick={() => setView('self-scout-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                    <Icon name="BarChart2" size={16} style={{ marginRight: '8px' }} /> Defense Self-Scout
+                                                </button>
                                             </CollapsibleCategory>
                                         )}
 
@@ -43818,6 +43826,9 @@
                                                         <Icon name="List" size={16} style={{ marginRight: '8px' }} /> Drill Library
                                                     </button>
                                                 )}
+                                                <button className={`nav-item ${view === 'self-scout-special-teams' ? 'active' : ''}`} onClick={() => setView('self-scout-special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                    <Icon name="BarChart2" size={16} style={{ marginRight: '8px' }} /> Special Teams Self-Scout
+                                                </button>
                                             </CollapsibleCategory>
                                         )}
 
@@ -44214,9 +44225,9 @@
                                                         onDragOver={handleTaskDragOver}
                                                         onDrop={(e) => handleTaskDrop(e, col)}
                                                     >
-                                                        <h3 style={{ fontSize: '1.1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                                                        <h3 style={{ fontSize: '1.1rem', padding: '0 1rem 0.5rem 1rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
                                                             {titleMap[col]}
-                                                            <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{taskList.length}</span>
+                                                            <span style={{ fontSize: '1rem', opacity: 0.7, fontWeight: 'normal' }}>{taskList.length}</span>
                                                         </h3>
 
                                                         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', minHeight: '200px' }}>
@@ -44259,10 +44270,10 @@
                                                             ))}
                                                         </div>
 
-                                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+                                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', paddingLeft: '0.5rem', paddingRight: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
                                                             <input
                                                                 className="form-input"
-                                                                style={{ fontSize: '0.9rem', padding: '0.4rem' }}
+                                                                style={{ fontSize: '0.9rem', padding: '0.75rem' }}
                                                                 placeholder="Add item..."
                                                                 value={weeklyTaskInputs[col] || ''}
                                                                 onChange={e => setWeeklyTaskInputs(prev => ({ ...prev, [col]: e.target.value }))}
