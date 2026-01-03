@@ -7174,6 +7174,14 @@
                                     <input
                                         value={item.col1 || ''}
                                         onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col1: e.target.value })}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const playName = e.dataTransfer.getData('text/plain');
+                                            if (playName) {
+                                                handleUpdateRow(selectedCardId, item.id, { col1: playName });
+                                            }
+                                        }}
                                         placeholder="Play 1"
                                         style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
                                     />
@@ -7190,6 +7198,14 @@
                                     <input
                                         value={item.col3 || ''}
                                         onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col3: e.target.value })}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const playName = e.dataTransfer.getData('text/plain');
+                                            if (playName) {
+                                                handleUpdateRow(selectedCardId, item.id, { col3: playName });
+                                            }
+                                        }}
                                         placeholder="Play 2"
                                         style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
                                     />
@@ -7235,6 +7251,10 @@
                                     {filteredPlays.map(play => (
                                         <div
                                             key={play.id}
+                                            draggable={true}
+                                            onDragStart={(e) => {
+                                                e.dataTransfer.setData('text/plain', play.name);
+                                            }}
                                             onClick={() => {
                                                 if (activeCard && (activeCard.type === 'mini-scripts' || activeCard.type === 'modular')) {
                                                     handleAddPlayRow(selectedCardId, play);
