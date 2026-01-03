@@ -32159,7 +32159,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [] }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [] }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
@@ -35930,16 +35930,38 @@
 
                         {/* Game Plan Statistics Ticker */}
                         {(() => {
-                            // Calculate unique plays in game plan
-                            const allGamePlanPlayIds = new Set();
-                            let totalPlaysCount = 0;
+                            // 1. Calculate New Plays (Created in the game week window)
+                            // Window = [Game Date - 6 days, Game Date]
+                            let newPlaysCount = 0;
+                            if (weekDate) {
+                                const gameDateObj = new Date(weekDate);
+                                // Set to end of game day
+                                gameDateObj.setHours(23, 59, 59, 999);
 
+                                const weekStartObj = new Date(gameDateObj);
+                                weekStartObj.setDate(weekStartObj.getDate() - 6);
+                                weekStartObj.setHours(0, 0, 0, 0);
+
+                                plays.forEach(p => {
+                                    if (p.id.startsWith('play_')) {
+                                        const timestamp = parseInt(p.id.replace('play_', ''));
+                                        if (!isNaN(timestamp)) {
+                                            const createdDate = new Date(timestamp);
+                                            if (createdDate >= weekStartObj && createdDate <= gameDateObj) {
+                                                newPlaysCount++;
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+
+                            // 2. Calculate unique plays in game plan
+                            const allGamePlanPlayIds = new Set();
                             (gamePlan.sets || []).forEach(set => {
                                 (set.playIds || []).forEach(item => {
                                     const id = typeof item === 'object' ? item.id : item;
                                     if (id) {
                                         allGamePlanPlayIds.add(id);
-                                        totalPlaysCount++;
                                     }
                                 });
                             });
@@ -35948,13 +35970,12 @@
                                     const id = typeof item === 'object' ? item.id : item;
                                     if (id) {
                                         allGamePlanPlayIds.add(id);
-                                        totalPlaysCount++;
                                     }
                                 });
                             });
                             const uniquePlaysCount = allGamePlanPlayIds.size;
 
-                            // Calculate total offensive practice script slots
+                            // 3. Calculate total offensive practice script slots
                             let totalScriptSlots = 0;
                             Object.values(practicePlans || {}).forEach(plan => {
                                 (plan.segments || []).forEach(seg => {
@@ -35977,29 +35998,36 @@
                                     border: '1px solid var(--border)',
                                     alignItems: 'center'
                                 }}>
+                                    {/* New Plays */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0ea5e9' }}>
+                                            {newPlaysCount}
+                                        </div>
+                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
+                                            New
+                                        </div>
+                                    </div>
+
+                                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
+
+                                    {/* Unique Plays */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                         <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                                             {uniquePlaysCount}
                                         </div>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
                                             Unique
                                         </div>
                                     </div>
+
                                     <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#10b981' }}>
-                                            {totalPlaysCount}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                            Total
-                                        </div>
-                                    </div>
-                                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
+
+                                    {/* Script Slots */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                         <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#6366f1' }}>
                                             {totalScriptSlots}
                                         </div>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
                                             Slots
                                         </div>
                                     </div>
@@ -44834,7 +44862,7 @@
                         }
 
                         {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} />}
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} />}
 
                         {
                             view === 'playbook' && (
