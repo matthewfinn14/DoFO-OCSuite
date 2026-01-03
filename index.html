@@ -24600,6 +24600,25 @@
             // Hydrated Install List
             const hydratedInstall = installList.map(id => plays.find(p => p.id === id)).filter(Boolean);
 
+            // Helper to check if play is "New" (created in current game week window)
+            const isNewPlay = (playId) => {
+                if (!week || !week.date || !playId.startsWith('play_')) return false;
+
+                const timestamp = parseInt(playId.replace('play_', ''));
+                if (isNaN(timestamp)) return false;
+
+                const gameDateObj = new Date(week.date);
+                // Set to end of game day
+                gameDateObj.setHours(23, 59, 59, 999);
+
+                const weekStartObj = new Date(gameDateObj);
+                weekStartObj.setDate(weekStartObj.getDate() - 6);
+                weekStartObj.setHours(0, 0, 0, 0);
+
+                const createdDate = new Date(timestamp);
+                return createdDate >= weekStartObj && createdDate <= gameDateObj;
+            };
+
 
             return (
                 <>
@@ -24761,7 +24780,20 @@
 
                                                     {/* Play Info */}
                                                     <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                        <div style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b' }}>{play.name}</div>
+                                                        <div style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            {play.name}
+                                                            {isNewPlay(play.id) && (
+                                                                <span style={{
+                                                                    fontSize: '0.6rem',
+                                                                    background: '#0ea5e9',
+                                                                    color: 'white',
+                                                                    padding: '1px 4px',
+                                                                    borderRadius: '4px',
+                                                                    fontWeight: 'bold',
+                                                                    lineHeight: '1'
+                                                                }}>NEW</span>
+                                                            )}
+                                                        </div>
                                                         <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.formation}</div>
                                                     </div>
                                                 </div>
