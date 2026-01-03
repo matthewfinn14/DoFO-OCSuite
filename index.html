@@ -43148,16 +43148,144 @@
                                     </div>
                                 </div>
 
-                                {/* Weekly Tasks */}
-                                <div className="card" style={{ padding: '1.5rem' }}>
-                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="CheckSquare" size={20} />
-                                        Weekly Tasks
-                                    </h3>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                        Task management coming soon. Use the navigation to access specific tools for this week.
-                                    </div>
-                                </div>
+                                {/* Task Management Columns */}
+                                {(() => {
+                                    // Task state management
+                                    const [weeklyToday, setWeeklyToday] = useLocalStorage(`weekly-tasks-today-${currentWeekId}`, []);
+                                    const [weeklyThisWeek, setWeeklyThisWeek] = useLocalStorage(`weekly-tasks-thisweek-${currentWeekId}`, []);
+                                    const [weeklyThisMonth, setWeeklyThisMonth] = useLocalStorage(`weekly-tasks-thismonth-${currentWeekId}`, []);
+                                    const [weeklySomeday, setWeeklySomeday] = useLocalStorage(`weekly-tasks-someday-${currentWeekId}`, []);
+                                    const [taskInputs, setTaskInputs] = React.useState({ today: '', thisWeek: '', thisMonth: '', someday: '' });
+                                    const [draggedTask, setDraggedTask] = React.useState(null);
+
+                                    const weeklyLists = {
+                                        today: weeklyToday,
+                                        thisWeek: weeklyThisWeek,
+                                        thisMonth: weeklyThisMonth,
+                                        someday: weeklySomeday
+                                    };
+
+                                    const weeklySetters = {
+                                        today: setWeeklyToday,
+                                        thisWeek: setWeeklyThisWeek,
+                                        thisMonth: setWeeklyThisMonth,
+                                        someday: setWeeklySomeday
+                                    };
+
+                                    const addTaskItem = (col, text) => {
+                                        if (!text?.trim()) return;
+                                        weeklySetters[col]([...weeklyLists[col], text.trim()]);
+                                        setTaskInputs(prev => ({ ...prev, [col]: '' }));
+                                    };
+
+                                    const handleTaskDragOver = (e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    };
+
+                                    const handleTaskDrop = (e, targetCol, targetIndex = null) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (!draggedTask) return;
+
+                                        const { type: sourceCol, index: sourceIndex, item } = draggedTask;
+
+                                        // Remove from source
+                                        const sourceList = weeklyLists[sourceCol];
+                                        const newSourceList = sourceList.filter((_, i) => i !== sourceIndex);
+                                        weeklySetters[sourceCol](newSourceList);
+
+                                        // Add to target
+                                        const targetList = weeklyLists[targetCol];
+                                        if (targetIndex !== null) {
+                                            const newTargetList = [...targetList];
+                                            newTargetList.splice(targetIndex, 0, item);
+                                            weeklySetters[targetCol](newTargetList);
+                                        } else {
+                                            weeklySetters[targetCol]([...targetList, item]);
+                                        }
+
+                                        setDraggedTask(null);
+                                    };
+
+                                    return (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                                            {['today', 'thisWeek', 'thisMonth', 'someday'].map(col => {
+                                                const titleMap = { today: 'Today', thisWeek: 'This Week', thisMonth: 'This Month', someday: 'Someday' };
+                                                const taskList = weeklyLists[col];
+
+                                                return (
+                                                    <div
+                                                        key={col}
+                                                        className="card"
+                                                        style={{ display: 'flex', flexDirection: 'column', minHeight: '400px', background: 'var(--surface)', border: '1px solid var(--border)' }}
+                                                        onDragOver={handleTaskDragOver}
+                                                        onDrop={(e) => handleTaskDrop(e, col)}
+                                                    >
+                                                        <h3 style={{ fontSize: '1.1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                                                            {titleMap[col]}
+                                                            <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 'normal' }}>{taskList.length}</span>
+                                                        </h3>
+
+                                                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', minHeight: '200px' }}>
+                                                            {taskList.map((item, idx) => (
+                                                                <div
+                                                                    key={idx}
+                                                                    draggable
+                                                                    onDragStart={(e) => {
+                                                                        setDraggedTask({ type: col, index: idx, item });
+                                                                        e.dataTransfer.effectAllowed = "move";
+                                                                    }}
+                                                                    onDragOver={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onDrop={(e) => handleTaskDrop(e, col, idx)}
+                                                                    style={{
+                                                                        padding: '0.75rem',
+                                                                        background: 'white',
+                                                                        borderRadius: '6px',
+                                                                        border: '1px solid var(--border)',
+                                                                        fontSize: '0.9rem',
+                                                                        cursor: 'grab',
+                                                                        display: 'flex',
+                                                                        justifyContent: 'space-between',
+                                                                        alignItems: 'center'
+                                                                    }}
+                                                                >
+                                                                    <span>{typeof item === 'string' ? item : item.task || JSON.stringify(item)}</span>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const newList = taskList.filter((_, i) => i !== idx);
+                                                                            weeklySetters[col](newList);
+                                                                        }}
+                                                                        style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }}
+                                                                    >
+                                                                        <Icon name="X" size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+
+                                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+                                                            <input
+                                                                className="form-input"
+                                                                style={{ fontSize: '0.9rem', padding: '0.4rem' }}
+                                                                placeholder="Add item..."
+                                                                value={taskInputs[col] || ''}
+                                                                onChange={e => setTaskInputs(prev => ({ ...prev, [col]: e.target.value }))}
+                                                                onKeyDown={e => e.key === 'Enter' && addTaskItem(col, taskInputs[col])}
+                                                            />
+                                                            <button className="btn-sm btn-primary" onClick={() => addTaskItem(col, taskInputs[col])} style={{ padding: '0 0.5rem' }}>
+                                                                <Icon name="Plus" size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         )}
                         {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} currentUser={currentUser} positionFatigue={positionFatigue} setPositionFatigue={setPositionFatigue} />}
