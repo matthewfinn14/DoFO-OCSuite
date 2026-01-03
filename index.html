@@ -15595,7 +15595,7 @@
         };
 
         // Special Teams Dashboard Component
-        const SpecialTeamsDashboard = ({ roster, depthCharts, onUpdateDepthChart, savedLayouts, onUpdateLayout, onResetLayout, opponentData, onUpdateOpponentData }) => {
+        const SpecialTeamsDashboard = ({ roster, depthCharts, onUpdateDepthChart, savedLayouts, onUpdateLayout, onResetLayout, opponentData, onUpdateOpponentData, customPositions = {}, hiddenPositions = {}, positionNames = {} }) => {
             const [kickerDistance, setKickerDistance] = useState(opponentData?.kickerDistance || 50);
             const [punterDistance, setPunterDistance] = useState(opponentData?.punterDistance || 45);
             const [yardLine, setYardLine] = useState(35);
@@ -15856,6 +15856,9 @@
                                     savedLayout={savedLayouts[chart.type] || {}}
                                     onUpdateLayout={(layout) => onUpdateLayout(chart.type, layout)}
                                     onResetLayout={() => onResetLayout(chart.type)}
+                                    customPositions={customPositions}
+                                    hiddenPositions={hiddenPositions}
+                                    positionNames={positionNames}
                                 />
                             </div>
                         ))}
@@ -16288,13 +16291,20 @@
             );
         };
 
-        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout, positionNames = {}, onUpdatePositionNames, depthStrings = {}, onUpdateDepthStrings, depthRowCounts = {}, onUpdateDepthRowCounts }) => {
-
+        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout, positionNames = {}, onUpdatePositionNames, depthStrings = {}, onUpdateDepthStrings, depthRowCounts = {}, onUpdateDepthRowCounts, customPositions = {}, hiddenPositions = {} }) => {
             // Derive base type and squad level
             const formattedType = chartType || 'OFFENSE';
             const baseChartType = formattedType.replace(/^(V|JV|J2|SCOUT)_/, '');
             const squadPrefix = formattedType.match(/^(V|JV|J2|SCOUT)_/)?.[1] || '';
             const squadName = { 'V': 'Varsity', 'JV': 'JV', 'J2': 'JV2' }[squadPrefix] || 'Varsity';
+
+            // Map chart type to Setup Phase (OFFENSE, DEFENSE, SPECIAL_TEAMS)
+            const getSetupPhase = (type) => {
+                if (type === 'OFFENSE') return 'OFFENSE';
+                if (type === 'DEFENSE') return 'DEFENSE';
+                return 'SPECIAL_TEAMS'; // KICKOFF, PUNT, etc.
+            };
+            const setupPhase = getSetupPhase(baseChartType);
 
             // Standard coordinate mappings for different formations
             const FORMATIONS = {
@@ -16384,13 +16394,31 @@
                 ]
             };
 
-            const defaultPositions = FORMATIONS[baseChartType] || FORMATIONS['OFFENSE'];
+            // Prepare Custom Positions for this phase
+            const phaseCustomPositions = customPositions[setupPhase] || [];
+            const formattedCustomPositions = phaseCustomPositions.map((cp, idx) => ({
+                id: `CUSTOM_${baseChartType}_${cp.key}`, // Unique ID for depth chart assignment
+                key: cp.key,
+                defaultName: cp.key,
+                x: 100 + (idx * 150) % 1200, // Staggered default placement
+                y: 650 + Math.floor(idx / 8) * 150, // Below default positions
+                isCustom: true
+            }));
 
-            // Merge default positions with saved custom layout
-            const positions = defaultPositions.map(pos => {
+            // Get base defaults
+            const baseDefaults = FORMATIONS[baseChartType] || FORMATIONS['OFFENSE'];
+
+            // Filter out Hidden defaults
+            const currentHidden = hiddenPositions[setupPhase] || [];
+            const filteredDefaults = baseDefaults.filter(pos => !currentHidden.includes(pos.key));
+
+            // Combine
+            const availablePositions = [...filteredDefaults, ...formattedCustomPositions];
+
+            // Merge with saved layout
+            const positions = availablePositions.map(pos => {
                 const saved = savedLayout[pos.id];
                 // Determine name: user key override > default key override > default name
-                // Note: user key override is positionNames[pos.key]
                 const name = (pos.key ? positionNames[pos.key] : null) || pos.defaultName;
                 return saved ? { ...pos, x: saved.x, y: saved.y, name } : { ...pos, name };
             });
@@ -43981,7 +44009,7 @@
                         {view === 'staff-roster' && <StaffManager view="roster" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'staff-tasks' && <StaffManager view="tasks" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
-                        {view === 'depth' && <DepthChart roster={roster} depthChart={depthCharts[depthChartType] || {}} onUpdateDepthChart={(updated) => setDepthCharts({ ...depthCharts, [depthChartType]: updated })} chartType={depthChartType} positionNames={positionNames} />}
+                        {view === 'depth' && <DepthChart roster={roster} depthChart={depthCharts[depthChartType] || {}} onUpdateDepthChart={(updated) => setDepthCharts({ ...depthCharts, [depthChartType]: updated })} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} />}
                         {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} installList={currentWeek?.installList || []} />}
 
 
