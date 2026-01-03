@@ -7149,7 +7149,7 @@
                         } else {
                             // Render Play Row (3 Inputs: Play1, Tempo, Play2)
                             rows.push(
-                                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 1fr 80px', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '40px 80px 1fr 80px 1fr 80px', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                                         <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
                                             {currentCoord}
@@ -7170,6 +7170,14 @@
                                         </select>
                                     </div>
 
+                                    {/* Tempo (Left) */}
+                                    <input
+                                        value={item.col0 || ''}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col0: e.target.value })}
+                                        placeholder="Tempo"
+                                        style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem', textAlign: 'center', fontWeight: 'bold' }}
+                                    />
+
                                     {/* Play 1 */}
                                     <input
                                         value={item.col1 || ''}
@@ -7186,7 +7194,7 @@
                                         style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
                                     />
 
-                                    {/* Tempo */}
+                                    {/* Tempo (Middle) */}
                                     <input
                                         value={item.col2 || ''}
                                         onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col2: e.target.value })}
@@ -7420,7 +7428,7 @@
                                     >
                                         <option value="standard">Standard (Traditional)</option>
                                         <option value="staples">STAPLES (10-89)</option>
-                                        <option value="mini-scripts">Mini-Scripts (Old Modular)</option>
+                                        <option value="mini-scripts">Mini-Scripts</option>
 
                                         <option value="rooski">Rooski (16-slot grid)</option>
 
@@ -7525,8 +7533,9 @@
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {/* Header */}
-                                            <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 1fr 80px', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '40px 80px 1fr 80px 1fr 80px', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
                                                 <div style={{ textAlign: 'center' }}>#</div>
+                                                <div style={{ textAlign: 'center' }}>Tempo</div>
                                                 <div>Play 1</div>
                                                 <div style={{ textAlign: 'center' }}>Tempo</div>
                                                 <div>Play 2</div>
@@ -24587,7 +24596,7 @@
                 ],
                 game: [
                     { id: 'call_sheet', label: 'Call Sheet', desc: 'Simplified, high-contrast call sheet', icon: 'Grid' },
-                    { id: 'wristbands', label: 'Wristbands', desc: '3x5" Wristband Inserts', icon: 'Columns' },
+                    { id: 'wristbands', label: 'Wristband Wizard', desc: '3x5" Wristband Inserts', icon: 'Columns' },
                     { id: 'pregame', label: 'Pre-game Timeline', desc: 'Print game day itinerary', icon: 'Clock' },
                     { id: 'game_report', label: 'Game Report', desc: 'Post-game summary and stats', icon: 'BarChart' }
                 ],
@@ -40590,7 +40599,7 @@
                         <button className={`nav-item ${isActive && view === 'wristband' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('wristband'); }}
                             style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Watch" size={12} /> Wristbands
+                            <Icon name="Watch" size={12} /> Wristband Wizard
                         </button>
                         <button className={`nav-item ${isActive && view === 'practice-scripts' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('practice-scripts'); }}
