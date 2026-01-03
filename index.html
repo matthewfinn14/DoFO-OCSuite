@@ -5830,6 +5830,70 @@
                 setStaplesInputs(inputs);
             }, [slotMap]);
 
+            // Sync Mini-Script assignments (101A/101B)
+            useEffect(() => {
+                // Prevent running if no plays or settings
+                if (!plays || plays.length === 0 || !wbSettings) return;
+
+                const newAssignments = new Map(); // playId -> slot string
+
+                ['card1', 'card2', 'card3', 'card4', 'card5', 'card6'].forEach(cardId => {
+                    const card = wbSettings[cardId];
+                    if (card && card.type === 'mini-scripts' && card.rows) {
+                        const startCoord = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
+                        let currentCoord = startCoord;
+
+                        card.rows.forEach(row => {
+                            if (row.type !== 'header') {
+                                const coord = currentCoord++;
+
+                                // Slot A (Play 1)
+                                if (row.col1Id) {
+                                    newAssignments.set(row.col1Id, `${coord}A`);
+                                } else if (row.col1) {
+                                    // Try find by name
+                                    const p = plays.find(pl => pl.name === row.col1);
+                                    if (p) newAssignments.set(p.id, `${coord}A`);
+                                }
+
+                                // Slot B (Play 2)
+                                if (row.col3Id) {
+                                    newAssignments.set(row.col3Id, `${coord}B`);
+                                } else if (row.col3) {
+                                    // Try find by name
+                                    const p = plays.find(pl => pl.name === row.col3);
+                                    if (p) newAssignments.set(p.id, `${coord}B`);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                // Calculate updates to plays
+                const updates = [];
+                plays.forEach(p => {
+                    const target = newAssignments.get(p.id);
+                    const current = p.wristbandSlot;
+
+                    if (target) {
+                        if (current !== target) {
+                            updates.push({ ...p, wristbandSlot: target });
+                        }
+                    } else {
+                        // If Play has a Mini-Script slot (digits + A/B) but is no longer mapped, clear it.
+                        // Explicitly check for A/B suffix to avoid clearing standard wristband slots (integers)
+                        if (current && /^\d+[AB]$/.test(current)) {
+                            updates.push({ ...p, wristbandSlot: '' });
+                        }
+                    }
+                });
+
+                if (updates.length > 0) {
+                    onUpdatePlay(updates);
+                }
+
+            }, [wbSettings, plays]);
+
 
             // Helper to match Staples concept + color
             const getPlaySignature = (p) => {
@@ -5954,14 +6018,56 @@
                 const card = wbSettings[cardId];
                 if (!card) return;
 
-                const newRow = {
-                    id: Date.now().toString(),
+                const timestamp = Date.now();
+                const newHeader = {
+                    id: timestamp.toString(),
                     type: 'header',
                     label: '',
                     color: 'gray'
                 };
-                updateCard(cardId, { rows: [...card.rows, newRow] });
+
+                const newPlayRow = {
+                    id: `row_${timestamp + 1}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'play-row',
+                    col0: '',
+                    col1: '',
+                    col2: '',
+                    col3: ''
+                };
+
+                updateCard(cardId, { rows: [...card.rows, newHeader, newPlayRow] });
             };
+
+            const handleLayoutChange = (newType) => {
+                // If switching TO Rooski (16 slots), clear plays assigned to slots > 16
+                if (newType === 'rooski') {
+                    let startSlot = 0;
+                    if (selectedCardId === 'card1') startSlot = 101;
+                    else if (selectedCardId === 'card2') startSlot = 201;
+                    else if (selectedCardId === 'card3') startSlot = 301;
+                    else if (selectedCardId === 'card4') startSlot = 401;
+                    else if (selectedCardId === 'card5') startSlot = 501;
+                    else if (selectedCardId === 'card6') startSlot = 601;
+
+                    if (startSlot > 0) {
+                        const maxRooski = startSlot + 15;
+                        const maxStandard = startSlot + 47;
+
+                        // Find plays assigned to the "invalid" range (Rooski overflow)
+                        const playsToUnassign = plays.filter(p => {
+                            const slot = parseInt(p.wristbandSlot || 0);
+                            return slot > maxRooski && slot <= maxStandard;
+                        });
+
+                        playsToUnassign.forEach(p => {
+                            onUpdatePlay(p.id, { wristbandSlot: null });
+                        });
+                    }
+                }
+
+                updateCard(selectedCardId, { type: newType });
+            };
+
 
             const handleClearCard = (cardId) => {
                 const cardName = cardId === 'card1' ? 'WB1 (100s)' : (cardId === 'card2' ? 'WB2 (200s)' : (cardId === 'card3' ? 'WB3 (300s)' : (cardId === 'card4' ? 'WB4 (400s)' : (cardId === 'card5' ? 'WB5 (500s)' : (cardId === 'card6' ? 'WB6 (600s)' : 'STAPLES')))));
@@ -6231,6 +6337,7 @@
                                 <table className="wristband-spreadsheet-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                                     <colgroup>
                                         <col style={{ width: '38px' }} />
+                                        <col style={{ width: '45px' }} />
                                         <col style={{ width: 'auto' }} />
                                         <col style={{ width: '45px' }} />
                                         <col style={{ width: 'auto' }} />
@@ -6238,6 +6345,7 @@
                                     <thead>
                                         <tr style={{ background: '#e5e5e5', fontSize: '8pt', fontWeight: 'bold', textAlign: 'center', height: 'auto' }}>
                                             <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>#</th>
+                                            <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>TEMPO</th>
                                             <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>PLAY 1</th>
                                             <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>TEMPO</th>
                                             <th style={{ borderBottom: '1px solid #000', padding: 0, textAlign: 'center' }}>PLAY 2</th>
@@ -6256,7 +6364,7 @@
 
                                                 return (
                                                     <tr key={row.id}>
-                                                        <td colSpan="4" style={{
+                                                        <td colSpan="5" style={{
                                                             background: bg,
                                                             color: fg,
                                                             fontWeight: 'bold',
@@ -6304,6 +6412,21 @@
                                                             background: rowBackground
                                                         }}>
                                                             {thisCoord}
+                                                        </td>
+                                                        {/* Tempo Left */}
+                                                        <td style={{
+                                                            border: '1px solid #333',
+                                                            padding: '0 2px',
+                                                            fontSize: `${fontSize}rem`,
+                                                            verticalAlign: 'middle',
+                                                            overflow: 'hidden',
+                                                            whiteSpace: 'nowrap',
+                                                            textOverflow: 'ellipsis',
+                                                            fontWeight: 'bold',
+                                                            textAlign: 'center',
+                                                            background: '#ffedd5'
+                                                        }}>
+                                                            {row.col0}
                                                         </td>
                                                         {/* Play 1 */}
                                                         <td style={{
@@ -7188,7 +7311,8 @@
                                             e.preventDefault();
                                             const playName = e.dataTransfer.getData('text/plain');
                                             if (playName) {
-                                                handleUpdateRow(selectedCardId, item.id, { col1: playName });
+                                                const p = plays.find(p => p.name === playName);
+                                                handleUpdateRow(selectedCardId, item.id, { col1: playName, col1Id: p ? p.id : null });
                                             }
                                         }}
                                         placeholder="Play 1"
@@ -7212,7 +7336,8 @@
                                             e.preventDefault();
                                             const playName = e.dataTransfer.getData('text/plain');
                                             if (playName) {
-                                                handleUpdateRow(selectedCardId, item.id, { col3: playName });
+                                                const p = plays.find(p => p.name === playName);
+                                                handleUpdateRow(selectedCardId, item.id, { col3: playName, col3Id: p ? p.id : null });
                                             }
                                         }}
                                         placeholder="Play 2"
@@ -7411,7 +7536,6 @@
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '1rem',
-                                flexWrap: 'wrap',
                                 padding: '0.75rem',
                                 background: 'var(--bg-panel)',
                                 border: '1px solid var(--border)',
@@ -7424,7 +7548,7 @@
                                         className="form-input"
                                         style={{ width: 'auto', padding: '4px 8px' }}
                                         value={activeCard.type}
-                                        onChange={e => updateCard(selectedCardId, { type: e.target.value })}
+                                        onChange={e => handleLayoutChange(e.target.value)}
                                         disabled={selectedCardId === 'staples'}
                                     >
                                         <option value="standard">Standard (Traditional)</option>
@@ -7463,14 +7587,14 @@
                                             onChange={e => updateCard(selectedCardId, { color: e.target.value })}
                                         >
                                             <option value="none">None (White)</option>
-                                            <option value="green">Green (alternating shades)</option>
-                                            <option value="orange">Orange (alternating shades)</option>
-                                            <option value="red">Red (alternating shades)</option>
-                                            <option value="blue">Blue (alternating shades)</option>
-                                            <option value="yellow">Yellow (alternating shades)</option>
-                                            <option value="purple">Purple (alternating shades)</option>
-                                            <option value="teal">Teal (alternating shades)</option>
-                                            <option value="pink">Pink (alternating shades)</option>
+                                            <option value="green">Green</option>
+                                            <option value="orange">Orange</option>
+                                            <option value="red">Red</option>
+                                            <option value="blue">Blue</option>
+                                            <option value="yellow">Yellow</option>
+                                            <option value="purple">Purple</option>
+                                            <option value="teal">Teal</option>
+                                            <option value="pink">Pink</option>
                                         </select>
                                     </div>
                                 )}
@@ -7487,28 +7611,6 @@
                                                 <option value="skill">Skill Positions</option>
                                                 <option value="oline">O-Line</option>
                                             </select>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                style={{ width: '120px', padding: '4px 8px' }}
-                                                value={activeCard.opponent || ''}
-                                                onChange={(e) => updateCard(selectedCardId, { opponent: e.target.value })}
-                                                placeholder="e.g., Oelwein"
-                                            />
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iteration:</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                className="form-input"
-                                                style={{ width: '60px', padding: '4px 8px' }}
-                                                value={activeCard.iteration || 1}
-                                                onChange={(e) => updateCard(selectedCardId, { iteration: parseInt(e.target.value) || 1 })}
-                                            />
                                         </div>
                                     </>
                                 )}
@@ -7563,19 +7665,22 @@
                                                 aspectRatio: '5/3',
                                                 color: 'black'
                                             }}>
-                                                {/* Header */}
+                                                {/* Header REMOVED per user request
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '2px solid #333' }}>
                                                     <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.9rem' }}>{activeCard.opp || 'OPPONENT'}</span>
                                                     <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Card {selectedCardId === 'card1' ? '1' : (selectedCardId === 'card2' ? '2' : (selectedCardId === 'card3' ? '3' : (selectedCardId === 'card4' ? '4' : (selectedCardId === 'card5' ? '5' : '6'))))}{activeCard.iter ? ` - Iter ${activeCard.iter}` : ''}</span>
                                                 </div>
+                                                */}
                                                 {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId, activeCard.opp || activeCard.opponent || '')}
                                             </div>
                                         ) : (
                                             <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                                {/*
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
                                                     <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
                                                     <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
                                                 </div>
+                                                */}
                                                 {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')}
                                             </div>
                                         )}
@@ -7583,10 +7688,12 @@
                                 </div>
                             ) : activeCard ? (
                                 <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                    {/*
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
                                         <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
                                         <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
                                     </div>
+                                    */}
                                     {activeCard.type === 'rooski' ? (
                                         <div style={{
                                             width: '100%',
