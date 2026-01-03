@@ -21639,6 +21639,96 @@
                             ))}
                         </div>
 
+                        {/* Game Plan Statistics */}
+                        {(() => {
+                            // Calculate unique plays in game plan
+                            const allGamePlanPlayIds = new Set();
+                            (gamePlan.sets || []).forEach(set => {
+                                (set.playIds || []).forEach(item => {
+                                    const id = typeof item === 'object' ? item.id : item;
+                                    if (id) allGamePlanPlayIds.add(id);
+                                });
+                            });
+                            (gamePlan.miniScripts || []).forEach(script => {
+                                (script.playIds || []).forEach(item => {
+                                    const id = typeof item === 'object' ? item.id : item;
+                                    if (id) allGamePlanPlayIds.add(id);
+                                });
+                            });
+                            const uniquePlaysCount = allGamePlanPlayIds.size;
+
+                            // Calculate new plays (plays added this week that weren't in previous weeks)
+                            const previousWeekPlayIds = new Set();
+                            weeks.forEach(w => {
+                                if (w.weekNumber < currentWeek.weekNumber) {
+                                    const prevGamePlan = w.gamePlan || {};
+                                    (prevGamePlan.sets || []).forEach(set => {
+                                        (set.playIds || []).forEach(item => {
+                                            const id = typeof item === 'object' ? item.id : item;
+                                            if (id) previousWeekPlayIds.add(id);
+                                        });
+                                    });
+                                    (prevGamePlan.miniScripts || []).forEach(script => {
+                                        (script.playIds || []).forEach(item => {
+                                            const id = typeof item === 'object' ? item.id : item;
+                                            if (id) previousWeekPlayIds.add(id);
+                                        });
+                                    });
+                                }
+                            });
+                            const newPlaysCount = Array.from(allGamePlanPlayIds).filter(id => !previousWeekPlayIds.has(id)).length;
+
+                            // Calculate total practice script slots for the week
+                            let totalScriptSlots = 0;
+                            practicePlans.forEach(plan => {
+                                plan.segments.forEach(seg => {
+                                    if (seg.hasScript && seg.script && seg.script.length > 0) {
+                                        totalScriptSlots += seg.script.length;
+                                    }
+                                });
+                            });
+
+                            return (
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    gap: '1.5rem',
+                                    marginBottom: '1rem',
+                                    padding: '1rem',
+                                    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                                    borderRadius: '12px',
+                                    border: '1px solid var(--border)'
+                                }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                                            {uniquePlaysCount}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            Unique Plays
+                                        </div>
+                                    </div>
+                                    <div style={{ width: '1px', background: 'var(--border)' }}></div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#10b981' }}>
+                                            {newPlaysCount}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            New Plays
+                                        </div>
+                                    </div>
+                                    <div style={{ width: '1px', background: 'var(--border)' }}></div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#6366f1' }}>
+                                            {totalScriptSlots}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            Script Slots
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         {/* Situations View */}
                         {viewMode === 'situations' && (gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => (
                             <div key={section.id || sIdx} style={{ marginBottom: '1.5rem' }}>
