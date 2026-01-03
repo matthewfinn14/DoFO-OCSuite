@@ -5830,6 +5830,67 @@
                 setStaplesInputs(inputs);
             }, [slotMap]);
 
+            // Auto-cleanup Ghost Assignments (Rooski/Mini-Scripts overflow)
+            useEffect(() => {
+                if (!wbSettings || !selectedCardId) return;
+
+                const card = wbSettings[selectedCardId];
+                if (!card) return;
+
+                let startSlot = 0;
+                if (selectedCardId === 'card1') startSlot = 101;
+                else if (selectedCardId === 'card2') startSlot = 201;
+                else if (selectedCardId === 'card3') startSlot = 301;
+                else if (selectedCardId === 'card4') startSlot = 401;
+                else if (selectedCardId === 'card5') startSlot = 501;
+                else if (selectedCardId === 'card6') startSlot = 601;
+
+                if (startSlot === 0) return;
+
+                const updates = [];
+
+                if (card.type === 'rooski') {
+                    const maxRooski = startSlot + 15;
+                    const maxStandard = startSlot + 47; // Standard 48 slots
+
+                    // Identify ghosts: plays assigned to > maxRooski but within standard range
+                    plays.forEach(p => {
+                        if (!p.wristbandSlot) return;
+                        const slotStr = p.wristbandSlot.toString();
+                        const slot = parseInt(slotStr, 10);
+
+                        if (slot > maxRooski && slot <= maxStandard) {
+                            updates.push({ ...p, wristbandSlot: '' });
+                        }
+                    });
+
+                } else if (card.type === 'mini-scripts') {
+                    const minStandard = startSlot;
+                    const maxStandard = startSlot + 99; // Wide net
+
+                    // Identify ghosts: plays assigned to numeric slots (Traditional) when in Mini-Scripts
+                    plays.forEach(p => {
+                        if (!p.wristbandSlot) return;
+                        const slotStr = p.wristbandSlot.toString();
+
+                        // If it's pure number, it's a Traditional ghost in Mini-Scripts land
+                        // Mini-Scripts use "101A", "101B"
+                        if (/^\d+$/.test(slotStr)) {
+                            const slot = parseInt(slotStr, 10);
+                            if (slot >= minStandard && slot <= maxStandard) {
+                                updates.push({ ...p, wristbandSlot: '' });
+                            }
+                        }
+                    });
+                }
+
+                if (updates.length > 0) {
+                    // Use setTimeout to avoid render-cycle conflicts if immediate
+                    setTimeout(() => onUpdatePlay(updates), 0);
+                }
+            }, [wbSettings, selectedCardId, plays]); // Dependency on plays ensures we re-check if data loads later
+
+
             // Sync Mini-Script assignments (101A/101B)
             useEffect(() => {
                 // Prevent running if no plays or settings
@@ -6039,30 +6100,76 @@
             };
 
             const handleLayoutChange = (newType) => {
-                // If switching TO Rooski (16 slots), clear plays assigned to slots > 16
-                if (newType === 'rooski') {
-                    let startSlot = 0;
-                    if (selectedCardId === 'card1') startSlot = 101;
-                    else if (selectedCardId === 'card2') startSlot = 201;
-                    else if (selectedCardId === 'card3') startSlot = 301;
-                    else if (selectedCardId === 'card4') startSlot = 401;
-                    else if (selectedCardId === 'card5') startSlot = 501;
-                    else if (selectedCardId === 'card6') startSlot = 601;
+                let startSlot = 0;
+                if (selectedCardId === 'card1') startSlot = 101;
+                else if (selectedCardId === 'card2') startSlot = 201;
+                else if (selectedCardId === 'card3') startSlot = 301;
+                else if (selectedCardId === 'card4') startSlot = 401;
+                else if (selectedCardId === 'card5') startSlot = 501;
+                else if (selectedCardId === 'card6') startSlot = 601;
 
+                const updates = [];
+
+                if (newType === 'rooski') {
+                    // If switching TO Rooski (16 slots), clear plays assigned to slots > 16
                     if (startSlot > 0) {
                         const maxRooski = startSlot + 15;
                         const maxStandard = startSlot + 47;
 
-                        // Find plays assigned to the "invalid" range (Rooski overflow)
-                        const playsToUnassign = plays.filter(p => {
+                        plays.forEach(p => {
                             const slot = parseInt(p.wristbandSlot || 0);
-                            return slot > maxRooski && slot <= maxStandard;
-                        });
-
-                        playsToUnassign.forEach(p => {
-                            onUpdatePlay(p.id, { wristbandSlot: null });
+                            if (slot > maxRooski && slot <= maxStandard) {
+                                updates.push({ ...p, wristbandSlot: '' });
+                            }
                         });
                     }
+                } else if (newType === 'mini-scripts') {
+                    // If switching TO Mini-Scripts, clear ALMOST ALL Standard assignments (101-148)
+                    // because Mini-Scripts uses A/B slots.
+                    // However, we should be careful. If I switch Standard -> Mini-Scripts, maybe I WANT to keep them?
+                    // But the user specifically said "traditional wristband coordinates should have been cleared".
+                    // So we will clear the traditional numeric slots range for this card.
+                    if (startSlot > 0) {
+                        const minStandard = startSlot;
+                        const maxStandard = startSlot + 99; // Cover a wide range just in case
+
+                        plays.forEach(p => {
+                            // Check if it's a pure number (Traditional)
+                            // We don't want to wipe "101A" if we are already in Mini-Scripts and just re-selecting logic?
+                            // But usually we switch FROM something else.
+                            // If p.wristbandSlot is "101", parseInt is 101.
+                            // If p.wristbandSlot is "101A", parseInt is 101.
+                            // We should differentiate.
+                            // Traditional slots are strictly numeric strings?
+                            // Actually, let's just use parseInt check, but verify the string is just numbers?
+                            // Or, if we entered Mini-Scripts, maybe we assume the user is starting fresh or using the Builder rows.
+                            // The user said "traditional wristband coordinates should have been cleared".
+                            // So let's clear anything that acts like a traditional coordinate in that range.
+
+                            if (!p.wristbandSlot) return;
+
+                            const slotStr = p.wristbandSlot.toString();
+                            const slotNum = parseInt(slotStr, 10);
+
+                            // Check if it's in the card's 100s range
+                            if (slotNum >= minStandard && slotNum <= maxStandard) {
+                                // Only clear if it looks like a traditional slot (no letters)
+                                // Standard slots are "101", "102". Mini-scripts are "101A", "101B".
+                                // If I have "101A", user might want to keep it?
+                                // BUT, if I am initiating the switch TO mini-scripts, implies I wasn't using it before?
+                                // Or maybe I swtiched away and back?
+                                // Safest: Clear pure numeric slots.
+                                const isNumeric = /^\d+$/.test(slotStr);
+                                if (isNumeric) {
+                                    updates.push({ ...p, wristbandSlot: '' });
+                                }
+                            }
+                        });
+                    }
+                }
+
+                if (updates.length > 0) {
+                    onUpdatePlay(updates);
                 }
 
                 updateCard(selectedCardId, { type: newType });
@@ -6087,12 +6194,24 @@
             const confirmClear = () => {
                 if (!confirmModal) return;
 
+                const updates = [];
+
                 if (confirmModal.action === 'all') {
                     // Clear all play linkings
                     plays.forEach(play => {
-                        if (play.wristbandSlot) onUpdatePlay({ ...play, wristbandSlot: '' });
-                        if (play.staplesSlot) onUpdatePlay({ ...play, staplesSlot: '' });
+                        let needsUpdate = false;
+                        const update = { ...play };
+                        if (play.wristbandSlot) {
+                            update.wristbandSlot = '';
+                            needsUpdate = true;
+                        }
+                        if (play.staplesSlot) {
+                            update.staplesSlot = '';
+                            needsUpdate = true;
+                        }
+                        if (needsUpdate) updates.push(update);
                     });
+
                     // Clear all modular rows
                     setWbSettings(prev => ({
                         card1: { ...prev.card1, rows: [] },
@@ -6110,26 +6229,33 @@
                         // Clear Staples (10-89)
                         plays.forEach(play => {
                             if (play.staplesSlot) {
-                                const slot = Number(play.staplesSlot);
-                                if (slot >= 10 && slot <= 89) {
-                                    onUpdatePlay({ ...play, staplesSlot: '' });
+                                const slot = parseInt(play.staplesSlot, 10);
+                                if (!isNaN(slot) && slot >= 10 && slot <= 89) {
+                                    updates.push({ ...play, staplesSlot: '' });
                                 }
                             }
                         });
                     } else {
-                        // Standard Clear
+                        // Standard Clear (works for Standard, Rooski, Mini-Scripts if they use slots)
                         const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
-                        const end = start + 47; // Assuming 48 slots max
+                        const end = start + 99; // Allow for wider range (e.g. up to 199) to catch A/B slots if parsed as int
 
                         plays.forEach(play => {
-                            const slot = Number(play.wristbandSlot);
-                            if (slot >= start && slot <= end) {
-                                onUpdatePlay({ ...play, wristbandSlot: '' });
+                            if (play.wristbandSlot) {
+                                const slot = parseInt(play.wristbandSlot, 10);
+                                // Check if slot matches the card range (e.g. 101-199)
+                                if (!isNaN(slot) && slot >= start && slot < start + 100) {
+                                    updates.push({ ...play, wristbandSlot: '' });
+                                }
                             }
                         });
                     }
 
                     updateCard(cardId, { rows: [] });
+                }
+
+                if (updates.length > 0) {
+                    onUpdatePlay(updates);
                 }
 
                 setConfirmModal(null);
@@ -6346,9 +6472,9 @@
                                         <tr style={{ background: '#e5e5e5', fontSize: '8pt', fontWeight: 'bold', textAlign: 'center', height: 'auto' }}>
                                             <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>#</th>
                                             <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>TEMPO</th>
-                                            <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>PLAY 1</th>
+                                            <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>PLAY A</th>
                                             <th style={{ borderBottom: '1px solid #000', borderRight: '1px solid #000', padding: 0, textAlign: 'center' }}>TEMPO</th>
-                                            <th style={{ borderBottom: '1px solid #000', padding: 0, textAlign: 'center' }}>PLAY 2</th>
+                                            <th style={{ borderBottom: '1px solid #000', padding: 0, textAlign: 'center' }}>PLAY B</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -7315,7 +7441,7 @@
                                                 handleUpdateRow(selectedCardId, item.id, { col1: playName, col1Id: p ? p.id : null });
                                             }
                                         }}
-                                        placeholder="Play 1"
+                                        placeholder="Play A"
                                         style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
                                     />
 
@@ -7340,7 +7466,7 @@
                                                 handleUpdateRow(selectedCardId, item.id, { col3: playName, col3Id: p ? p.id : null });
                                             }
                                         }}
-                                        placeholder="Play 2"
+                                        placeholder="Play B"
                                         style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
                                     />
 
@@ -7552,7 +7678,7 @@
                                         disabled={selectedCardId === 'staples'}
                                     >
                                         <option value="standard">Standard (Traditional)</option>
-                                        <option value="staples">STAPLES (10-89)</option>
+
                                         <option value="mini-scripts">Mini-Scripts</option>
 
                                         <option value="rooski">Rooski (16-slot grid)</option>
@@ -7639,9 +7765,9 @@
                                             <div style={{ display: 'grid', gridTemplateColumns: '40px 80px 1fr 80px 1fr 80px', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
                                                 <div style={{ textAlign: 'center' }}>#</div>
                                                 <div style={{ textAlign: 'center' }}>Tempo</div>
-                                                <div>Play 1</div>
+                                                <div>Play A</div>
                                                 <div style={{ textAlign: 'center' }}>Tempo</div>
-                                                <div>Play 2</div>
+                                                <div>Play B</div>
                                                 <div></div>
                                             </div>
                                             {/* Rows */}
