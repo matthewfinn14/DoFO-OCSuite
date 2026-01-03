@@ -7906,7 +7906,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentSettings = {} }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentSettings = {}, scriptPresets = [] }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -8052,15 +8052,72 @@
                 });
             };
 
-            // Ensure script slots consistency and calculate times
-            // Moved here to be accessible by useEffect
-            const ensureScriptSlots = (currentScript, duration, segmentType = '') => {
-                const targetCount = Math.round((parseInt(duration) || 0) * 1.6) || 0; // Handle NaN/undefined safely
+            // Helper to find preset based on Type and Situation (Focus)
+            const findPreset = (type, situation) => {
+                const normalize = (str) => (str || '').trim().toLowerCase().replace(/s$/, ''); // Remove trailing s
+                const t = (type || '').trim().toLowerCase();
+                const s = normalize(situation);
+
+                // 0. Explicit Type + Focus Match
+                const exactExplicit = scriptPresets.find(p =>
+                    p.type && p.type.toLowerCase() === t &&
+                    p.focus && normalize(p.focus) === s
+                );
+                if (exactExplicit) return exactExplicit;
+
+                // 1. Try Specific Combos (Legacy Name)
+                if (t && s) {
+                    const match = scriptPresets.find(p => {
+                        const n = p.name.trim().toLowerCase();
+                        return n === `${t} - ${situation.toLowerCase()}` || n.includes(s);
+                    });
+                    if (match) return match;
+                }
+
+                // 2. Explicit Focus Match (Rare but possible)
+                if (s) {
+                    const focusExplicit = scriptPresets.find(p =>
+                        p.focus && normalize(p.focus) === s && (!p.type || !p.type.trim())
+                    );
+                    if (focusExplicit) return focusExplicit;
+                }
+
+                // 3. Try Situation (Legacy Name)
+                if (s) {
+                    const match = scriptPresets.find(p => {
+                        const n = normalize(p.name);
+                        return n === s;
+                    });
+                    if (match) return match;
+                }
+
+                // 4. Explicit Type Match (Generic)
+                if (t) {
+                    const typeExplicit = scriptPresets.find(p =>
+                        p.type && p.type.toLowerCase() === t && (!p.focus || !p.focus.trim())
+                    );
+                    if (typeExplicit) return typeExplicit;
+                }
+
+                // 5. Try Type (Legacy Name)
+                if (t) {
+                    const match = scriptPresets.find(p => p.name.trim().toLowerCase() === t);
+                    if (match) return match;
+                }
+
+                return null;
+            };
+
+            const ensureScriptSlots = (currentScript, duration, segmentType = '', segmentSituation = '') => {
+                const targetCount = Math.round((parseInt(duration) || 0) * 1.6) || 0;
+
+                // Find matching preset
+                // Note: scriptPresets is available in scope (passed as prop)
+                const preset = findPreset(segmentType, segmentSituation);
 
                 const PATTERN_A = ['L', 'LM', 'M', 'RM', 'R', 'RM', 'M', 'LM'];
                 const PATTERN_B = ['R', 'RM', 'M', 'LM', 'L', 'LM', 'M', 'RM'];
 
-                // Determine pattern based on existing slots or random choice
                 let pattern = Math.random() > 0.5 ? PATTERN_A : PATTERN_B;
                 if (currentScript && currentScript.length > 0 && currentScript[0].hash) {
                     if (currentScript[0].hash === 'L') pattern = PATTERN_A;
@@ -8074,32 +8131,35 @@
                     'ONSIDE KICK', 'PREVENT DEFENSE', 'VICTORY'
                 ];
 
-                // BACKFILL/FIX LOGIC: Ensure segments have yardlines (Take-Off) and hashes (All)
                 let processedScript = [...(currentScript || [])];
-                const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
 
                 processedScript = processedScript.map((slot, i) => {
                     let newSlot = { ...slot };
                     let changed = false;
 
-                    // Fix missing hashes
+                    // Apply Preset Data (YardLines, Hashes, Situations from preset)
+                    if (preset && preset.items && preset.items.length > 0) {
+                        const pItem = preset.items[i % preset.items.length];
+
+                        if (preset.useYardLine) {
+                            if (pItem.yardLine && !newSlot.yardLine) { newSlot.yardLine = pItem.yardLine; changed = true; }
+                            if (pItem.hash && !newSlot.hash) { newSlot.hash = pItem.hash; changed = true; }
+                            if (pItem.down && !newSlot.downDistance) { newSlot.downDistance = pItem.down; changed = true; }
+                            if (newSlot.situation) { delete newSlot.situation; changed = true; }
+                        } else {
+                            if (pItem.situation && !newSlot.situation) { newSlot.situation = pItem.situation; changed = true; }
+                            if (newSlot.yardLine) { delete newSlot.yardLine; changed = true; }
+                        }
+                    }
+
+                    // Fallback Defaults
                     if (!newSlot.hash) {
                         newSlot.hash = pattern[i % 8];
                         changed = true;
                     }
 
-                    // Fix Take-Off yardlines
-                    if (segmentType === 'Take-Off') {
-                        if (newSlot.yardLine === undefined || newSlot.situation !== undefined) {
-                            delete newSlot.situation;
-                            newSlot.yardLine = yardlines[i % yardlines.length] || '';
-                            newSlot.downDistance = newSlot.downDistance || '';
-                            changed = true;
-                        }
-                    }
-
-                    // Fix Ghost Script situations (if empty and within sequence range)
-                    if (segmentType === 'Ghost Script') {
+                    // Ghost Script Legacy Fallback
+                    if (segmentType === 'Ghost Script' && !preset) {
                         if (!newSlot.situation && i < GHOST_SEQUENCE.length) {
                             newSlot.situation = GHOST_SEQUENCE[i];
                             changed = true;
@@ -8109,33 +8169,35 @@
                     return changed ? newSlot : slot;
                 });
 
-                // For Ghost Script, ensure we at least cover the sequence
                 let needed = targetCount - processedScript.length;
-                if (segmentType === 'Ghost Script' && processedScript.length < GHOST_SEQUENCE.length) {
+                if (segmentType === 'Ghost Script' && !preset && processedScript.length < GHOST_SEQUENCE.length) {
                     needed = GHOST_SEQUENCE.length - processedScript.length;
                 }
 
                 if (needed <= 0) return processedScript;
 
                 const newSlots = Array(needed).fill(0).map((_, i) => {
+                    const seqIndex = processedScript.length + i;
                     const slot = {
                         id: Date.now().toString() + Math.random(),
                         playId: '',
                         playName: '',
-                        hash: pattern[(processedScript.length + i) % 8]
+                        hash: pattern[seqIndex % 8]
                     };
 
-                    // For Take-Off segments, use yardLine and downDistance
-                    if (segmentType === 'Take-Off') {
-                        slot.yardLine = yardlines[(processedScript.length + i) % yardlines.length] || '';
-                        slot.downDistance = '';
-                    }
-                    // For Ghost Script, use sequence
-                    else if (segmentType === 'Ghost Script') {
-                        const seqIndex = processedScript.length + i;
+                    if (preset && preset.items && preset.items.length > 0) {
+                        const pItem = preset.items[seqIndex % preset.items.length];
+                        if (preset.useYardLine) {
+                            slot.yardLine = pItem.yardLine || '';
+                            slot.downDistance = pItem.down || '';
+                            if (pItem.hash) slot.hash = pItem.hash;
+                        } else {
+                            slot.situation = pItem.situation || '';
+                            if (pItem.hash) slot.hash = pItem.hash;
+                        }
+                    } else if (segmentType === 'Ghost Script') {
                         slot.situation = seqIndex < GHOST_SEQUENCE.length ? GHOST_SEQUENCE[seqIndex] : '';
-                    }
-                    else {
+                    } else {
                         slot.situation = '';
                     }
 
@@ -8144,6 +8206,15 @@
 
                 return [...processedScript, ...newSlots];
             };
+
+
+
+
+
+
+
+
+
 
             // Calculate segment times and ensure script consistency automatically
             useEffect(() => {
@@ -8167,7 +8238,7 @@
                     currentTime.setMinutes(currentTime.getMinutes() + parseInt(seg.duration || 0));
 
                     // Ensure script slots are correct (including Take-Off yardlines)
-                    const updatedScript = ensureScriptSlots(seg.script || [], parseInt(seg.duration || 0), seg.type);
+                    const updatedScript = ensureScriptSlots(seg.script || [], parseInt(seg.duration || 0), seg.type, seg.situation);
 
                     // Force clear situation/focus for Ghost Script to resolve rendering issues
                     if (seg.type === 'Ghost Script' && seg.situation) {
@@ -8187,7 +8258,7 @@
 
             const addSegment = () => {
                 const duration = 5;
-                const script = ensureScriptSlots([], duration);
+                const script = ensureScriptSlots([], duration, 'NEW SEGMENT', '');
 
                 updateCurrentPlan({
                     ...plan,
@@ -8217,7 +8288,7 @@
 
                 if (field === 'duration') {
                     const segment = plan.segments.find(s => s.id === id);
-                    const newScript = ensureScriptSlots(segment.script, value, segment.type);
+                    const newScript = ensureScriptSlots(segment.script, value, segment.type, segment.situation);
                     updateCurrentPlan({
                         ...plan,
                         segments: plan.segments.map(s => s.id === id ? { ...s, duration: value, script: newScript } : s)
@@ -8225,36 +8296,26 @@
                     return;
                 }
 
-                // Handle type changes - migrate script when changing to/from Take-Off
                 if (field === 'type') {
                     const segment = plan.segments.find(s => s.id === id);
-                    const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
+                    const newPreset = findPreset(value, segment.situation);
 
-                    // If changing TO Take-Off, migrate existing script slots
-                    if (value === 'Take-Off' && segment.script && segment.script.length > 0) {
+                    if (newPreset && segment.script && segment.script.length > 0) {
+                        // Migrate compatible fields
                         const migratedScript = segment.script.map((slot, index) => {
                             const newSlot = { ...slot };
-                            // Move situation to yardLine if it exists, otherwise use sequence
-                            newSlot.yardLine = yardlines[index % yardlines.length] || '';
-                            newSlot.downDistance = '';
-                            delete newSlot.situation;
-                            return newSlot;
-                        });
+                            const pItem = newPreset.items[index % newPreset.items.length] || {};
 
-                        updateCurrentPlan({
-                            ...plan,
-                            segments: plan.segments.map(s => s.id === id ? { ...s, type: value, script: migratedScript } : s)
-                        });
-                        return;
-                    }
-
-                    // If changing FROM Take-Off, migrate back to situation
-                    if (segment.type === 'Take-Off' && value !== 'Take-Off' && segment.script && segment.script.length > 0) {
-                        const migratedScript = segment.script.map(slot => {
-                            const newSlot = { ...slot };
-                            newSlot.situation = '';
-                            delete newSlot.yardLine;
-                            delete newSlot.downDistance;
+                            if (newPreset.useYardLine) {
+                                newSlot.yardLine = pItem.yardLine || '';
+                                newSlot.downDistance = pItem.down || '';
+                                if (pItem.hash) newSlot.hash = pItem.hash;
+                                delete newSlot.situation;
+                            } else {
+                                newSlot.situation = pItem.situation || '';
+                                delete newSlot.yardLine;
+                                delete newSlot.downDistance;
+                            }
                             return newSlot;
                         });
 
@@ -8276,7 +8337,7 @@
                 const segment = plan.segments.find(s => s.id === segmentId);
                 if (!segment) return;
 
-                const currentScript = ensureScriptSlots(segment.script, parseInt(segment.duration || 0), segment.type);
+                const currentScript = ensureScriptSlots(segment.script, parseInt(segment.duration || 0), segment.type, segment.situation);
 
                 let newScript = [...currentScript];
                 const count = newScript.length;
@@ -8449,14 +8510,20 @@
                                                                 </div>
                                                             </th>
                                                         )}
-                                                        {seg.type === 'Take-Off' ? (
-                                                            <>
-                                                                <th style={{ textAlign: 'left', padding: '8px 4px', width: '80px' }}>Yard</th>
-                                                                <th style={{ textAlign: 'left', padding: '8px 4px', width: '100px' }}>Dn/Dist</th>
-                                                            </>
-                                                        ) : (
-                                                            <th style={{ textAlign: 'left', padding: '8px 4px', width: '150px' }}>Situation</th>
                                                         )}
+                                                        {(() => {
+                                                            const preset = findPreset(seg.type, seg.situation);
+                                                            const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
+                                                            if (showYardLine) {
+                                                                return (
+                                                                    <>
+                                                                        <th style={{ textAlign: 'left', padding: '8px 4px', width: '80px' }}>Yard</th>
+                                                                        <th style={{ textAlign: 'left', padding: '8px 4px', width: '100px' }}>Dn/Dist</th>
+                                                                    </>
+                                                                );
+                                                            }
+                                                            return <th style={{ textAlign: 'left', padding: '8px 4px', width: '150px' }}>Situation</th>;
+                                                        })()}
                                                         <th style={{ textAlign: 'left', padding: '8px 4px', width: '100px' }}>Tempo</th>
                                                         <th style={{ textAlign: 'left', padding: '8px 4px' }}>Play Call</th>
                                                         {settings.showDefense !== false && <th style={{ textAlign: 'left', padding: '8px 4px' }}>Defense</th>}
@@ -8466,7 +8533,7 @@
                                                 </thead>
                                                 <tbody>
                                                     {/* Ensure slots are populated even if just enabled but not opened in modal yet */}
-                                                    {ensureScriptSlots(seg.script, parseInt(seg.duration || 0), seg.type).map((slot, idx) => (
+                                                    {ensureScriptSlots(seg.script, parseInt(seg.duration || 0), seg.type, seg.situation).map((slot, idx) => (
                                                         <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                                                             <td style={{ textAlign: 'center', padding: '4px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{idx + 1}</td>
                                                             {settings.showHash !== false && (
@@ -8490,71 +8557,85 @@
                                                                 </td>
                                                             )}
 
-                                                            {seg.type === 'Take-Off' ? (
-                                                                <>
-                                                                    <td style={{ padding: '4px' }}>
-                                                                        <input
-                                                                            className="form-input"
-                                                                            style={{ padding: '4px', width: '100%', backgroundColor: 'var(--bg-body)', cursor: 'not-allowed' }}
-                                                                            value={slot.yardLine || slot.situation || ''}
-                                                                            readOnly
-                                                                            disabled
-                                                                        />
-                                                                    </td>
-                                                                    <td style={{ padding: '4px' }}>
-                                                                        <input
-                                                                            className="form-input"
-                                                                            style={{ padding: '4px', width: '100%' }}
-                                                                            value={slot.downDistance || ''}
-                                                                            onChange={e => {
-                                                                                const newScript = seg.script.map(s => s.id === slot.id ? { ...s, downDistance: e.target.value } : s);
-                                                                                updateSegment(seg.id, 'script', newScript);
-                                                                            }}
-                                                                            placeholder="Dn/Dst"
-                                                                            disabled={isLocked}
-                                                                        />
-                                                                    </td>
-                                                                </>
-                                                            ) : (
-                                                                <td style={{ padding: '4px' }}>
-                                                                    {(() => {
-                                                                        const segmentFocus = seg.situation || '';
-                                                                        if (isLocked) return slot.situation;
+                                                            {(() => {
+                                                                // Determine columns based on preset
+                                                                const preset = findPreset(seg.type, seg.situation);
+                                                                const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
 
-                                                                        if (segmentFocus.toLowerCase().includes('3rd')) {
-                                                                            return (
-                                                                                <select
+                                                                if (showYardLine) {
+                                                                    return (
+                                                                        <>
+                                                                            <td style={{ padding: '4px' }}>
+                                                                                <input
                                                                                     className="form-input"
-                                                                                    style={{ padding: '4px', width: '100%' }}
-                                                                                    value={slot.situation}
+                                                                                    style={{ padding: '4px', width: '100%', backgroundColor: 'var(--bg-body)' }}
+                                                                                    value={slot.yardLine || ''}
                                                                                     onChange={e => {
-                                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
+                                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, yardLine: e.target.value } : s);
                                                                                         updateSegment(seg.id, 'script', newScript);
                                                                                     }}
-                                                                                >
-                                                                                    <option value="">--</option>
-                                                                                    <option value="S">S (Short)</option>
-                                                                                    <option value="M">M (Medium)</option>
-                                                                                    <option value="L">L (Long)</option>
-                                                                                    <option value="XL">XL (Extra Long)</option>
-                                                                                </select>
-                                                                            );
-                                                                        }
-                                                                        return (
-                                                                            <input
-                                                                                className="form-input"
-                                                                                style={{ padding: '4px', width: '100%' }}
-                                                                                value={slot.situation}
-                                                                                onChange={e => {
-                                                                                    const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
-                                                                                    updateSegment(seg.id, 'script', newScript);
-                                                                                }}
-                                                                                placeholder="Situation"
-                                                                            />
-                                                                        );
-                                                                    })()}
-                                                                </td>
-                                                            )}
+                                                                                    placeholder="-30"
+                                                                                    disabled={isLocked}
+                                                                                />
+                                                                            </td>
+                                                                            <td style={{ padding: '4px' }}>
+                                                                                <input
+                                                                                    className="form-input"
+                                                                                    style={{ padding: '4px', width: '100%' }}
+                                                                                    value={slot.downDistance || ''}
+                                                                                    onChange={e => {
+                                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, downDistance: e.target.value } : s);
+                                                                                        updateSegment(seg.id, 'script', newScript);
+                                                                                    }}
+                                                                                    placeholder="Dn/Dst"
+                                                                                    disabled={isLocked}
+                                                                                />
+                                                                            </td>
+                                                                        </>
+                                                                    );
+                                                                } else {
+                                                                    return (
+                                                                        <td style={{ padding: '4px' }}>
+                                                                            {(() => {
+                                                                                const segmentFocus = seg.situation || '';
+                                                                                if (isLocked) return slot.situation;
+
+                                                                                if (segmentFocus.toLowerCase().includes('3rd')) {
+                                                                                    return (
+                                                                                        <select
+                                                                                            className="form-input"
+                                                                                            style={{ padding: '4px', width: '100%' }}
+                                                                                            value={slot.situation}
+                                                                                            onChange={e => {
+                                                                                                const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
+                                                                                                updateSegment(seg.id, 'script', newScript);
+                                                                                            }}
+                                                                                        >
+                                                                                            <option value="">--</option>
+                                                                                            <option value="S">S (Short)</option>
+                                                                                            <option value="M">M (Medium)</option>
+                                                                                            <option value="L">L (Long)</option>
+                                                                                            <option value="XL">XL (Extra Long)</option>
+                                                                                        </select>
+                                                                                    );
+                                                                                }
+                                                                                return (
+                                                                                    <input
+                                                                                        className="form-input"
+                                                                                        style={{ padding: '4px', width: '100%' }}
+                                                                                        value={slot.situation}
+                                                                                        onChange={e => {
+                                                                                            const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
+                                                                                            updateSegment(seg.id, 'script', newScript);
+                                                                                        }}
+                                                                                        placeholder="Situation"
+                                                                                    />
+                                                                                );
+                                                                            })()}
+                                                                        </td>
+                                                                    );
+                                                                }
+                                                            })()}
 
                                                             <td style={{ padding: '4px' }}>
                                                                 {isLocked ? (
@@ -8650,13 +8731,26 @@
                                                                             let pattern = PATTERN_A;
                                                                             if (seg.script.length > 0 && seg.script[0].hash === 'R') pattern = PATTERN_B;
 
+                                                                            const preset = findPreset(seg.type, seg.situation);
+
                                                                             let scriptItem = {
                                                                                 id: Date.now().toString() + Math.random(),
                                                                                 playId: '',
                                                                                 playName: '',
                                                                                 hash: pattern[idx % 8]
                                                                             };
-                                                                            if (seg.type === 'Take-Off') {
+
+                                                                            if (preset && preset.items && preset.items.length > 0) {
+                                                                                const pItem = preset.items[idx % preset.items.length] || {};
+                                                                                if (preset.useYardLine) {
+                                                                                    scriptItem.yardLine = pItem.yardLine || '';
+                                                                                    scriptItem.downDistance = pItem.down || '';
+                                                                                    if (pItem.hash) scriptItem.hash = pItem.hash;
+                                                                                } else {
+                                                                                    scriptItem.situation = pItem.situation || '';
+                                                                                    if (pItem.hash) scriptItem.hash = pItem.hash;
+                                                                                }
+                                                                            } else if (seg.type === 'Take-Off') {
                                                                                 const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
                                                                                 scriptItem.yardLine = yardlines[idx % 8] || '';
                                                                                 scriptItem.downDistance = '';
@@ -8696,7 +8790,9 @@
                                                                 if (!isLocked) span += 1;
                                                                 if (settings.showHash !== false) span += 1;
                                                                 if (settings.showDefense !== false) span += 1;
-                                                                if (seg.type === 'Take-Off') span += 2; else span += 1;
+                                                                const preset = findPreset(seg.type, seg.situation);
+                                                                const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
+                                                                if (showYardLine) span += 2; else span += 1;
                                                                 return span;
                                                             })()} style={{ padding: '8px', textAlign: 'center', backgroundColor: 'var(--bg-body)' }}>
                                                                 <button
@@ -8708,13 +8804,26 @@
                                                                         let pattern = PATTERN_A;
                                                                         if (seg.script.length > 0 && seg.script[0].hash === 'R') pattern = PATTERN_B;
 
+                                                                        const preset = findPreset(seg.type, seg.situation);
+
                                                                         let scriptItem = {
                                                                             id: Date.now().toString() + Math.random(),
                                                                             playId: '',
                                                                             playName: '',
                                                                             hash: pattern[seg.script.length % 8]
                                                                         };
-                                                                        if (seg.type === 'Take-Off') {
+
+                                                                        if (preset && preset.items && preset.items.length > 0) {
+                                                                            const pItem = preset.items[seg.script.length % preset.items.length] || {};
+                                                                            if (preset.useYardLine) {
+                                                                                scriptItem.yardLine = pItem.yardLine || '';
+                                                                                scriptItem.downDistance = pItem.down || '';
+                                                                                if (pItem.hash) scriptItem.hash = pItem.hash;
+                                                                            } else {
+                                                                                scriptItem.situation = pItem.situation || '';
+                                                                                if (pItem.hash) scriptItem.hash = pItem.hash;
+                                                                            }
+                                                                        } else if (seg.type === 'Take-Off') {
                                                                             const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
                                                                             scriptItem.yardLine = yardlines[seg.script.length % 8] || '';
                                                                             scriptItem.downDistance = '';
@@ -9864,8 +9973,18 @@
                                             <tr>
                                                 <th style={{ textAlign: 'left', padding: '2px', width: '30px' }}>#</th>
                                                 <th style={{ textAlign: 'left', padding: '2px' }}>Hash</th>
-                                                {seg.type === 'Ghost Script' || seg.type === 'Take-Off' ? null : <th style={{ textAlign: 'left', padding: '2px' }}>Situation</th>}
-                                                {seg.type === 'Take-Off' && <th style={{ textAlign: 'left', padding: '2px' }}>YL</th>}
+                                                {(() => {
+                                                    const preset = findPreset(seg.type, seg.situation);
+                                                    const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
+                                                    if (showYardLine) return (
+                                                        <>
+                                                            <th style={{ textAlign: 'left', padding: '2px' }}>YL</th>
+                                                            <th style={{ textAlign: 'left', padding: '2px' }}>Dn/Dist</th>
+                                                        </>
+                                                    );
+                                                    if (seg.type === 'Ghost Script') return null;
+                                                    return <th style={{ textAlign: 'left', padding: '2px' }}>Situation</th>;
+                                                })()}
                                                 <th style={{ textAlign: 'left', padding: '2px' }}>Play</th>
                                             </tr>
                                         </thead>
@@ -9874,8 +9993,18 @@
                                                 <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
                                                     <td style={{ padding: '2px', width: '30px' }}>{idx + 1}</td>
                                                     <td style={{ padding: '2px', width: '40px' }}>{slot.hash}</td>
-                                                    {seg.type === 'Ghost Script' || seg.type === 'Take-Off' ? null : <td style={{ padding: '2px' }}>{slot.situation}</td>}
-                                                    {seg.type === 'Take-Off' && <td style={{ padding: '2px', width: '50px' }}>{slot.yardLine}</td>}
+                                                    {(() => {
+                                                        const preset = findPreset(seg.type, seg.situation);
+                                                        const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
+                                                        if (showYardLine) return (
+                                                            <>
+                                                                <td style={{ padding: '2px', width: '50px' }}>{slot.yardLine}</td>
+                                                                <td style={{ padding: '2px', width: '60px' }}>{slot.downDistance}</td>
+                                                            </>
+                                                        );
+                                                        if (seg.type === 'Ghost Script') return null;
+                                                        return <td style={{ padding: '2px' }}>{slot.situation}</td>;
+                                                    })()}
                                                     <td style={{ padding: '2px', fontWeight: 'bold' }}>{slot.playName}</td>
                                                 </tr>
                                             ))}
@@ -9922,6 +10051,9 @@
                                         const activeSegment = plan.segments.find(s => s.id === selectedSegmentId);
                                         if (!activeSegment) return <div>Segment not found</div>;
 
+                                        const preset = findPreset(activeSegment.type, activeSegment.situation);
+                                        const showYardLine = preset ? preset.useYardLine : activeSegment.type === 'Take-Off';
+
                                         const updateScript = (newScript) => {
                                             updateSegment(selectedSegmentId, 'script', newScript);
                                         };
@@ -9933,8 +10065,13 @@
                                                         <tr style={{ background: 'var(--bg-main)', position: 'sticky', top: 0, zIndex: 10 }}>
                                                             <th style={{ padding: '0.5rem', width: '40px' }}>#</th>
                                                             <th style={{ padding: '0.5rem', width: '80px' }}>Hash</th>
-                                                            {activeSegment.type !== 'Take-Off' && <th style={{ padding: '0.5rem', width: '150px' }}>Situation</th>}
-                                                            {activeSegment.type === 'Take-Off' && <th style={{ padding: '0.5rem', width: '80px' }}>YL</th>}
+                                                            {!showYardLine && <th style={{ padding: '0.5rem', width: '150px' }}>Situation</th>}
+                                                            {showYardLine && (
+                                                                <>
+                                                                    <th style={{ padding: '0.5rem', width: '80px' }}>YL</th>
+                                                                    <th style={{ padding: '0.5rem', width: '100px' }}>Dn/Dist</th>
+                                                                </>
+                                                            )}
                                                             <th style={{ padding: '0.5rem' }}>Play</th>
                                                             <th style={{ padding: '0.5rem', width: '60px' }}>Calc</th>
                                                         </tr>
@@ -9958,7 +10095,7 @@
                                                                         <option value="M">M</option>
                                                                     </select>
                                                                 </td>
-                                                                {activeSegment.type !== 'Take-Off' && (
+                                                                {!showYardLine && (
                                                                     <td style={{ padding: '0.5rem' }}>
                                                                         <input
                                                                             className="form-input"
@@ -9971,18 +10108,32 @@
                                                                         />
                                                                     </td>
                                                                 )}
-                                                                {activeSegment.type === 'Take-Off' && (
-                                                                    <td style={{ padding: '0.5rem' }}>
-                                                                        <input
-                                                                            className="form-input"
-                                                                            value={item.yardLine || ''}
-                                                                            onChange={e => {
-                                                                                const newScript = [...activeSegment.script];
-                                                                                newScript[index] = { ...item, yardLine: e.target.value };
-                                                                                updateScript(newScript);
-                                                                            }}
-                                                                        />
-                                                                    </td>
+                                                                {showYardLine && (
+                                                                    <>
+                                                                        <td style={{ padding: '0.5rem' }}>
+                                                                            <input
+                                                                                className="form-input"
+                                                                                value={item.yardLine || ''}
+                                                                                onChange={e => {
+                                                                                    const newScript = [...activeSegment.script];
+                                                                                    newScript[index] = { ...item, yardLine: e.target.value };
+                                                                                    updateScript(newScript);
+                                                                                }}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{ padding: '0.5rem' }}>
+                                                                            <input
+                                                                                className="form-input"
+                                                                                value={item.downDistance || ''}
+                                                                                placeholder="Dn/Dist"
+                                                                                onChange={e => {
+                                                                                    const newScript = [...activeSegment.script];
+                                                                                    newScript[index] = { ...item, downDistance: e.target.value };
+                                                                                    updateScript(newScript);
+                                                                                }}
+                                                                            />
+                                                                        </td>
+                                                                    </>
                                                                 )}
                                                                 <td style={{ padding: '0.5rem' }}>
                                                                     <input
@@ -10016,7 +10167,14 @@
                                                     <button
                                                         className="btn btn-primary"
                                                         onClick={() => {
-                                                            const newScript = [...(activeSegment.script || []), { hash: 'L', situation: '', playName: '', playId: '' }];
+                                                            const newItem = { hash: 'L', playName: '', playId: '' };
+                                                            if (showYardLine) {
+                                                                newItem.yardLine = '';
+                                                                newItem.downDistance = '';
+                                                            } else {
+                                                                newItem.situation = '';
+                                                            }
+                                                            const newScript = [...(activeSegment.script || []), newItem];
                                                             updateScript(newScript);
                                                         }}
                                                     >
@@ -41140,6 +41298,25 @@
             const [setupTab, setSetupTab] = useState('positions');
             const [setupCategory, setSetupCategory] = useState(null);
 
+            // Script Presets (Dynamic Script Templates)
+            const [scriptPresets, setScriptPresets] = useLocalStorage('oc-dashboard-script-presets', [
+                {
+                    id: 'preset_takeoff',
+                    name: 'Take-Off',
+                    useYardLine: true,
+                    items: [
+                        { yardLine: '-30', hash: 'L' },
+                        { yardLine: '-40', hash: 'M' },
+                        { yardLine: '50', hash: 'R' },
+                        { yardLine: '40', hash: 'L' },
+                        { yardLine: '30', hash: 'M' },
+                        { yardLine: '20', hash: 'R' },
+                        { yardLine: '10', hash: 'L' },
+                        { yardLine: '5', hash: 'M' }
+                    ]
+                }
+            ]);
+
             // Weekly Task Management State (must be at top level, not conditional)
             const [weeklyToday, setWeeklyToday] = useLocalStorage(`weekly-tasks-today-${currentWeekId}`, []);
             const [weeklyThisWeek, setWeeklyThisWeek] = useLocalStorage(`weekly-tasks-thisweek-${currentWeekId}`, []);
@@ -41997,6 +42174,228 @@
                 );
             };
 
+            const ScriptPresetsManager = () => {
+                const [editingPreset, setEditingPreset] = useState(null);
+
+                const handleSave = () => {
+                    if (!editingPreset.name) return alert('Name is required');
+                    setScriptPresets(prev => {
+                        const exists = prev.find(p => p.id === editingPreset.id);
+                        if (exists) {
+                            return prev.map(p => p.id === editingPreset.id ? editingPreset : p);
+                        } else {
+                            return [...prev, editingPreset];
+                        }
+                    });
+                    setEditingPreset(null);
+                };
+
+                const handleDelete = (id) => {
+                    if (confirm('Delete this preset?')) {
+                        setScriptPresets(prev => prev.filter(p => p.id !== id));
+                    }
+                };
+
+                const handleItemChange = (idx, field, val) => {
+                    const newItems = [...editingPreset.items];
+                    newItems[idx] = { ...newItems[idx], [field]: val };
+                    setEditingPreset({ ...editingPreset, items: newItems });
+                };
+
+                if (editingPreset) {
+                    return (
+                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                                <button className="btn-ghost" onClick={() => setEditingPreset(null)} style={{ marginRight: '1rem' }}>
+                                    <Icon name="ArrowLeft" size={16} /> Back
+                                </button>
+                                <h3 style={{ margin: 0 }}>{editingPreset.id ? 'Edit Preset' : 'New Preset'}</h3>
+                                <div style={{ flex: 1 }}></div>
+                                <button className="btn-primary" onClick={handleSave}>
+                                    <Icon name="Save" size={16} /> Save Preset
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 2fr', gap: '2rem', flex: 1, minHeight: 0 }}>
+                                <div style={{ background: 'var(--bg-panel)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', height: 'fit-content' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Segment Type</label>
+                                            <select
+                                                className="form-input"
+                                                value={editingPreset.type || ''}
+                                                onChange={e => setEditingPreset({ ...editingPreset, type: e.target.value })}
+                                                style={{ width: '100%' }}
+                                            >
+                                                <option value="">- Generic / None -</option>
+                                                {practiceSegmentTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Focus / Situation</label>
+                                            <select
+                                                className="form-input"
+                                                value={editingPreset.focus || ''}
+                                                onChange={e => setEditingPreset({ ...editingPreset, focus: e.target.value })}
+                                                style={{ width: '100%' }}
+                                            >
+                                                <option value="">- Any / None -</option>
+                                                {practiceFocusItems.map(f => <option key={f} value={f}>{f}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Preset Name</label>
+                                        <input
+                                            className="form-input"
+                                            value={editingPreset.name}
+                                            onChange={e => setEditingPreset({ ...editingPreset, name: e.target.value })}
+                                            placeholder="e.g. Take-Off, Red Zone"
+                                        />
+                                    </div>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={editingPreset.useYardLine}
+                                                onChange={e => setEditingPreset({ ...editingPreset, useYardLine: e.target.checked })}
+                                            />
+                                            <span style={{ fontWeight: 'bold' }}>Use Yard Line & Dn/Dist</span>
+                                        </label>
+                                        <p style={{ fontSize: '0.8rem', opacity: 0.7, marginLeft: '1.5rem', marginTop: '0.25rem' }}>
+                                            If unchecked, uses "Situation" text field instead.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-panel)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h4 style={{ margin: 0 }}>Script Sequence</h4>
+                                        <button className="btn-secondary btn-sm" onClick={() => setEditingPreset({ ...editingPreset, items: [...editingPreset.items, {}] })}>
+                                            <Icon name="Plus" size={14} /> Add Row
+                                        </button>
+                                    </div>
+                                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                                                    <th style={{ padding: '0.5rem', width: '40px' }}>#</th>
+                                                    {editingPreset.useYardLine ? (
+                                                        <>
+                                                            <th style={{ padding: '0.5rem' }}>Yard Line</th>
+                                                            <th style={{ padding: '0.5rem' }}>Hash</th>
+                                                            <th style={{ padding: '0.5rem' }}>Dn/Dist</th>
+                                                        </>
+                                                    ) : (
+                                                        <th style={{ padding: '0.5rem' }}>Situation</th>
+                                                    )}
+                                                    <th style={{ padding: '0.5rem', width: '40px' }}></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {editingPreset.items.map((item, idx) => (
+                                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                        <td style={{ padding: '0.5rem', opacity: 0.5 }}>{idx + 1}</td>
+                                                        {editingPreset.useYardLine ? (
+                                                            <>
+                                                                <td style={{ padding: '0.5rem' }}>
+                                                                    <input className="form-input" style={{ padding: '4px 8px' }} value={item.yardLine || ''} onChange={e => handleItemChange(idx, 'yardLine', e.target.value)} placeholder="-30" />
+                                                                </td>
+                                                                <td style={{ padding: '0.5rem' }}>
+                                                                    <select className="form-input" style={{ padding: '4px 8px' }} value={item.hash || ''} onChange={e => handleItemChange(idx, 'hash', e.target.value)}>
+                                                                        <option value="">-</option>
+                                                                        <option value="L">L</option>
+                                                                        <option value="M">M</option>
+                                                                        <option value="R">R</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td style={{ padding: '0.5rem' }}>
+                                                                    <input className="form-input" style={{ padding: '4px 8px' }} value={item.down || ''} onChange={e => handleItemChange(idx, 'down', e.target.value)} placeholder="1st & 10" />
+                                                                </td>
+                                                            </>
+                                                        ) : (
+                                                            <td style={{ padding: '0.5rem' }}>
+                                                                <input className="form-input" style={{ padding: '4px 8px', width: '100%' }} value={item.situation || ''} onChange={e => handleItemChange(idx, 'situation', e.target.value)} placeholder="Goal Line..." />
+                                                            </td>
+                                                        )}
+                                                        <td style={{ padding: '0.5rem' }}>
+                                                            <button className="btn-icon" style={{ color: 'var(--danger)', opacity: 0.7 }} onClick={() => {
+                                                                const newItems = editingPreset.items.filter((_, i) => i !== idx);
+                                                                setEditingPreset({ ...editingPreset, items: newItems });
+                                                            }}>
+                                                                <Icon name="Trash" size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {editingPreset.items.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={editingPreset.useYardLine ? 5 : 3} style={{ padding: '2rem', textAlign: 'center', opacity: 0.5 }}>
+                                                            No items. Click "Add Row" to start.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div >
+                    );
+                }
+
+                return (
+                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h3 style={{ margin: 0 }}>Script Presets</h3>
+                                <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7 }}>Manage standard script templates for different practice periods.</p>
+                            </div>
+                            <button className="btn-primary" onClick={() => setEditingPreset({ id: Date.now().toString(), name: 'New Preset', type: '', focus: '', useYardLine: true, items: [] })}>
+                                <Icon name="Plus" size={16} /> New Preset
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', alignContent: 'start' }}>
+                            {scriptPresets.map(preset => (
+                                <div key={preset.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{preset.name}</h4>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button className="btn-icon" onClick={() => setEditingPreset({ ...preset, items: [...preset.items] })} title="Edit">
+                                                <Icon name="Edit" size={16} />
+                                            </button>
+                                            <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(preset.id)} title="Delete">
+                                                <Icon name="Trash" size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                                        {preset.items.length} items • {preset.useYardLine ? 'Yard/Hash' : 'Situation'}
+                                    </div>
+                                    {(preset.type || preset.focus) && (
+                                        <div style={{ marginTop: '0.25rem', fontSize: '0.8rem', color: 'var(--accent)', fontWeight: '500' }}>
+                                            {preset.type && <span style={{ marginRight: '0.5rem' }}>[{preset.type}]</span>}
+                                            {preset.focus && <span>({preset.focus})</span>}
+                                        </div>
+                                    )}
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: 'auto' }}>
+                                        {preset.items.slice(0, 3).map((item, i) => (
+                                            <span key={i} style={{ background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--border)' }}>
+                                                {preset.useYardLine ? (item.yardLine || '-') + (item.hash ? ` ${item.hash}` : '') : (item.situation || 'Item')}
+                                            </span>
+                                        ))}
+                                        {preset.items.length > 3 && (
+                                            <span style={{ fontSize: '0.8rem', opacity: 0.5, alignSelf: 'center' }}>+{preset.items.length - 3} more</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
             const renderSetup = (phase) => {
                 const isOffense = phase === 'OFFENSE';
                 const isDefense = phase === 'DEFENSE';
@@ -42145,6 +42544,22 @@
                             >
                                 <Icon name="List" size={16} /> Practice Lists
                             </button>
+                            {isOffense && (
+                                <button
+                                    className={`btn-ghost`}
+                                    style={{
+                                        borderRadius: 0,
+                                        padding: '1rem 1.5rem',
+                                        borderBottom: setupTab === 'script-presets' ? '3px solid var(--accent)' : '3px solid transparent',
+                                        fontWeight: setupTab === 'script-presets' ? 'bold' : 'normal',
+                                        color: setupTab === 'script-presets' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                        background: 'transparent'
+                                    }}
+                                    onClick={() => setSetupTab('script-presets')}
+                                >
+                                    <Icon name="FileText" size={16} /> Script Presets
+                                </button>
+                            )}
                         </div>
 
                         <div style={{ padding: '1.5rem', flex: 1 }}>
@@ -42650,6 +43065,10 @@
                                         </div>
                                     </div>
                                 </div>
+                            )}
+
+                            {setupTab === 'script-presets' && (
+                                <ScriptPresetsManager />
                             )}
                         </div>
                     </div>
@@ -44084,6 +44503,7 @@
                                 segmentTypes={practiceSegmentTypes}
                                 focusItems={practiceFocusItems}
                                 segmentSettings={practiceSegmentSettings}
+                                scriptPresets={scriptPresets}
                             />
                         )}
                         {view === 'pregame' && (
@@ -44118,6 +44538,7 @@
                                 segmentTypes={practiceSegmentTypes}
                                 focusItems={practiceFocusItems}
                                 segmentSettings={practiceSegmentSettings}
+                                scriptPresets={scriptPresets}
                             />
                         )}
                         {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} />}
