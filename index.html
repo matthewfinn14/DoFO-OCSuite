@@ -5771,11 +5771,12 @@
             }, []);
 
             // Auto-sync to Firestore (debounced or just when changed)
-            useEffect(() => {
-                if (currentUser && (wbSettings.version === 'v2' || wbSettings.version === 'v3')) {
-                    syncToFirestore(currentUser.uid, 'wbSettings', wbSettings);
-                }
-            }, [wbSettings, currentUser]);
+            // REMOVED: Now handled by 'weeks' sync in App component
+            // useEffect(() => {
+            //     if (currentUser && (wbSettings.version === 'v2' || wbSettings.version === 'v3')) {
+            //         syncToFirestore(currentUser.uid, 'wbSettings', wbSettings);
+            //     }
+            // }, [wbSettings, currentUser]);
 
             // Quick add state
 
@@ -40749,17 +40750,74 @@
                     return defaults;
                 };
 
+                // --- SCOPING MIGRATION HELPERS ---
+                // 1. Wristband Defaults
+                const getGlobalWbSettings = () => {
+                    const defaultSettings = {
+                        card1: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        card2: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        card3: { type: 'rooski-skill', opp: '', iter: '1', rows: [] },
+                        staples: { type: 'staples', opp: '', iter: '1', rows: [] }
+                    };
+                    try {
+                        const saved = localStorage.getItem('hc_wb_settings_v3');
+                        return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+                    } catch (e) { return defaultSettings; }
+                };
+
+                // 2. Depth Chart Defaults
+                const getGlobalDepthCharts = () => {
+                    try {
+                        const saved = localStorage.getItem('hc-depth-charts');
+                        return saved ? JSON.parse(saved) : {};
+                    } catch (e) { return {}; }
+                };
+
+                // 3. Zone Philosophies Defaults
+                const getGlobalZonePhilosophies = () => {
+                    const defaultPhilosophies = {
+                        backed_up: '',
+                        coming_out: '',
+                        open_field: '',
+                        fringe: 'Take one shot, be ready to convert on 4th',
+                        high_red: '',
+                        low_red: '',
+                        goal_line: ''
+                    };
+                    try {
+                        const saved = localStorage.getItem('oc-dashboard-zone-philosophies');
+                        return saved ? { ...defaultPhilosophies, ...JSON.parse(saved) } : defaultPhilosophies;
+                    } catch (e) { return defaultPhilosophies; }
+                };
+
+                const currentGlobalWb = getGlobalWbSettings();
+                const currentGlobalDepth = getGlobalDepthCharts();
+                const currentGlobalZone = getGlobalZonePhilosophies();
+                // ---------------------------------
+
                 // Migrate/Populate from OPS_CALENDAR
                 const mergedWeeks = OPS_CALENDAR.map((phase, index) => {
                     const existing = existingWeeks.find(w => w.name === phase || w.id === phase);
 
+                    // Scoping Migration: Ensure existing weeks have the new scoped properties
                     if (existing) {
-                        return existing;
+                        return {
+                            ...existing,
+                            wristbands: existing.wristbands || JSON.parse(JSON.stringify(currentGlobalWb)),
+                            depthChart: existing.depthChart || JSON.parse(JSON.stringify(currentGlobalDepth)),
+                            zonePhilosophies: existing.zonePhilosophies || JSON.parse(JSON.stringify(currentGlobalZone))
+                        };
                     }
 
                     if (phase === "Week 1") {
                         const legacyWeek = existingWeeks.find(w => w.id === 'week-1');
-                        if (legacyWeek) return { ...legacyWeek, name: phase };
+                        if (legacyWeek) return {
+                            ...legacyWeek,
+                            name: phase,
+                            wristbands: legacyWeek.wristbands || JSON.parse(JSON.stringify(currentGlobalWb)),
+                            depthChart: legacyWeek.depthChart || JSON.parse(JSON.stringify(currentGlobalDepth)),
+                            zonePhilosophies: legacyWeek.zonePhilosophies || JSON.parse(JSON.stringify(currentGlobalZone))
+                        };
                     }
 
                     return {
@@ -40772,11 +40830,21 @@
                         offensiveGamePlan: { sets: [] },
                         dumbCallSheetData: {},
                         pregamePlan: { kickoffTime: '19:00', segments: [] },
-                        gameLog: []
+                        gameLog: [],
+                        // Scoped Data Initialization
+                        wristbands: JSON.parse(JSON.stringify(currentGlobalWb)),
+                        depthChart: JSON.parse(JSON.stringify(currentGlobalDepth)),
+                        zonePhilosophies: JSON.parse(JSON.stringify(currentGlobalZone))
                     };
                 });
 
-                const customWeeks = existingWeeks.filter(w => !OPS_CALENDAR.includes(w.name) && w.id !== 'week-1');
+                const customWeeks = existingWeeks.filter(w => !OPS_CALENDAR.includes(w.name) && w.id !== 'week-1').map(w => ({
+                    ...w,
+                    // Backfill custom weeks too
+                    wristbands: w.wristbands || JSON.parse(JSON.stringify(currentGlobalWb)),
+                    depthChart: w.depthChart || JSON.parse(JSON.stringify(currentGlobalDepth)),
+                    zonePhilosophies: w.zonePhilosophies || JSON.parse(JSON.stringify(currentGlobalZone))
+                }));
 
                 return [...mergedWeeks, ...customWeeks];
             });
@@ -40965,12 +41033,16 @@
                     scoutingReport: '',
                     isLocked: false,
                     // Copy practice plans structure but maybe clear specific details? For now, full copy is safest/easiest base.
-                    // Actually, let's keep the structure but maybe reset dates? 
-                    // User asked for "saves practice plans... but allows you to edit". Copying is best.
                     practicePlans: JSON.parse(JSON.stringify(prevWeek.practicePlans)),
                     pregamePlan: JSON.parse(JSON.stringify(prevWeek.pregamePlan)),
                     offensiveGamePlan: prevWeek.offensiveGamePlan ? JSON.parse(JSON.stringify(prevWeek.offensiveGamePlan)) : { sets: [] },
                     dumbCallSheetData: prevWeek.dumbCallSheetData ? JSON.parse(JSON.stringify(prevWeek.dumbCallSheetData)) : {},
+
+                    // Scoped Data Carryover (Clone)
+                    wristbands: prevWeek.wristbands ? JSON.parse(JSON.stringify(prevWeek.wristbands)) : JSON.parse(JSON.stringify(getGlobalWbSettings())),
+                    depthChart: prevWeek.depthChart ? JSON.parse(JSON.stringify(prevWeek.depthChart)) : JSON.parse(JSON.stringify(getGlobalDepthCharts())),
+                    zonePhilosophies: prevWeek.zonePhilosophies ? JSON.parse(JSON.stringify(prevWeek.zonePhilosophies)) : JSON.parse(JSON.stringify(getGlobalZonePhilosophies())),
+
                     gameLog: [] // Start fresh for game log
                 };
 
@@ -40990,6 +41062,34 @@
                 if (currentWeek.isLocked) return;
                 setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, gameLog: newLog } : w));
             };
+
+            const handleUpdateGamePlan = (newPlan) => {
+                handleUpdateWeek(currentWeekId, 'offensiveGamePlan', newPlan);
+            };
+
+            // --- SCOPED UPDATE HANDLERS ---
+            const handleUpdateWristbands = (newSettings) => {
+                if (currentWeek.isLocked) return;
+                // Support functional updates like standard setState
+                const resolvedSettings = typeof newSettings === 'function'
+                    ? newSettings(currentWeek.wristbands)
+                    : newSettings;
+
+                setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, wristbands: resolvedSettings } : w));
+            };
+
+            const handleUpdateDepthChart = (newChart) => {
+                if (currentWeek.isLocked) return;
+                const resolvedChart = typeof newChart === 'function' ? newChart(currentWeek.depthChart) : newChart;
+                setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, depthChart: resolvedChart } : w));
+            };
+
+            const handleUpdateZonePhilosophies = (newPhilosophies) => {
+                if (currentWeek.isLocked) return;
+                const resolvedPhils = typeof newPhilosophies === 'function' ? newPhilosophies(currentWeek.zonePhilosophies) : newPhilosophies;
+                setWeeks(weeks.map(w => w.id === currentWeekId ? { ...w, zonePhilosophies: resolvedPhils } : w));
+            };
+            // ------------------------------
 
             const [globalWeekTemplates, setGlobalWeekTemplates] = useState([]);
 
@@ -41017,6 +41117,12 @@
                     offensiveGamePlan: JSON.parse(JSON.stringify(currentWeek.offensiveGamePlan)),
                     dumbCallSheetData: JSON.parse(JSON.stringify(currentWeek.dumbCallSheetData || {})),
                     pregamePlan: currentWeek.pregamePlan ? JSON.parse(JSON.stringify(currentWeek.pregamePlan)) : null,
+
+                    // Add new scoped data to templates
+                    wristbands: currentWeek.wristbands ? JSON.parse(JSON.stringify(currentWeek.wristbands)) : null,
+                    depthChart: currentWeek.depthChart ? JSON.parse(JSON.stringify(currentWeek.depthChart)) : null,
+                    zonePhilosophies: currentWeek.zonePhilosophies ? JSON.parse(JSON.stringify(currentWeek.zonePhilosophies)) : null,
+
                     createdAt: new Date().toISOString(),
                     createdBy: authUser.uid
                 };
@@ -44450,8 +44556,8 @@
                         {view === 'staff-roster' && <StaffManager view="roster" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'staff-tasks' && <StaffManager view="tasks" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
-                        {view === 'depth' && <DepthChart roster={roster} depthChart={depthCharts[depthChartType] || {}} onUpdateDepthChart={(updated) => setDepthCharts({ ...depthCharts, [depthChartType]: updated })} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} savedLayout={depthChartLayouts[depthChartType] || {}} onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)} onResetLayout={() => handleResetDepthLayout(depthChartType)} />}
-                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} installList={currentWeek?.installList || []} />}
+                        {view === 'depth' && <DepthChart roster={roster} depthChart={(currentWeek.depthChart && currentWeek.depthChart[depthChartType]) || {}} onUpdateDepthChart={(updated) => handleUpdateDepthChart(prev => ({ ...prev, [depthChartType]: updated }))} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} savedLayout={depthChartLayouts[depthChartType] || {}} onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)} onResetLayout={() => handleResetDepthLayout(depthChartType)} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} />}
 
 
                         {
@@ -44541,7 +44647,7 @@
                         )}
                         {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} />}
                         {view === 'staff-app' && <StaffApp staff={staff} currentUser={currentUser} dutyAssignments={dutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} onUpdateStaff={(updatedStaff) => syncToFirestore('staff', updatedStaff)} />}
-                        {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophies={zonePhilosophies} onUpdatePhilosophy={setZonePhilosophies} />}
+                        {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophies={currentWeek.zonePhilosophies || {}} onUpdatePhilosophy={handleUpdateZonePhilosophies} onUpdateGamePlan={handleUpdateGamePlan} />}
                         {view === 'dumb-call-sheet' && <DumbCallSheet gamePlan={currentWeek.offensiveGamePlan} dumbCallSheetData={currentWeek.dumbCallSheetData || {}} onUpdateData={(newData) => handleUpdateWeek(currentWeekId, 'dumbCallSheetData', newData)} />}
                         {view === 'play-call-simulator' && <PlayCallSimulator plays={plays} gamePlan={currentWeek.offensiveGamePlan} />}
                         {view === 'special-teams-setup' && renderSetup('SPECIAL_TEAMS')}
