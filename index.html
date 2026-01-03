@@ -8773,7 +8773,6 @@
                                                                 </div>
                                                             </th>
                                                         )}
-                                                        )}
                                                         {(() => {
                                                             const preset = findPreset(seg.type, seg.situation);
                                                             const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
@@ -8798,9 +8797,9 @@
                                                     {/* Ensure slots are populated even if just enabled but not opened in modal yet */}
                                                     {ensureScriptSlots(seg.script, parseInt(seg.duration || 0), seg.type, seg.situation).map((slot, idx) => (
                                                         <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                            <td style={{ textAlign: 'center', padding: '4px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{idx + 1}</td>
+                                                            <td style={{ textAlign: 'center', padding: '4px', fontWeight: 'bold', color: 'var(--text-secondary)', width: '30px' }}>{idx + 1}</td>
                                                             {settings.showHash !== false && (
-                                                                <td style={{ padding: '4px' }}>
+                                                                <td style={{ padding: '4px', width: '50px' }}>
                                                                     {isLocked ? slot.hash : (
                                                                         <select
                                                                             className="form-input"
@@ -8828,7 +8827,7 @@
                                                                 if (showYardLine) {
                                                                     return (
                                                                         <>
-                                                                            <td style={{ padding: '4px' }}>
+                                                                            <td style={{ padding: '4px', width: '80px' }}>
                                                                                 <input
                                                                                     className="form-input"
                                                                                     style={{ padding: '4px', width: '100%', backgroundColor: 'var(--bg-body)' }}
@@ -8841,7 +8840,7 @@
                                                                                     disabled={isLocked}
                                                                                 />
                                                                             </td>
-                                                                            <td style={{ padding: '4px' }}>
+                                                                            <td style={{ padding: '4px', width: '100px' }}>
                                                                                 <input
                                                                                     className="form-input"
                                                                                     style={{ padding: '4px', width: '100%' }}
@@ -8900,7 +8899,7 @@
                                                                 }
                                                             })()}
 
-                                                            <td style={{ padding: '4px' }}>
+                                                            <td style={{ padding: '4px', width: '100px' }}>
                                                                 {isLocked ? (
                                                                     <span style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
                                                                         {slot.tempo === 'NOHUDDLE' && <span style={{ color: '#d97706' }}>NH</span>}
@@ -42897,7 +42896,7 @@
                                 }}
                                 onClick={() => setSetupTab('syntax')}
                             >
-                                <Icon name="Code" size={16} /> Play Syntax
+                                <Icon name="Code" size={16} /> Playcall Chain
                             </button>
                             <button
                                 className={`btn-ghost`}
