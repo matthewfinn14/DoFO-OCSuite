@@ -35946,27 +35946,6 @@
                             });
                             const uniquePlaysCount = allGamePlanPlayIds.size;
 
-                            // Calculate new plays (plays added this week that weren't in previous weeks)
-                            const previousWeekPlayIds = new Set();
-                            weeks.forEach(w => {
-                                if (w.weekNumber < currentWeek.weekNumber) {
-                                    const prevGamePlan = w.gamePlan || {};
-                                    (prevGamePlan.sets || []).forEach(set => {
-                                        (set.playIds || []).forEach(item => {
-                                            const id = typeof item === 'object' ? item.id : item;
-                                            if (id) previousWeekPlayIds.add(id);
-                                        });
-                                    });
-                                    (prevGamePlan.miniScripts || []).forEach(script => {
-                                        (script.playIds || []).forEach(item => {
-                                            const id = typeof item === 'object' ? item.id : item;
-                                            if (id) previousWeekPlayIds.add(id);
-                                        });
-                                    });
-                                }
-                            });
-                            const newPlaysCount = Array.from(allGamePlanPlayIds).filter(id => !previousWeekPlayIds.has(id)).length;
-
                             // Calculate total practice script slots for the week
                             let totalScriptSlots = 0;
                             practicePlans.forEach(plan => {
@@ -35992,16 +35971,7 @@
                                             {uniquePlaysCount}
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                            Unique
-                                        </div>
-                                    </div>
-                                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#10b981' }}>
-                                            {newPlaysCount}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                            New
+                                            Unique Plays
                                         </div>
                                     </div>
                                     <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
@@ -36010,7 +35980,7 @@
                                             {totalScriptSlots}
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                            Slots
+                                            Script Slots
                                         </div>
                                     </div>
                                 </div>
