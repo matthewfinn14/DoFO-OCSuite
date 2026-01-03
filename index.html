@@ -2069,6 +2069,7 @@
 
                 // -- Game Week --
                 case "CalendarClock": return <svg {...commonProps}><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /><circle cx="18" cy="18" r="4" /><path d="M17 16l1 2 2 .5" /></svg>;
+                case "Sun": return <svg {...commonProps}><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></svg>;
                 case "Eye": return <svg {...commonProps}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>;
                 case "LayoutDashboard": return <svg {...commonProps}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>;
                 case "Zap": return <svg {...commonProps}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>;
@@ -39701,6 +39702,25 @@
 
             // -- DEPTH CHART STATE --
             const [depthCharts, setDepthCharts] = useLocalStorage('hc-depth-charts', {});
+            const [depthChartLayouts, setDepthChartLayouts] = useLocalStorage('hc-depth-chart-layouts', {});
+
+            const handleUpdateDepthLayout = (chartType, id, x, y) => {
+                setDepthChartLayouts(prev => ({
+                    ...prev,
+                    [chartType]: {
+                        ...(prev[chartType] || {}),
+                        [id]: { x, y }
+                    }
+                }));
+            };
+
+            const handleResetDepthLayout = (chartType) => {
+                if (window.confirm('Reset layout positions for ' + chartType + '?')) {
+                    const newLayouts = { ...depthChartLayouts };
+                    delete newLayouts[chartType];
+                    setDepthChartLayouts(newLayouts);
+                }
+            };
             // Sync Depth Charts to Firestore
             useAutoSync(authUser, 'depth_charts', depthCharts);
 
@@ -44009,7 +44029,7 @@
                         {view === 'staff-roster' && <StaffManager view="roster" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'staff-tasks' && <StaffManager view="tasks" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
-                        {view === 'depth' && <DepthChart roster={roster} depthChart={depthCharts[depthChartType] || {}} onUpdateDepthChart={(updated) => setDepthCharts({ ...depthCharts, [depthChartType]: updated })} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} />}
+                        {view === 'depth' && <DepthChart roster={roster} depthChart={depthCharts[depthChartType] || {}} onUpdateDepthChart={(updated) => setDepthCharts({ ...depthCharts, [depthChartType]: updated })} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} savedLayout={depthChartLayouts[depthChartType] || {}} onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)} onResetLayout={() => handleResetDepthLayout(depthChartType)} />}
                         {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={wbSettings} setWbSettings={setWbSettings} onNavigate={setView} installList={currentWeek?.installList || []} />}
 
 
