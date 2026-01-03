@@ -32159,7 +32159,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, gamePlan, practicePlans = [], onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [] }) => {
+        const OffensiveGamePlan = ({ plays, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [] }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
@@ -35956,7 +35956,7 @@
 
                             // Calculate total offensive practice script slots
                             let totalScriptSlots = 0;
-                            (practicePlans || []).forEach(plan => {
+                            Object.values(practicePlans || {}).forEach(plan => {
                                 (plan.segments || []).forEach(seg => {
                                     if (seg.hasScript && seg.script && seg.script.length > 0) {
                                         // Only count offensive scripts (exclude special teams)
