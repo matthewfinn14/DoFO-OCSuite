@@ -38118,7 +38118,253 @@
             );
         };
 
-        const GameWeekOverview = ({ week, onUpdateWeek, teamLogo, isLocked }) => {
+        const ManageWeekModal = ({ isOpen, onClose, currentWeek, weeks, onUpdateWeek }) => {
+            console.log('ManageWeekModal Render: isOpen=', isOpen, 'currentWeek=', currentWeek?.id);
+            if (!isOpen) return null;
+            if (!currentWeek) {
+                console.error('ManageWeekModal: currentWeek is missing');
+                return null;
+            }
+
+            const [mode, setMode] = React.useState('import'); // 'import' | 'clear'
+            const [sourceWeekId, setSourceWeekId] = React.useState('');
+            const [selections, setSelections] = React.useState({
+                practicePlans: true,
+                gamePlan: true, // Includes Scripts & Layouts
+                wristbands: true,
+                installs: true,
+                depthChart: true,
+                zonePhilosophies: true
+            });
+
+            // Filter available weeks (exclude current)
+            const availableWeeks = (weeks || []).filter(w => w.id !== currentWeek.id);
+
+            const handleToggle = (key) => {
+                setSelections(prev => ({ ...prev, [key]: !prev[key] }));
+            };
+
+            const handleImport = () => {
+                if (!sourceWeekId) return;
+                const sourceWeek = weeks.find(w => w.id === sourceWeekId);
+                if (!sourceWeek) return;
+
+                const updates = {};
+
+                if (selections.practicePlans) {
+                    const newPlans = {};
+                    Object.entries(sourceWeek.practicePlans || {}).forEach(([day, plan]) => {
+                        newPlans[day] = {
+                            ...JSON.parse(JSON.stringify(plan)),
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 5) + day,
+                            date: currentWeek.practicePlans[day]?.date || plan.date
+                        };
+                    });
+                    updates.practicePlans = newPlans;
+                }
+
+                if (selections.gamePlan) {
+                    updates.offensiveGamePlan = JSON.parse(JSON.stringify(sourceWeek.offensiveGamePlan || { sets: [] }));
+                    updates.dumbCallSheetData = JSON.parse(JSON.stringify(sourceWeek.dumbCallSheetData || {}));
+                }
+
+                if (selections.wristbands) {
+                    updates.wristbands = JSON.parse(JSON.stringify(sourceWeek.wristbands));
+                }
+
+                if (selections.installs) {
+                    updates.installList = [...(sourceWeek.installList || [])];
+                }
+
+                if (selections.depthChart) {
+                    updates.depthChart = JSON.parse(JSON.stringify(sourceWeek.depthChart));
+                }
+
+                if (selections.zonePhilosophies) {
+                    updates.zonePhilosophies = JSON.parse(JSON.stringify(sourceWeek.zonePhilosophies));
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    onUpdateWeek(currentWeek.id, 'bulk_update', updates);
+                }
+                onClose();
+            };
+
+            const handleClear = () => {
+                const updates = {};
+
+                if (selections.practicePlans) {
+                    const resetPlans = {};
+                    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].forEach(day => {
+                        resetPlans[day] = {
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 5) + day,
+                            date: (currentWeek.practicePlans[day]?.date) || new Date().toISOString().split('T')[0],
+                            startTime: '15:40',
+                            segments: []
+                        };
+                    });
+                    updates.practicePlans = resetPlans;
+                }
+
+                if (selections.gamePlan) {
+                    updates.offensiveGamePlan = { sets: [] };
+                    updates.dumbCallSheetData = {};
+                }
+
+                if (selections.wristbands) {
+                    updates.wristbands = {
+                        card1: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        card2: { type: 'standard', opp: '', iter: '1', rows: [] },
+                        card3: { type: 'rooski-skill', opp: '', iter: '1', rows: [] },
+                        staples: { type: 'staples', opp: '', iter: '1', rows: [] }
+                    };
+                }
+
+                if (selections.installs) updates.installList = [];
+                if (selections.depthChart) updates.depthChart = {};
+                if (selections.zonePhilosophies) updates.zonePhilosophies = {};
+
+                if (Object.keys(updates).length > 0) {
+                    onUpdateWeek(currentWeek.id, 'bulk_update', updates);
+                }
+                onClose();
+            };
+
+            return (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+                }}>
+                    <div className="card" style={{ width: '500px', padding: '1.5rem', background: '#1e293b', color: 'white', maxHeight: '90vh', overflowY: 'auto', border: '1px solid #334155' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ margin: 0 }}>Manage Week</h2>
+                            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Icon name="X" size={24} /></button>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <button
+                                onClick={() => setMode('import')}
+                                style={{
+                                    flex: 1, padding: '0.75rem', borderRadius: '8px', fontWeight: 'bold',
+                                    background: mode === 'import' ? 'var(--primary)' : '#334155',
+                                    color: mode === 'import' ? 'white' : '#94a3b8',
+                                    border: '1px solid #475569'
+                                }}
+                            >
+                                Import from Previous
+                            </button>
+                            <button
+                                onClick={() => setMode('clear')}
+                                style={{
+                                    flex: 1, padding: '0.75rem', borderRadius: '8px', fontWeight: 'bold',
+                                    background: mode === 'clear' ? '#ef4444' : '#334155',
+                                    color: mode === 'clear' ? 'white' : '#94a3b8',
+                                    border: '1px solid #475569'
+                                }}
+                            >
+                                Start from Scratch
+                            </button>
+                        </div>
+
+                        {mode === 'import' && (
+                            <div>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>Select Source Week</label>
+                                    <select
+                                        className="form-input"
+                                        style={{ background: '#334155', color: 'white', border: '1px solid #475569' }}
+                                        value={sourceWeekId}
+                                        onChange={(e) => setSourceWeekId(e.target.value)}
+                                    >
+                                        <option value="">-- Select Week --</option>
+                                        {availableWeeks.map(w => (
+                                            <option key={w.id} value={w.id}>Week {w.weekNum} - {w.name} {w.opponent ? `vs ${w.opponent}` : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {sourceWeekId && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        <label style={{ fontWeight: 'bold' }}>Select Data to Import:</label>
+                                        {[
+                                            { id: 'practicePlans', label: 'Practice Plans' },
+                                            { id: 'gamePlan', label: 'Game Plan & Scripts' },
+                                            { id: 'wristbands', label: 'Wristbands' },
+                                            { id: 'installs', label: 'Install List' },
+                                            { id: 'depthChart', label: 'Depth Charts' },
+                                            { id: 'zonePhilosophies', label: 'Zone Philosophies' }
+                                        ].map(item => (
+                                            <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selections[item.id]}
+                                                    onChange={() => handleToggle(item.id)}
+                                                    style={{ width: '18px', height: '18px' }}
+                                                />
+                                                {item.label}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                    <button
+                                        className="btn btn-primary"
+                                        disabled={!sourceWeekId}
+                                        onClick={handleImport}
+                                    >
+                                        Import Selected Data
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {mode === 'clear' && (
+                            <div style={{ padding: '1rem' }}>
+                                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                                    <Icon name="AlertTriangle" size={48} color="#ef4444" style={{ marginBottom: '1rem' }} />
+                                    <h3 style={{ color: '#ef4444', marginTop: 0 }}>Clear Selected Data</h3>
+                                    <p>Select the items you want to reset. <br /><strong>Warning: This action is irreversible.</strong></p>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                    <label style={{ fontWeight: 'bold' }}>Select Data to Clear:</label>
+                                    {[
+                                        { id: 'practicePlans', label: 'Practice Plans' },
+                                        { id: 'gamePlan', label: 'Game Plan & Scripts' },
+                                        { id: 'wristbands', label: 'Wristbands' },
+                                        { id: 'installs', label: 'Install List' },
+                                        { id: 'depthChart', label: 'Depth Charts' },
+                                        { id: 'zonePhilosophies', label: 'Zone Philosophies' }
+                                    ].map(item => (
+                                        <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selections[item.id]}
+                                                onChange={() => handleToggle(item.id)}
+                                                style={{ width: '18px', height: '18px' }}
+                                            />
+                                            {item.label}
+                                        </label>
+                                    ))}
+                                </div>
+
+                                <button
+                                    className="btn"
+                                    onClick={handleClear}
+                                    style={{ background: '#ef4444', color: 'white', width: '100%', padding: '1rem', fontWeight: 'bold' }}
+                                >
+                                    Clear Selected Data
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const GameWeekOverview = ({ week, weeks, onUpdateWeek, teamLogo, isLocked }) => {
+
             const [addEventModal, setAddEventModal] = useState(null); // { day: 'monday' } or null
             const [editingEvent, setEditingEvent] = useState(null); // { day, eventId, event } or null
             const [exportMode, setExportMode] = useState(false);
@@ -38218,10 +38464,13 @@
                 <div style={{ padding: '1rem', maxWidth: '1000px', margin: '0 auto' }}>
                     <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <h1>Week {week.weekNum} Overview</h1>
-                        <button className="btn btn-primary" onClick={handleExport}>
-                            <Icon name="Printer" size={18} style={{ marginRight: '8px' }} />
-                            Export for SportsYou
-                        </button>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+
+                            <button className="btn btn-primary" onClick={handleExport}>
+                                <Icon name="Printer" size={18} style={{ marginRight: '8px' }} />
+                                Export for SportsYou
+                            </button>
+                        </div>
                     </div>
 
                     <div id="game-week-print-area">
@@ -38501,6 +38750,7 @@
                             <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => onSave({ type, level, isHome, opponent, kickoff, busTime, dismissalTime, location, uniforms, title, time, notes })}>Save</button>
                         </div>
                     </div>
+
                 </div>
             );
         };
@@ -38511,6 +38761,120 @@
 
 
 
+
+        const SeasonSetupView = ({ weeks, onUpdateWeek, onAddWeek, onDeleteWeek }) => {
+            const getWeekNum = (w) => {
+                if (w.weekNum !== undefined) return w.weekNum;
+                const match = w.name.match(/Week (\d+)/);
+                if (match) return parseInt(match[1]);
+                if (w.name === "Week 0") return 0;
+                return 99;
+            };
+
+            const sortedWeeks = weeks
+                .filter(w => (w.name.startsWith("Week ") && !w.name.includes("Summer")) || w.name === "First Week with No Game")
+                .sort((a, b) => getWeekNum(a) - getWeekNum(b));
+
+            return (
+                <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
+                    <div className="card" style={{ padding: '2rem', background: '#1e293b', color: 'white', border: '1px solid #334155' }}>
+                        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem', borderBottom: '1px solid #334155', paddingBottom: '1rem' }}>
+                            <Icon name="Calendar" size={28} color="#60a5fa" />
+                            Season Setup: Opponents & Schedule
+                        </h2>
+
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: '#0f172a', textTransform: 'uppercase', fontSize: '0.85rem', letterSpacing: '0.05em' }}>
+                                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #334155' }}>Week</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #334155' }}>Opponent Name</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #334155' }}>Home / Away</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #334155' }}>Label Preview</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #334155' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sortedWeeks.map(week => (
+                                        <tr key={week.id} style={{ borderBottom: '1px solid #334155' }}>
+                                            <td style={{ padding: '1rem', fontWeight: 'bold', color: '#94a3b8' }}>{week.name}</td>
+                                            <td style={{ padding: '1rem' }}>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    placeholder="Enter Opponent..."
+                                                    value={week.opponent || ''}
+                                                    onChange={(e) => onUpdateWeek(week.id, 'opponent', e.target.value)}
+                                                    style={{ background: '#334155', color: 'white', border: '1px solid #475569', width: '100%' }}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                                                    <button
+                                                        onClick={() => onUpdateWeek(week.id, 'isHome', true)}
+                                                        style={{
+                                                            padding: '0.5rem 1rem',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid',
+                                                            background: week.isHome ? '#3b82f6' : 'transparent',
+                                                            color: week.isHome ? 'white' : '#64748b',
+                                                            borderColor: week.isHome ? '#3b82f6' : '#475569',
+                                                            cursor: 'pointer', fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        Home
+                                                    </button>
+                                                    <button
+                                                        onClick={() => onUpdateWeek(week.id, 'isHome', false)}
+                                                        style={{
+                                                            padding: '0.5rem 1rem',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid',
+                                                            background: !week.isHome === true && week.isHome !== undefined ? '#ef4444' : (week.isHome === false ? '#ef4444' : 'transparent'),
+                                                            color: week.isHome === false ? 'white' : '#64748b',
+                                                            borderColor: week.isHome === false ? '#ef4444' : '#475569',
+                                                            cursor: 'pointer', fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        Away
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '1rem', color: '#cbd5e1', fontStyle: 'italic' }}>
+                                                Week {week.weekNum} {week.opponent ? `- ${week.opponent} (${week.isHome ? 'H' : 'A'})` : ''}
+                                            </td>
+                                            <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <button
+                                                    onClick={() => onDeleteWeek(week.id)}
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: '#ef4444',
+                                                        cursor: 'pointer',
+                                                        opacity: 0.7,
+                                                        padding: '0.4rem',
+                                                        borderRadius: '4px'
+                                                    }}
+                                                    className="hover-bg-slate-700"
+                                                    title="Delete Week"
+                                                >
+                                                    <Icon name="Trash" size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+                            <button className="btn btn-primary" onClick={onAddWeek} style={{ padding: '0.75rem 1.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Icon name="Plus" size={18} /> Add Next Week
+                            </button>
+                        </div>
+                    </div>
+                </div >
+            );
+        };
 
         const SchoolSetupWizard = ({ schoolId, onComplete }) => {
             const [localSchoolName, setLocalSchoolName] = useState('');
@@ -40318,6 +40682,7 @@
 
             const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
             const [view, setView] = useState('landing'); // Default to My Tasks
+            const [showManageWeekModal, setShowManageWeekModal] = useState(false);
             const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage('hc-sidebar-collapsed', false);
             const [editingPlay, setEditingPlay] = useState(null);
 
@@ -41029,10 +41394,20 @@
                 const isActive = currentWeekId === weekId;
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', padding: '0.25rem 0 0.5rem 0' }}>
-                        <button className={`nav-item ${isActive && view === 'staff-meeting' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('staff-meeting'); }}
+                        <button className={`nav-item ${isActive && view === 'staff-meeting' && !showManageWeekModal ? 'active' : ''}`}
+                            onClick={() => { setCurrentWeekId(weekId); setView('staff-meeting'); setShowManageWeekModal(false); }}
                             style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="LayoutDashboard" size={12} /> Meeting Home
+                            <Icon name="LayoutDashboard" size={12} /> Week Dashboard
+                        </button>
+                        <button className={`nav-item ${isActive && view === 'staff-meeting' && showManageWeekModal ? 'active' : ''}`}
+                            onClick={() => { setCurrentWeekId(weekId); setView('staff-meeting'); setShowManageWeekModal(true); }}
+                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            <Icon name="Settings" size={12} /> Manage Week
+                        </button>
+                        <button className={`nav-item ${isActive && view === 'meeting-notes' ? 'active' : ''}`}
+                            onClick={() => { setCurrentWeekId(weekId); setView('meeting-notes'); }}
+                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            <Icon name="Users" size={12} /> Meeting Home
                         </button>
                         <button className={`nav-item ${isActive && view === 'practice' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('practice'); }}
@@ -41527,18 +41902,30 @@
             };
 
             const handleAddWeek = () => {
-                const newWeekId = `week-${weeks.length + 1}`;
-                const prevWeek = weeks[weeks.length - 1];
+                // Find highest week number
+                let maxWeek = 0;
+                weeks.forEach(w => {
+                    const match = w.name.match(/Week (\d+)$/); // Strict end match to avoid "Week 1 of Summer"
+                    if (match) {
+                        const num = parseInt(match[1]);
+                        if (num > maxWeek) maxWeek = num;
+                    }
+                });
+
+                const nextNum = maxWeek + 1;
+                const newWeekId = `week-${nextNum}`; // helper ID
+                const prevWeek = weeks[weeks.length - 1]; // Use last week for data cloning
 
                 // Carryover Logic
                 const newWeek = {
-                    id: newWeekId,
-                    name: `Week ${weeks.length + 1}`,
+                    id: `custom-week-${Date.now()}`, // Unique ID to avoid any potential collision
+                    name: `Week ${nextNum}`,
+                    weekNum: nextNum, // Explicitly set weekNum
                     date: '',
                     opponent: '',
                     scoutingReport: '',
                     isLocked: false,
-                    // Copy practice plans structure but maybe clear specific details? For now, full copy is safest/easiest base.
+                    // Copy practice plans structure
                     practicePlans: JSON.parse(JSON.stringify(prevWeek.practicePlans)),
                     pregamePlan: JSON.parse(JSON.stringify(prevWeek.pregamePlan)),
                     offensiveGamePlan: prevWeek.offensiveGamePlan ? JSON.parse(JSON.stringify(prevWeek.offensiveGamePlan)) : { sets: [] },
@@ -41549,11 +41936,23 @@
                     depthChart: prevWeek.depthChart ? JSON.parse(JSON.stringify(prevWeek.depthChart)) : JSON.parse(JSON.stringify(getGlobalDepthCharts())),
                     zonePhilosophies: prevWeek.zonePhilosophies ? JSON.parse(JSON.stringify(prevWeek.zonePhilosophies)) : JSON.parse(JSON.stringify(getGlobalZonePhilosophies())),
 
-                    gameLog: [] // Start fresh for game log
+                    gameLog: []
                 };
 
                 setWeeks([...weeks, newWeek]);
-                setCurrentWeekId(newWeekId);
+                setCurrentWeekId(newWeek.id);
+            };
+
+            const handleDeleteWeek = (weekId) => {
+                if (!window.confirm("Are you sure you want to permanently delete this week?")) return;
+
+                const newWeeks = weeks.filter(w => w.id !== weekId);
+                setWeeks(newWeeks);
+
+                if (currentWeekId === weekId) {
+                    const fallback = newWeeks.length > 0 ? newWeeks[0].id : null;
+                    if (fallback) setCurrentWeekId(fallback); // fixed implicit check
+                }
             };
 
             const toggleWeekLock = () => {
@@ -43907,7 +44306,7 @@
                                                             icon={w.isLocked ? "Lock" : "Calendar"}
                                                             defaultOpen={currentWeekId === w.id}
                                                             nested={true}
-                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
+                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); setShowManageWeekModal(false); }}
                                                         >
                                                             {renderWeeklyTools(w.id)}
                                                         </CollapsibleCategory>
@@ -43923,7 +44322,7 @@
                                                             icon={w.isLocked ? "Lock" : "Sun"}
                                                             defaultOpen={currentWeekId === w.id}
                                                             nested={true}
-                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
+                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); setShowManageWeekModal(false); }}
                                                         >
                                                             {renderWeeklyTools(w.id)}
                                                         </CollapsibleCategory>
@@ -43935,31 +44334,50 @@
                                                     {weeks.filter(w => ["Family Week", "Camp Week", "First Week of Practice", "Week 0"].includes(w.name)).map(w => (
                                                         <CollapsibleCategory
                                                             key={w.id}
-                                                            title={w.name}
+                                                            title={`${w.name}${w.opponent ? ` - ${w.opponent}` : ''}${w.opponent && w.isHome !== undefined ? (w.isHome ? ' (H)' : ' (A)') : ''}`}
                                                             icon={w.isLocked ? "Lock" : "Zap"}
                                                             defaultOpen={currentWeekId === w.id}
                                                             nested={true}
-                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
+                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); setShowManageWeekModal(false); }}
                                                         >
                                                             {renderWeeklyTools(w.id)}
                                                         </CollapsibleCategory>
                                                     ))}
                                                 </CollapsibleCategory>
 
+                                                {/* Season Setup */}
+                                                <button
+                                                    className={`nav-item ${view === 'season-setup' ? 'active' : ''}`}
+                                                    onClick={() => setView('season-setup')}
+                                                    style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', color: 'var(--text-primary)', cursor: 'pointer' }}
+                                                >
+                                                    <Icon name="Calendar" size={18} style={{ marginRight: '8px', color: '#60a5fa' }} />
+                                                    <span style={{ flex: 1, fontWeight: 'bold' }}>SEASON SETUP</span>
+                                                </button>
+
                                                 {/* Regular Season Phase */}
                                                 <CollapsibleCategory title="SEASON" icon="Trophy" defaultOpen={false}>
-                                                    {weeks.filter(w => (w.name.startsWith("Week ") && !w.name.includes("Summer") && w.name !== "Week 0") || w.name === "First Week with No Game").map(w => (
-                                                        <CollapsibleCategory
-                                                            key={w.id}
-                                                            title={`${w.name}${w.opponent ? ` vs ${w.opponent}` : ''}`}
-                                                            icon={w.isLocked ? "Lock" : "Trophy"}
-                                                            defaultOpen={currentWeekId === w.id}
-                                                            nested={true}
-                                                            onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); }}
-                                                        >
-                                                            {renderWeeklyTools(w.id)}
-                                                        </CollapsibleCategory>
-                                                    ))}
+                                                    {weeks.filter(w => (w.name.startsWith("Week ") && !w.name.includes("Summer") && w.name !== "Week 0") || w.name === "First Week with No Game")
+                                                        .sort((a, b) => {
+                                                            const getNum = (item) => {
+                                                                if (item.weekNum !== undefined) return item.weekNum;
+                                                                const match = item.name.match(/Week (\d+)/);
+                                                                return match ? parseInt(match[1]) : 99;
+                                                            };
+                                                            return getNum(a) - getNum(b);
+                                                        })
+                                                        .map(w => (
+                                                            <CollapsibleCategory
+                                                                key={w.id}
+                                                                title={`${w.name}${w.opponent ? ` - ${w.opponent}` : ''}${w.opponent && w.isHome !== undefined ? (w.isHome ? ' (H)' : ' (A)') : ''}`}
+                                                                icon={w.isLocked ? "Lock" : "Trophy"}
+                                                                defaultOpen={currentWeekId === w.id}
+                                                                nested={true}
+                                                                onTitleClick={() => { setCurrentWeekId(w.id); setView('staff-meeting'); setShowManageWeekModal(false); }}
+                                                            >
+                                                                {renderWeeklyTools(w.id)}
+                                                            </CollapsibleCategory>
+                                                        ))}
                                                 </CollapsibleCategory>
                                             </div>
                                         </div>
@@ -44329,10 +44747,20 @@
                             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
                                 {/* Header */}
                                 <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: 'white' }}>
-                                    <h2 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="LayoutDashboard" size={28} />
-                                        {currentWeek.name} Dashboard
-                                    </h2>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Icon name="LayoutDashboard" size={28} />
+                                            {currentWeek.name} Dashboard
+                                        </h2>
+                                        <button
+                                            className="btn"
+                                            onClick={() => setShowManageWeekModal(true)}
+                                            style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                        >
+                                            <Icon name="Settings" size={18} />
+                                            Manage Week
+                                        </button>
+                                    </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
                                         <div>
                                             <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Week</div>
@@ -44545,6 +44973,7 @@
                         {view === 'multi-sport' && <MultiSportTrackingView roster={roster} onUpdateRoster={setRoster} />}
                         {view === 'dashboard' && <GamedayDashboard plays={plays} />}
                         {view === 'calendar' && <StaffCalendar data={calendarData} onUpdate={setCalendarData} staff={staff} roster={roster} tasks={masterTasks} onUpdateTasks={setMasterTasks} />}
+                        {view === 'season-setup' && <SeasonSetupView weeks={weeks} onUpdateWeek={handleUpdateWeek} onAddWeek={handleAddWeek} onDeleteWeek={handleDeleteWeek} />}
                         {view === 'budget' && (
                             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
                                 {/* Financial Overview */}
@@ -45069,10 +45498,27 @@
                                             />
                                         ))}
                                     </div>
+
                                 </div>
                             )
                         }
 
+
+
+                        {view === 'meeting-notes' && (
+                            <div style={{ padding: '2rem', height: '100%', overflow: 'auto' }}>
+                                <div className="card" style={{ padding: '3rem', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Icon name="Users" size={64} style={{ opacity: 0.1, marginBottom: '2rem' }} />
+                                    <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Meeting Home</h2>
+                                    <p style={{ fontSize: '1.2rem', opacity: 0.6, maxWidth: '500px' }}>
+                                        Reserved for coach meeting notes, daily checklists, and action items.
+                                    </p>
+                                    <div style={{ marginTop: '2rem', padding: '1rem 2rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                                        Coming Soon
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {view === 'formations-defense' && <div>Formation Management (Coming Soon)</div>}
                         {view === 'roster' && <RosterManager roster={roster} onUpdateRoster={setRoster} depthChart={depthChart} />}
@@ -45150,6 +45596,7 @@
                                 week={currentWeek}
                                 onUpdateWeek={handleUpdateWeek}
                                 teamLogo={teamLogo}
+                                weeks={this.state.weeks}
                                 isLocked={currentWeek.isLocked}
                             />
                         )}
@@ -45331,6 +45778,14 @@
                             )
                         }
                     </main >
+                    {/* Global Modals */}
+                    <ManageWeekModal
+                        isOpen={showManageWeekModal}
+                        onClose={() => setShowManageWeekModal(false)}
+                        currentWeek={currentWeek}
+                        weeks={weeks}
+                        onUpdateWeek={handleUpdateWeek}
+                    />
                 </div >
             );
         };
