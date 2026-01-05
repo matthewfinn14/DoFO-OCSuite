@@ -2377,7 +2377,7 @@
         };
 
         // Priority Sortable Column
-        const PrioritySortableColumn = ({ items, onListChange, className, style, emptyText, isLocked }) => {
+        const PrioritySortableColumn = ({ items, onListChange, className, style, emptyText, isLocked, onItemDoubleClick }) => {
             const [localItems, setLocalItems] = React.useState(items);
 
             // Stable Sync
@@ -2405,7 +2405,12 @@
                     {localItems.map(play => (
                         <div
                             key={play.id}
-                            style={{ padding: '0.4rem', background: 'white', color: '#1f2937', border: '1px solid var(--border)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isLocked ? 'default' : 'grab', marginBottom: '4px' }}
+                            style={{ padding: '0.4rem', background: 'white', color: '#1f2937', border: '1px solid var(--border)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isLocked ? 'default' : 'grab', marginBottom: '4px', userSelect: 'none' }}
+                            onDoubleClick={(e) => {
+                                if (isLocked) return;
+                                e.stopPropagation();
+                                if (onItemDoubleClick) onItemDoubleClick(play, e);
+                            }}
                         >
                             <div style={{ overflow: 'hidden' }}>
                                 <div style={{ fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.name}</div>
@@ -21393,7 +21398,7 @@
                 // Update game plan via prop
                 const newGamePlan = {
                     ...gamePlan,
-                    miniScripts: [...(gamePlan.miniScripts || []), newScript]
+                    miniScripts: [...(gamePlan?.miniScripts || []), newScript]
                 };
                 // Assuming onUpdateSituation can propagate this up or we need onUpdateGamePlan passed down?
                 // SmartCallSheet only has onUpdateSituation, we need onUpdateGamePlan or similar.
@@ -21413,7 +21418,7 @@
                 const newPlay = onQuickAddPlay(playName);
 
                 // Add to the set
-                const updatedSets = [...(gamePlan.sets || [])];
+                const updatedSets = [...(gamePlan?.sets || [])];
                 const setIndex = updatedSets.findIndex(s => s.id === setId);
 
                 if (setIndex >= 0) {
@@ -21499,7 +21504,7 @@
                 });
 
                 return derivedSections;
-            }, [gamePlanLayouts, gamePlan.miniScripts]);
+            }, [gamePlanLayouts, gamePlan?.miniScripts]);
 
             // Formation groups for matrix view
             const formationGroups = [
@@ -21530,48 +21535,67 @@
             ];
 
             // Get plays for selected section
+            // Helper to get all situations a play is assigned to
+            const getPlaySituations = (playId) => {
+                const situations = [];
+                Object.values(gamePlan?.sets || {}).forEach(set => {
+                    if (set.playIds && set.playIds.includes(playId)) {
+                        // Find the section metadata for this set
+                        const section = gamePlanSections.find(s => s.key === set.id);
+                        if (section) {
+                            situations.push({
+                                id: set.id,
+                                label: section.label,
+                                color: section.color
+                            });
+                        }
+                    }
+                });
+                return situations;
+            };
+
             const getSectionPlays = () => {
                 if (!selectedSection) return [];
 
                 // Special handling for opening script with hash submenu
                 if (selectedSection === 'opening_script') {
                     const setId = selectedHash === 'left' ? '1st_ten_lh' : '1st_ten_rh';
-                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
                 // Special handling for 2-minute drill with category submenu
                 if (selectedSection === 'two_minute') {
                     const setId = `two_minute_${selected2MinCategory} `;
-                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
                 // Special handling for one_word in Strike 'Em Out view with category submenu
                 if (selectedSection === 'one_word') {
                     const setId = selectedOneWordCategory; // 'form_adj', 'motion', or 'tag'
-                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
                 // Special handling for 2nd_xl with hash submenu
                 if (selectedSection === '2nd_xl') {
                     const setId = selected2ndXLHash === 'lh' ? '2nd_xl_lh' : '2nd_xl_rh';
-                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
                 // Special handling for convert_short_med with distance submenu
                 if (selectedSection === 'convert_short_med') {
                     const setId = selectedConvertShortMed === 'short' ? '3rd_short' : '3rd_med';
-                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
                 // Special handling for convert_long_xl with distance submenu
                 if (selectedSection === 'convert_long_xl') {
                     const setId = selectedConvertLongXL === 'long' ? '3rd_long' : '3rd_xl';
-                    const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
@@ -21590,10 +21614,10 @@
                     return plays.filter(p => p.formation && p.formation.includes(selectedSection));
                 }
 
-                const sectionPlayIds = (gamePlan.sets || []).find(s => s.id === selectedSection)?.playIds || [];
+                const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === selectedSection)?.playIds || [];
                 // Check mini scripts if not found in sets
                 if (sectionPlayIds.length === 0 && selectedSection.startsWith('ms_')) {
-                    const script = (gamePlan.miniScripts || []).find(s => s.id === selectedSection);
+                    const script = (gamePlan?.miniScripts || []).find(s => s.id === selectedSection);
                     if (script) {
                         return script.playIds.map(item => {
                             const id = typeof item === 'object' ? item.id : item;
@@ -21610,6 +21634,9 @@
             };
 
             const sectionPlays = getSectionPlays();
+
+            // State for situation dropdown (track which play has dropdown open)
+            const [situationDropdownPlayId, setSituationDropdownPlayId] = useState(null);
 
             // Main Menu View
             if (!selectedSection) {
@@ -21656,13 +21683,13 @@
                             {(() => {
                                 // Calculate unique plays in game plan
                                 const allGamePlanPlayIds = new Set();
-                                (gamePlan.sets || []).forEach(set => {
+                                Object.values(gamePlan?.sets || {}).forEach(set => {
                                     (set.playIds || []).forEach(item => {
                                         const id = typeof item === 'object' ? item.id : item;
                                         if (id) allGamePlanPlayIds.add(id);
                                     });
                                 });
-                                (gamePlan.miniScripts || []).forEach(script => {
+                                Object.values(gamePlan?.miniScripts || {}).forEach(script => {
                                     (script.playIds || []).forEach(item => {
                                         const id = typeof item === 'object' ? item.id : item;
                                         if (id) allGamePlanPlayIds.add(id);
@@ -21675,13 +21702,13 @@
                                 weeks.forEach(w => {
                                     if (w.weekNumber < currentWeek.weekNumber) {
                                         const prevGamePlan = w.gamePlan || {};
-                                        (prevGamePlan.sets || []).forEach(set => {
+                                        Object.values(prevGamePlan.sets || {}).forEach(set => {
                                             (set.playIds || []).forEach(item => {
                                                 const id = typeof item === 'object' ? item.id : item;
                                                 if (id) previousWeekPlayIds.add(id);
                                             });
                                         });
-                                        (prevGamePlan.miniScripts || []).forEach(script => {
+                                        Object.values(prevGamePlan.miniScripts || {}).forEach(script => {
                                             (script.playIds || []).forEach(item => {
                                                 const id = typeof item === 'object' ? item.id : item;
                                                 if (id) previousWeekPlayIds.add(id);
@@ -21766,7 +21793,7 @@
                                 }}>
                                     {(section.boxes || section.rows || []).map(cell => {
                                         const meta = { icon: 'Circle', ...cell }; // Fallback
-                                        const playCount = (gamePlan.sets || []).find(s => s.id === cell.setId)?.playIds?.length || 0;
+                                        const playCount = (gamePlan?.sets || []).find(s => s.id === cell.setId)?.playIds?.length || 0;
 
                                         return (
                                             <button
@@ -22007,7 +22034,7 @@
                                         padding: '0.5rem 1rem',
                                         borderRadius: '6px'
                                     }}>
-                                        {((gamePlan.sets || []).find(s => s.id === 'player_touches')?.playIds?.length || 0)} {((gamePlan.sets || []).find(s => s.id === 'player_touches')?.playIds?.length || 0) === 1 ? 'play' : 'plays'}
+                                        {((gamePlan?.sets || []).find(s => s.id === 'player_touches')?.playIds?.length || 0)} {((gamePlan?.sets || []).find(s => s.id === 'player_touches')?.playIds?.length || 0) === 1 ? 'play' : 'plays'}
                                     </div>
                                 </button>
                             </div>
@@ -22827,7 +22854,7 @@
                                                 </td>
                                                 {['base', 'convert', 'explosive'].map(category => {
                                                     const setId = `${selectedSection}_${down}_${category} `;
-                                                    const cellPlays = (gamePlan.sets || []).find(s => s.id === setId)?.playIds || [];
+                                                    const cellPlays = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
                                                     const cellPlayObjects = cellPlays.map(item => {
                                                         if (typeof item === 'string') {
                                                             const play = plays.find(p => p.id === item);
@@ -22894,6 +22921,154 @@
                                                                                     {play.formation}
                                                                                 </div>
                                                                             )}
+
+                                                                            {/* Situation Assignment UI */}
+                                                                            {(() => {
+                                                                                const playSituations = getPlaySituations(play.id);
+                                                                                const availableSituations = gamePlanSections.filter(section =>
+                                                                                    !playSituations.some(ps => ps.id === section.key)
+                                                                                );
+                                                                                const showDropdown = situationDropdownPlayId === play.id;
+
+                                                                                return (
+                                                                                    <div
+                                                                                        style={{
+                                                                                            marginTop: '0.5rem',
+                                                                                            display: 'flex',
+                                                                                            flexWrap: 'wrap',
+                                                                                            gap: '4px',
+                                                                                            alignItems: 'center'
+                                                                                        }}
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                    >
+                                                                                        {/* Current situation tags */}
+                                                                                        {playSituations.map(situation => (
+                                                                                            <span
+                                                                                                key={situation.id}
+                                                                                                style={{
+                                                                                                    display: 'inline-flex',
+                                                                                                    alignItems: 'center',
+                                                                                                    gap: '4px',
+                                                                                                    padding: '2px 6px',
+                                                                                                    borderRadius: '4px',
+                                                                                                    fontSize: '0.7rem',
+                                                                                                    fontWeight: '500',
+                                                                                                    background: situation.color,
+                                                                                                    color: 'white',
+                                                                                                    cursor: 'default'
+                                                                                                }}
+                                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                            >
+                                                                                                {situation.label}
+                                                                                                <span
+                                                                                                    style={{
+                                                                                                        cursor: 'pointer',
+                                                                                                        marginLeft: '2px',
+                                                                                                        opacity: 0.8,
+                                                                                                        fontWeight: 'bold'
+                                                                                                    }}
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleRemovePlayFromSet(situation.id, play.id);
+                                                                                                    }}
+                                                                                                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                                                                                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                                                                                                >
+                                                                                                    ×
+                                                                                                </span>
+                                                                                            </span>
+                                                                                        ))}
+
+                                                                                        {/* Add situation button */}
+                                                                                        {availableSituations.length > 0 && (
+                                                                                            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                                                                                                <button
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        setSituationDropdownPlayId(showDropdown ? null : play.id);
+                                                                                                    }}
+                                                                                                    style={{
+                                                                                                        padding: '2px 6px',
+                                                                                                        fontSize: '0.7rem',
+                                                                                                        background: 'var(--bg-panel)',
+                                                                                                        border: '1px solid var(--border)',
+                                                                                                        borderRadius: '4px',
+                                                                                                        cursor: 'pointer',
+                                                                                                        color: 'var(--text-secondary)',
+                                                                                                        display: 'inline-flex',
+                                                                                                        alignItems: 'center',
+                                                                                                        gap: '2px'
+                                                                                                    }}
+                                                                                                    onMouseEnter={(e) => {
+                                                                                                        e.currentTarget.style.background = 'var(--bg-card)';
+                                                                                                        e.currentTarget.style.borderColor = 'var(--accent)';
+                                                                                                    }}
+                                                                                                    onMouseLeave={(e) => {
+                                                                                                        e.currentTarget.style.background = 'var(--bg-panel)';
+                                                                                                        e.currentTarget.style.borderColor = 'var(--border)';
+                                                                                                    }}
+                                                                                                >
+                                                                                                    +
+                                                                                                </button>
+
+                                                                                                {/* Dropdown menu */}
+                                                                                                {showDropdown && (
+                                                                                                    <div
+                                                                                                        style={{
+                                                                                                            position: 'absolute',
+                                                                                                            top: '100%',
+                                                                                                            left: 0,
+                                                                                                            marginTop: '4px',
+                                                                                                            background: 'var(--bg-card)',
+                                                                                                            border: '1px solid var(--border)',
+                                                                                                            borderRadius: '6px',
+                                                                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                                                                            zIndex: 1000,
+                                                                                                            minWidth: '200px'
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        {availableSituations.map(situation => (
+                                                                                                            <div
+                                                                                                                key={situation.key}
+                                                                                                                onClick={(e) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    handleAddPlayToSet(situation.key, play.id);
+                                                                                                                    setSituationDropdownPlayId(null);
+                                                                                                                }}
+                                                                                                                style={{
+                                                                                                                    padding: '8px 12px',
+                                                                                                                    cursor: 'pointer',
+                                                                                                                    display: 'flex',
+                                                                                                                    alignItems: 'center',
+                                                                                                                    gap: '8px',
+                                                                                                                    fontSize: '0.85rem',
+                                                                                                                    borderBottom: '1px solid var(--border)'
+                                                                                                                }}
+                                                                                                                onMouseEnter={(e) => {
+                                                                                                                    e.currentTarget.style.background = 'var(--bg-panel)';
+                                                                                                                }}
+                                                                                                                onMouseLeave={(e) => {
+                                                                                                                    e.currentTarget.style.background = 'transparent';
+                                                                                                                }}
+                                                                                                            >
+                                                                                                                <div
+                                                                                                                    style={{
+                                                                                                                        width: '12px',
+                                                                                                                        height: '12px',
+                                                                                                                        borderRadius: '3px',
+                                                                                                                        background: situation.color
+                                                                                                                    }}
+                                                                                                                />
+                                                                                                                {situation.label}
+                                                                                                            </div>
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -23034,6 +23209,155 @@
                                                     return <span key={t} className="mini-tag">{isMotion ? `"${t}"` : t}</span>
                                                 })}
                                             </div>
+
+                                            {/* Situation Assignment UI */}
+                                            {(() => {
+                                                const playSituations = getPlaySituations(play.id);
+                                                const showDropdown = situationDropdownPlayId === play.id;
+
+                                                // Get available situations (not already assigned)
+                                                const availableSituations = gamePlanSections.filter(s =>
+                                                    s.key && !s.type && !playSituations.some(ps => ps.id === s.key)
+                                                );
+
+                                                return (
+                                                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                                        <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                            SITUATIONS
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                            {/* Current situation tags */}
+                                                            {playSituations.map(situation => (
+                                                                <span
+                                                                    key={situation.id}
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px',
+                                                                        padding: '4px 8px',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: 'bold',
+                                                                        background: situation.color,
+                                                                        color: 'white',
+                                                                        cursor: 'default'
+                                                                    }}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    {situation.label}
+                                                                    <span
+                                                                        style={{
+                                                                            cursor: 'pointer',
+                                                                            marginLeft: '2px',
+                                                                            opacity: 0.8,
+                                                                            fontWeight: 'bold'
+                                                                        }}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleRemovePlayFromSet(situation.id, play.id);
+                                                                        }}
+                                                                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                                                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                                                                    >
+                                                                        ×
+                                                                    </span>
+                                                                </span>
+                                                            ))}
+
+                                                            {/* Add situation button */}
+                                                            {availableSituations.length > 0 && (
+                                                                <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSituationDropdownPlayId(showDropdown ? null : play.id);
+                                                                        }}
+                                                                        style={{
+                                                                            padding: '4px 8px',
+                                                                            borderRadius: '4px',
+                                                                            border: '1px dashed var(--border)',
+                                                                            background: 'var(--bg-card)',
+                                                                            color: 'var(--text-secondary)',
+                                                                            fontSize: '0.7rem',
+                                                                            fontWeight: 'bold',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'all 0.2s'
+                                                                        }}
+                                                                        onMouseEnter={(e) => {
+                                                                            e.currentTarget.style.borderColor = 'var(--primary)';
+                                                                            e.currentTarget.style.color = 'var(--primary)';
+                                                                        }}
+                                                                        onMouseLeave={(e) => {
+                                                                            e.currentTarget.style.borderColor = 'var(--border)';
+                                                                            e.currentTarget.style.color = 'var(--text-secondary)';
+                                                                        }}
+                                                                    >
+                                                                        + ADD
+                                                                    </button>
+
+                                                                    {/* Dropdown menu */}
+                                                                    {showDropdown && (
+                                                                        <div
+                                                                            style={{
+                                                                                position: 'absolute',
+                                                                                top: '100%',
+                                                                                left: 0,
+                                                                                marginTop: '4px',
+                                                                                background: 'white',
+                                                                                border: '1px solid var(--border)',
+                                                                                borderRadius: '6px',
+                                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                                                zIndex: 1000,
+                                                                                maxHeight: '300px',
+                                                                                overflowY: 'auto',
+                                                                                minWidth: '200px'
+                                                                            }}
+                                                                        >
+                                                                            {availableSituations.map(situation => (
+                                                                                <div
+                                                                                    key={situation.key}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleAddPlayToSet(situation.key, play.id);
+                                                                                        setSituationDropdownPlayId(null);
+                                                                                    }}
+                                                                                    style={{
+                                                                                        padding: '8px 12px',
+                                                                                        cursor: 'pointer',
+                                                                                        fontSize: '0.85rem',
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '8px',
+                                                                                        transition: 'background 0.15s'
+                                                                                    }}
+                                                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-panel)'}
+                                                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                                                >
+                                                                                    <div
+                                                                                        style={{
+                                                                                            width: '12px',
+                                                                                            height: '12px',
+                                                                                            borderRadius: '2px',
+                                                                                            background: situation.color
+                                                                                        }}
+                                                                                    />
+                                                                                    {situation.label}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {playSituations.length === 0 && availableSituations.length === 0 && (
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                                                    No situations available
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 ))}
@@ -32192,6 +32516,7 @@
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
+            const [assignmentModalState, setAssignmentModalState] = useState(null); // { playId, x, y }
 
             const [viewMode, setViewMode] = useState('call-sheet'); // 'call-sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
@@ -32368,7 +32693,7 @@
                     const existingSet = gamePlan?.sets?.find(s => s.id === setId);
                     let newSets;
                     if (existingSet) {
-                        newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: rawIds } : s);
+                        newSets = (gamePlan?.sets || []).map(s => s.id === setId ? { ...s, playIds: rawIds } : s);
                     } else {
                         // Implicit create
                         newSets = [...(gamePlan?.sets || []), { id: setId, name: setId, playIds: rawIds }];
@@ -32407,7 +32732,7 @@
                     const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                     let newSets;
                     if (existingSet) {
-                        newSets = gamePlan.sets.map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
+                        newSets = (gamePlan?.sets || []).map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
                     } else {
                         // Should not happen in selector usually, but implicit create
                         newSets = [...(gamePlan?.sets || []), { id: activeCellSetId, name: activeCellSetId, playIds: rawIds }];
@@ -32445,7 +32770,7 @@
                     const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                     let newSets;
                     if (existingSet) {
-                        newSets = gamePlan.sets.map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
+                        newSets = (gamePlan?.sets || []).map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
                     } else {
                         newSets = [...(gamePlan?.sets || []), { id: activeCellSetId, name: activeCellSetId, playIds: rawIds }];
                     }
@@ -32471,7 +32796,7 @@
                         const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                         let newSets;
                         if (existingSet) {
-                            newSets = gamePlan.sets.map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
+                            newSets = (gamePlan?.sets || []).map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
                         }
                         // If implicitly creating on remove? weird. Ignore.
                         if (newSets) onUpdateGamePlan({ ...gamePlan, sets: newSets });
@@ -32501,7 +32826,7 @@
                     const existingSet = gamePlan?.sets?.find(s => s.id === setId);
                     let newSets;
                     if (existingSet) {
-                        newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: [...s.playIds, playId] } : s);
+                        newSets = (gamePlan?.sets || []).map(s => s.id === setId ? { ...s, playIds: [...s.playIds, playId] } : s);
                     } else {
                         // Implicit creation for grid cells
                         newSets = [...(gamePlan?.sets || []), { id: setId, name: setId, playIds: [playId] }];
@@ -32515,13 +32840,13 @@
                     const existingScript = gamePlan?.miniScripts?.find(s => s.id === setId);
                     if (!existingScript) return;
                     const newPlayIds = existingScript.playIds.filter(id => id !== playId);
-                    const newMiniScripts = gamePlan.miniScripts.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                    const newMiniScripts = (gamePlan?.miniScripts || []).map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
                     const existingSet = gamePlan?.sets?.find(s => s.id === setId);
                     if (!existingSet) return;
                     const newPlayIds = existingSet.playIds.filter(id => id !== playId);
-                    const newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                    const newSets = (gamePlan?.sets || []).map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                     onUpdateGamePlan({ ...gamePlan, sets: newSets });
                 }
             };
@@ -32602,10 +32927,10 @@
                     }
 
                     if (setId.startsWith('ms_')) {
-                        const newMiniScripts = gamePlan.miniScripts.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                        const newMiniScripts = (gamePlan?.miniScripts || []).map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                         onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                     } else {
-                        const newSets = gamePlan.sets.map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                        const newSets = (gamePlan?.sets || []).map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                         onUpdateGamePlan({ ...gamePlan, sets: newSets });
                     }
                 };
@@ -32627,7 +32952,16 @@
                 return (
                     <div style={{ padding: '0.25rem' }}>
                         {playsInSet.map((p, pIdx) => (
-                            <div key={`${p.id}_${pIdx}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 0', position: 'relative' }}>
+                            <div key={`${p.id}_${pIdx}`} style={{
+                                display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 0', position: 'relative',
+                                cursor: 'pointer', userSelect: 'none'
+                            }}
+                                onDoubleClick={(e) => {
+                                    if (p.type === 'note') return;
+                                    e.stopPropagation();
+                                    setAssignmentModalState({ playId: p.id, x: e.clientX, y: e.clientY });
+                                }}
+                            >
                                 {p.type === 'note' ? (
                                     <div style={{
                                         fontSize: '0.75rem', marginTop: '4px', marginBottom: '4px', padding: '2px 4px',
@@ -32839,7 +33173,7 @@
                 // Add to game plan data
                 const newGamePlan = {
                     ...gamePlan,
-                    miniScripts: [...(gamePlan.miniScripts || []), newScript]
+                    miniScripts: [...(gamePlan?.miniScripts || []), newScript]
                 };
                 onUpdateGamePlan(newGamePlan);
 
@@ -32874,7 +33208,7 @@
                 // Update Game Plan Data
                 const newGamePlan = {
                     ...gamePlan,
-                    miniScripts: (gamePlan.miniScripts || []).filter(s => s.id !== scriptId)
+                    miniScripts: (gamePlan?.miniScripts || []).filter(s => s.id !== scriptId)
                 };
                 onUpdateGamePlan(newGamePlan);
                 setConfirmDeleteScriptId(null);
@@ -33051,8 +33385,8 @@
             // Extracted logic for Active Plays
             const getAllActivePlays = () => {
                 const allActivePlayIds = new Set();
-                (gamePlan.sets || []).forEach(set => set.playIds.forEach(id => allActivePlayIds.add(id)));
-                (gamePlan.miniScripts || []).forEach(script => script.playIds.forEach(id => allActivePlayIds.add(id)));
+                Object.values(gamePlan?.sets || {}).forEach(set => set.playIds.forEach(id => allActivePlayIds.add(id)));
+                Object.values(gamePlan?.miniScripts || {}).forEach(script => script.playIds.forEach(id => allActivePlayIds.add(id)));
                 return Array.from(allActivePlayIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
             };
 
@@ -33288,12 +33622,12 @@
                                             fontSize: '0.75rem',
                                             cursor: 'pointer',
                                             background: idx === selectedIndex ? '#f1f5f9' : 'white',
-                                            borderBottom: '1px solid #f1f5f9'
+                                            borderBottom: '1px solid #f1f5f9',
+                                            color: '#0f172a' // Force dark text
                                         }}
                                         onMouseEnter={() => setSelectedIndex(idx)}
                                     >
-                                        <div style={{ fontWeight: 'bold' }}>{p.name}</div>
-                                        <div style={{ fontSize: '0.9em', color: '#64748b' }}>{p.formation}</div>
+                                        <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{p.name}</div>
                                     </div>
                                 ))}
                                 {filteredResults.length === 0 && (
@@ -33305,6 +33639,72 @@
                         )}
                     </div>
                 );
+            };
+
+            const handleAssignPlayToSituation = (playId, box) => {
+                if (!playId || !box || !box.setId) return;
+
+                const isScript = box.type === 'script';
+                const collection = isScript ? (gamePlan.miniScripts || {}) : (gamePlan.sets || {});
+                const targetId = box.setId;
+                const currentData = collection[targetId] || { playIds: [], assignedPlayIds: [] };
+
+                // Initialize if missing
+                if (!currentData.assignedPlayIds) currentData.assignedPlayIds = [];
+
+                const isAssigned = currentData.assignedPlayIds.includes(playId);
+                let newAssignedIds;
+
+                if (isAssigned) {
+                    newAssignedIds = currentData.assignedPlayIds.filter(id => id !== playId);
+                } else {
+                    newAssignedIds = [...currentData.assignedPlayIds, playId];
+                }
+
+                // Update gamePlan
+                const newGamePlan = { ...gamePlan };
+                if (isScript) {
+                    newGamePlan.miniScripts = {
+                        ...newGamePlan.miniScripts,
+                        [targetId]: { ...currentData, assignedPlayIds: newAssignedIds }
+                    };
+                } else {
+                    newGamePlan.sets = {
+                        ...newGamePlan.sets,
+                        [targetId]: { ...currentData, assignedPlayIds: newAssignedIds }
+                    };
+                }
+
+                onUpdateGamePlan(newGamePlan);
+            };
+
+            const getPlaySituations = (playId) => {
+                if (!playId || !gamePlanLayouts?.CALL_SHEET?.sections) return [];
+
+                const assignedSituations = [];
+
+                gamePlanLayouts.CALL_SHEET.sections.forEach(section => {
+                    if (!section.boxes) return;
+                    section.boxes.forEach(box => {
+                        if (!box.setId) return;
+
+                        const isScript = box.type === 'script';
+                        const collection = isScript ? (gamePlan.miniScripts || {}) : (gamePlan.sets || {});
+                        const data = collection[box.setId];
+
+                        // Check if play is assigned
+                        if (data?.assignedPlayIds?.includes(playId)) {
+                            assignedSituations.push({
+                                id: box.setId,
+                                header: box.header,
+                                color: box.color,
+                                type: box.type
+                            });
+                        }
+                    });
+                });
+
+                return assignedSituations;
             };
 
             const PlaySlot = ({ playId, onUpdate, isLocked, placeholder = "+" }) => {
@@ -33379,12 +33779,17 @@
 
                 return (
                     <div
-                        style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', padding: '0 4px', background: isHovered ? '#e0f2fe' : 'transparent' }}
+                        style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', padding: '0 4px', background: isHovered ? '#e0f2fe' : 'transparent', cursor: 'pointer' }}
                         onDragOver={(e) => { e.preventDefault(); setIsHovered(true); }}
                         onDragLeave={() => setIsHovered(false)}
                         onDrop={(e) => {
                             e.preventDefault(); setIsHovered(false); if (isLocked) return;
                             try { const data = JSON.parse(e.dataTransfer.getData('application/react-dnd')); if (data && data.playId) onUpdate(data.playId); } catch (e) { }
+                        }}
+                        onDoubleClick={(e) => {
+                            if (isLocked || !play) return;
+                            e.stopPropagation();
+                            setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY });
                         }}
                     >
                         {play ? (
@@ -33443,13 +33848,13 @@
                                                         cursor: 'pointer',
                                                         background: idx === selectedIndex ? '#f1f5f9' : 'white',
                                                         borderBottom: '1px solid #f1f5f9',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                        color: '#0f172a' // Force dark text color
                                                     }}
                                                     onMouseEnter={() => setSelectedIndex(idx)}
                                                 >
                                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                        <span style={{ fontWeight: 'bold' }}>{p.name}</span>
-                                                        <span style={{ fontSize: '0.7em', color: '#64748b' }}>{p.formation} :: {p.concept}</span>
+                                                        <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{p.name}</span>
                                                     </div>
                                                     {p.wristbandSlot && (
                                                         <div style={{ fontSize: '0.7em', background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '12px', fontWeight: 'bold' }}>
@@ -33468,7 +33873,29 @@
                                 </div>
                             )
                         )}
-                    </div>
+
+                        {/* Situation Assignment UI - DOTS ONLY */}
+                        {
+                            (playId && !isLocked) && (
+                                <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto', paddingLeft: '4px' }}>
+                                    {/* Render Assigned Situations */}
+                                    {getPlaySituations(playId).map(sit => (
+                                        <div
+                                            key={sit.id}
+                                            title={`Assigned to ${sit.header}`}
+                                            style={{
+                                                width: '8px', height: '8px', borderRadius: '50%',
+                                                backgroundColor: sit.color || '#cbd5e1',
+                                                marginRight: '2px',
+                                                cursor: 'help'
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            )
+                        }
+
+                    </div >
                 );
             };
 
@@ -33520,6 +33947,259 @@
                 </div>
             );
 
+            const renderAssignedPlaysPanel = (box) => {
+                // Get the setId from the box to look up assigned plays
+                const setId = box.setId;
+                if (!setId) return null;
+
+                // Get the set/script data object
+                const setData = gamePlan?.sets?.[setId] || gamePlan?.miniScripts?.[setId] || {};
+
+                // Get assigned play IDs (safely defaulting to empty array)
+                // Note: handling both 'playIds' and 'assignedPlayIds' for backward compatibility/migration
+                const assignedPlayIds = setData.assignedPlayIds || setData.playIds || [];
+
+                // Map play IDs to full play objects
+                const assignedPlays = assignedPlayIds
+                    .map(playId => plays.find(p => p.id === playId))
+                    .filter(Boolean);
+
+                // Handle adding a play
+                // Determine if this is a script or set
+                const isScript = box.type === 'script';
+                const collectionKey = isScript ? 'miniScripts' : 'sets';
+
+                // Handle adding a play
+                const handleAddPlay = (playId) => {
+                    if (!assignedPlayIds.includes(playId)) {
+                        const updatedWeek = { ...currentWeek };
+
+                        // Ensure collection object exists
+                        if (!updatedWeek.offensiveGamePlan[collectionKey]) {
+                            updatedWeek.offensiveGamePlan[collectionKey] = {};
+                        }
+
+                        // Get current data for this item
+                        const currentCollection = updatedWeek.offensiveGamePlan[collectionKey];
+                        const currentItemData = currentCollection[setId] || { playIds: [], assignedPlayIds: [] };
+
+                        // Update assignedPlayIds
+                        const newAssignedIds = [...assignedPlayIds, playId];
+
+                        // Save back maintaining object structure
+                        currentCollection[setId] = {
+                            ...currentItemData,
+                            assignedPlayIds: newAssignedIds,
+                            playIds: newAssignedIds
+                        };
+
+                        onUpdateWeek(updatedWeek);
+                    }
+                };
+
+                // Handle removing a play
+                const handleRemovePlay = (playId) => {
+                    const updatedWeek = { ...currentWeek };
+
+                    if (!updatedWeek.offensiveGamePlan[collectionKey]) return;
+
+                    const currentCollection = updatedWeek.offensiveGamePlan[collectionKey];
+                    const currentItemData = currentCollection[setId] || { playIds: [], assignedPlayIds: [] };
+                    const newAssignedIds = assignedPlayIds.filter(id => id !== playId);
+
+                    currentCollection[setId] = {
+                        ...currentItemData,
+                        assignedPlayIds: newAssignedIds,
+                        playIds: newAssignedIds
+                    };
+
+                    onUpdateWeek(updatedWeek);
+                };
+
+                // Handle reordering plays
+                const handleMovePlay = (playId, direction) => {
+                    const currentIndex = assignedPlayIds.indexOf(playId);
+                    if (currentIndex === -1) return;
+
+                    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+                    if (newIndex < 0 || newIndex >= assignedPlayIds.length) return;
+
+                    const updatedWeek = { ...currentWeek };
+                    if (!updatedWeek.offensiveGamePlan[collectionKey]) return;
+
+                    const currentCollection = updatedWeek.offensiveGamePlan[collectionKey];
+                    const currentItemData = currentCollection[setId] || { playIds: [], assignedPlayIds: [] };
+                    const newPlayIds = [...assignedPlayIds];
+                    [newPlayIds[currentIndex], newPlayIds[newIndex]] = [newPlayIds[newIndex], newPlayIds[currentIndex]];
+
+                    currentCollection[setId] = {
+                        ...currentItemData,
+                        assignedPlayIds: newPlayIds,
+                        playIds: newPlayIds
+                    };
+
+                    onUpdateWeek(updatedWeek);
+                };
+
+                return (
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100%',
+                        background: '#f8fafc',
+                        borderRadius: '8px',
+                        overflow: 'hidden'
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            padding: '1rem',
+                            borderBottom: '2px solid #e2e8f0',
+                            background: 'white'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold', color: '#1e293b' }}>
+                                    QUICK LIST
+                                </h4>
+                                <span style={{
+                                    background: box.color || '#64748b',
+                                    color: 'white',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold'
+                                }}>
+                                    {assignedPlays.length}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Play List */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+                            {assignedPlays.length > 0 ? (
+                                assignedPlays.map((play, idx) => (
+                                    <div
+                                        key={play.id}
+                                        style={{
+                                            background: 'white',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '6px',
+                                            padding: '0.75rem',
+                                            marginBottom: '0.5rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            cursor: 'pointer' // Add cursor pointer to indicate interactivity
+                                        }}
+                                        onDoubleClick={(e) => {
+                                            e.stopPropagation();
+                                            setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY });
+                                        }}
+                                    >
+                                        {/* Reorder Buttons */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <button
+                                                onClick={() => handleMovePlay(play.id, 'up')}
+                                                disabled={idx === 0}
+                                                style={{
+                                                    padding: '2px 4px',
+                                                    fontSize: '0.7rem',
+                                                    background: idx === 0 ? '#f1f5f9' : '#e2e8f0',
+                                                    border: 'none',
+                                                    borderRadius: '3px',
+                                                    cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                                                    color: idx === 0 ? '#cbd5e1' : '#475569'
+                                                }}
+                                            >
+                                                ▲
+                                            </button>
+                                            <button
+                                                onClick={() => handleMovePlay(play.id, 'down')}
+                                                disabled={idx === assignedPlays.length - 1}
+                                                style={{
+                                                    padding: '2px 4px',
+                                                    fontSize: '0.7rem',
+                                                    background: idx === assignedPlays.length - 1 ? '#f1f5f9' : '#e2e8f0',
+                                                    border: 'none',
+                                                    borderRadius: '3px',
+                                                    cursor: idx === assignedPlays.length - 1 ? 'not-allowed' : 'pointer',
+                                                    color: idx === assignedPlays.length - 1 ? '#cbd5e1' : '#475569'
+                                                }}
+                                            >
+                                                ▼
+                                            </button>
+                                        </div>
+
+                                        {/* Play Info */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px' }}>
+                                                {play.name}
+                                                {play.wristbandSlot && (
+                                                    <span style={{
+                                                        marginLeft: '6px',
+                                                        fontSize: '0.7rem',
+                                                        background: '#dbeafe',
+                                                        color: '#1e40af',
+                                                        padding: '1px 6px',
+                                                        borderRadius: '10px',
+                                                        fontWeight: 'normal'
+                                                    }}>
+                                                        {play.wristbandSlot}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                {play.formation} {play.concept && `• ${play.concept}`}
+                                            </div>
+                                        </div>
+
+                                        {/* Remove Button */}
+                                        <button
+                                            onClick={() => handleRemovePlay(play.id)}
+                                            style={{
+                                                padding: '4px 8px',
+                                                fontSize: '0.9rem',
+                                                background: '#fee2e2',
+                                                color: '#dc2626',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = '#fecaca'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = '#fee2e2'}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '2rem 1rem',
+                                    color: '#94a3b8',
+                                    fontSize: '0.85rem',
+                                    fontStyle: 'italic'
+                                }}>
+                                    No plays assigned yet.
+                                    <br />
+                                    Click "Add Play" below to get started.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Add Play Button */}
+                        <div style={{ padding: '0.75rem', borderTop: '2px solid #e2e8f0', background: 'white' }}>
+                            <PlaySlot
+                                playId={null}
+                                isLocked={false}
+                                onUpdate={handleAddPlay}
+                                placeholder="+ Add Play to Situation"
+                            />
+                        </div>
+                    </div>
+                );
+            };
+
             const [editingBox, setEditingBox] = useState(null); // { sectionIdx, boxIdx }
 
             const renderBoxEditorModal = () => {
@@ -33537,7 +34217,7 @@
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }} onClick={() => setEditingBox(null)}>
                         <div style={{
-                            width: '95%', maxWidth: '1200px', maxHeight: '90vh',
+                            width: '95%', maxWidth: '1300px', maxHeight: '90vh',
                             background: 'white', borderRadius: '8px',
                             display: 'flex', flexDirection: 'column',
                             overflow: 'hidden'
@@ -33546,8 +34226,16 @@
                                 <h3 style={{ margin: 0, textTransform: 'uppercase' }}>Edit {box.header}</h3>
                                 <button className="btn" onClick={() => setEditingBox(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white' }}>Close</button>
                             </div>
-                            <div style={{ padding: '1rem', overflowY: 'auto', flex: 1 }}>
-                                {box.type === 'script' ? renderScriptBox(box, sectionIdx, boxIdx, true) : renderGridBox(box, sectionIdx, boxIdx, true)}
+                            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                                {/* Left Panel: QUICK LIST */}
+                                <div style={{ width: '350px', borderRight: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                                    {renderAssignedPlaysPanel(box)}
+                                </div>
+
+                                {/* Right Panel: Editor */}
+                                <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+                                    {box.type === 'script' ? renderScriptBox(box, sectionIdx, boxIdx, true) : renderGridBox(box, sectionIdx, boxIdx, true)}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -34822,7 +35510,7 @@
                                                 {editingFormationId === formation.id ? (
                                                     <input
                                                         autoFocus
-                                                        defaultValue={(gamePlan.formationOverrides || {})[formation.id] || formation.label}
+                                                        defaultValue={(gamePlan?.formationOverrides || {})[formation.id] || formation.label}
                                                         style={{ background: 'white', color: 'black', border: 'none', padding: '2px 4px', borderRadius: '2px', width: '200px' }}
                                                         onBlur={(e) => handleUpdateFormationName(formation.id, e.target.value)}
                                                         onKeyDown={(e) => {
@@ -34831,7 +35519,7 @@
                                                         onClick={(e) => e.stopPropagation()}
                                                     />
                                                 ) : (
-                                                    (gamePlan.formationOverrides || {})[formation.id] || formation.label
+                                                    (gamePlan?.formationOverrides || {})[formation.id] || formation.label
                                                 )}
                                             </td>
                                         </tr>
@@ -35355,7 +36043,13 @@
                                                                         background: p.type === 'GAP' ? '#f8fafc' : 'white',
                                                                         opacity: draggedGridIndex === idx ? 0.5 : 1,
                                                                         transition: 'all 0.2s',
-                                                                        textAlign: 'center'
+                                                                        textAlign: 'center',
+                                                                        cursor: p.type !== 'GAP' ? 'pointer' : 'default'
+                                                                    }}
+                                                                    onDoubleClick={(e) => {
+                                                                        if (isLocked || p.type === 'GAP') return;
+                                                                        e.stopPropagation();
+                                                                        setAssignmentModalState({ playId: p.id, x: e.clientX, y: e.clientY });
                                                                     }}
                                                                 >
                                                                     {p.type !== 'GAP' ? (
@@ -35407,7 +36101,13 @@
                                                             height: '40px', border: '1px solid #cbd5e1', borderRadius: '4px',
                                                             display: 'flex', alignItems: 'center', padding: '0 4px', gap: '4px',
                                                             background: p.type === 'GAP' ? '#f8fafc' : 'white',
-                                                            opacity: draggedGridIndex === idx ? 0.5 : 1
+                                                            opacity: draggedGridIndex === idx ? 0.5 : 1,
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onDoubleClick={(e) => {
+                                                            if (isLocked) return;
+                                                            e.stopPropagation();
+                                                            setAssignmentModalState({ playId: p.id, x: e.clientX, y: e.clientY });
                                                         }}
                                                     >
                                                         {p.type !== 'GAP' && (
@@ -35451,7 +36151,13 @@
                                                                 height: '40px', border: '1px solid #cbd5e1', borderRadius: '4px',
                                                                 display: 'flex', alignItems: 'center', padding: '0 4px', gap: '4px',
                                                                 background: p.type === 'GAP' ? '#f8fafc' : 'white',
-                                                                opacity: draggedGridIndex === globalIdx ? 0.5 : 1
+                                                                opacity: draggedGridIndex === globalIdx ? 0.5 : 1,
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            onDoubleClick={(e) => {
+                                                                if (isLocked) return;
+                                                                e.stopPropagation();
+                                                                setAssignmentModalState({ playId: p.id, x: e.clientX, y: e.clientY });
                                                             }}
                                                         >
                                                             {p.type !== 'GAP' && (
@@ -35739,8 +36445,15 @@
                                                             <div style={{
                                                                 background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px',
                                                                 padding: '4px', fontSize: '0.8rem', position: 'relative',
-                                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                            }}>
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                                onDoubleClick={(e) => {
+                                                                    if (isLocked) return;
+                                                                    e.stopPropagation();
+                                                                    setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY });
+                                                                }}
+                                                            >
                                                                 <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{play.name}</div>
                                                                 {!isLocked && (
                                                                     <div
@@ -35894,6 +36607,7 @@
                                                 onListChange={(newItems) => handleCategoryListChange(newItems, cat.id)}
                                                 style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', gap: '0' }}
                                                 isLocked={isLocked}
+                                                onItemDoubleClick={(play, e) => setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY })}
                                             />
                                             {listItems.length === 0 && (
                                                 <div style={{ fontStyle: 'italic', opacity: 0.5, fontSize: '0.8rem', padding: '0.5rem', textAlign: 'center', pointerEvents: 'none' }}>
@@ -35922,6 +36636,7 @@
                                     onListChange={handleInboxListChange}
                                     style={{ minHeight: '200px', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
                                     isLocked={isLocked}
+                                    onItemDoubleClick={(play, e) => setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY })}
                                 />
                                 {unassignedPriorityPlays.length === 0 && (
                                     <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontStyle: 'italic', fontSize: '0.9rem' }}>
@@ -35933,6 +36648,107 @@
                     </div>
                 );
             };
+            // POPOVER FOR MULTI-SELECT ASSIGNMENT
+            const renderSituationAssignmentModal = () => {
+                if (!assignmentModalState) return null;
+                const { playId, x, y } = assignmentModalState;
+
+                const play = plays.find(p => p.id === playId);
+                if (!play) return null;
+
+                const assignedSits = getPlaySituations(playId);
+                const assignedIds = new Set(assignedSits.map(s => s.id));
+
+                const popoverHeight = 300;
+                const popoverWidth = 280;
+
+                // Simple collision detection to keep on screen
+                let top = y;
+                let left = x;
+                if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 10;
+                if (left + popoverWidth > window.innerWidth) left = window.innerWidth - popoverWidth - 10;
+
+                return (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'transparent', zIndex: 9999,
+                    }} onClick={() => setAssignmentModalState(null)}>
+                        <div style={{
+                            position: 'absolute',
+                            top: top, left: left,
+                            background: 'white', width: `${popoverWidth}px`, maxHeight: `${popoverHeight}px`,
+                            borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+                            display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                        }} onClick={e => e.stopPropagation()}>
+
+                            {/* HEADER */}
+                            <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
+                                <div>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Assign Situations</div>
+                                </div>
+                                <button
+                                    onClick={() => setAssignmentModalState(null)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            {/* BODY - SCROLLABLE */}
+                            <div style={{ padding: '8px', overflowY: 'auto', flex: 1 }}>
+                                {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
+                                    const relevantBoxes = (section.boxes || []).filter(b => b.header && !b.hidden);
+                                    if (relevantBoxes.length === 0) return null;
+
+                                    return (
+                                        <div key={sIdx} style={{ marginBottom: '12px' }}>
+                                            <div style={{
+                                                fontSize: '0.65rem', fontWeight: 'bold', color: '#94a3b8',
+                                                marginBottom: '4px', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px'
+                                            }}>
+                                                {section.title || `Section ${sIdx + 1}`}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                {relevantBoxes.map((box, bIdx) => {
+                                                    const isCheck = assignedIds.has(box.setId);
+                                                    return (
+                                                        <div
+                                                            key={bIdx}
+                                                            onClick={() => handleAssignPlayToSituation(playId, box)}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', gap: '8px',
+                                                                padding: '6px', borderRadius: '4px', cursor: 'pointer',
+                                                                background: isCheck ? '#eff6ff' : 'transparent',
+                                                                color: isCheck ? '#1e3a8a' : '#334155'
+                                                            }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = isCheck ? '#eff6ff' : '#f8fafc'}
+                                                            onMouseLeave={e => e.currentTarget.style.background = isCheck ? '#eff6ff' : 'transparent'}
+                                                        >
+                                                            <div style={{
+                                                                width: '14px', height: '14px', borderRadius: '3px',
+                                                                border: `1px solid ${isCheck ? (box.color || '#3b82f6') : '#cbd5e1'}`,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                background: isCheck ? (box.color || '#3b82f6') : 'white'
+                                                            }}>
+                                                                {isCheck && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
+                                                            </div>
+                                                            <span style={{ fontSize: '0.8rem', fontWeight: isCheck ? '600' : '400' }}>
+                                                                {box.header}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                        </div>
+                    </div>
+                );
+            };
+
 
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)', gap: '1rem' }}>
@@ -35964,7 +36780,7 @@
 
                             // 2. Calculate unique plays in game plan
                             const allGamePlanPlayIds = new Set();
-                            (gamePlan.sets || []).forEach(set => {
+                            Object.values(gamePlan?.sets || {}).forEach(set => {
                                 (set.playIds || []).forEach(item => {
                                     const id = typeof item === 'object' ? item.id : item;
                                     if (id) {
@@ -35972,7 +36788,7 @@
                                     }
                                 });
                             });
-                            (gamePlan.miniScripts || []).forEach(script => {
+                            Object.values(gamePlan?.miniScripts || {}).forEach(script => {
                                 (script.playIds || []).forEach(item => {
                                     const id = typeof item === 'object' ? item.id : item;
                                     if (id) {
@@ -36071,6 +36887,7 @@
                     {renderPlaySelector()}
                     {renderSectionConfigurationModal()}
                     {renderBoxEditorModal()}
+                    {renderSituationAssignmentModal()}
 
                 </div>
             );
@@ -44485,6 +45302,19 @@
                                             </CollapsibleCategory>
                                         )}
 
+                                        {/* SELF-SCOUT CATEGORY */}
+                                        <CollapsibleCategory title="Self-Scout" icon="BarChart2" defaultOpen={false}>
+                                            <button className={`nav-item ${view === 'self-scout-season-offense' ? 'active' : ''}`} onClick={() => setView('self-scout-season-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="TrendingUp" size={16} style={{ marginRight: '8px' }} /> Season Offense
+                                            </button>
+                                            <button className={`nav-item ${view === 'self-scout-season-defense' ? 'active' : ''}`} onClick={() => setView('self-scout-season-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Shield" size={16} style={{ marginRight: '8px' }} /> Season Defense
+                                            </button>
+                                            <button className={`nav-item ${view === 'self-scout-season-special-teams' ? 'active' : ''}`} onClick={() => setView('self-scout-season-special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Compass" size={16} style={{ marginRight: '8px' }} /> Season Special Teams
+                                            </button>
+                                        </CollapsibleCategory>
+
                                         {/* PERSONNEL CATEGORY (Moved from top) */}
                                         {currentPermissions.staff.view && (
                                             <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
@@ -45667,6 +46497,68 @@
                         {view === 'self-scout-offense' && <SelfScoutView phase="Offense" />}
                         {view === 'self-scout-defense' && <SelfScoutView phase="Defense" />}
                         {view === 'self-scout-special-teams' && <SelfScoutView phase="Special Teams" />}
+
+                        {/* Season-level Self-Scout Views (Placeholders) */}
+                        {view === 'self-scout-season-offense' && (
+                            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+                                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Season Offense Self-Scout</h1>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                                    This section will contain season-long offensive analytics and self-scouting reports.
+                                </p>
+                                <div style={{
+                                    padding: '3rem',
+                                    background: 'var(--bg-secondary)',
+                                    borderRadius: '8px',
+                                    textAlign: 'center',
+                                    border: '2px dashed var(--border-color)'
+                                }}>
+                                    <Icon name="TrendingUp" size={48} style={{ marginBottom: '1rem', color: 'var(--text-tertiary)' }} />
+                                    <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>
+                                        Placeholder for Season Offense Analytics
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        {view === 'self-scout-season-defense' && (
+                            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+                                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Season Defense Self-Scout</h1>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                                    This section will contain season-long defensive analytics and self-scouting reports.
+                                </p>
+                                <div style={{
+                                    padding: '3rem',
+                                    background: 'var(--bg-secondary)',
+                                    borderRadius: '8px',
+                                    textAlign: 'center',
+                                    border: '2px dashed var(--border-color)'
+                                }}>
+                                    <Icon name="Shield" size={48} style={{ marginBottom: '1rem', color: 'var(--text-tertiary)' }} />
+                                    <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>
+                                        Placeholder for Season Defense Analytics
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        {view === 'self-scout-season-special-teams' && (
+                            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+                                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Season Special Teams Self-Scout</h1>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                                    This section will contain season-long special teams analytics and self-scouting reports.
+                                </p>
+                                <div style={{
+                                    padding: '3rem',
+                                    background: 'var(--bg-secondary)',
+                                    borderRadius: '8px',
+                                    textAlign: 'center',
+                                    border: '2px dashed var(--border-color)'
+                                }}>
+                                    <Icon name="Compass" size={48} style={{ marginBottom: '1rem', color: 'var(--text-tertiary)' }} />
+                                    <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>
+                                        Placeholder for Season Special Teams Analytics
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         {
                             showLogoutConfirm && (
