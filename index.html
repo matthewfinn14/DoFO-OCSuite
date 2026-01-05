@@ -42329,6 +42329,28 @@
                 );
             };
 
+            const checkWristbandConflict = (slot) => {
+                const numSlot = parseInt(slot, 10);
+                if (isNaN(numSlot)) return false;
+
+                let collision = false;
+                Object.keys(wbSettings || {}).forEach(cardId => {
+                    if (collision) return;
+                    const card = wbSettings[cardId];
+                    if (card.type === 'mini-scripts') {
+                        const startMap = { card1: 101, card2: 201, card3: 301, card4: 401, card5: 501, card6: 601 };
+                        let current = startMap[cardId] || 101;
+                        (card.rows || []).forEach(row => {
+                            if (row.type !== 'header') {
+                                if (current === numSlot) collision = true;
+                                current++;
+                            }
+                        });
+                    }
+                });
+                return collision;
+            };
+
             const handlePatchPlay = (arg1, arg2) => {
                 if (Array.isArray(arg1)) {
                     // Bulk Update (Array of objects)
@@ -42340,6 +42362,10 @@
                 } else if (typeof arg1 === 'object' && arg1 !== null && arg1.id) {
                     // Single Object (Update or Create)
                     const updatedPlay = arg1;
+                    if (updatedPlay.wristbandSlot && checkWristbandConflict(updatedPlay.wristbandSlot)) {
+                        alert(`Wristband slot ${updatedPlay.wristbandSlot} is already assigned to a Mini-Script position. Please choose another number.`);
+                        return;
+                    }
                     setPlays(prev => {
                         const exists = prev.some(p => p.id === updatedPlay.id);
                         if (exists) {
@@ -42352,6 +42378,10 @@
                     });
                 } else {
                     // Standard (id, updates)
+                    if (arg2 && arg2.wristbandSlot && checkWristbandConflict(arg2.wristbandSlot)) {
+                        alert(`Wristband slot ${arg2.wristbandSlot} is already assigned to a Mini-Script position. Please choose another number.`);
+                        return;
+                    }
                     setPlays(prev => prev.map(p => p.id === arg1 ? { ...p, ...arg2 } : p));
                 }
             };
