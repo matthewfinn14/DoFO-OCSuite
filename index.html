@@ -31653,118 +31653,51 @@
                     <div style={{ flex: 1, overflow: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', background: '#52525b' }}>
 
                         {Array.from({ length: pageCount }).map((_, pageIndex) => (
-                            <div
-                                key={pageIndex}
-                                id={`print-canvas-${pageIndex}`}
-                                className="print-page"
-                                data-page-index={pageIndex}
-                                style={{
-                                    width: dimensions.width,
-                                    height: dimensions.height,
-                                    background: 'white',
-                                    transform: `scale(${zoom})`,
-                                    transformOrigin: 'top center',
-                                    position: 'relative',
-                                    boxShadow: '0 0 20px rgba(0,0,0,0.5)',
+                                <                                        key={pag                                            id={`print-canvas-${p                                                classNa                                                    data-pag                                                                                                                                          `,
+                                                            s.height}px`,
+                                           kground: 'white',
+                                               n: 'relative',
+                                                    0 4px 6px -1px rgba(0,                                    0,0,0.06)',
+                                                                                                  tran                                                                 transformOrigin: 'top center',
                                     transition: 'width 0.3s, height 0.3s',
-                                    backgroundImage: showGrid ? 'repeating-linear-gradient(0deg, transparent, transparent 19px, #e5e5e5 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #e5e5e5 20px)' : 'none',
-                                    marginTop: pageIndex > 0 ? '20px' : '0' // Visual gap
-                                }}
-                                onDrop={handleDrop}
+                                    backgroundImage: showGrid                                    eg, transparent, transparent 19px, #e5e5e5 20px), repe                                 tr                                 #e5e5e5 20px)' : 'n                                              backgroundSize                                                                                                                 eDrop(e, pageIndex)}
                                 onDragOver={handleDragOver}
                             >
-                                {/* Page Label */}
-                                <div style={{ position: 'absolute', top: '-25px', left: 0, color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
+                                         age Label */}
+                                       v style=                                : '-30px', left: 0, color: 'white', fontWe                                x' }}>
                                     Page {pageIndex + 1}
-                                </div>
+                                                                            {                                    Page */}
+                                {pla                                    geIndex || 0) === pageInde                                                         // Header color l                                             let headerColor = 'black';
+                                    if (item.type === 'script                                                         const sec = (                                            []).find(s => s.id === item.sec                                                     if (sec && sec.headerColor) {
+                                                                           or                                                                                                                                                                                        <di                                                  key                                                           draggable
+                                                 nDragStart={(e                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ectedId ? '#3b82                                                                                                                                                     ckground:                                                              boxShadow: item.id === selectedId ? '0                                         no                                                         zIndex:                                                                                                                                                                               setSelectedId(item.id);                                                 
+                                                                  Only visible when selected) */}
+                                                 div className="no-pr                                                                  di                                                ne',
+                                                            : 'absolute',
+                                                                                                                                                                                                    3',
+                                                    borderRadius: '4px',
+                                                padding: '2px',
+                                                                                                                alignItems: 'c                                                        }}>
+                                                    <di                                                    ght: '8px' }}>
+                                                                              map(rati                                                                   <butt                                                                   key={ratio}
+                                                                                h to ${ratio * 100                                                                     onClick={(e) =>                                                                       e.stopPropagation();
+                                                                                th = dimensions.width * ratio;
+                                                                                                                          ? { ...p, width: newWidt                                                                              setPlacedItems(newItms);
+                                                                                                                                                                                                                                                                                                                           fontSize: '0.6rem', padding: '1px 3px',
+                                                                                   ba(255,255,255,0.2)', border: '1px so                                                                                                                       po                                                                       }}
+                                                            >
+                                                                                                                                                                                                                                                                     </div>
 
-                                {/* Render Placed Items for this Page */}
-                                {placedItems.filter(item => (item.pageIndex || 0) === pageIndex).map(item => {
-                                    // Determine Header Color
-                                    let headerColor = '#f4f4f5'; // Default gray
-                                    let headerText = 'black';
-                                    if (item.type === 'script_section') {
-                                        const sec = (gamePlanLayouts.CALL_SHEET?.sections || []).find(s => s.id === item.sectionId);
-                                        if (sec && sec.headerColor) {
-                                            headerColor = sec.headerColor;
-                                            headerText = 'white'; // Assume dark color for now, or calculate contrast
-                                        }
-                                    }
+                                                                                                                onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                                                                                                  ', color: '#                                            inter',                                                                                                                                      </div>
 
-                                    return (
-                                        <div
-                                            key={item.id}
-                                            style={{
-                                                position: 'absolute',
-                                                left: item.x,
-                                                top: item.y,
-                                                width: item.width,
-                                                height: item.height,
-                                                border: '1px solid black',
-                                                background: 'white',
-                                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                                cursor: 'move',
-                                                zIndex: 1
-                                            }}
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, item, 'canvas')}
-                                        >
-                                            {/* Item Header */}
-                                            <div style={{
-                                                padding: '4px 8px',
-                                                background: headerColor,
-                                                color: headerText,
-                                                borderBottom: '1px solid black',
-                                                fontSize: '0.8rem',
-                                                fontWeight: 'bold',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                cursor: 'grab'
-                                            }}>
-                                                <span style={{ maxWidth: '40%', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.title || 'Untitled'}</span>
-
-                                                {/* Smart Sizing Controls */}
-                                                <div className="no-print" style={{ display: 'flex', gap: '2px' }}>
-                                                    {[0.25, 0.5, 0.75, 1].map(ratio => (
-                                                        <button
-                                                            key={ratio}
-                                                            title={`Set width to ${ratio * 100}%`}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const newWidth = dimensions.width * ratio;
-                                                                const newItms = placedItems.map(p => p.id === item.id ? { ...p, width: newWidth } : p);
-                                                                setPlacedItems(newItms);
-                                                                if (onSaveItems) onSaveItems(newItms);
-                                                            }}
-                                                            style={{
-                                                                fontSize: '0.6rem', padding: '1px 3px',
-                                                                background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(0,0,0,0.2)',
-                                                                color: headerText, cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            {ratio * 100}%
-                                                        </button>
-                                                    ))}
-                                                </div>
-
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                                                    style={{ background: 'none', border: 'none', color: headerText === 'white' ? 'white' : 'red', fontWeight: 'bold', cursor: 'pointer', marginLeft: '4px' }}
-                                                >×</button>
-                                            </div>
-
-                                            {/* Item Content */}
-                                            <div style={{ padding: '0.5rem' }}>
-                                                {renderItemContent(item)}
-                                            </div>
+                                                    Item Content */}
+                                                     style={                                                                                   nde                                                                        </div>
                                         </div>
-                                    );
-                                })}
+                                                                           })}
 
                                 {placedItems.filter(p => (p.pageIndex || 0) === pageIndex).length === 0 && (
-                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#e4e4e7', fontSize: '3rem', fontWeight: 'bold', pointerEvents: 'none', textAlign: 'center' }}>
-                                        DROP ZONE<br /><span style={{ fontSize: '1.5rem' }}>Page {pageIndex + 1}</span>
+                                    <div style={{ position: 'absolu                                        orm: 'translate(-50%, -50%)', color: '#e4e4e7', fontSize: '3rem', fontWeight: 'b                                    tAlign:                                                               ROP ZONE<br /><span style={{ fontSize: '1.5rem' }}>Page {pageIndex + 1}</span>
                                     </div>
                                 )}
                             </div>
@@ -31774,9 +31707,9 @@
                     {/* Toolbar */}
                     <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', display: 'flex', gap: '1rem', background: 'var(--surface)', padding: '0.75rem', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', border: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
-                            <button className="btn btn-secondary btn-sm" onClick={() => setZoom(z => Math.max(0.2, z - 0.1))}><Icon name="Minus" size={14} /></button>
+                            <button className="btn btn-secondary btn-sm" style={{ background: 'var(--bg-panel)' }} onClick={() => setZoom(z => Math.max(0.2, z - 0.1))}><Icon name="Minus" size={14} /></button>
                             <span style={{ minWidth: '40px', textAlign: 'center', fontWeight: 'bold' }}>{Math.round(zoom * 100)}%</span>
-                            <button className="btn btn-secondary btn-sm" onClick={() => setZoom(z => Math.min(2, z + 0.1))}><Icon name="Plus" size={14} /></button>
+                            <button className="btn btn-secondary btn-sm" style={{ background: 'var(--bg-panel)' }} onClick={() => setZoom(z => Math.min(2, z + 0.1))}><Icon name="Plus" size={14} /></button>
                         </div>
                         <div style={{ width: '1px', background: 'var(--border)' }}></div>
                         <button className="btn btn-primary" onClick={() => {
@@ -47378,17 +47311,17 @@
                     return (
                         <div style={{ padding: '2rem', color: '#ef4444', background: '#1e293b', height: '100vh' }}>
                             <h1>Something went wrong.</h1>
-                            <details style={{ whiteSpace: 'pre-wrap' }}>
+                 <details style={{ whiteSpace: 'pre-wrap' }}>
                                 {this.state.error && this.state.error.toString()}
-                                <br />
+                         />
                                 {this.state.errorInfo && this.state.errorInfo.componentStack}
                             </details>
                         </div>
                     );
                 }
                 return this.props.children;
-            }
         }
+ }
 
         ReactDOM.render(
             <ErrorBoundary>
