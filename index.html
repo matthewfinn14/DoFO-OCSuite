@@ -17201,350 +17201,7 @@
             );
         };
 
-        const DumbCallSheet = ({ data = {}, onUpdateData, gamePlanLayouts, plays = [], gamePlan = {} }) => {
-            const COLS = 4;
-            const ROWS = 25;
-            const [showClearConfirm, setShowClearConfirm] = useState(false);
-            const [showSyncConfirm, setShowSyncConfirm] = useState(false);
-            const [printMode, setPrintMode] = useState('grid'); // 'grid', 'situations', 'matrix'
 
-            const handleCellChange = (row, col, value) => {
-                const key = `${row}-${col}`;
-                onUpdateData({ ...data, [key]: value });
-            };
-
-            const handleHeaderChange = (col, value) => {
-                const key = `header-${col}`;
-                onUpdateData({ ...data, [key]: value });
-            };
-
-            const clearSheet = () => {
-                onUpdateData({});
-                setShowClearConfirm(false);
-            };
-
-            const syncHeaders = () => {
-                if (!gamePlanLayouts) return;
-                const sections = gamePlanLayouts.CALL_SHEET?.sections || [];
-                const sourceRows = sections[1] ? sections[1].rows : (sections[0] ? sections[0].rows : []);
-                const newData = { ...data };
-                sourceRows.slice(0, 4).forEach((cell, idx) => {
-                    newData[`header-${idx}`] = cell.header;
-                });
-                onUpdateData(newData);
-                setShowSyncConfirm(false);
-            };
-
-            const getPlayName = (input) => {
-                if (!input) return '';
-                const id = typeof input === 'object' ? input.id : input;
-                const tempo = typeof input === 'object' ? input.tempo : null;
-
-                const p = plays.find(x => x.id === id);
-                if (!p) return id;
-
-                let name = `${p.name} (${p.formation})`;
-                if (tempo && tempo !== 'REGULAR') {
-                    const protocol = PLAY_PROTOCOLS.find(pp => pp.id === tempo);
-                    if (protocol) {
-                        name = `[${protocol.code}] ${name}`;
-                    }
-                }
-                return name;
-            };
-            const renderSituationsPrint = () => {
-                if (!gamePlanLayouts || !gamePlanLayouts.CALL_SHEET) return <div>No Game Plan Data</div>;
-                const sections = gamePlanLayouts.CALL_SHEET.sections;
-
-                // Helper to chunk array into rows of N columns
-                const chunk = (arr, size) => Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
-                    arr.slice(i * size, i * size + size)
-                );
-
-                return (
-                    <div className="print-situations-container" style={{ padding: '0.5rem' }}>
-                        <div className="no-print" style={{ marginBottom: '1rem', fontStyle: 'italic', color: '#666' }}>
-                            Printing Situations & Scripts. Use browser print (Cmd+P) to print.
-                        </div>
-                        {(sections || []).map((section, idx) => {
-                            if (section.hidden) return null;
-
-                            // Render Script Sections (Vertical List)
-                            if (section.type === 'script') {
-                                return (
-                                    <div key={idx} style={{ breakInside: 'avoid', border: '1px solid black', marginBottom: '1rem' }}>
-                                        <div style={{ background: '#eee', padding: '0.25rem 0.5rem', fontWeight: 'bold', borderBottom: '1px solid black', fontSize: '0.9rem' }}>{section.title || 'Script'}</div>
-                                        <div>
-                                            {(section.rows || []).map((row, rIdx) => (
-                                                <div key={rIdx} style={{ padding: '0.25rem 0.5rem', borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                                                    <span>{rIdx + 1}. {getPlayName(row.content)}</span>
-                                                    {section.tempos?.[rIdx] && section.tempos[rIdx] !== 'REGULAR' && (
-                                                        <span style={{ fontWeight: 'bold', fontSize: '0.7rem', color: PLAY_PROTOCOLS.find(p => p.id === section.tempos[rIdx])?.color || 'black' }}>
-                                                            [{PLAY_PROTOCOLS.find(p => p.id === section.tempos[rIdx])?.label || section.tempos[rIdx]}]
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                );
-                            }
-                            // Render Grid / Situational as Table
-                            else if (section.type === 'grid' || !section.type) {
-                                const cols = section.cols || 4;
-                                const rows = chunk(section.rows || [], cols);
-
-                                return (
-                                    <div key={idx} style={{ breakInside: 'avoid', marginBottom: '1rem', border: '1px solid black' }}>
-                                        <div style={{ background: '#eee', padding: '0.25rem 0.5rem', fontWeight: 'bold', borderBottom: '1px solid black', fontSize: '0.9rem' }}>{section.title || 'Situational'}</div>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                            <tbody>
-                                                {rows.map((rowItems, rIdx) => (
-                                                    <tr key={rIdx}>
-                                                        {rowItems.map((box, cIdx) => (
-                                                            <td key={cIdx} style={{
-                                                                border: '1px solid black',
-                                                                padding: '0',
-                                                                verticalAlign: 'top',
-                                                                width: `${100 / cols}%`
-                                                            }}>
-                                                                {/* Box Header */}
-                                                                <div style={{
-                                                                    fontWeight: 'bold',
-                                                                    fontSize: '0.75rem',
-                                                                    padding: '2px 4px',
-                                                                    color: box.color || 'black',
-                                                                    borderBottom: '1px solid #eee' // subtle separator
-                                                                }}>{box.header}</div>
-
-                                                                {/* Plays List */}
-                                                                <div style={{ padding: '4px', fontSize: '0.7rem' }}>
-                                                                    {(box.plays || []).map((pid, pIdx) => (
-                                                                        <div key={pIdx} style={{ marginBottom: '2px' }}>
-                                                                            {getPlayName(pid)}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </td>
-                                                        ))}
-                                                        {/* Fill empty cells if row is incomplete */}
-                                                        {[...Array(cols - rowItems.length)].map((_, i) => (
-                                                            <td key={`empty-${i}`} style={{ border: '1px solid black' }}></td>
-                                                        ))}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                );
-                            }
-                            // ... other types fallback or copy as needed
-                            else if (section.type === 'field_position') {
-                                return (
-                                    <div key={idx} style={{ breakInside: 'avoid', border: '1px solid black', marginBottom: '1rem' }}>
-                                        <div style={{ background: '#eee', padding: '0.5rem', fontWeight: 'bold', borderBottom: '1px solid black' }}>{section.title || 'Field Position'}</div>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                                            <thead>
-                                                <tr>
-                                                    <th style={{ border: '1px solid black', padding: '4px' }}></th>
-                                                    {(section.colHeaders || []).map((h, i) => <th key={i} style={{ border: '1px solid black', padding: '4px', background: '#f5f5f5' }}>{h}</th>)}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(section.rowLabels || []).map((l, rIdx) => (
-                                                    <tr key={rIdx}>
-                                                        <td style={{ border: '1px solid black', padding: '4px', fontWeight: 'bold', background: '#f5f5f5' }}>{l}</td>
-                                                        {(section.colHeaders || []).map((_, cIdx) => (
-                                                            <td key={cIdx} style={{ border: '1px solid black', padding: '4px' }}>
-                                                                {getPlayName(section.gridData?.[`${rIdx}-${cIdx}`])}
-                                                            </td>
-                                                        ))}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                );
-                            }
-                            return null;
-                        })}
-                    </div>
-                );
-            };
-
-            const renderMatrixPrint = () => {
-                if (!gamePlanLayouts || !gamePlanLayouts.MATRIX) return <div>No Matrix Data</div>;
-                const layout = gamePlanLayouts.MATRIX;
-
-                // Group columns by pitch type (Same logic as main view)
-                const safeCols = layout.cols || [];
-                const columnGroups = [
-                    { id: 'FB', label: 'BASE/INITIAL', cols: safeCols.slice(0, 2) },
-                    { id: 'CB', label: 'BASE W/ DRESSING', cols: safeCols.slice(2, 4) },
-                    { id: 'CU', label: 'CONVERT', cols: safeCols.slice(4, 6) },
-                    { id: 'SO', label: 'EXPLOSIVE', cols: safeCols.slice(6, 8) }
-                ];
-
-                const getMatrixPlays = (setId) => {
-                    const set = gamePlan.sets?.find(s => s.id === setId);
-                    if (!set) return [];
-                    return set.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
-                };
-
-                return (
-                    <div className="print-matrix-container" style={{ padding: '0.5rem' }}>
-                        <div className="no-print" style={{ marginBottom: '1rem', fontStyle: 'italic', color: '#666' }}>
-                            Printing Strike &apos;Em Out (Matrix). Use Landscape mode for best results.
-                        </div>
-                        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem', borderBottom: '2px solid black' }}>Strike &apos;Em Out Matrix</h2>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.6rem' }}>
-                            <thead>
-                                <tr>
-                                    <th rowSpan={2} style={{ border: '1px solid black', padding: '2px', background: '#ccc', width: '80px' }}>Formation / Type</th>
-                                    {columnGroups.map(group => (
-                                        <th key={group.id} colSpan={group.cols.length} style={{ border: '1px solid black', padding: '2px', background: '#ddd' }}>
-                                            {group.label}
-                                        </th>
-                                    ))}
-                                </tr>
-                                <tr>
-                                    {columnGroups.map((group) => (
-                                        <React.Fragment key={group.id + '_sub'}>
-                                            {group.cols.map((col, i) => (
-                                                <th key={col.id} style={{ border: '1px solid black', fontSize: '0.5rem', overflow: 'hidden', whiteSpace: 'nowrap', width: '11%' }}>{col.header}</th>
-                                            ))}
-                                        </React.Fragment>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(layout.formations || []).map(formation => (
-                                    <React.Fragment key={formation.id}>
-                                        <tr style={{ background: '#eee' }}>
-                                            <td colSpan={100} style={{ border: '1px solid black', fontWeight: 'bold', padding: '2px', textAlign: 'center' }}>{formation.name}</td>
-                                        </tr>
-                                        {(layout.playTypes || []).map((playType) => (
-                                            <tr key={playType.id}>
-                                                <td style={{ border: '1px solid black', padding: '2px', fontWeight: 'bold' }}>{playType.label}</td>
-                                                {columnGroups.map((group) => (
-                                                    <React.Fragment key={group.id + '_cells'}>
-                                                        {group.cols.map(c => {
-                                                            const setId = `matrix_${formation.id}_${playType.id}_${c.id}`;
-                                                            const plays = getMatrixPlays(setId);
-                                                            return (
-                                                                <td key={c.id} style={{ border: '1px solid black', verticalAlign: 'top', height: '40px', padding: '2px' }}>
-                                                                    {plays.map(p => (
-                                                                        <div key={p.id} style={{ marginBottom: '2px', lineHeight: '1.1' }}>
-                                                                            • {p.name}
-                                                                        </div>
-                                                                    ))}
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </React.Fragment>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                );
-            };
-
-            const renderManualGrid = () => (
-                <div className="dumb-sheet-container" style={{
-                    flex: 1, overflow: 'auto', background: 'white', color: 'black', padding: '1rem', borderRadius: '8px'
-                }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}>
-                        <thead>
-                            <tr>
-                                {[...Array(COLS)].map((_, colIndex) => (
-                                    <th key={colIndex} style={{ border: '2px solid black', padding: '0', height: '40px', background: '#e5e5e5', minWidth: '80px', width: `${100 / COLS}%` }}>
-                                        <input
-                                            type="text"
-                                            value={data[`header-${colIndex}`] || ''}
-                                            onChange={(e) => handleHeaderChange(colIndex, e.target.value)}
-                                            style={{
-                                                width: '100%', height: '100%', border: 'none', background: 'transparent',
-                                                textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', padding: '0.5rem', color: 'black'
-                                            }}
-                                            placeholder={`Header ${colIndex + 1}`}
-                                        />
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {[...Array(ROWS)].map((_, rowIndex) => (
-                                <tr key={rowIndex}>
-                                    {[...Array(COLS)].map((_, colIndex) => (
-                                        <td key={colIndex} style={{ border: '1px solid black', padding: '0', height: '32px' }}>
-                                            <input
-                                                type="text"
-                                                value={data[`${rowIndex}-${colIndex}`] || ''}
-                                                onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                                                style={{
-                                                    width: '100%', height: '100%', border: 'none', padding: '4px 8px', fontSize: '0.9rem',
-                                                    outline: 'none', background: rowIndex % 2 === 0 ? 'white' : '#f9f9f9', color: 'black'
-                                                }}
-                                            />
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            );
-
-            return (
-                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
-                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <h2 style={{ margin: 0 }}>Printable Call Sheet</h2>
-                            <div style={{ display: 'flex', background: '#334155', borderRadius: '6px', padding: '4px' }}>
-                                <button className={`btn btn-sm ${printMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('grid')}>Basic Grid</button>
-                                <button className={`btn btn-sm ${printMode === 'situations' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('situations')}>Situations & Scripts</button>
-                                <button className={`btn btn-sm ${printMode === 'matrix' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrintMode('matrix')}>Strike &apos;Em Out</button>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            {printMode === 'grid' && gamePlanLayouts && (
-                                <button className="btn btn-secondary btn-sm" onClick={() => setShowSyncConfirm(true)} title="Sync headers from Game Plan">🔄 Sync Headers</button>
-                            )}
-                            {printMode === 'grid' && (
-                                <button className="btn btn-secondary btn-sm" onClick={() => setShowClearConfirm(true)}>Clear</button>
-                            )}
-                            {showSyncConfirm && printMode === 'grid' && (
-                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#e5e7eb', padding: '4px', borderRadius: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem' }}>Overwrite?</span>
-                                    <button className="btn btn-sm btn-primary" onClick={syncHeaders}>Yes</button>
-                                    <button className="btn btn-sm" onClick={() => setShowSyncConfirm(false)}>No</button>
-                                </div>
-                            )}
-                            {showClearConfirm && printMode === 'grid' && (
-                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', background: '#fee2e2', padding: '4px', borderRadius: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem', color: '#991b1b' }}>Clear?</span>
-                                    <button className="btn btn-sm" style={{ background: '#dc2626', color: 'white' }} onClick={clearSheet}>Yes</button>
-                                    <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>No</button>
-                                </div>
-                            )}
-
-                            <button className="btn btn-primary" onClick={() => window.print()}>🖨️ Print View</button>
-                        </div>
-                    </div>
-
-                    <div style={{ flex: 1, overflow: 'auto', background: 'white', color: 'black', borderRadius: '8px' }}>
-                        {printMode === 'grid' && renderManualGrid()}
-                        {printMode === 'situations' && renderSituationsPrint()}
-                        {printMode === 'matrix' && renderMatrixPrint()}
-                    </div>
-                </div>
-            );
-        };
 
         // --- Global Helper Functions for Metrics & Scoring ---
         const parseTime = (val) => {
@@ -31768,6 +31425,384 @@
             { id: 'BLUR', label: 'Blur Tempo', color: '#dc2626', code: 'B' }
         ];
 
+
+        // Dumb Call Sheet Component (Drag & Drop Printable Builder)
+        const DumbCallSheet = ({ gamePlanData, priorityPlays, onClose, isVisible, gamePlanLayouts, savedItems = [], onSaveItems }) => {
+            const [paperSize, setPaperSize] = useState('letter'); // 'letter' (8.5x11) or 'ledger' (11x17)
+            const [orientation, setOrientation] = useState('portrait'); // 'portrait', 'landscape'
+            const [pageCount, setPageCount] = useState(1); // 1 or 2 pages
+            const [showGrid, setShowGrid] = useState(true);
+            const [placedItems, setPlacedItems] = useState(savedItems); // { id, type, content, x, y, width, height, pageIndex }
+            const [zoom, setZoom] = useState(0.5); // Start slightly zoomed out to see full page
+
+            // Drag and Drop State
+            const [draggedItem, setDraggedItem] = useState(null);
+
+            // Paper Dimensions (in pixels at 96 DPI)
+            // Letter: 816 x 1056
+            // Ledger: 1056 x 1632
+            const getDimensions = () => {
+                let w, h, label;
+                if (paperSize === 'letter') {
+                    if (orientation === 'portrait') { w = 816; h = 1056; label = 'Letter (8.5 x 11)'; }
+                    else { w = 1056; h = 816; label = 'Letter (11 x 8.5)'; }
+                } else {
+                    if (orientation === 'portrait') { w = 1056; h = 1632; label = 'Ledger (11 x 17)'; }
+                    else { w = 1632; h = 1056; label = 'Ledger (17 x 11)'; }
+                }
+                return { width: w, height: h, label };
+            };
+
+            const dimensions = getDimensions();
+
+            const handleDragStart = (e, item, source = 'sidebar') => {
+                // Set data for HTML5 drag and drop
+                e.dataTransfer.setData('application/json', JSON.stringify({ item, source }));
+                setDraggedItem(item);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                const dataStr = e.dataTransfer.getData('application/json');
+                if (!dataStr) return;
+
+                try {
+                    const { item, source } = JSON.parse(dataStr);
+                    const rect = e.currentTarget.getBoundingClientRect();
+
+                    const pageIndex = parseInt(e.currentTarget.dataset.pageIndex || '0');
+
+                    // Calculate drop position relative to canvas, accounting for zoom
+                    let x = (e.clientX - rect.left) / zoom;
+                    let y = (e.clientY - rect.top) / zoom;
+
+                    // Snap to grid (synced to visual 20px grid)
+                    const snap = 20;
+                    x = Math.round(x / snap) * snap;
+                    y = Math.round(y / snap) * snap;
+
+                    if (source === 'sidebar') {
+                        // Add new item
+                        const newItms = [...placedItems, {
+                            ...item,
+                            id: Date.now(),
+                            x,
+                            y,
+                            pageIndex,
+                            width: item.defaultWidth || 300,
+                            height: 'auto'
+                        }];
+                        setPlacedItems(newItms);
+                        if (onSaveItems) onSaveItems(newItms);
+                    } else if (source === 'canvas') {
+                        // Update existing item
+                        const newItms = placedItems.map(p => p.id === item.id ? { ...p, x, y, pageIndex } : p);
+                        setPlacedItems(newItms);
+                        if (onSaveItems) onSaveItems(newItms);
+                    }
+                } catch (err) {
+                    console.error("Drop Error", err);
+                }
+                setDraggedItem(null);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+            };
+
+            const removeItem = (id) => {
+                const newItms = placedItems.filter(p => p.id !== id);
+                setPlacedItems(newItms);
+                if (onSaveItems) onSaveItems(newItms);
+            };
+
+            const renderItemContent = (item) => {
+                if (item.type === 'strike_sheet') {
+                    // Generate Strike Sheet Matrix
+                    // This mimics the "Strike 'em Out" matrix from Game Plan
+                    const matrixLayout = gamePlanLayouts.MATRIX;
+                    if (!matrixLayout) return <div>Matrix Layout Missing</div>;
+
+                    return (
+                        <div style={{ fontSize: '10px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(8, 1fr)', fontSize: '9px', borderBottom: '1px solid black' }}>
+                                <div style={{ fontWeight: 'bold', padding: '2px' }}>Play / Form</div>
+                                {matrixLayout.cols.map(col => (
+                                    <div key={col.id} style={{ fontWeight: 'bold', padding: '2px', textAlign: 'center', borderLeft: '1px solid #ccc' }}>{col.label}</div>
+                                ))}
+                            </div>
+                            {matrixLayout.formations.map(row => (
+                                <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '80px repeat(8, 1fr)', borderBottom: '1px solid #eee' }}>
+                                    <div style={{ padding: '2px', fontWeight: 'bold' }}>{row.label}</div>
+                                    {matrixLayout.cols.map(col => (
+                                        <div key={col.id} style={{ borderLeft: '1px solid #eee', height: '15px' }}></div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    );
+                }
+                if (item.type === 'script_section') {
+                    // Render a specific script section (e.g. Openers)
+                    const sectionData = (gamePlanData?.sections || {})[item.sectionId] || { plays: [] };
+                    return (
+                        <div style={{ fontSize: '12px' }}>
+                            {(sectionData.plays || []).map((playId, idx) => (
+                                <div key={idx} style={{ padding: '2px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>{idx + 1}. {playId || 'Undefined'}</span>
+                                </div>
+                            ))}
+                            {(!sectionData.plays || sectionData.plays.length === 0) && <div style={{ color: '#ccc', fontStyle: 'italic' }}>No plays</div>}
+                        </div>
+                    );
+                }
+                if (item.type === 'priority_list') {
+                    const list = priorityPlays || [];
+                    return (
+                        <div style={{ fontSize: '12px' }}>
+                            {list.map((play, idx) => (
+                                <div key={idx} style={{ padding: '2px 0', borderBottom: '1px solid #eee' }}>
+                                    {play.name}
+                                </div>
+                            ))}
+                            {list.length === 0 && <div style={{ color: '#ccc' }}>No priority plays</div>}
+                        </div>
+                    );
+                }
+                return <div>Unknown Item</div>;
+            };
+
+            if (!isVisible) return null;
+
+            return (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', color: 'black' }}>
+
+                    {/* Sidebar / Toolbox */}
+                    <div style={{ width: '320px', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--text-primary)' }}>
+                        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Call Sheet Builder</h3>
+                            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '1.5rem' }}>✕</button>
+                        </div>
+
+                        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
+                            <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Paper Size</label>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <button className={`btn btn-sm ${paperSize === 'letter' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setPaperSize('letter')}>Letter</button>
+                                <button className={`btn btn-sm ${paperSize === 'ledger' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setPaperSize('ledger')}>Ledger</button>
+                            </div>
+
+                            <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Orientation</label>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <button className={`btn btn-sm ${orientation === 'portrait' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setOrientation('portrait')}>Portrait</button>
+                                <button className={`btn btn-sm ${orientation === 'landscape' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setOrientation('landscape')}>Landscape</button>
+                            </div>
+
+                            <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Pages</label>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <button className={`btn btn-sm ${pageCount === 1 ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setPageCount(1)}>1 Page</button>
+                                <button className={`btn btn-sm ${pageCount === 2 ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setPageCount(2)}>2 Pages</button>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input type="checkbox" checked={showGrid} onChange={e => setShowGrid(e.target.checked)} id="gridCheck" />
+                                <label htmlFor="gridCheck" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>Show Grid Overlay</label>
+                            </div>
+                        </div>
+
+                        <div style={{ overflowY: 'auto', flex: 1, padding: '1rem' }}>
+                            <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Standard Forms</h4>
+                            <div
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, { type: 'strike_sheet', title: "Strike 'Em Out", defaultWidth: 600 })}
+                                style={{ padding: '0.75rem', background: 'var(--bg-panel)', border: '1px solid var(--border)', marginBottom: '0.5rem', cursor: 'grab', borderRadius: '4px' }}
+                            >
+                                <Icon name="Grid" size={14} style={{ marginRight: '8px' }} />
+                                <strong>Strike 'Em Out Matrix</strong>
+                                <div style={{ fontSize: '0.7rem', color: 'gray', marginTop: '4px' }}>Grid for crossing off calls</div>
+                            </div>
+
+                            <div
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, { type: 'priority_list', title: "Priority Plays", defaultWidth: 300 })}
+                                style={{ padding: '0.75rem', background: 'var(--bg-panel)', border: '1px solid var(--border)', marginBottom: '0.5rem', cursor: 'grab', borderRadius: '4px' }}
+                            >
+                                <Icon name="Star" size={14} style={{ marginRight: '8px' }} />
+                                <strong>Priority Plays</strong>
+                                <div style={{ fontSize: '0.7rem', color: 'gray', marginTop: '4px' }}>Starred from Install</div>
+                            </div>
+
+                            <hr style={{ margin: '1rem 0', borderColor: 'var(--border)' }} />
+
+                            <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginTop: '1rem', marginBottom: '0.5rem' }}>Game Plan Sections</h4>
+                            {/* Iterate Game Plan Sections defined in Layouts */}
+                            {(gamePlanLayouts.CALL_SHEET?.sections || []).map((section, idx) => (
+                                <div
+                                    key={idx}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, { type: 'script_section', sectionId: section.id, title: section.title, defaultWidth: 250 })}
+                                    style={{ padding: '0.5rem', background: 'var(--bg-panel)', border: '1px solid var(--border)', marginBottom: '0.5rem', cursor: 'grab', borderRadius: '4px', fontSize: '0.9rem' }}
+                                >
+                                    <Icon name="List" size={12} style={{ marginRight: '8px' }} />
+                                    {section.title || 'Untitled Section'}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Canvas Area */}
+                    <div style={{ flex: 1, overflow: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', background: '#52525b' }}>
+
+                        {Array.from({ length: pageCount }).map((_, pageIndex) => (
+                            <div
+                                key={pageIndex}
+                                id={`print-canvas-${pageIndex}`}
+                                className="print-page"
+                                data-page-index={pageIndex}
+                                style={{
+                                    width: dimensions.width,
+                                    height: dimensions.height,
+                                    background: 'white',
+                                    transform: `scale(${zoom})`,
+                                    transformOrigin: 'top center',
+                                    position: 'relative',
+                                    boxShadow: '0 0 20px rgba(0,0,0,0.5)',
+                                    transition: 'width 0.3s, height 0.3s',
+                                    backgroundImage: showGrid ? 'repeating-linear-gradient(0deg, transparent, transparent 19px, #e5e5e5 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #e5e5e5 20px)' : 'none',
+                                    marginTop: pageIndex > 0 ? '20px' : '0' // Visual gap
+                                }}
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                            >
+                                {/* Page Label */}
+                                <div style={{ position: 'absolute', top: '-25px', left: 0, color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
+                                    Page {pageIndex + 1}
+                                </div>
+
+                                {/* Render Placed Items for this Page */}
+                                {placedItems.filter(item => (item.pageIndex || 0) === pageIndex).map(item => {
+                                    // Determine Header Color
+                                    let headerColor = '#f4f4f5'; // Default gray
+                                    let headerText = 'black';
+                                    if (item.type === 'script_section') {
+                                        const sec = (gamePlanLayouts.CALL_SHEET?.sections || []).find(s => s.id === item.sectionId);
+                                        if (sec && sec.headerColor) {
+                                            headerColor = sec.headerColor;
+                                            headerText = 'white'; // Assume dark color for now, or calculate contrast
+                                        }
+                                    }
+
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            style={{
+                                                position: 'absolute',
+                                                left: item.x,
+                                                top: item.y,
+                                                width: item.width,
+                                                height: item.height,
+                                                border: '1px solid black',
+                                                background: 'white',
+                                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                                cursor: 'move',
+                                                zIndex: 1
+                                            }}
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, item, 'canvas')}
+                                        >
+                                            {/* Item Header */}
+                                            <div style={{
+                                                padding: '4px 8px',
+                                                background: headerColor,
+                                                color: headerText,
+                                                borderBottom: '1px solid black',
+                                                fontSize: '0.8rem',
+                                                fontWeight: 'bold',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                cursor: 'grab'
+                                            }}>
+                                                <span style={{ maxWidth: '40%', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.title || 'Untitled'}</span>
+
+                                                {/* Smart Sizing Controls */}
+                                                <div className="no-print" style={{ display: 'flex', gap: '2px' }}>
+                                                    {[0.25, 0.5, 0.75, 1].map(ratio => (
+                                                        <button
+                                                            key={ratio}
+                                                            title={`Set width to ${ratio * 100}%`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const newWidth = dimensions.width * ratio;
+                                                                const newItms = placedItems.map(p => p.id === item.id ? { ...p, width: newWidth } : p);
+                                                                setPlacedItems(newItms);
+                                                                if (onSaveItems) onSaveItems(newItms);
+                                                            }}
+                                                            style={{
+                                                                fontSize: '0.6rem', padding: '1px 3px',
+                                                                background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(0,0,0,0.2)',
+                                                                color: headerText, cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {ratio * 100}%
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                                                    style={{ background: 'none', border: 'none', color: headerText === 'white' ? 'white' : 'red', fontWeight: 'bold', cursor: 'pointer', marginLeft: '4px' }}
+                                                >×</button>
+                                            </div>
+
+                                            {/* Item Content */}
+                                            <div style={{ padding: '0.5rem' }}>
+                                                {renderItemContent(item)}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {placedItems.filter(p => (p.pageIndex || 0) === pageIndex).length === 0 && (
+                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#e4e4e7', fontSize: '3rem', fontWeight: 'bold', pointerEvents: 'none', textAlign: 'center' }}>
+                                        DROP ZONE<br /><span style={{ fontSize: '1.5rem' }}>Page {pageIndex + 1}</span>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Toolbar */}
+                    <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', display: 'flex', gap: '1rem', background: 'var(--surface)', padding: '0.75rem', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                            <button className="btn btn-secondary btn-sm" onClick={() => setZoom(z => Math.max(0.2, z - 0.1))}><Icon name="Minus" size={14} /></button>
+                            <span style={{ minWidth: '40px', textAlign: 'center', fontWeight: 'bold' }}>{Math.round(zoom * 100)}%</span>
+                            <button className="btn btn-secondary btn-sm" onClick={() => setZoom(z => Math.min(2, z + 0.1))}><Icon name="Plus" size={14} /></button>
+                        </div>
+                        <div style={{ width: '1px', background: 'var(--border)' }}></div>
+                        <button className="btn btn-primary" onClick={() => {
+                            // Print Logic
+                            const style = document.createElement('style');
+                            style.innerHTML = `
+                                @media print {
+                                    body * { visibility: hidden; }
+                                    .no-print { display: none !important; }
+                                    @page { size: ${paperSize} ${orientation}; margin: 0; }
+                                    .print-page { page-break-after: always; visibility: visible !important; position: absolute !important; top: 0 !important; left: 0 !important; transform: none !important; margin: 0 !important; box-shadow: none !important; }
+                                    #print-canvas-0 { top: 0 !important; }
+                                    #print-canvas-1 { top: 100% !important; page-break-before: always; } 
+                                }
+                            `;
+                            document.head.appendChild(style);
+                            window.print();
+                            document.head.removeChild(style);
+                        }}>
+                            <Icon name="Printer" size={16} style={{ marginRight: '8px' }} /> Print Sheet
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
         // Game Plan 2.0 Component
 
 
@@ -32529,6 +32564,7 @@
             const [showWristband, setShowWristband] = useState(true);
             const [wristbandFocus, setWristbandFocus] = useState(null);
             const [wbAutocomplete, setWbAutocomplete] = useState({ playId: null, query: '' });
+            const [showDumbCallSheet, setShowDumbCallSheet] = useState(false); // Dumb Call Sheet Toggle
 
             const validWristbandSlots = useMemo(() => {
                 if (!wbSettings) return [];
@@ -36773,6 +36809,9 @@
                             <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
                                 PLAYER TOUCHES
                             </button>
+                            <button className={`btn ${showDumbCallSheet ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowDumbCallSheet(!showDumbCallSheet)} style={{ border: '2px solid var(--accent)' }}>
+                                {showDumbCallSheet ? 'HIDE SHEET BUILDER' : 'DUMB SHEET'}
+                            </button>
                         </div>
 
                         {/* Game Plan Statistics Ticker */}
@@ -36890,6 +36929,16 @@
                     {renderSectionConfigurationModal()}
                     {renderBoxEditorModal()}
                     {renderSituationAssignmentModal()}
+                    {/* Dumb Call Sheet Overlay */}
+                    <DumbCallSheet
+                        gamePlanData={gamePlan}
+                        priorityPlays={plays.filter(p => p.priority)} // Or use specific priority list if available
+                        gamePlanLayouts={gamePlanLayouts}
+                        savedItems={gamePlanLayouts?.DUMB_SHEET || []}
+                        onSaveItems={(items) => onUpdateLayouts && onUpdateLayouts({ ...gamePlanLayouts, DUMB_SHEET: items })}
+                        isVisible={showDumbCallSheet}
+                        onClose={() => setShowDumbCallSheet(false)}
+                    />
 
                 </div>
             );
@@ -41574,123 +41623,131 @@
                                 </button>
                             </div>
                             {data.length > 0 && (
-                                <button onClick={clearData} className="btn-danger" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <button
+                                    className="btn btn-danger"
+                                    onClick={() => setData([])}
+                                    style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                >
                                     <Icon name="Trash2" size={16} /> Clear Data
                                 </button>
                             )}
                         </div>
                     </div>
 
-                    {activeTab === 'setup' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%', overflow: 'hidden' }}>
+                    {
+                        activeTab === 'setup' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%', overflow: 'hidden' }}>
 
-                            {/* Data Management Panel */}
-                            <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0 }}>Data Management</h3>
-                                    {data.length > 0 && (
-                                        <button
-                                            className="btn btn-secondary btn-sm"
-                                            onClick={() => setShowUploader(!showUploader)}
-                                        >
-                                            <Icon name={showUploader ? "X" : "Plus"} size={14} /> {showUploader ? 'Cancel Upload' : 'Upload Another Game'}
-                                        </button>
+                                {/* Data Management Panel */}
+                                <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0 }}>Data Management</h3>
+                                        {data.length > 0 && (
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => setShowUploader(!showUploader)}
+                                            >
+                                                <Icon name={showUploader ? "X" : "Upload"} size={14} /> {showUploader ? 'Cancel Upload' : 'Upload Another Game'}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {loadedGames.length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: showUploader ? '1rem' : 0 }}>
+                                            {loadedGames.map(game => (
+                                                <div key={`${game.week}-${game.opponent}`} style={{
+                                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                    padding: '0.25rem 0.5rem', background: 'var(--bg-main)',
+                                                    border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem'
+                                                }}>
+                                                    <span style={{ fontWeight: 'bold' }}>Week {game.week}</span> vs {game.opponent}
+                                                    <span style={{ color: 'var(--text-secondary)' }}>({game.count} plays)</span>
+                                                    <button
+                                                        onClick={() => deleteGame(game.week, game.opponent)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px' }}
+                                                        title="Delete Game"
+                                                    >
+                                                        <Icon name="Trash2" size={12} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {(showUploader || data.length === 0) && (
+                                        <div style={{ marginTop: loadedGames.length > 0 ? '1rem' : 0 }}>
+                                            <CsvUploader onUpload={handleFileUpload} />
+                                        </div>
                                     )}
                                 </div>
 
-                                {loadedGames.length > 0 && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: showUploader ? '1rem' : 0 }}>
-                                        {loadedGames.map(game => (
-                                            <div key={`${game.week}-${game.opponent}`} style={{
-                                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                                padding: '0.25rem 0.5rem', background: 'var(--bg-main)',
-                                                border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem'
-                                            }}>
-                                                <span style={{ fontWeight: 'bold' }}>Week {game.week}</span> vs {game.opponent}
-                                                <span style={{ color: 'var(--text-secondary)' }}>({game.count} plays)</span>
-                                                <button
-                                                    onClick={() => deleteGame(game.week, game.opponent)}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px' }}
-                                                    title="Delete Game"
-                                                >
-                                                    <Icon name="Trash2" size={12} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {(showUploader || data.length === 0) && (
-                                    <div style={{ marginTop: loadedGames.length > 0 ? '1rem' : 0 }}>
-                                        <CsvUploader onUpload={handleFileUpload} />
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Mapper and Table (Only if data exists) */}
-                            {data.length > 0 && (
-                                <>
-                                    <ColumnMapper
-                                        headers={rawHeaders}
-                                        mapping={columnMapping}
-                                        setMapping={setColumnMapping}
-                                        columnOrder={columnOrder}
-                                        setColumnOrder={setColumnOrder}
-                                        customFields={customFields}
-                                        setCustomFields={setCustomFields}
-                                    />
-                                    <div style={{ overflow: 'auto', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', flex: 1 }}>
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 10 }}>
-                                                    {columnOrder.map(header => (
-                                                        <th key={header} style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
-                                                            {header}
-                                                            {Object.entries(columnMapping).find(([sys, csv]) => csv === header) && (
-                                                                <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', background: 'var(--accent)', color: 'white', padding: '2px 4px', borderRadius: '4px' }}>
-                                                                    {Object.entries(columnMapping).find(([sys, csv]) => csv === header)[0]}
-                                                                </span>
-                                                            )}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {data.slice(0, 100).map((row, i) => (
-                                                    <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                {/* Mapper and Table (Only if data exists) */}
+                                {data.length > 0 && (
+                                    <>
+                                        <ColumnMapper
+                                            headers={rawHeaders}
+                                            mapping={columnMapping}
+                                            setMapping={setColumnMapping}
+                                            columnOrder={columnOrder}
+                                            setColumnOrder={setColumnOrder}
+                                            customFields={customFields}
+                                            setCustomFields={setCustomFields}
+                                        />
+                                        <div style={{ overflow: 'auto', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', flex: 1 }}>
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 10 }}>
                                                         {columnOrder.map(header => (
-                                                            <td key={header} style={{ padding: '0.5rem 0.75rem', whiteSpace: 'nowrap' }}>
-                                                                {row[header]}
-                                                            </td>
+                                                            <th key={header} style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
+                                                                {header}
+                                                                {Object.entries(columnMapping).find(([sys, csv]) => csv === header) && (
+                                                                    <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', background: 'var(--accent)', color: 'white', padding: '2px 4px', borderRadius: '4px' }}>
+                                                                        {Object.entries(columnMapping).find(([sys, csv]) => csv === header)[0]}
+                                                                    </span>
+                                                                )}
+                                                            </th>
                                                         ))}
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                        {data.length > 100 && (
-                                            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                Showing first 100 rows of {data.length}
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-
-                    {activeTab === 'analysis' && (
-                        data.length > 0 ? (
-                            <AnalyticsDashboard data={data} mapping={columnMapping} />
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
-                                <Icon name="BarChart2" size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                                <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No Data Available</h3>
-                                <p style={{ marginBottom: '1.5rem' }}>Please upload data in the Setup tab to view analytics.</p>
-                                <button onClick={() => setActiveTab('setup')} className="btn btn-primary">Go to Setup</button>
+                                                </thead>
+                                                <tbody>
+                                                    {data.slice(0, 100).map((row, i) => (
+                                                        <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                                            {columnOrder.map(header => (
+                                                                <td key={header} style={{ padding: '0.5rem 0.75rem', whiteSpace: 'nowrap' }}>
+                                                                    {row[header]}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            {data.length > 100 && (
+                                                <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                    Showing first 100 rows of {data.length}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )
-                    )}
-                </div>
+                    }
+
+                    {
+                        activeTab === 'analysis' && (
+                            data.length > 0 ? (
+                                <AnalyticsDashboard data={data} mapping={columnMapping} />
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
+                                    <Icon name="BarChart2" size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                    <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No Data Available</h3>
+                                    <p style={{ marginBottom: '1.5rem' }}>Please upload data in the Setup tab to view analytics.</p>
+                                    <button onClick={() => setActiveTab('setup')} className="btn btn-primary">Go to Setup</button>
+                                </div>
+                            )
+                        )
+                    }
+                </div >
             );
         };
 
@@ -47074,7 +47131,7 @@
 
                         {view === 'grading' && <GameGradingView roster={roster} gameLog={currentWeek.gameLog} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} />}
                         {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} depthCharts={depthCharts} positionNames={positionNames} />}
-                        {view === 'attendance-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} depthCharts={depthCharts} positionNames={positionNames} />}
+                        {view === 'attendance-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={ailtions} currentWeek={currentWeek} culturalCalibration={culturalCalibration} depthCharts={depthCharts} positionNames={positionNames} />}
                         {view === 'practice' && (
                             <PracticeScriptBuilder
                                 mode="plan"
@@ -47131,7 +47188,7 @@
                         {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} weeks={weeks} currentWeek={currentWeek} />}
                         {view === 'staff-app' && <StaffApp staff={staff} currentUser={currentUser} dutyAssignments={dutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} onUpdateStaff={(updatedStaff) => syncToFirestore('staff', updatedStaff)} />}
                         {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophies={currentWeek.zonePhilosophies || {}} onUpdatePhilosophy={handleUpdateZonePhilosophies} onUpdateGamePlan={handleUpdateGamePlan} weeks={weeks} currentWeek={currentWeek} />}
-                        {view === 'dumb-call-sheet' && <DumbCallSheet gamePlan={currentWeek.offensiveGamePlan} dumbCallSheetData={currentWeek.dumbCallSheetData || {}} onUpdateData={(newData) => handleUpdateWeek(currentWeekId, 'dumbCallSheetData', newData)} />}
+                        {/* Legacy DumbCallSheet removed from here */}
                         {view === 'play-call-simulator' && <PlayCallSimulator plays={plays} gamePlan={currentWeek.offensiveGamePlan} />}
                         {view === 'special-teams-setup' && renderSetup('SPECIAL_TEAMS')}
                         {view === 'formations-offense' && <FormationManager formations={formations} onUpdateFormations={setFormations} formationLayouts={formationLayouts} onUpdateFormationLayout={(chartType, posId, x, y) => updateFormationLayout(chartType, posId, x, y)} onResetLayout={(chartType, formation) => resetFormationLayout(chartType, formation)} positionNames={positionNames} phase="OFFENSE" />}
@@ -47284,8 +47341,7 @@
                                                 }
                                             }}
                                         >
-                                            No, Create New School Instead
-                                        </button>
+                                            No, Create New Sl I                                        </button>
                                     </div>
                                 </div >
                             )
