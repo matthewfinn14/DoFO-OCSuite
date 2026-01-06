@@ -2166,7 +2166,7 @@
         // -------------------------------------------------------------------------
 
         // Install Sortable Column
-        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount, handleTogglePriority, availableSlots = [], handleToggleNewPlay, newInstallIds = [] }) => {
+        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount, handleTogglePriority, availableSlots = [], handleToggleNewPlay, newInstallIds = [], onOpenAssignmentModal }) => {
             const [localItems, setLocalItems] = React.useState(items);
 
             const [editingWbId, setEditingWbId] = React.useState(null);
@@ -2213,6 +2213,12 @@
                                 color: '#0f172a',
                                 userSelect: 'none',
                                 position: 'relative'
+                            }}
+                            onDoubleClick={(e) => {
+                                if (onOpenAssignmentModal) {
+                                    e.stopPropagation();
+                                    onOpenAssignmentModal(play.id, e.clientX, e.clientY);
+                                }
                             }}
                         >
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'start' }}>
@@ -24315,16 +24321,94 @@
             drills = [],
             onQuickAddPlay, // New Prop
             playSyntax = [], // New Prop
-            onUpdatePlay // New Prop for Sortable Type Switching
+            onUpdatePlay, // New Prop for Sortable Type Switching
+            gamePlanLayouts // New Prop for Assignment Modal
         }) => {
             const { ReactSortable } = window; // Destructure Sortable
             const [searchTerm, setSearchTerm] = useState('');
             const [isQuickAddOpen, setIsQuickAddOpen] = useState(false); // Modal state for parser
 
             // Quick Parser State
+            const [assignmentModalState, setAssignmentModalState] = useState(null); // { playId, x, y }
             const [rawPlayCall, setRawPlayCall] = useState('');
             const [tokens, setTokens] = useState([]);
             const [parsedFields, setParsedFields] = useState({});
+
+            // Helper for Game Plan Updates
+            const onUpdateGamePlan = (newPlan) => {
+                if (onUpdateWeek && week) {
+                    onUpdateWeek(week.id, 'offensiveGamePlan', newPlan);
+                }
+            };
+
+            const handleAssignPlayToSituation = (playId, box) => {
+                if (!playId || !box || !box.setId) return;
+
+                const safeGamePlan = gamePlan || {};
+                const isScript = box.type === 'script';
+                const collection = isScript ? (safeGamePlan.miniScripts || {}) : (safeGamePlan.sets || {});
+                const targetId = box.setId;
+                const currentData = collection[targetId] || { playIds: [], assignedPlayIds: [] };
+
+                // Initialize if missing
+                if (!currentData.assignedPlayIds) currentData.assignedPlayIds = [];
+
+                const isAssigned = currentData.assignedPlayIds.includes(playId);
+                let newAssignedIds;
+
+                if (isAssigned) {
+                    newAssignedIds = currentData.assignedPlayIds.filter(id => id !== playId);
+                } else {
+                    newAssignedIds = [...currentData.assignedPlayIds, playId];
+                }
+
+                // Update gamePlan
+                const newGamePlan = { ...safeGamePlan };
+                if (isScript) {
+                    newGamePlan.miniScripts = {
+                        ...(newGamePlan.miniScripts || {}),
+                        [targetId]: { ...currentData, assignedPlayIds: newAssignedIds }
+                    };
+                } else {
+                    newGamePlan.sets = {
+                        ...(newGamePlan.sets || {}),
+                        [targetId]: { ...currentData, assignedPlayIds: newAssignedIds }
+                    };
+                }
+
+                onUpdateGamePlan(newGamePlan);
+            };
+
+            const getPlaySituations = (playId) => {
+                const layouts = gamePlanLayouts;
+                if (!playId || !layouts?.CALL_SHEET?.sections) return [];
+
+                const assignedSituations = [];
+
+                layouts.CALL_SHEET.sections.forEach(section => {
+                    if (!section.boxes) return;
+                    section.boxes.forEach(box => {
+                        if (!box.setId) return;
+
+                        const safeGamePlan = gamePlan || {};
+                        const isScript = box.type === 'script';
+                        const collection = isScript ? (safeGamePlan.miniScripts || {}) : (safeGamePlan.sets || {});
+                        const data = collection[box.setId];
+
+                        // Check if play is assigned
+                        if (data?.assignedPlayIds?.includes(playId)) {
+                            assignedSituations.push({
+                                id: box.setId,
+                                header: box.header,
+                                color: box.color,
+                                type: box.type
+                            });
+                        }
+                    });
+                });
+
+                return assignedSituations;
+            };
 
             // Initialize/Reset parsed fields when syntax changes or modal opens
             useEffect(() => {
@@ -24873,6 +24957,7 @@
                                         availableSlots={availableSlots}
                                         handleToggleNewPlay={handleToggleNewPlay}
                                         newInstallIds={week.newInstallIds || []}
+                                        onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
                                     />
                                 </div>
                             </div>
@@ -24898,6 +24983,7 @@
                                         availableSlots={availableSlots}
                                         handleToggleNewPlay={handleToggleNewPlay}
                                         newInstallIds={week.newInstallIds || []}
+                                        onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
                                     />
                                 </div>
                             </div>
@@ -24906,6 +24992,149 @@
 
 
                     </div>
+                    {assignmentModalState && (() => {
+                        const { playId, x, y } = assignmentModalState;
+                        const play = plays.find(p => p.id === playId);
+                        if (!play) return null;
+
+                        const assignedSits = getPlaySituations(playId);
+                        const assignedIds = new Set(assignedSits.map(s => s.id));
+
+                        // Check current states
+                        const isNew = (week.newInstallIds || []).includes(playId);
+                        const isPriority = play.priority || false;
+
+                        // Toggle handlers
+                        const handleToggleNew = () => {
+                            if (!onUpdateWeek) return;
+                            const currentNewIds = week.newInstallIds || [];
+                            let newIds;
+                            if (currentNewIds.includes(playId)) {
+                                newIds = currentNewIds.filter(id => id !== playId);
+                            } else {
+                                newIds = [...currentNewIds, playId];
+                            }
+                            onUpdateWeek(week.id, 'newInstallIds', newIds);
+                        };
+
+                        const handleTogglePriority = () => {
+                            if (!onUpdatePlay) return;
+                            onUpdatePlay(playId, { priority: !isPriority });
+                        };
+
+                        const popoverHeight = 350;
+                        const popoverWidth = 280;
+
+                        // Simple collision detection
+                        let top = y;
+                        let left = x;
+                        if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 10;
+                        if (left + popoverWidth > window.innerWidth) left = window.innerWidth - popoverWidth - 10;
+
+                        return (
+                            <div style={{
+                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                background: 'transparent', zIndex: 9999,
+                            }} onClick={() => setAssignmentModalState(null)}>
+                                <div style={{
+                                    position: 'absolute',
+                                    top: top, left: left,
+                                    background: 'white', width: `${popoverWidth}px`, maxHeight: `${popoverHeight}px`,
+                                    borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+                                    display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                                }} onClick={e => e.stopPropagation()}>
+
+                                    {/* HEADER */}
+                                    <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Assign Situations</div>
+                                            <button
+                                                onClick={() => setAssignmentModalState(null)}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+
+                                        {/* Checkboxes */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isNew}
+                                                    onChange={handleToggleNew}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                                <span>Mark as New</span>
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isPriority}
+                                                    onChange={handleTogglePriority}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                                <span>Mark as Priority</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* BODY - SCROLLABLE */}
+                                    <div style={{ padding: '8px', overflowY: 'auto', flex: 1 }}>
+                                        {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
+                                            const relevantBoxes = (section.boxes || []).filter(b => b.header && !b.hidden);
+                                            if (relevantBoxes.length === 0) return null;
+
+                                            return (
+                                                <div key={sIdx} style={{ marginBottom: '12px' }}>
+                                                    <div style={{
+                                                        fontSize: '0.65rem', fontWeight: 'bold', color: '#94a3b8',
+                                                        marginBottom: '4px', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px'
+                                                    }}>
+                                                        {section.title || `Section ${sIdx + 1}`}
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        {relevantBoxes.map((box, bIdx) => {
+                                                            const isCheck = assignedIds.has(box.setId);
+                                                            return (
+                                                                <div
+                                                                    key={bIdx}
+                                                                    onClick={() => handleAssignPlayToSituation(playId, box)}
+                                                                    style={{
+                                                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                                                        padding: '6px', borderRadius: '4px', cursor: 'pointer',
+                                                                        background: isCheck ? '#eff6ff' : 'transparent',
+                                                                        border: isCheck ? '1px solid #bfdbfe' : '1px solid transparent'
+                                                                    }}
+                                                                    onMouseEnter={e => !isCheck && (e.currentTarget.style.background = '#f8fafc')}
+                                                                    onMouseLeave={e => !isCheck && (e.currentTarget.style.background = 'transparent')}
+                                                                >
+                                                                    <div style={{
+                                                                        width: '16px', height: '16px', borderRadius: '4px', border: isCheck ? '1px solid #3b82f6' : '1px solid #cbd5e1',
+                                                                        background: isCheck ? '#3b82f6' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                                    }}>
+                                                                        {isCheck && <Icon name="Check" size={10} color="white" />}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '0.8rem', color: isCheck ? '#1d4ed8' : '#334155' }}>
+                                                                        {box.header}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {(!gamePlanLayouts?.CALL_SHEET?.sections?.length) && (
+                                            <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
+                                                No situations configured. Go to Settings > Call Sheet Layout.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </>
             );
         };
@@ -32562,7 +32791,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [] }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
@@ -32723,6 +32952,12 @@
             };
 
             const handleGridCellUpdate = (setId, index, playId) => {
+                // Safety check: ensure setId is defined
+                if (!setId) {
+                    console.warn('handleGridCellUpdate called with undefined setId');
+                    return;
+                }
+
                 let set = gamePlan?.sets?.find(s => s.id === setId);
                 if (!set && setId.startsWith('ms_')) {
                     set = gamePlan?.miniScripts?.find(s => s.id === setId);
@@ -32754,6 +32989,12 @@
             };
 
             const handleGridMove = (fromIndex, toIndex) => {
+                // Safety check: ensure activeCellSetId is defined
+                if (!activeCellSetId) {
+                    console.warn('handleGridMove called with undefined activeCellSetId');
+                    return;
+                }
+
                 const currentGrid = getGridPlays(activeCellSetId);
                 // We need the raw IDs not objects to save
                 let set = gamePlan?.sets?.find(s => s.id === activeCellSetId);
@@ -32793,6 +33034,12 @@
             };
 
             const handleGridAdd = (playId) => {
+                // Safety check: ensure activeCellSetId is defined
+                if (!activeCellSetId) {
+                    console.warn('handleGridAdd called with undefined activeCellSetId');
+                    return;
+                }
+
                 let set = gamePlan?.sets?.find(s => s.id === activeCellSetId);
                 if (!set && activeCellSetId.startsWith('ms_')) {
                     set = gamePlan?.miniScripts?.find(s => s.id === activeCellSetId);
@@ -36720,7 +36967,29 @@
                 const assignedSits = getPlaySituations(playId);
                 const assignedIds = new Set(assignedSits.map(s => s.id));
 
-                const popoverHeight = 300;
+                // Check current states
+                const isNew = (newInstallIds || []).includes(playId);
+                const isPriority = play.priority || false;
+
+                // Toggle handlers
+                const handleToggleNew = () => {
+                    if (!onUpdateWeek) return;
+                    const currentNewIds = newInstallIds || [];
+                    let newIds;
+                    if (currentNewIds.includes(playId)) {
+                        newIds = currentNewIds.filter(id => id !== playId);
+                    } else {
+                        newIds = [...currentNewIds, playId];
+                    }
+                    onUpdateWeek(weekDate, 'newInstallIds', newIds);
+                };
+
+                const handleTogglePriority = () => {
+                    if (!onUpdatePlay) return;
+                    onUpdatePlay(playId, { priority: !isPriority });
+                };
+
+                const popoverHeight = 350; // Increased height for checkboxes
                 const popoverWidth = 280;
 
                 // Simple collision detection to keep on screen
@@ -36743,16 +37012,38 @@
                         }} onClick={e => e.stopPropagation()}>
 
                             {/* HEADER */}
-                            <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
-                                <div>
+                            <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                                     <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Assign Situations</div>
+                                    <button
+                                        onClick={() => setAssignmentModalState(null)}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
+                                    >
+                                        ×
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setAssignmentModalState(null)}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
-                                >
-                                    ×
-                                </button>
+
+                                {/* Checkboxes */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isNew}
+                                            onChange={handleToggleNew}
+                                            style={{ cursor: 'pointer' }}
+                                        />
+                                        <span>Mark as New</span>
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isPriority}
+                                            onChange={handleTogglePriority}
+                                            style={{ cursor: 'pointer' }}
+                                        />
+                                        <span>Mark as Priority</span>
+                                    </label>
+                                </div>
                             </div>
 
                             {/* BODY - SCROLLABLE */}
@@ -46916,8 +47207,8 @@
                             )
                         }
 
-                        {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} />}
+                        {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} />}
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={setGamePlanLayouts} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} onUpdateWeek={handleUpdateWeek} />}
 
                         {
                             view === 'playbook' && (
