@@ -31678,30 +31678,33 @@
                                                     borderRadius: '4px',
                                                 padding: '2px',
                                                                                                                 alignItems: 'c                                                        }}>
-                                                    <di                                                    ght: '8px' }}>
-                                                                              map(rati                                                                   <butt                                                                   key={ratio}
-                                                                                h to ${ratio * 100                                                                     onClick={(e) =>                                                                       e.stopPropagation();
-                                                                                th = dimensions.width * ratio;
-                                                                                                                          ? { ...p, width: newWidt                                                                              setPlacedItems(newItms);
-                                                                                                                                                                                                                                                                                                                           fontSize: '0.6rem', padding: '1px 3px',
-                                                                                   ba(255,255,255,0.2)', border: '1px so                                                                                                                       po                                                                       }}
+                                                 <div s                                                    : '8px' }}>
+                                                                                 (ratio =                                                                <button
+                                                                key={ratio}
+                                                                                   o ${ratio * 100}%`                                                                  onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                                   = dimensions.width * ratio;
+                                                                                                                            { ...p, width: newWidth }                                                                           setPlacedItems(newItms);
+                                                                                                                                                                                                                                              s                                                                            fontSize: '0.6rem', padding: '1px 3px',
+                                                                                      255,255,255,0.2)', border: '1px solid                                                                                                                       nt                                                                    }}
                                                             >
                                                                                                                                                                                                                                                                      </div>
 
                                                                                                                 onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                                                                                                  ', color: '#                                            inter',                                                                                                                                      </div>
+                                                    s                                                color: '#ef4                                            er', mar                                                                                                                                  </div>
 
-                                                    Item Content */}
-                                                     style={                                                                                   nde                                                                        </div>
+                                                       m Content */}
+                                                        le={{ p                                                                                   rIt                                                                     </div>
                                         </div>
                                                                            })}
 
                                 {placedItems.filter(p => (p.pageIndex || 0) === pageIndex).length === 0 && (
-                                    <div style={{ position: 'absolu                                        orm: 'translate(-50%, -50%)', color: '#e4e4e7', fontSize: '3rem', fontWeight: 'b                                    tAlign:                                                               ROP ZONE<br /><span style={{ fontSize: '1.5rem' }}>Page {pageIndex + 1}</span>
+                                    <div style={{ position: 'absolute'                                        : 'translate(-50%, -50%)', color: '#e4e4e7', fontSize: '3rem', fontWeight: 'bold                                    ign: 'c                                                                ZONE<br /><span style={{ fontSize: '1.5rem' }}>Page {pageIndex + 1}</span>
                                     </div>
                                 )}
                             </div>
                         ))}
+
                     </div>
 
                     {/* Toolbar */}
@@ -47321,9 +47324,7 @@
                 }
                 return this.props.children;
         }
- }
-
-        ReactDOM.render(
+  eactDOM.render(
             <ErrorBoundary>
                 <AuthProvider>
                     <App />
