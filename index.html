@@ -34130,6 +34130,7 @@
                                 assignedPlays.map((play, idx) => (
                                     <div
                                         key={play.id}
+                                        draggable={true}
                                         style={{
                                             background: 'white',
                                             border: '1px solid #e2e8f0',
@@ -34139,7 +34140,16 @@
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '0.5rem',
-                                            cursor: 'pointer' // Add cursor pointer to indicate interactivity
+                                            cursor: 'grab'
+                                        }}
+                                        onDragStart={(e) => {
+                                            e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id }));
+                                            e.currentTarget.style.cursor = 'grabbing';
+                                            e.currentTarget.style.opacity = '0.5';
+                                        }}
+                                        onDragEnd={(e) => {
+                                            e.currentTarget.style.cursor = 'grab';
+                                            e.currentTarget.style.opacity = '1';
                                         }}
                                         onDoubleClick={(e) => {
                                             e.stopPropagation();
