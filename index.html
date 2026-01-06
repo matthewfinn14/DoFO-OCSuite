@@ -31434,6 +31434,7 @@
             const [showGrid, setShowGrid] = useState(true);
             const [placedItems, setPlacedItems] = useState(savedItems); // { id, type, content, x, y, width, height, pageIndex }
             const [zoom, setZoom] = useState(0.5); // Start slightly zoomed out to see full page
+            const [selectedId, setSelectedId] = useState(null);
 
             // Drag and Drop State
             const [draggedItem, setDraggedItem] = useState(null);
@@ -31461,7 +31462,7 @@
                 setDraggedItem(item);
             };
 
-            const handleDrop = (e) => {
+            const handleDrop = (e, pageIndex) => {
                 e.preventDefault();
                 const dataStr = e.dataTransfer.getData('application/json');
                 if (!dataStr) return;
@@ -31469,8 +31470,6 @@
                 try {
                     const { item, source } = JSON.parse(dataStr);
                     const rect = e.currentTarget.getBoundingClientRect();
-
-                    const pageIndex = parseInt(e.currentTarget.dataset.pageIndex || '0');
 
                     // Calculate drop position relative to canvas, accounting for zoom
                     let x = (e.clientX - rect.left) / zoom;
@@ -31575,10 +31574,10 @@
             if (!isVisible) return null;
 
             return (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', color: 'black' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', color: 'black' }} onClick={() => setSelectedId(null)}>
 
                     {/* Sidebar / Toolbox */}
-                    <div style={{ width: '320px', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--text-primary)' }}>
+                    <div style={{ width: '320px', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--text-primary)' }} onClick={e => e.stopPropagation()}>
                         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Call Sheet Builder</h3>
                             <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '1.5rem' }}>✕</button>
@@ -31650,61 +31649,121 @@
                     </div>
 
                     {/* Canvas Area */}
-                    <div style={{ flex: 1, overflow: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', background: '#52525b' }}>
+                    <div style={{ flex: 1, overflow: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', background: '#52525b' }} onClick={(e) => e.stopPropagation()}>
 
                         {Array.from({ length: pageCount }).map((_, pageIndex) => (
-                                <                                        key={pag                                            id={`print-canvas-${p                                                classNa                                                    data-pag                                                                                                                                          `,
-                                                            s.height}px`,
-                                           kground: 'white',
-                                               n: 'relative',
-                                                    0 4px 6px -1px rgba(0,                                    0,0,0.06)',
-                                                                                                  tran                                                                 transformOrigin: 'top center',
+                            <div
+                                key={pageIndex}
+                                id={`print-canvas-${pageIndex}`}
+                                className="print-page"
+                                data-page-index={pageIndex}
+                                style={{
+                                    width: `${dimensions.width}px`,
+                                    height: `${dimensions.height}px`,
+                                    background: 'white',
+                                    position: 'relative',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                                    marginBottom: '2rem',
+                                    transform: `scale(${zoom})`,
+                                    transformOrigin: 'top center',
                                     transition: 'width 0.3s, height 0.3s',
-                                    backgroundImage: showGrid                                    eg, transparent, transparent 19px, #e5e5e5 20px), repe                                 tr                                 #e5e5e5 20px)' : 'n                                              backgroundSize                                                                                                                 eDrop(e, pageIndex)}
+                                    backgroundImage: showGrid ? 'repeating-linear-gradient(0deg, transparent, transparent 19px, #e5e5e5 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #e5e5e5 20px)' : 'none',
+                                    backgroundSize: '20px 20px'
+                                }}
+                                onDrop={(e) => handleDrop(e, pageIndex)}
                                 onDragOver={handleDragOver}
+                                onClick={() => setSelectedId(null)}
                             >
-                                         age Label */}
-                                       v style=                                : '-30px', left: 0, color: 'white', fontWe                                x' }}>
+                                {/* Page Label */}
+                                <div style={{ position: 'absolute', top: '-30px', left: 0, color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
                                     Page {pageIndex + 1}
-                                                                            {                                    Page */}
-                                {pla                                    geIndex || 0) === pageInde                                                         // Header color l                                             let headerColor = 'black';
-                                    if (item.type === 'script                                                         const sec = (                                            []).find(s => s.id === item.sec                                                     if (sec && sec.headerColor) {
-                                                                           or                                                                                                                                                                                        <di                                                  key                                                           draggable
-                                                 nDragStart={(e                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ectedId ? '#3b82                                                                                                                                                     ckground:                                                              boxShadow: item.id === selectedId ? '0                                         no                                                         zIndex:                                                                                                                                                                               setSelectedId(item.id);                                                 
-                                                                  Only visible when selected) */}
-                                                 div className="no-pr                                                                  di                                                ne',
-                                                            : 'absolute',
-                                                                                                                                                                                                    3',
-                                                    borderRadius: '4px',
+                                </div>
+
+                                {/* Render Placed Items for this Page */}
+                                {placedItems.filter(item => (item.pageIndex || 0) === pageIndex).map(item => {
+                                    // Header color logic
+                                    let headerColor = 'black';
+                                    if (item.type === 'script_section') {
+                                        const sec = (gamePlanLayouts.CALL_SHEET?.sections || []).find(s => s.id === item.sectionId);
+                                        if (sec && sec.headerColor) {
+                                            headerColor = sec.headerColor;
+                                        }
+                                    }
+
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, item, 'canvas')}
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${item.x}px`,
+                                                top: `${item.y}px`,
+                                                width: `${item.width}px`,
+                                                border: `2px solid ${item.id === selectedId ? '#3b82f6' : 'transparent'}`,
+                                                cursor: 'move',
+                                                background: 'white',
+                                                boxShadow: item.id === selectedId ? '0 0 0 4px rgba(59, 130, 246, 0.5)' : 'none',
+                                                zIndex: item.id === selectedId ? 10 : 1
+                                            }}
+                                            onClick={(e) => { e.stopPropagation(); setSelectedId(item.id); }}
+                                        >
+                                            {/* Item Toolbar (Only visible when selected) */}
+                                            <div className="no-print" style={{
+                                                display: item.id === selectedId ? 'flex' : 'none',
+                                                position: 'absolute',
+                                                top: '-30px',
+                                                right: 0,
+                                                background: '#333',
+                                                borderRadius: '4px',
                                                 padding: '2px',
-                                                                                                                alignItems: 'c                                                        }}>
-                                                 <div s                                                    : '8px' }}>
-                                                                                 (ratio =                                                                <button
-                                                                key={ratio}
-                                                                                   o ${ratio * 100}%`                                                                  onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                                   = dimensions.width * ratio;
-                                                                                                                            { ...p, width: newWidth }                                                                           setPlacedItems(newItms);
-                                                                                                                                                                                                                                              s                                                                            fontSize: '0.6rem', padding: '1px 3px',
-                                                                                      255,255,255,0.2)', border: '1px solid                                                                                                                       nt                                                                    }}
-                                                            >
-                                                                                                                                                                                                                                                                     </div>
+                                                zIndex: 20,
+                                                alignItems: 'center'
+                                            }}>
+                                                <div style={{ display: 'flex', gap: '2px', marginRight: '8px' }}>
+                                                    {[0.25, 0.5, 0.75, 1].map(ratio => (
+                                                        <button
+                                                            key={ratio}
+                                                            title={`Set width to ${ratio * 100}%`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const newWidth = dimensions.width * ratio;
+                                                                const newItms = placedItems.map(p => p.id === item.id ? { ...p, width: newWidth } : p);
+                                                                setPlacedItems(newItms);
+                                                                if (onSaveItems) onSaveItems(newItms);
+                                                            }}
+                                                            style={{
+                                                                fontSize: '0.6rem', padding: '1px 3px',
+                                                                background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(0,0,0,0.2)',
+                                                                color: 'white', cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {ratio * 100}%
+                                                        </button>
+                                                    ))}
+                                                </div>
 
-                                                                                                                onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                                                    s                                                color: '#ef4                                            er', mar                                                                                                                                  </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                                                    style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', marginLeft: '4px' }}
+                                                >×</button>
+                                            </div>
 
-                                                       m Content */}
-                                                        le={{ p                                                                                   rIt                                                                     </div>
+                                            {/* Item Content */}
+                                            <div style={{ padding: '0.5rem' }}>
+                                                {renderItemContent(item)}
+                                            </div>
                                         </div>
-                                                                           })}
+                                    );
+                                })}
 
                                 {placedItems.filter(p => (p.pageIndex || 0) === pageIndex).length === 0 && (
-                                    <div style={{ position: 'absolute'                                        : 'translate(-50%, -50%)', color: '#e4e4e7', fontSize: '3rem', fontWeight: 'bold                                    ign: 'c                                                                ZONE<br /><span style={{ fontSize: '1.5rem' }}>Page {pageIndex + 1}</span>
+                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#e4e4e7', fontSize: '3rem', fontWeight: 'bold', pointerEvents: 'none', textAlign: 'center' }}>
+                                        DROP ZONE<br /><span style={{ fontSize: '1.5rem' }}>Page {pageIndex + 1}</span>
                                     </div>
                                 )}
                             </div>
                         ))}
-
                     </div>
 
                     {/* Toolbar */}
@@ -47309,22 +47368,25 @@
                 console.error("Uncaught error:", error, errorInfo);
             }
 
+
             render() {
                 if (this.state.hasError) {
                     return (
                         <div style={{ padding: '2rem', color: '#ef4444', background: '#1e293b', height: '100vh' }}>
                             <h1>Something went wrong.</h1>
-                 <details style={{ whiteSpace: 'pre-wrap' }}>
+                            <details style={{ whiteSpace: 'pre-wrap' }}>
                                 {this.state.error && this.state.error.toString()}
-                         />
+                                <br />
                                 {this.state.errorInfo && this.state.errorInfo.componentStack}
                             </details>
                         </div>
                     );
                 }
                 return this.props.children;
+            }
         }
-  eactDOM.render(
+
+        ReactDOM.render(
             <ErrorBoundary>
                 <AuthProvider>
                     <App />
