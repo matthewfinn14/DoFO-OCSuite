@@ -30746,12 +30746,20 @@
                 someday: []
             };
 
-            seasonallyFilteredTasks.forEach(t => {
-                const bucket = getTaskBucket(t);
-                if (assignedBuckets[bucket]) assignedBuckets[bucket].push(t);
-            });
 
+            // Separate completed and incomplete tasks
             assignedBuckets.completed = [];
+
+            seasonallyFilteredTasks.forEach(t => {
+                if (t.completed) {
+                    // Add completed tasks to the completed bucket
+                    assignedBuckets.completed.push(t);
+                } else {
+                    // Add incomplete tasks to their appropriate bucket
+                    const bucket = getTaskBucket(t);
+                    if (assignedBuckets[bucket]) assignedBuckets[bucket].push(t);
+                }
+            });
 
             // Sort assigned tasks by priority
             Object.values(assignedBuckets).forEach(bucket => {
@@ -31442,19 +31450,23 @@
             // Paper Dimensions (in pixels at 96 DPI)
             // Letter: 816 x 1056
             // Ledger: 1056 x 1632
-            const getDimensions = () => {
-                let w, h, label;
-                if (paperSize === 'letter') {
-                    if (orientation === 'portrait') { w = 816; h = 1056; label = 'Letter (8.5 x 11)'; }
-                    else { w = 1056; h = 816; label = 'Letter (11 x 8.5)'; }
+            // Calculate dimensions directly based on current state
+            let width, height, label;
+            if (paperSize === 'letter') {
+                if (orientation === 'portrait') {
+                    width = 816; height = 1056; label = 'Letter (8.5 x 11)';
                 } else {
-                    if (orientation === 'portrait') { w = 1056; h = 1632; label = 'Ledger (11 x 17)'; }
-                    else { w = 1632; h = 1056; label = 'Ledger (17 x 11)'; }
+                    width = 1056; height = 816; label = 'Letter (11 x 8.5)';
                 }
-                return { width: w, height: h, label };
-            };
-
-            const dimensions = getDimensions();
+            } else {
+                if (orientation === 'portrait') {
+                    width = 1056; height = 1632; label = 'Ledger (11 x 17)';
+                } else {
+                    width = 1632; height = 1056; label = 'Ledger (17 x 11)';
+                }
+            }
+            const dimensions = { width, height, label };
+            console.log('Dimensions calculated:', dimensions, 'paperSize:', paperSize, 'orientation:', orientation);
 
             const handleDragStart = (e, item, source = 'sidebar') => {
                 // Set data for HTML5 drag and drop
@@ -31605,6 +31617,12 @@
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <input type="checkbox" checked={showGrid} onChange={e => setShowGrid(e.target.checked)} id="gridCheck" />
                                 <label htmlFor="gridCheck" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>Show Grid Overlay</label>
+                            </div>
+
+                            {/* DEBUG: Show current dimensions */}
+                            <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#fef3c7', color: '#92400e', borderRadius: '4px', fontSize: '0.75rem' }}>
+                                <strong>DEBUG:</strong> {dimensions.width}×{dimensions.height}px<br />
+                                {dimensions.label}
                             </div>
                         </div>
 
