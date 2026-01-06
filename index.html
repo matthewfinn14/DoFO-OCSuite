@@ -41440,38 +41440,520 @@
 
 
 
-        const SelfScoutView = ({ phase }) => {
+        const SelfScoutAnalytics = ({ phase }) => {
+            // State for Data and Mapping
+            const [data, setData] = useLocalStorage(`self-scout-data-${phase}`, []);
+            const [rawHeaders, setRawHeaders] = useLocalStorage(`self-scout-headers-${phase}`, []);
+            const [columnMapping, setColumnMapping] = useLocalStorage(`self-scout-mapping-${phase}`, {});
+            const [activeTab, setActiveTab] = useState('setup'); // 'setup', 'analysis'
+            const [columnOrder, setColumnOrder] = useLocalStorage(`self-scout-order-${phase}`, []);
+
+            // Handle File Upload
+            const handleFileUpload = (parsedData, headers) => {
+                setData(parsedData);
+                setRawHeaders(headers);
+                // Initialize mapping if empty
+                if (Object.keys(columnMapping).length === 0) {
+                    const initialMapping = {};
+                    // Try to auto-map standard fields
+                    const standardFields = ['ODK', 'DN', 'DIST', 'YARD LN', 'HASH', 'PLAY TYPE', 'RESULT', 'GN/LS', 'EFF'];
+                    headers.forEach(h => {
+                        const match = standardFields.find(f => f.toLowerCase() === h.toLowerCase());
+                        if (match) initialMapping[match] = h;
+                    });
+                    setColumnMapping(initialMapping);
+                }
+                // Initialize column order if empty
+                if (columnOrder.length === 0) {
+                    setColumnOrder(headers);
+                }
+            };
+
+            const clearData = () => {
+                if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+                    setData([]);
+                    setRawHeaders([]);
+                    setColumnMapping({});
+                    setColumnOrder([]);
+                }
+            };
+
             return (
-                <div style={{ padding: '2rem', textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
-                    <div style={{
-                        border: '2px dashed var(--border)',
-                        borderRadius: '12px',
-                        padding: '3rem',
-                        background: 'var(--bg-main)'
-                    }}>
-                        <Icon name="BarChart2" size={48} style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }} />
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>{phase} Self-Scout</h2>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
-                            Comprehensive season-wide analytics for {phase.toLowerCase()} are coming soon.
-                        </p>
-                        <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                            <div style={{ padding: '1rem', background: 'var(--bg-panel)', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Tendencies</div>
-                                <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Down & Distance</div>
+                <div style={{ padding: '1.5rem', height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <div>
+                            <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Icon name="BarChart2" /> {phase} Self-Scout Analytics
+                            </h1>
+                            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                {data.length > 0 ? `${data.length} plays loaded` : 'No data loaded'}
                             </div>
-                            <div style={{ padding: '1rem', background: 'var(--bg-panel)', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Hit Charts</div>
-                                <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Field Zones</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <div style={{ display: 'flex', background: 'var(--bg-panel)', padding: '4px', borderRadius: '8px' }}>
+                                <button
+                                    onClick={() => setActiveTab('setup')}
+                                    className={`btn ${activeTab === 'setup' ? 'btn-primary' : 'btn-text'}`}
+                                    style={{ padding: '0.5rem 1rem' }}
+                                >
+                                    Setup & Data
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('analysis')}
+                                    className={`btn ${activeTab === 'analysis' ? 'btn-primary' : 'btn-text'}`}
+                                    style={{ padding: '0.5rem 1rem' }}
+                                >
+                                    Analysis Dashboard
+                                </button>
                             </div>
-                            <div style={{ padding: '1rem', background: 'var(--bg-panel)', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Efficiency</div>
-                                <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Success Rates</div>
+                            {data.length > 0 && (
+                                <button onClick={clearData} className="btn-danger" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Icon name="Trash2" size={16} /> Clear Data
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {activeTab === 'setup' && (
+                        data.length === 0 ? (
+                            <CsvUploader onUpload={handleFileUpload} />
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', height: '100%', overflow: 'hidden' }}>
+                                <ColumnMapper
+                                    headers={rawHeaders}
+                                    mapping={columnMapping}
+                                    setMapping={setColumnMapping}
+                                    columnOrder={columnOrder}
+                                    setColumnOrder={setColumnOrder}
+                                />
+                                <div style={{ overflow: 'auto', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 10 }}>
+                                                {columnOrder.map(header => (
+                                                    <th key={header} style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
+                                                        {header}
+                                                        {Object.entries(columnMapping).find(([sys, csv]) => csv === header) && (
+                                                            <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', background: 'var(--accent)', color: 'white', padding: '2px 4px', borderRadius: '4px' }}>
+                                                                {Object.entries(columnMapping).find(([sys, csv]) => csv === header)[0]}
+                                                            </span>
+                                                        )}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {data.slice(0, 100).map((row, i) => (
+                                                <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                                    {columnOrder.map(header => (
+                                                        <td key={header} style={{ padding: '0.5rem 0.75rem', whiteSpace: 'nowrap' }}>
+                                                            {row[header]}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {data.length > 100 && (
+                                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                            Showing first 100 rows of {data.length}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                        )
+                    )}
+
+                    {activeTab === 'analysis' && (
+                        data.length > 0 ? (
+                            <AnalyticsDashboard data={data} mapping={columnMapping} />
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
+                                <Icon name="BarChart2" size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No Data Available</h3>
+                                <p style={{ marginBottom: '1.5rem' }}>Please upload data in the Setup tab to view analytics.</p>
+                                <button onClick={() => setActiveTab('setup')} className="btn btn-primary">Go to Setup</button>
+                            </div>
+                        )
+                    )}
+                </div>
+            );
+        };
+
+        const CsvUploader = ({ onUpload }) => {
+            const fileInputRef = useRef(null);
+            const [error, setError] = useState(null);
+
+            const parseCSV = (text) => {
+                const lines = text.split('\n').filter(l => l.trim());
+                if (lines.length < 2) return null;
+
+                // Parse headers
+                const headers = lines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g).map(h => h.replace(/^"|"$/g, '').trim());
+
+                // Parse rows
+                const result = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const row = {};
+                    const currentLine = lines[i];
+                    // Regex to handle quoted strings with commas
+                    const values = currentLine.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+
+                    if (values) {
+                        headers.forEach((header, index) => {
+                            let value = values[index] ? values[index].replace(/^"|"$/g, '').trim() : '';
+                            row[header] = value;
+                        });
+                        result.push(row);
+                    }
+                }
+                return { headers, data: result };
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = parseCSV(event.target.result);
+                        if (parsed) {
+                            onUpload(parsed.data, parsed.headers);
+                        } else {
+                            setError('Could not parse CSV file. Please check format.');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        setError('Error parsing file: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            return (
+                <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    height: '400px', border: '2px dashed var(--border)', borderRadius: '12px', background: 'var(--bg-secondary)'
+                }}>
+                    <Icon name="UploadCloud" size={64} style={{ color: 'var(--accent)', marginBottom: '1.5rem' }} />
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Upload Hudl Data</h3>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Upload a CSV export from Hudl to begin analysis</p>
+
+                    <input
+                        type="file"
+                        accept=".csv"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        style={{ display: 'none' }}
+                    />
+                    <button onClick={() => fileInputRef.current.click()} className="btn btn-primary" style={{ padding: '0.75rem 2rem' }}>
+                        Select CSV File
+                    </button>
+                    {error && <div style={{ color: '#ef4444', marginTop: '1rem' }}>{error}</div>}
+                </div>
+            );
+        };
+
+        const ColumnMapper = ({ headers, mapping, setMapping, columnOrder, setColumnOrder }) => {
+            const systemFields = [
+                { id: 'ODK', label: 'ODK', required: true },
+                { id: 'DN', label: 'Down', required: true },
+                { id: 'DIST', label: 'Distance', required: true },
+                { id: 'YARD LN', label: 'Yard Line', required: true },
+                { id: 'HASH', label: 'Hash', required: false },
+                { id: 'PLAY TYPE', label: 'Play Type', required: true },
+                { id: 'RESULT', label: 'Result', required: false },
+                { id: 'GN/LS', label: 'Gain/Loss', required: false },
+                { id: 'EFF', label: 'Efficiency', required: false }
+            ];
+
+            const moveColumn = (fromIndex, toIndex) => {
+                const newOrder = [...columnOrder];
+                const [moved] = newOrder.splice(fromIndex, 1);
+                newOrder.splice(toIndex, 0, moved);
+                setColumnOrder(newOrder);
+            };
+
+            return (
+                <div style={{ padding: '1.5rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', overflowY: 'auto' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Column Configuration</h3>
+
+                    <div style={{ marginBottom: '2rem' }}>
+                        <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Map System Fields</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {systemFields.map(field => (
+                                <div key={field.id}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.25rem' }}>
+                                        {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
+                                    </label>
+                                    <select
+                                        className="form-select"
+                                        value={mapping[field.id] || ''}
+                                        onChange={(e) => setMapping({ ...mapping, [field.id]: e.target.value })}
+                                        style={{ width: '100%', fontSize: '0.9rem', padding: '0.5rem' }}
+                                    >
+                                        <option value="">-- Select Column --</option>
+                                        {headers.map(h => (
+                                            <option key={h} value={h}>{h}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Column Display Order</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {columnOrder.map((col, idx) => (
+                                <div key={col} style={{
+                                    padding: '0.5rem',
+                                    background: 'var(--bg-main)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <button disabled={idx === 0} onClick={() => moveColumn(idx, idx - 1)} style={{ cursor: 'pointer', opacity: idx === 0 ? 0.3 : 1 }}>▲</button>
+                                        <button disabled={idx === columnOrder.length - 1} onClick={() => moveColumn(idx, idx + 1)} style={{ cursor: 'pointer', opacity: idx === columnOrder.length - 1 ? 0.3 : 1 }}>▼</button>
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem' }}>{col}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             );
         };
+
+        const AnalyticsDashboard = ({ data, mapping }) => {
+            const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip: RechartsTooltip, Legend, ResponsiveContainer } = Recharts;
+            const [filters, setFilters] = useState({});
+            const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(true);
+
+            // Helper: Get unique values for a column
+            const getUniqueValues = (column) => {
+                const values = new Set(data.map(row => row[column]).filter(Boolean));
+                return Array.from(values).sort();
+            };
+
+            // Filter Data
+            const filteredData = data.filter(row => {
+                return Object.entries(filters).every(([key, selectedValues]) => {
+                    if (!selectedValues || selectedValues.length === 0) return true;
+                    return selectedValues.includes(row[key]);
+                });
+            });
+
+            // Toggle Filter
+            const toggleFilter = (column, value) => {
+                setFilters(prev => {
+                    const current = prev[column] || [];
+                    const updated = current.includes(value)
+                        ? current.filter(v => v !== value)
+                        : [...current, value];
+                    return { ...prev, [column]: updated };
+                });
+            };
+
+            // -- Chart Data Preparation --
+
+            // 1. Run vs Pass (Pie)
+            const playTypeCol = mapping['PLAY TYPE'];
+            const runPassData = useMemo(() => {
+                if (!playTypeCol) return [];
+                const counts = { Run: 0, Pass: 0, Other: 0 };
+                filteredData.forEach(row => {
+                    const type = (row[playTypeCol] || '').toLowerCase();
+                    if (type.includes('run') || type.includes('rush')) counts.Run++;
+                    else if (type.includes('pass') || type.includes('throw')) counts.Pass++;
+                    else counts.Other++;
+                });
+                return [
+                    { name: 'Run', value: counts.Run },
+                    { name: 'Pass', value: counts.Pass }
+                ].filter(d => d.value > 0);
+            }, [filteredData, playTypeCol]);
+            const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+
+            // 2. Efficiency by Down (Bar)
+            const downCol = mapping['DN'];
+            const effCol = mapping['EFF'];
+            const efficiencyByDown = useMemo(() => {
+                if (!downCol || !effCol) return [];
+                const stats = { 1: { total: 0, succ: 0 }, 2: { total: 0, succ: 0 }, 3: { total: 0, succ: 0 }, 4: { total: 0, succ: 0 } };
+                filteredData.forEach(row => {
+                    const down = parseInt(row[downCol]);
+                    if (stats[down]) {
+                        stats[down].total++;
+                        if ((row[effCol] || '').toLowerCase().includes('y')) stats[down].succ++; // Assuming 'Y' or 'Yes' for efficiency
+                    }
+                });
+                return Object.entries(stats).map(([dn, vals]) => ({
+                    name: `Down ${dn}`,
+                    Efficiency: vals.total ? Math.round((vals.succ / vals.total) * 100) : 0,
+                    Plays: vals.total
+                }));
+            }, [filteredData, downCol, effCol]);
+
+            // 3. Top 5 Results (if Result mapped)
+            const resultCol = mapping['RESULT'];
+            const resultDistribution = useMemo(() => {
+                if (!resultCol) return [];
+                const counts = {};
+                filteredData.forEach(row => {
+                    const res = row[resultCol] || 'Unknown';
+                    counts[res] = (counts[res] || 0) + 1;
+                });
+                return Object.entries(counts)
+                    .map(([name, value]) => ({ name, value }))
+                    .sort((a, b) => b.value - a.value)
+                    .slice(0, 10);
+            }, [filteredData, resultCol]);
+
+
+            return (
+                <div style={{ display: 'flex', height: '100%', overflow: 'hidden', gap: '1rem' }}>
+
+                    {/* Filters Sidebar */}
+                    <div style={{
+                        width: isFilterSidebarOpen ? '250px' : '0px',
+                        minWidth: isFilterSidebarOpen ? '250px' : '0px',
+                        background: 'var(--surface)',
+                        borderRight: '1px solid var(--border)',
+                        overflowY: 'auto',
+                        transition: 'all 0.3s ease',
+                        opacity: isFilterSidebarOpen ? 1 : 0
+                    }}>
+                        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ fontWeight: 'bold' }}>Filters</h3>
+                            <button onClick={() => setFilters({})} style={{ fontSize: '0.75rem', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Clear All</button>
+                        </div>
+                        <div style={{ padding: '1rem' }}>
+                            {Object.entries(mapping).map(([sysField, csvHeader]) => (
+                                <div key={sysField} style={{ marginBottom: '1.5rem' }}>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        {sysField} <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: 'var(--text-secondary)' }}>({csvHeader})</span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '150px', overflowY: 'auto' }}>
+                                        {getUniqueValues(csvHeader).map(val => (
+                                            <label key={val} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={(filters[csvHeader] || []).includes(val)}
+                                                    onChange={() => toggleFilter(csvHeader, val)}
+                                                />
+                                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{val}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <button onClick={() => setIsFilterSidebarOpen(!isFilterSidebarOpen)} className="btn btn-sm btn-secondary">
+                                <Icon name="Filter" size={14} /> {isFilterSidebarOpen ? 'Hide Filters' : 'Show Filters'}
+                            </button>
+                            <span style={{ marginLeft: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                Showing {filteredData.length} of {data.length} plays
+                            </span>
+                        </div>
+
+                        {/* Charts Area */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+
+                            {/* Run/Pass Breakdown */}
+                            <div className="card" style={{ padding: '1.5rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                                <h3 style={{ fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>Run / Pass Ratio</h3>
+                                <div style={{ height: '300px' }}>
+                                    {runPassData.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={runPassData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    labelLine={false}
+                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                    outerRadius={100}
+                                                    fill="#8884d8"
+                                                    dataKey="value"
+                                                >
+                                                    {runPassData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip />
+                                                <Legend />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                                            Map "PLAY TYPE" to see this chart
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Efficiency by Down */}
+                            <div className="card" style={{ padding: '1.5rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                                <h3 style={{ fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>Efficiency by Down</h3>
+                                <div style={{ height: '300px' }}>
+                                    {efficiencyByDown.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={efficiencyByDown}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                                                <XAxis dataKey="name" stroke="var(--text-secondary)" />
+                                                <YAxis stroke="var(--text-secondary)" />
+                                                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)' }} />
+                                                <Legend />
+                                                <Bar dataKey="Efficiency" fill="#82ca9d" name="Efficiency %" />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                                            Map "DN" and "EFF" to see this chart
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Result Distribution */}
+                            <div className="card" style={{ padding: '1.5rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                                <h3 style={{ fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>Top Play Results</h3>
+                                <div style={{ height: '300px' }}>
+                                    {resultDistribution.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={resultDistribution} layout="vertical">
+                                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                                                <XAxis type="number" stroke="var(--text-secondary)" />
+                                                <YAxis dataKey="name" type="category" width={100} stroke="var(--text-secondary)" style={{ fontSize: '0.8rem' }} />
+                                                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)' }} />
+                                                <Bar dataKey="value" fill="#8884d8" name="Count" />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                                            Map "RESULT" to see this chart
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+
 
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
@@ -42614,7 +43096,7 @@
             // Custom Focus Items State - MIGRATED TO FULL LISTS
             // We'll keep the storage key to migrate old data if needed, but primarily use practiceFocusItems
 
-            const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { list: 'segments'|'focus', item: 'name' }
+            const [deleteConfirmation, setDeleteConfirmation] = useState(null); // {list: 'segments'|'focus', item: 'name' }
 
 
             const [practiceSegmentTypes, setPracticeSegmentTypes] = useState(() => {
@@ -45245,8 +45727,9 @@
                                                     </button>
                                                 )}
                                                 <button className={`nav-item ${view === 'self-scout-offense' ? 'active' : ''}`} onClick={() => setView('self-scout-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                    <Icon name="BarChart2" size={16} style={{ marginRight: '8px' }} /> Offense Self-Scout
+                                                    <Icon name="FileBarChart" size={16} style={{ marginRight: '8px' }} /> Offense Self-Scout
                                                 </button>
+
                                             </CollapsibleCategory>
                                         )}
 
@@ -45279,8 +45762,9 @@
                                                     </button>
                                                 )}
                                                 <button className={`nav-item ${view === 'self-scout-defense' ? 'active' : ''}`} onClick={() => setView('self-scout-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                    <Icon name="BarChart2" size={16} style={{ marginRight: '8px' }} /> Defense Self-Scout
+                                                    <Icon name="FileBarChart" size={16} style={{ marginRight: '8px' }} /> Defense Self-Scout
                                                 </button>
+
                                             </CollapsibleCategory>
                                         )}
 
@@ -45312,23 +45796,13 @@
                                                     </button>
                                                 )}
                                                 <button className={`nav-item ${view === 'self-scout-special-teams' ? 'active' : ''}`} onClick={() => setView('self-scout-special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                    <Icon name="BarChart2" size={16} style={{ marginRight: '8px' }} /> Special Teams Self-Scout
+                                                    <Icon name="FileBarChart" size={16} style={{ marginRight: '8px' }} /> Special Teams Self-Scout
                                                 </button>
+
                                             </CollapsibleCategory>
                                         )}
 
-                                        {/* SELF-SCOUT CATEGORY */}
-                                        <CollapsibleCategory title="Self-Scout" icon="BarChart2" defaultOpen={false}>
-                                            <button className={`nav-item ${view === 'self-scout-season-offense' ? 'active' : ''}`} onClick={() => setView('self-scout-season-offense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="TrendingUp" size={16} style={{ marginRight: '8px' }} /> Season Offense
-                                            </button>
-                                            <button className={`nav-item ${view === 'self-scout-season-defense' ? 'active' : ''}`} onClick={() => setView('self-scout-season-defense')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Shield" size={16} style={{ marginRight: '8px' }} /> Season Defense
-                                            </button>
-                                            <button className={`nav-item ${view === 'self-scout-season-special-teams' ? 'active' : ''}`} onClick={() => setView('self-scout-season-special-teams')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                <Icon name="Compass" size={16} style={{ marginRight: '8px' }} /> Season Special Teams
-                                            </button>
-                                        </CollapsibleCategory>
+
 
                                         {/* PERSONNEL CATEGORY (Moved from top) */}
                                         {currentPermissions.staff.view && (
@@ -45637,29 +46111,29 @@
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                                         <button onClick={() => setView('practice')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <Icon name="Megaphone" size={18} />
-                                                <span style={{ fontWeight: 'bold' }}>Practice Plans</span>
+                                                <Icon name="Megaphone" size={18} style={{ color: 'var(--text-primary)' }} />
+                                                <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>Practice Plans</span>
                                             </div>
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>View and edit practice schedules</div>
                                         </button>
                                         <button onClick={() => setView('install-manager')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <Icon name="Layers" size={18} />
-                                                <span style={{ fontWeight: 'bold' }}>Install Manager</span>
+                                                <Icon name="Layers" size={18} style={{ color: 'var(--text-primary)' }} />
+                                                <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>Install Manager</span>
                                             </div>
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Manage weekly installations</div>
                                         </button>
                                         <button onClick={() => setView('scouting')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <Icon name="Search" size={18} />
-                                                <span style={{ fontWeight: 'bold' }}>Scouting</span>
+                                                <Icon name="Search" size={18} style={{ color: 'var(--text-primary)' }} />
+                                                <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>Scouting</span>
                                             </div>
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Scout opponent tendencies</div>
                                         </button>
                                         <button onClick={() => { setView('depth'); setDepthChartType('OFFENSE'); }} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <Icon name="Users" size={18} />
-                                                <span style={{ fontWeight: 'bold' }}>Depth Charts</span>
+                                                <Icon name="Users" size={18} style={{ color: 'var(--text-primary)' }} />
+                                                <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>Depth Charts</span>
                                             </div>
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Manage player positions</div>
                                         </button>
@@ -46509,71 +46983,11 @@
                         {/* Duplicate settings block removed */}
 
                         {view === 'help' && <UserGuide />}
-                        {view === 'self-scout-offense' && <SelfScoutView phase="Offense" />}
-                        {view === 'self-scout-defense' && <SelfScoutView phase="Defense" />}
-                        {view === 'self-scout-special-teams' && <SelfScoutView phase="Special Teams" />}
+                        {view === 'self-scout-offense' && <SelfScoutAnalytics phase="Offense" />}
+                        {view === 'self-scout-defense' && <SelfScoutAnalytics phase="Defense" />}
+                        {view === 'self-scout-special-teams' && <SelfScoutAnalytics phase="Special Teams" />}
 
-                        {/* Season-level Self-Scout Views (Placeholders) */}
-                        {view === 'self-scout-season-offense' && (
-                            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-                                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Season Offense Self-Scout</h1>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-                                    This section will contain season-long offensive analytics and self-scouting reports.
-                                </p>
-                                <div style={{
-                                    padding: '3rem',
-                                    background: 'var(--bg-secondary)',
-                                    borderRadius: '8px',
-                                    textAlign: 'center',
-                                    border: '2px dashed var(--border-color)'
-                                }}>
-                                    <Icon name="TrendingUp" size={48} style={{ marginBottom: '1rem', color: 'var(--text-tertiary)' }} />
-                                    <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>
-                                        Placeholder for Season Offense Analytics
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                        {view === 'self-scout-season-defense' && (
-                            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-                                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Season Defense Self-Scout</h1>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-                                    This section will contain season-long defensive analytics and self-scouting reports.
-                                </p>
-                                <div style={{
-                                    padding: '3rem',
-                                    background: 'var(--bg-secondary)',
-                                    borderRadius: '8px',
-                                    textAlign: 'center',
-                                    border: '2px dashed var(--border-color)'
-                                }}>
-                                    <Icon name="Shield" size={48} style={{ marginBottom: '1rem', color: 'var(--text-tertiary)' }} />
-                                    <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>
-                                        Placeholder for Season Defense Analytics
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                        {view === 'self-scout-season-special-teams' && (
-                            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-                                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Season Special Teams Self-Scout</h1>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-                                    This section will contain season-long special teams analytics and self-scouting reports.
-                                </p>
-                                <div style={{
-                                    padding: '3rem',
-                                    background: 'var(--bg-secondary)',
-                                    borderRadius: '8px',
-                                    textAlign: 'center',
-                                    border: '2px dashed var(--border-color)'
-                                }}>
-                                    <Icon name="Compass" size={48} style={{ marginBottom: '1rem', color: 'var(--text-tertiary)' }} />
-                                    <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>
-                                        Placeholder for Season Special Teams Analytics
-                                    </p>
-                                </div>
-                            </div>
-                        )}
+
 
                         {
                             showLogoutConfirm && (
