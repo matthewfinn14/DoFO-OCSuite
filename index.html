@@ -34885,7 +34885,8 @@
 
                                         {/* Play Info */}
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px' }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                {play.priority && <Icon name="Star" size={12} fill="gold" color="gold" />}
                                                 {play.name}
                                                 {play.wristbandSlot && (
                                                     <span style={{
@@ -34997,7 +34998,7 @@
             };
 
             const renderScriptBox = (box, sectionIdx, boxIdx, isEditing) => {
-                const rows = box.rows || [];
+                const rows = (box.rows && box.rows.length > 0) ? box.rows : [{ id: 'default', label: '1', content: '' }];
                 const tempos = box.tempos || {};
                 const protocolList = box.customTempos || PLAY_PROTOCOLS;
 
@@ -35023,8 +35024,11 @@
                                                 value={row.label || (rowIdx + 1).toString()}
                                                 onChange={(e) => {
                                                     const newLayouts = { ...gamePlanLayouts };
-                                                    const targetRow = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx];
-                                                    targetRow.label = e.target.value;
+                                                    const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                    if (!targetSection.rows) targetSection.rows = [];
+                                                    if (!targetSection.rows[rowIdx]) targetSection.rows[rowIdx] = { id: Date.now(), label: (rowIdx + 1).toString(), content: '' };
+
+                                                    targetSection.rows[rowIdx].label = e.target.value;
                                                     if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                                 }}
                                                 style={{
@@ -35044,7 +35048,11 @@
                                                 isLocked={isLocked}
                                                 onUpdate={(pid) => {
                                                     const newLayouts = { ...gamePlanLayouts };
-                                                    newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].content = pid;
+                                                    const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                    if (!targetSection.rows) targetSection.rows = [];
+                                                    if (!targetSection.rows[rowIdx]) targetSection.rows[rowIdx] = { id: Date.now(), label: (rowIdx + 1).toString(), content: '' };
+
+                                                    targetSection.rows[rowIdx].content = pid;
                                                     if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                                 }}
                                             />
