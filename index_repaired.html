@@ -33279,6 +33279,8 @@
             // For Strike 'Em Out matrix collapsible groups
             const [collapsedGroups, setCollapsedGroups] = useState(new Set());
             const [collapsedRows, setCollapsedRows] = useState(new Set());
+            const [editingSectionIdx, setEditingSectionIdx] = useState(null); // For Spreadsheet editing
+            const [draggedBox, setDraggedBox] = useState(null); // For DnD Reordering
 
             // For Strike 'Em Out matrix collapsible hash columns (LEFT/RIGHT)
             const [collapsedHashColumns, setCollapsedHashColumns] = useState(() => {
@@ -34046,79 +34048,38 @@
             };
 
             const handleSectionDragOver = (e) => {
-                if (isLocked || (!draggedSection && !draggedCell)) return;
+                if (isLocked || !draggedSection) return;
                 e.preventDefault();
                 e.stopPropagation();
                 e.dataTransfer.dropEffect = 'move';
             };
 
             const handleSectionDrop = (e, targetSectionIdx) => {
-                if (isLocked) return;
+                if (isLocked || !draggedSection) return;
+                e.preventDefault();
+                e.stopPropagation();
 
-                // Case 1: Dropping a Section (Reordering Sections)
-                if (draggedSection) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const sourceSectionIdx = draggedSection.sectionIdx;
-                    if (sourceSectionIdx === targetSectionIdx) {
-                        setDraggedSection(null);
-                        return;
-                    }
-
-                    // Reorder sections array
-                    const newLayouts = { ...gamePlanLayouts };
-                    const sheet = { ...newLayouts.CALL_SHEET };
-                    const sections = [...sheet.sections];
-
-                    // Remove source section
-                    const [movedSection] = sections.splice(sourceSectionIdx, 1);
-
-                    // Insert at target position
-                    sections.splice(targetSectionIdx, 0, movedSection);
-
-                    sheet.sections = sections;
-                    newLayouts.CALL_SHEET = sheet;
-                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                const sourceSectionIdx = draggedSection.sectionIdx;
+                if (sourceSectionIdx === targetSectionIdx) {
                     setDraggedSection(null);
                     return;
                 }
 
-                // Case 2: Dropping a Box (Moving Box to Section)
-                if (draggedCell) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                // Reorder sections array
+                const newLayouts = { ...gamePlanLayouts };
+                const sheet = { ...newLayouts.CALL_SHEET };
+                const sections = [...sheet.sections];
 
-                    // If dropped on the same section, do nothing (draggedCell logic in handleDrop handles intra-section sorts usually, 
-                    // but dropping on the *container* usually implies appending or no-op if same. 
-                    // Let's allow appending if same section? Or just return if same to avoid jumping.)
-                    if (draggedCell.sectionIdx === targetSectionIdx) return;
+                // Remove source section
+                const [movedSection] = sections.splice(sourceSectionIdx, 1);
 
-                    // Move dragged item to this section
-                    const newLayouts = { ...gamePlanLayouts };
-                    const sheet = { ...newLayouts.CALL_SHEET };
-                    sheet.sections = [...sheet.sections];
+                // Insert at target position
+                sections.splice(targetSectionIdx, 0, movedSection);
 
-                    // Source
-                    const sourceBoxes = [...(sheet.sections[draggedCell.sectionIdx].boxes || [])];
-                    const itemToMove = sourceBoxes[draggedCell.rowIdx];
-
-                    // Safety
-                    if (!itemToMove) return;
-
-                    // Remove from source
-                    sourceBoxes.splice(draggedCell.rowIdx, 1);
-                    sheet.sections[draggedCell.sectionIdx] = { ...sheet.sections[draggedCell.sectionIdx], boxes: sourceBoxes };
-
-                    // Target (Append to this section)
-                    // Ensure boxes array exists
-                    const targetBoxes = [...(sheet.sections[targetSectionIdx].boxes || []), itemToMove];
-                    sheet.sections[targetSectionIdx] = { ...sheet.sections[targetSectionIdx], boxes: targetBoxes };
-
-                    newLayouts.CALL_SHEET = sheet;
-                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                    setDraggedCell(null);
-                }
+                sheet.sections = sections;
+                newLayouts.CALL_SHEET = sheet;
+                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                setDraggedSection(null);
             };
 
 
@@ -36126,255 +36087,164 @@
                 );
             };
 
-            // spreadsheet editing state
-            const [isSheetEditing, setIsSheetEditing] = useState(false);
-
-            const handleAddSheetSection = () => {
-                const newSection = {
-                    title: 'New Section',
-                    boxes: []
-                };
-                const newLayouts = { ...gamePlanLayouts };
-                const sheet = { ...newLayouts.CALL_SHEET };
-                sheet.sections = [...(sheet.sections || []), newSection];
-                newLayouts.CALL_SHEET = sheet;
-                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-            };
-
-            const handleUpdateSheetSection = (index, updatedSection) => {
-                const newLayouts = { ...gamePlanLayouts };
-                const sheet = { ...newLayouts.CALL_SHEET };
-                const newSections = [...sheet.sections];
-                newSections[index] = updatedSection;
-                sheet.sections = newSections;
-                newLayouts.CALL_SHEET = sheet;
-                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-            };
-
-            const handleDeleteSheetSection = (index) => {
-                if (!confirm('Delete this section and all its boxes?')) return;
-                const newLayouts = { ...gamePlanLayouts };
-                const sheet = { ...newLayouts.CALL_SHEET };
-                const newSections = [...sheet.sections];
-                newSections.splice(index, 1);
-                sheet.sections = newSections;
-                newLayouts.CALL_SHEET = sheet;
-                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-            };
-
-            const handleAddSheetBox = (sectionIndex) => {
-                const newBox = {
-                    header: 'New Box',
-                    setId: `box_${Date.now()}`,
-                    color: '#3b82f6',
-                    rows: []
-                };
-                const newLayouts = { ...gamePlanLayouts };
-                const sheet = { ...newLayouts.CALL_SHEET };
-                const newSections = [...sheet.sections];
-                const targetSection = { ...newSections[sectionIndex] };
-                targetSection.boxes = [...(targetSection.boxes || []), newBox];
-                newSections[sectionIndex] = targetSection;
-                sheet.sections = newSections;
-                newLayouts.CALL_SHEET = sheet;
-                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-            };
-
-            const handleDeleteSheetBox = (sectionIndex, boxIndex) => {
-                if (!confirm('Delete this box?')) return;
-                const newLayouts = { ...gamePlanLayouts };
-                const sheet = { ...newLayouts.CALL_SHEET };
-                const newSections = [...sheet.sections];
-                const targetSection = { ...newSections[sectionIndex] };
-                const newBoxes = [...targetSection.boxes];
-                newBoxes.splice(boxIndex, 1);
-                targetSection.boxes = newBoxes;
-                newSections[sectionIndex] = targetSection;
-                sheet.sections = newSections;
-                newLayouts.CALL_SHEET = sheet;
-                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-            };
-
-            const handleSheetBoxDrop = (e, targetSectionIdx, targetBoxIdx) => {
-                if (!isSheetEditing || !draggedCell) return;
-                e.preventDefault();
-
-                // draggedCell contains { sectionIdx, boxIdx } from the start
-                // We need to move the box from source to target
-
-                const sourceSectionIdx = draggedCell.sectionIdx;
-                const sourceBoxIdx = draggedCell.boxIdx;
-
-                if (sourceSectionIdx === targetSectionIdx && sourceBoxIdx === targetBoxIdx) return;
-
-                const newLayouts = { ...gamePlanLayouts };
-                const sheet = { ...newLayouts.CALL_SHEET };
-                const newSections = [...sheet.sections];
-
-                const sourceSection = { ...newSections[sourceSectionIdx] };
-                const sourceBoxes = [...sourceSection.boxes];
-                const [movedBox] = sourceBoxes.splice(sourceBoxIdx, 1);
-
-                if (sourceSectionIdx === targetSectionIdx) {
-                    // Same section move
-                    sourceBoxes.splice(targetBoxIdx, 0, movedBox);
-                    sourceSection.boxes = sourceBoxes;
-                    newSections[sourceSectionIdx] = sourceSection;
-                } else {
-                    // Different section move
-                    const targetSection = { ...newSections[targetSectionIdx] };
-                    const targetBoxes = [...targetSection.boxes];
-
-                    // Update source first
-                    sourceSection.boxes = sourceBoxes;
-                    newSections[sourceSectionIdx] = sourceSection;
-
-                    // Update target
-                    targetBoxes.splice(targetBoxIdx, 0, movedBox);
-                    targetSection.boxes = targetBoxes;
-                    newSections[targetSectionIdx] = targetSection;
-                }
-
-                sheet.sections = newSections;
-                newLayouts.CALL_SHEET = sheet;
-                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                setDraggedCell(null);
-            };
-
-            const handleSheetSectionDragOver = (e) => {
-                if (!isSheetEditing || !draggedCell) return;
-                e.preventDefault();
-                e.stopPropagation();
-                e.dataTransfer.dropEffect = 'move';
-            };
-
-            const handleSheetSectionDrop = (e, targetSectionIdx) => {
-                if (!isSheetEditing || !draggedCell) return;
-                e.preventDefault();
-                e.stopPropagation();
-
-                // If dropping on same section, usually handled by box drop, but allowed for append.
-                if (draggedCell.sectionIdx === targetSectionIdx) return;
-
-                const newLayouts = { ...gamePlanLayouts };
-                const sheet = { ...newLayouts.CALL_SHEET };
-                const newSections = [...sheet.sections];
-
-                const sourceSection = { ...newSections[draggedCell.sectionIdx] };
-                const sourceBoxes = [...(sourceSection.boxes || [])];
-
-                if (!sourceBoxes[draggedCell.boxIdx]) return;
-
-                const [movedBox] = sourceBoxes.splice(draggedCell.boxIdx, 1);
-
-                // Update source
-                sourceSection.boxes = sourceBoxes;
-                newSections[draggedCell.sectionIdx] = sourceSection;
-
-                // Update target (Append)
-                const targetSection = { ...newSections[targetSectionIdx] };
-                const targetBoxes = [...(targetSection.boxes || []), movedBox];
-                targetSection.boxes = targetBoxes;
-                newSections[targetSectionIdx] = targetSection;
-
-                sheet.sections = newSections;
-                newLayouts.CALL_SHEET = sheet;
-                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                setDraggedCell(null);
-            };
-
             const renderSheetView = () => {
+                const handleUpdateSectionTitle = (sIdx, newTitle) => {
+                    const newLayouts = { ...gamePlanLayouts };
+                    newLayouts.CALL_SHEET.sections[sIdx].title = newTitle;
+                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                };
+
+                const handleUpdateSectionColumns = (sIdx, cols) => {
+                    const newLayouts = { ...gamePlanLayouts };
+                    newLayouts.CALL_SHEET.sections[sIdx].sheetColumns = cols;
+                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                };
+
+                const handleRemoveBox = (sIdx, bIdx) => {
+                    if (!confirm("Remove this box?")) return;
+                    const newLayouts = { ...gamePlanLayouts };
+                    newLayouts.CALL_SHEET.sections[sIdx].boxes.splice(bIdx, 1);
+                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                };
+
+                const handleAddBox = (sIdx) => {
+                    const newLayouts = { ...gamePlanLayouts };
+                    newLayouts.CALL_SHEET.sections[sIdx].boxes.push({
+                        id: Date.now(),
+                        header: 'New Box',
+                        setId: `new_box_${Date.now()}`,
+                        color: '#3b82f6',
+                        type: 'list'
+                    });
+                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                };
+
+                // Drag and Drop Handlers
+                const handleDragStart = (e, sIdx, bIdx) => {
+                    setDraggedBox({ sIdx, bIdx });
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", JSON.stringify({ sIdx, bIdx }));
+                };
+
+                const handleDragOver = (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                };
+
+                const handleDrop = (e, targetSIdx, targetBIdx) => {
+                    e.preventDefault();
+                    if (!draggedBox) return;
+
+                    const { sIdx: sourceSIdx, bIdx: sourceBIdx } = draggedBox;
+
+                    const newLayouts = { ...gamePlanLayouts };
+
+                    if (sourceSIdx === targetSIdx) {
+                        const list = newLayouts.CALL_SHEET.sections[sourceSIdx].boxes;
+                        if (sourceBIdx < targetBIdx) {
+                            const [removed] = list.splice(sourceBIdx, 1);
+                            list.splice(targetBIdx - 1, 0, removed);
+                        } else {
+                            const [removed] = list.splice(sourceBIdx, 1);
+                            list.splice(targetBIdx, 0, removed);
+                        }
+                    } else {
+                        const [removed] = newLayouts.CALL_SHEET.sections[sourceSIdx].boxes.splice(sourceBIdx, 1);
+                        newLayouts.CALL_SHEET.sections[targetSIdx].boxes.splice(targetBIdx, 0, removed);
+                    }
+
+                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                    setDraggedBox(null);
+                };
+
                 return (
                     <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
-
-                        {/* Edit Toolbar */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                            {!isLocked && (
-                                <button
-                                    onClick={() => setIsSheetEditing(!isSheetEditing)}
-                                    style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '6px',
-                                        fontSize: '0.85rem',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                        backgroundColor: isSheetEditing ? '#2563eb' : 'white',
-                                        color: isSheetEditing ? 'white' : '#0f172a',
-                                        border: isSheetEditing ? '1px solid #2563eb' : '1px solid #94a3b8',
-                                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                                    }}
-                                >
-                                    {isSheetEditing ? 'Done Editing' : 'Edit Layout'}
-                                </button>
-                            )}
-                        </div>
-
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start' }}>
                             {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
-                                // Show all boxes in edit mode
-                                const visibleBoxes = isSheetEditing ? (section.boxes || []) : (section.boxes || []).filter(b => !b.hidden);
-                                if (!isSheetEditing && visibleBoxes.length === 0) return null;
+                                const visibleBoxes = (section.boxes || []).filter(b => !b.hidden || editingSectionIdx === sIdx);
+                                if (visibleBoxes.length === 0 && editingSectionIdx !== sIdx) return null;
+
+                                const isEditing = editingSectionIdx === sIdx;
+                                const columns = section.sheetColumns || 2;
 
                                 return (
-                                    <div
-                                        key={sIdx}
-                                        style={{ breakInside: 'avoid', marginBottom: '0.5rem', border: isSheetEditing ? '1px dashed #3b82f6' : '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', background: 'white', display: 'flex', flexDirection: 'column' }}
-                                        onDragOver={handleSheetSectionDragOver}
-                                        onDrop={(e) => handleSheetSectionDrop(e, sIdx)}
-                                    >
+                                    <div key={sIdx} style={{ breakInside: 'avoid', marginBottom: '0.5rem', border: isEditing ? '2px dashed #3b82f6' : '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', background: 'white', display: 'flex', flexDirection: 'column' }}>
                                         <div style={{
                                             background: '#f1f5f9', padding: '0.5rem', fontWeight: 'bold',
                                             borderBottom: '1px solid #cbd5e1', textTransform: 'uppercase', fontSize: '0.8rem',
                                             color: '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                                         }}>
-                                            {isSheetEditing ? (
-                                                <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
-                                                    <input
-                                                        value={section.title}
-                                                        onChange={(e) => handleUpdateSheetSection(sIdx, { ...section, title: e.target.value })}
-                                                        style={{ flex: 1, padding: '2px 4px', fontSize: '0.8rem', fontWeight: 'bold' }}
-                                                    />
-                                                    <button className="btn-sm" style={{ color: '#ef4444' }} onClick={() => handleDeleteSheetSection(sIdx)}>
-                                                        <Icon name="Trash2" size={14} />
-                                                    </button>
-                                                </div>
+                                            {isEditing ? (
+                                                <input
+                                                    value={section.title}
+                                                    onChange={e => handleUpdateSectionTitle(sIdx, e.target.value)}
+                                                    style={{ fontSize: '0.8rem', fontWeight: 'bold', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px', width: '100%' }}
+                                                />
                                             ) : (
                                                 <span>{section.title}</span>
                                             )}
+
+                                            {!isLocked && (
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                    {isEditing && (
+                                                        <div style={{ display: 'flex', gap: '4px', marginRight: '8px' }}>
+                                                            <button 
+                                                                className={`btn-xs ${columns === 1 ? 'btn-primary' : 'btn-secondary'}`}
+                                                                onClick={() => handleUpdateSectionColumns(sIdx, 1)}
+                                                                title="1 Column (Stack)"
+                                                            >
+                                                                1 Col
+                                                            </button>
+                                                            <button 
+                                                                className={`btn-xs ${columns === 2 ? 'btn-primary' : 'btn-secondary'}`}
+                                                                onClick={() => handleUpdateSectionColumns(sIdx, 2)}
+                                                                title="2 Columns (Grid)"
+                                                            >
+                                                                2 Col
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {isEditing ? (
+                                                        <button className="btn-sm btn-primary" onClick={() => setEditingSectionIdx(null)}>Done</button>
+                                                    ) : (
+                                                        <button className="btn-sm btn-secondary" onClick={() => setEditingSectionIdx(sIdx)}>Edit</button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '0', gap: isSheetEditing ? '4px' : '0', padding: isSheetEditing ? '4px' : '0' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: columns === 1 ? '1fr' : '1fr 1fr', borderTop: '0', gap: isEditing ? '8px' : '0', padding: isEditing ? '8px' : '0' }}>
                                             {visibleBoxes.map((box, bIdx) => {
                                                 const playsInBox = getPlaysForSet(box.setId);
                                                 return (
                                                     <div
                                                         key={bIdx}
-                                                        draggable={isSheetEditing}
-                                                        onDragStart={(e) => {
-                                                            if (!isSheetEditing) return;
-                                                            setDraggedCell({ sectionIdx: sIdx, boxIdx: bIdx }); // Reuse draggedCell state for simplicity or create new one? defined as { sectionIdx, rowIdx } so keys match intended usage if we treat rowIdx as boxIdx
-                                                            e.dataTransfer.effectAllowed = 'move';
-                                                            e.stopPropagation();
-                                                        }}
-                                                        onDragOver={(e) => {
-                                                            if (!isSheetEditing) return;
-                                                            e.preventDefault();
-                                                            e.dataTransfer.dropEffect = 'move';
-                                                        }}
-                                                        onDrop={(e) => handleSheetBoxDrop(e, sIdx, bIdx)}
+                                                        draggable={isEditing}
+                                                        onDragStart={(e) => handleDragStart(e, sIdx, bIdx)}
+                                                        onDragOver={handleDragOver}
+                                                        onDrop={(e) => handleDrop(e, sIdx, bIdx)}
                                                         style={{
-                                                            borderBottom: !isSheetEditing && Math.floor(bIdx / 2) < Math.ceil(visibleBoxes.length / 2) - 1 ? '1px solid #cbd5e1' : 'none',
-                                                            borderRight: !isSheetEditing && bIdx % 2 === 0 ? '1px solid #cbd5e1' : 'none',
-                                                            border: isSheetEditing ? '1px solid #e2e8f0' : undefined,
+                                                            borderBottom: (!isEditing && (columns === 1 ? bIdx < visibleBoxes.length - 1 : Math.floor(bIdx / 2) < Math.ceil(visibleBoxes.length / 2) - 1)) ? '1px solid #cbd5e1' : 'none',
+                                                            borderRight: (!isEditing && columns === 2 && bIdx % 2 === 0) ? '1px solid #cbd5e1' : 'none',
+                                                            border: isEditing ? '1px solid #e2e8f0' : undefined,
                                                             background: 'white',
                                                             minHeight: '120px',
-                                                            cursor: isSheetEditing ? 'grab' : 'pointer',
+                                                            cursor: isEditing ? 'grab' : 'pointer',
                                                             display: 'flex', flexDirection: 'column',
-                                                            opacity: (draggedCell?.sectionIdx === sIdx && draggedCell?.boxIdx === bIdx) ? 0.5 : 1
+                                                            opacity: (box.hidden && isEditing) ? 0.5 : (draggedBox && draggedBox.sIdx === sIdx && draggedBox.bIdx === bIdx ? 0.4 : 1),
+                                                            position: 'relative'
                                                         }}
-                                                        onClick={() => {
-                                                            if (!isSheetEditing) setEditingBox({ box, sectionIdx: sIdx, boxIdx: bIdx });
-                                                        }}
+                                                        onClick={() => !isEditing && setEditingBox({ box, sectionIdx: sIdx, boxIdx: bIdx })}
                                                     >
+                                                        {isEditing && (
+                                                            <div
+                                                                style={{ position: 'absolute', top: -5, right: -5, background: '#ef4444', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, fontSize: '12px' }}
+                                                                onClick={(e) => { e.stopPropagation(); handleRemoveBox(sIdx, bIdx); }}
+                                                            >
+                                                                ×
+                                                            </div>
+                                                        )}
+
                                                         {/* Sheet Box Header */}
                                                         <div style={{
                                                             padding: '4px 8px',
@@ -36382,19 +36252,12 @@
                                                             color: 'white',
                                                             fontSize: '0.75rem',
                                                             fontWeight: 'bold',
-                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                                                        }}>
+                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                            cursor: isEditing ? 'grab' : 'default'
+                                                        }} onClick={() => isEditing && setEditingBox({ box, sectionIdx: sIdx, boxIdx: bIdx })}>
                                                             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{box.header}</span>
-                                                            {isSheetEditing ? (
-                                                                <div
-                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteSheetBox(sIdx, bIdx); }}
-                                                                    style={{ cursor: 'pointer', padding: '0 4px' }}
-                                                                >
-                                                                    ×
-                                                                </div>
-                                                            ) : (
-                                                                <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{playsInBox.length}</span>
-                                                            )}
+                                                            {!isEditing && <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{playsInBox.length}</span>}
+                                                            {isEditing && <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>Edit</span>}
                                                         </div>
 
                                                         {/* Sheet Box Content */}
@@ -36407,13 +36270,20 @@
                                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                                                             {box.rows.map((row, rIdx) => {
                                                                                 const play = plays.find(p => p.id === row.content);
+                                                                                const playRight = plays.find(p => p.id === row.contentRight);
                                                                                 return (
-                                                                                    <div key={rIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', borderBottom: '1px dotted #f1f5f9' }}>
-                                                                                        <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
-                                                                                        {play ? (
-                                                                                            <span style={{ fontWeight: '600', color: '#1e293b' }}>{play.name}</span>
-                                                                                        ) : (
-                                                                                            <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                                                                                    <div key={rIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', borderBottom: '1px dotted #f1f5f9', justifyContent: 'space-between' }}>
+                                                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                                                            <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
+                                                                                            {play ? (
+                                                                                                <span style={{ fontWeight: '600', color: '#1e293b' }}>{play.name}</span>
+                                                                                            ) : (
+                                                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        {/* Right Hash Play */}
+                                                                                        {playRight && (
+                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', textAlign: 'right' }}>{playRight.name}</span>
                                                                                         )}
                                                                                     </div>
                                                                                 );
@@ -36443,47 +36313,21 @@
                                                     </div>
                                                 );
                                             })}
-                                            {isSheetEditing && (
+                                            {isEditing && (
                                                 <div
-                                                    style={{
-                                                        border: '2px dashed #e2e8f0', borderRadius: '4px', minHeight: '120px',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        cursor: 'pointer', color: '#64748b', fontWeight: '500', background: '#f8fafc'
-                                                    }}
-                                                    onClick={() => handleAddSheetBox(sIdx)}
+                                                    style={{ border: '2px dashed #cbd5e1', borderRadius: '4px', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', flexDirection: 'column', gap: '4px' }}
+                                                    onClick={() => handleAddBox(sIdx)}
                                                 >
-                                                    + Add Box
+                                                    <Icon name="Plus" size={24} />
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Add Box</span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                );
-                            })}
-
-                            {isSheetEditing && (
-                                <button
-                                    style={{
-                                        border: '2px dashed #cbd5e1',
-                                        height: '80px',
-                                        width: '100%',
-                                        gridColumn: '1 / -1',
-                                        background: '#f1f5f9',
-                                        color: '#475569',
-                                        fontWeight: '600',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        fontSize: '0.9rem',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                    }}
-                                    onClick={handleAddSheetSection}
-                                >
-                                    <span style={{ fontSize: '1.2rem' }}>+</span> Add New Section
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                );
-            };
+                        );
+                                            </div>
+                    </div >
+                           };
 
             const renderMatrix = () => {
                 const layout = GAME_PLAN_LAYOUTS.MATRIX;
@@ -36670,7 +36514,7 @@
                                                 {editingFormationId === formation.id ? (
                                                     <input
                                                         autoFocus
-                                                        defaultValue={(gamePlan?.formationOverrides || {})[formation.id] || formation.label}
+                                                        defaultValue={(gamePlan.formationOverrides || {})[formation.id] || formation.label}
                                                         style={{ background: 'white', color: 'black', border: 'none', padding: '2px 4px', borderRadius: '2px', width: '200px' }}
                                                         onBlur={(e) => handleUpdateFormationName(formation.id, e.target.value)}
                                                         onKeyDown={(e) => {
@@ -36679,7 +36523,7 @@
                                                         onClick={(e) => e.stopPropagation()}
                                                     />
                                                 ) : (
-                                                    (gamePlan?.formationOverrides || {})[formation.id] || formation.label
+                                                    (gamePlan.formationOverrides || {})[formation.id] || formation.label
                                                 )}
                                             </td>
                                         </tr>
@@ -37203,13 +37047,7 @@
                                                                         background: p.type === 'GAP' ? '#f8fafc' : 'white',
                                                                         opacity: draggedGridIndex === idx ? 0.5 : 1,
                                                                         transition: 'all 0.2s',
-                                                                        textAlign: 'center',
-                                                                        cursor: p.type !== 'GAP' ? 'pointer' : 'default'
-                                                                    }}
-                                                                    onDoubleClick={(e) => {
-                                                                        if (isLocked || p.type === 'GAP') return;
-                                                                        e.stopPropagation();
-                                                                        setAssignmentModalState({ playId: p.id, x: e.clientX, y: e.clientY });
+                                                                        textAlign: 'center'
                                                                     }}
                                                                 >
                                                                     {p.type !== 'GAP' ? (
@@ -37261,13 +37099,7 @@
                                                             height: '40px', border: '1px solid #cbd5e1', borderRadius: '4px',
                                                             display: 'flex', alignItems: 'center', padding: '0 4px', gap: '4px',
                                                             background: p.type === 'GAP' ? '#f8fafc' : 'white',
-                                                            opacity: draggedGridIndex === idx ? 0.5 : 1,
-                                                            cursor: 'pointer'
-                                                        }}
-                                                        onDoubleClick={(e) => {
-                                                            if (isLocked) return;
-                                                            e.stopPropagation();
-                                                            setAssignmentModalState({ playId: p.id, x: e.clientX, y: e.clientY });
+                                                            opacity: draggedGridIndex === idx ? 0.5 : 1
                                                         }}
                                                     >
                                                         {p.type !== 'GAP' && (
@@ -37311,13 +37143,7 @@
                                                                 height: '40px', border: '1px solid #cbd5e1', borderRadius: '4px',
                                                                 display: 'flex', alignItems: 'center', padding: '0 4px', gap: '4px',
                                                                 background: p.type === 'GAP' ? '#f8fafc' : 'white',
-                                                                opacity: draggedGridIndex === globalIdx ? 0.5 : 1,
-                                                                cursor: 'pointer'
-                                                            }}
-                                                            onDoubleClick={(e) => {
-                                                                if (isLocked) return;
-                                                                e.stopPropagation();
-                                                                setAssignmentModalState({ playId: p.id, x: e.clientX, y: e.clientY });
+                                                                opacity: draggedGridIndex === globalIdx ? 0.5 : 1
                                                             }}
                                                         >
                                                             {p.type !== 'GAP' && (
@@ -37605,15 +37431,8 @@
                                                             <div style={{
                                                                 background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px',
                                                                 padding: '4px', fontSize: '0.8rem', position: 'relative',
-                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                                onDoubleClick={(e) => {
-                                                                    if (isLocked) return;
-                                                                    e.stopPropagation();
-                                                                    setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY });
-                                                                }}
-                                                            >
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                            }}>
                                                                 <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{play.name}</div>
                                                                 {!isLocked && (
                                                                     <div
@@ -37767,7 +37586,6 @@
                                                 onListChange={(newItems) => handleCategoryListChange(newItems, cat.id)}
                                                 style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', gap: '0' }}
                                                 isLocked={isLocked}
-                                                onItemDoubleClick={(play, e) => setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY })}
                                             />
                                             {listItems.length === 0 && (
                                                 <div style={{ fontStyle: 'italic', opacity: 0.5, fontSize: '0.8rem', padding: '0.5rem', textAlign: 'center', pointerEvents: 'none' }}>
@@ -37796,7 +37614,6 @@
                                     onListChange={handleInboxListChange}
                                     style={{ minHeight: '200px', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
                                     isLocked={isLocked}
-                                    onItemDoubleClick={(play, e) => setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY })}
                                 />
                                 {unassignedPriorityPlays.length === 0 && (
                                     <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontStyle: 'italic', fontSize: '0.9rem' }}>
@@ -37808,285 +37625,32 @@
                     </div>
                 );
             };
-            // POPOVER FOR MULTI-SELECT ASSIGNMENT
-            const renderSituationAssignmentModal = () => {
-                if (!assignmentModalState) return null;
-                const { playId, x, y } = assignmentModalState;
-
-                const play = plays.find(p => p.id === playId);
-                if (!play) return null;
-
-                const assignedSits = getPlaySituations(playId);
-                const assignedIds = new Set(assignedSits.map(s => s.id));
-
-                // Check current states
-                const isNew = (newInstallIds || []).includes(playId);
-                const isPriority = play.priority || false;
-
-                // Toggle handlers
-                const handleToggleNew = () => {
-                    if (!onUpdateWeek) return;
-                    const currentNewIds = newInstallIds || [];
-                    let newIds;
-                    if (currentNewIds.includes(playId)) {
-                        newIds = currentNewIds.filter(id => id !== playId);
-                    } else {
-                        newIds = [...currentNewIds, playId];
-                    }
-                    onUpdateWeek(weekDate, 'newInstallIds', newIds);
-                };
-
-                const handleTogglePriority = () => {
-                    if (!onUpdatePlay) return;
-                    onUpdatePlay(playId, { priority: !isPriority });
-                };
-
-                const popoverHeight = 350; // Increased height for checkboxes
-                const popoverWidth = 280;
-
-                // Simple collision detection to keep on screen
-                let top = y;
-                let left = x;
-                if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 10;
-                if (left + popoverWidth > window.innerWidth) left = window.innerWidth - popoverWidth - 10;
-
-                return (
-                    <div style={{
-                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'transparent', zIndex: 9999,
-                    }} onClick={() => setAssignmentModalState(null)}>
-                        <div style={{
-                            position: 'absolute',
-                            top: top, left: left,
-                            background: 'white', width: `${popoverWidth}px`, maxHeight: `${popoverHeight}px`,
-                            borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
-                            display: 'flex', flexDirection: 'column', overflow: 'hidden'
-                        }} onClick={e => e.stopPropagation()}>
-
-                            {/* HEADER */}
-                            <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Assign Situations</div>
-                                    <button
-                                        onClick={() => setAssignmentModalState(null)}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-
-                                {/* Checkboxes */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={isNew}
-                                            onChange={handleToggleNew}
-                                            style={{ cursor: 'pointer' }}
-                                        />
-                                        <span>Mark as New</span>
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={isPriority}
-                                            onChange={handleTogglePriority}
-                                            style={{ cursor: 'pointer' }}
-                                        />
-                                        <span>Mark as Priority</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            {/* BODY - SCROLLABLE */}
-                            <div style={{ padding: '8px', overflowY: 'auto', flex: 1 }}>
-                                {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
-                                    const relevantBoxes = (section.boxes || []).filter(b => b.header && !b.hidden);
-                                    if (relevantBoxes.length === 0) return null;
-
-                                    return (
-                                        <div key={sIdx} style={{ marginBottom: '12px' }}>
-                                            <div style={{
-                                                fontSize: '0.65rem', fontWeight: 'bold', color: '#94a3b8',
-                                                marginBottom: '4px', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px'
-                                            }}>
-                                                {section.title || `Section ${sIdx + 1}`}
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                {relevantBoxes.map((box, bIdx) => {
-                                                    const isCheck = assignedIds.has(box.setId);
-                                                    return (
-                                                        <div
-                                                            key={bIdx}
-                                                            onClick={() => handleAssignPlayToSituation(playId, box)}
-                                                            style={{
-                                                                display: 'flex', alignItems: 'center', gap: '8px',
-                                                                padding: '6px', borderRadius: '4px', cursor: 'pointer',
-                                                                background: isCheck ? '#eff6ff' : 'transparent',
-                                                                color: isCheck ? '#1e3a8a' : '#334155'
-                                                            }}
-                                                            onMouseEnter={e => e.currentTarget.style.background = isCheck ? '#eff6ff' : '#f8fafc'}
-                                                            onMouseLeave={e => e.currentTarget.style.background = isCheck ? '#eff6ff' : 'transparent'}
-                                                        >
-                                                            <div style={{
-                                                                width: '14px', height: '14px', borderRadius: '3px',
-                                                                border: `1px solid ${isCheck ? (box.color || '#3b82f6') : '#cbd5e1'}`,
-                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                background: isCheck ? (box.color || '#3b82f6') : 'white'
-                                                            }}>
-                                                                {isCheck && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
-                                                            </div>
-                                                            <span style={{ fontSize: '0.8rem', fontWeight: isCheck ? '600' : '400' }}>
-                                                                {box.header}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                        </div>
-                    </div>
-                );
-            };
-
 
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)', gap: '1rem' }}>
 
                     {/* Toolbar */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')}>
-                                STAPLES
-                            </button>
-                            <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')}>
-                                PRIORITY PLAYS
-                            </button>
-                            <button className={`btn ${viewMode === 'call-sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('call-sheet')}>
-                                SITUATIONS & SCRIPTS
-                            </button>
-                            <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')}>
-                                SPREADSHEET
-                            </button>
-                            <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
-                                STRIKE 'EM OUT
-                            </button>
-                            <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
-                                PLAYER TOUCHES
-                            </button>
-                            <button className={`btn ${showDumbCallSheet ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowDumbCallSheet(!showDumbCallSheet)} style={{ border: '2px solid var(--accent)' }}>
-                                {showDumbCallSheet ? 'HIDE SHEET BUILDER' : 'DUMB SHEET'}
-                            </button>
-                        </div>
-
-                        {/* Game Plan Statistics Ticker */}
-                        {(() => {
-                            // 1. Calculate New Plays (Manually flagged in Install Manager)
-                            const newPlaysCount = (newInstallIds || []).length;
-
-                            // 2. Calculate unique plays in game plan
-                            const allGamePlanPlayIds = new Set();
-                            Object.values(gamePlan?.sets || {}).forEach(set => {
-                                (set.playIds || []).forEach(item => {
-                                    const id = typeof item === 'object' ? item.id : item;
-                                    if (id) {
-                                        allGamePlanPlayIds.add(id);
-                                    }
-                                });
-                            });
-                            Object.values(gamePlan?.miniScripts || {}).forEach(script => {
-                                (script.playIds || []).forEach(item => {
-                                    const id = typeof item === 'object' ? item.id : item;
-                                    if (id) {
-                                        allGamePlanPlayIds.add(id);
-                                    }
-                                });
-                            });
-
-                            // Include plays from Layouts (Call Sheet)
-                            // Include plays from Layouts (Call Sheet)
-                            Object.values(gamePlanLayouts || {}).forEach(layout => {
-                                (layout.sections || []).forEach(section => {
-                                    (section.boxes || []).forEach(box => {
-                                        (box.rows || []).forEach(row => {
-                                            if (row.content) {
-                                                allGamePlanPlayIds.add(row.content);
-                                            }
-                                        });
-                                    });
-                                });
-                            });
-                            const uniquePlaysCount = allGamePlanPlayIds.size;
-
-                            // 3. Calculate total offensive practice script slots
-                            let totalScriptSlots = 0;
-                            Object.values(practicePlans || {}).forEach(plan => {
-                                (plan.segments || []).forEach(seg => {
-                                    if (seg.hasScript && seg.script && seg.script.length > 0) {
-                                        // Only count offensive scripts (exclude special teams)
-                                        if (!seg.isSpecialTeams) {
-                                            totalScriptSlots += seg.script.length;
-                                        }
-                                    }
-                                });
-                            });
-
-                            return (
-                                <div style={{
-                                    display: 'flex',
-                                    gap: '1rem',
-                                    padding: '0.5rem 1rem',
-                                    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-                                    borderRadius: '24px',
-                                    border: '1px solid var(--border)',
-                                    alignItems: 'center'
-                                }}>
-                                    {/* New Plays */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0ea5e9' }}>
-                                            {newPlaysCount}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
-                                            New
-                                        </div>
-                                    </div>
-
-                                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-
-                                    {/* Unique Plays */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#374151' }}>
-                                            {uniquePlaysCount}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
-                                            Unique
-                                        </div>
-                                    </div>
-
-                                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-
-                                    {/* Script Slots */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#6366f1' }}>
-                                            {totalScriptSlots}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
-                                            Slots
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                    <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
+                        <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')}>
+                            STAPLES
+                        </button>
+                        <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')}>
+                            PRIORITY PLAYS
+                        </button>
+                        <button className={`btn ${viewMode === 'call-sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('call-sheet')}>
+                            SITUATIONS & SCRIPTS
+                        </button>
+                        <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
+                            STRIKE 'EM OUT
+                        </button>
+                        <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
+                            PLAYER TOUCHES
+                        </button>
                     </div>
 
                     {/* View Content */}
                     <div style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px' }}>
                         {viewMode === 'call-sheet' && renderCallSheet()}
-                        {viewMode === 'sheet' && renderSheetView()}
                         {viewMode === 'matrix' && renderMatrix()}
                         {viewMode === 'player-touches' && renderPlayerTouches()}
                         {viewMode === 'priority' && renderPriorityPlays()}
@@ -38098,133 +37662,63 @@
                     {renderPlaySelector()}
                     {renderSectionConfigurationModal()}
                     {renderBoxEditorModal()}
-                    {renderSituationAssignmentModal()}
-                    {/* Dumb Call Sheet Overlay */}
-                    <DumbCallSheet
-                        gamePlanData={gamePlan}
-                        priorityPlays={plays.filter(p => p.priority)} // Or use specific priority list if available
-                        gamePlanLayouts={gamePlanLayouts}
-                        savedItems={gamePlanLayouts?.DUMB_SHEET || []}
-                        onSaveItems={(items) => onUpdateLayouts && onUpdateLayouts({ ...gamePlanLayouts, DUMB_SHEET: items })}
-                        isVisible={showDumbCallSheet}
-                        onClose={() => setShowDumbCallSheet(false)}
-                    />
 
                 </div>
             );
         };
 
 
-        const JerseyLottery = ({ roster, lotteryData, onUpdateLottery }) => {
-            const [view, setView] = useState('bidding'); // 'bidding', 'results'
-            const [selectedBidderId, setSelectedBidderId] = useState('');
-            const [battleNumber, setBattleNumber] = useState(null);
-            const [battleLives, setBattleLives] = useState({});
-
-            // Ensure data structure
-            const bids = lotteryData?.bids || {};
-            const winners = lotteryData?.winners || {};
-            const availableNumbers = lotteryData?.available || Array.from({ length: 99 }, (_, i) => i + 1);
-
-            const getRemainingTokens = (pid) => {
-                const playerBids = bids[pid] || {};
-                const total = Object.values(playerBids).reduce((a, b) => a + b, 0);
-                return 7 - total;
-            };
-
-            const handleBid = (pid, number, delta) => {
-                const currentBids = { ...(bids[pid] || {}) };
-                const currentVal = currentBids[number] || 0;
-                const remaining = getRemainingTokens(pid);
-
-                if (delta > 0 && remaining <= 0) return;
-                if (delta < 0 && currentVal <= 0) return;
-
-                const newVal = currentVal + delta;
-                if (newVal === 0) delete currentBids[number];
-                else currentBids[number] = newVal;
-
-                const newAllBids = { ...bids, [pid]: currentBids };
-                onUpdateLottery({ ...lotteryData, bids: newAllBids });
-            };
-
-            const getBidsForNumber = (num) => {
-                const bidders = [];
-                Object.entries(bids).forEach(([pid, playerBids]) => {
-                    if (playerBids[num]) bidders.push({ pid, tokens: playerBids[num] });
+        const JerseyLottery = ({ roster, l                            > {
+            const [view, setView] = useSt                                ts'
+            const [selectedBidderId                                               const [battleNumber, se                                         const [battleLives                                            / Ensure data structure
+            c                                                                              || {                                s =                             from                         + 1                        ainingTokens = (pid) => {
+                const pla                                       const total = Object.values(playerBids)                        
+                return 7                                  const handleBid = (pid, number, delta) => {
+                            s = { ...(bids[pid] || {}) };
+                                         s[number] || 0;
+                const remaining = getRemaini                                    a > 0 && remaining <= 0) return;
+                if (del                                                const newVal =                                         al === 0) delete currentBids[number];
+                                     =                                 lB                            ids                         otter                        wAllBids                             const getBidsF                                  const bidders =                                bids).forEach                                          if (playerBids                                layerBids[num] });
                 });
-                return bidders.sort((a, b) => b.tokens - a.tokens);
+                return bid                                ens);
             };
 
-            const startBattle = (num) => {
-                const bidders = getBidsForNumber(num);
-                const lives = {};
-                bidders.forEach(b => lives[b.pid] = b.tokens);
-                setBattleLives(lives);
-                setBattleNumber(num);
+                                ) => {
+                const bidder                                       const lives =                             ach(                                           setBatt                                attleNumber(num);
             };
 
-            const updateLife = (pid, delta) => {
-                setBattleLives(prev => ({
+            const updateLife = (pid, d                                    s(prev => ({
                     ...prev,
-                    [pid]: Math.max(0, (prev[pid] || 0) + delta)
-                }));
+                    [pid]: Math.ma                                           }));
+                                            = (num,                                    `Declare ${roster.find(p => p.id === pid)?.name} the winner of #${num}?`)) return;
+                                                     : {                                          se                                
+                                                       if (!confirm(`Reset winner for #${num}?`)) return;
+                                                               delete                                UpdateLottery({ ...lotteryData, winners: newWinners });
             };
 
-            const declareWinner = (num, pid) => {
-                if (!confirm(`Declare ${roster.find(p => p.id === pid)?.name} the winner of #${num}?`)) return;
-                onUpdateLottery({ ...lotteryData, winners: { ...winners, [num]: pid } });
-                setBattleNumber(null);
-            };
-
-            const clearWinner = (num) => {
-                if (!confirm(`Reset winner for #${num}?`)) return;
-                const newWinners = { ...winners };
-                delete newWinners[num];
-                onUpdateLottery({ ...lotteryData, winners: newWinners });
-            };
-
-            return (
-                <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h2>Jersey Number Lottery</h2>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button className={`btn ${view === 'bidding' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setView('bidding')}>Place Bids</button>
-                            <button className={`btn ${view === 'results' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setView('results')}>Lottery Board</button>
-                        </div>
-                    </div>
-
-                    {view === 'bidding' && (
+                                    v className="card">
+                    <div style={{ display: 'flex', justi                                        ter', marginBottom:                                    Jersey                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button classNa                                        ' : 'bt                                    bidding                                                                        ew === 'results' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setView('resul                                                 </di                                               {view === 'bidding' && (
                         <div>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label className="form-label">Select Player</label>
-                                <select className="form-select" value={selectedBidderId} onChange={e => setSelectedBidderId(e.target.value)}>
-                                    <option value="">-- Choose Athlete --</option>
-                                    {roster.filter(Boolean).sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
-                                        <option key={p.id} value={p.id}>{p.lastName}, {p.firstName} (Tokens: {getRemainingTokens(p.id)})</option>
-                                    ))}
+                                      marginBottom: '1rem' }}>
+                                <label className="f                                                                                               {select                                    dderId(e.target.value)}>
+                                    <option value="">-- Choose Athlete                                             {r                                    ?.lastN                                lastNam                                                            <o                    p.id}>                stName}                 ngTokens(p.id)})</opt                                     ))}
                                 </select>
                             </div>
 
                             {selectedBidderId && (
                                 <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Tokens Remaining:</div>
-                                        <div style={{ display: 'flex', gap: '4px' }}>
-                                            {Array.from({ length: 7 }).map((_, i) => (
-                                                <div key={i} style={{
-                                                    width: '24px', height: '24px', borderRadius: '50%',
-                                                    background: i < getRemainingTokens(selectedBidderId) ? 'var(--accent)' : 'var(--border)',
-                                                    border: '1px solid var(--border)'
-                                                }}></div>
+                                              display: 'flex', alignItems: 'center', gap: '1re                    , padding: '1rem', background: 'var(--surfac                     }}>
+                                                         e: '1.2rem', fontWeight: 'bold' }}>Tokens Remaining:</div                                      <div style={{ display: 'flex', ga                                                     {Array.from                (_, i) =                                                            le={{
+                                                width: '24px'                rderRadius: '50%',
+                                                background                kens(selectedBidderId) ? 'var(--acc                r)',
+                                                border: '1                                                                }}></div>
                                             ))}
-                                        </div>
-                                    </div>
+                                                                               </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '0.5rem' }}>
-                                        {availableNumbers.map(num => {
-                                            const playerBid = (bids[selectedBidderId] || {})[num] || 0;
-                                            const isTaken = Object.values(winners).includes(num); // Or check unavailable list
+                                <div style={{ display: 'grid', gridT                    auto-fill, minmax(60px, 1fr))', gap: '0.5rem' }}>
+                                        {availableNum                                                                      = (bids[selectedBidderId] || {})[num] || 0;
+                                    con         Object.values(winners).includes(num); // Or check unavailable list
                                             const isWonByMe = winners[num] === selectedBidderId;
 
                                             // Check if won by someone else
@@ -48394,18 +47888,26 @@
                         {
                             view.startsWith('equipment-') && (
                                 <EquipmentManager
+                                    equipment={equipment}
+                                    onUpdateEquipment={setEquipment}
+                                    equipmentCheckouts={equipmentCheckouts}
+                                    onUpdateEquipmentCheckouts={setEquipmentCheckouts}
+                                    equipmentIssues={equipmentIssues}
+                                    onUpdateEquipmentIssues={setEquipmentIssues}
+                                    equipmentWishlist={equipmentWishlist}
+                                    onUpdateEquipmentWishlist={setEquipmentWishlist}
+                                    equipmentDueDate={equipmentDueDate}
+                                    setEquipmentDueDate={setEquipmentDueDate}
                                     view={view}
                                     roster={roster}
                                     inventory={inventory}
                                     onUpdateInventory={setInventory}
-                                    checkouts={checkouts}
-                                    onUpdateCheckouts={setCheckouts}
-                                    issuance={issuance}
-                                    onUpdateIssuance={setIssuance}
-                                    wishlist={wishlist}
-                                    onUpdateWishlist={setWishlist}
-                                    equipmentDueDate={equipmentDueDate}
-                                    setEquipmentDueDate={setEquipmentDueDate}
+                                    checkouts={equipmentCheckouts}
+                                    onUpdateCheckouts={setEquipmentCheckouts}
+                                    issues={equipmentIssues}
+                                    onUpdateIssues={setEquipmentIssues}
+                                    wishlist={equipmentWishlist}
+                                    onUpdateWishlist={setEquipmentWishlist}
                                     lotteryData={lotteryData}
                                     onUpdateLottery={setLotteryData}
                                 />
