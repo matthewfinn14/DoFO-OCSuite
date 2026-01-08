@@ -35027,8 +35027,6 @@
                                                     const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
                                                     if (!targetSection.rows) targetSection.rows = [];
                                                     if (!targetSection.rows[rowIdx]) targetSection.rows[rowIdx] = { id: Date.now(), label: (rowIdx + 1).toString(), content: '' };
-
-                                                    targetSection.rows[rowIdx].label = e.target.value;
                                                     if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                                 }}
                                                 style={{
@@ -36082,6 +36080,107 @@
                                 </div>
                             ))
                             }
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderSheetView = () => {
+                return (
+                    <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start' }}>
+                            {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
+                                const visibleBoxes = (section.boxes || []).filter(b => !b.hidden);
+                                if (visibleBoxes.length === 0) return null;
+
+                                return (
+                                    <div key={sIdx} style={{ breakInside: 'avoid', marginBottom: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', background: 'white', display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{
+                                            background: '#f1f5f9', padding: '0.5rem', fontWeight: 'bold',
+                                            borderBottom: '1px solid #cbd5e1', textTransform: 'uppercase', fontSize: '0.8rem',
+                                            color: '#334155', display: 'flex', justifyContent: 'space-between'
+                                        }}>
+                                            <span>{section.title}</span>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '0' }}>
+                                            {visibleBoxes.map((box, bIdx) => {
+                                                const playsInBox = getPlaysForSet(box.setId);
+                                                return (
+                                                    <div
+                                                        key={bIdx}
+                                                        style={{
+                                                            borderBottom: Math.floor(bIdx / 2) < Math.ceil(visibleBoxes.length / 2) - 1 ? '1px solid #cbd5e1' : 'none',
+                                                            borderRight: bIdx % 2 === 0 ? '1px solid #cbd5e1' : 'none',
+                                                            background: 'white',
+                                                            minHeight: '120px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex', flexDirection: 'column'
+                                                        }}
+                                                        onClick={() => setEditingBox({ box, sectionIdx: sIdx, boxIdx: bIdx })}
+                                                    >
+                                                        {/* Sheet Box Header */}
+                                                        <div style={{
+                                                            padding: '4px 8px',
+                                                            background: box.color || '#3b82f6',
+                                                            color: 'white',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 'bold',
+                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                                        }}>
+                                                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{box.header}</span>
+                                                            <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{playsInBox.length}</span>
+                                                        </div>
+
+                                                        {/* Sheet Box Content */}
+                                                        <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
+                                                            {/* Render Strategy: Script Rows vs Assigned Plays */}
+                                                            {(() => {
+                                                                if (box.type === 'script' && box.rows && box.rows.length > 0) {
+                                                                    // SCRIPT RENDERING
+                                                                    return (
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                                            {box.rows.map((row, rIdx) => {
+                                                                                const play = plays.find(p => p.id === row.content);
+                                                                                return (
+                                                                                    <div key={rIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', borderBottom: '1px dotted #f1f5f9' }}>
+                                                                                        <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
+                                                                                        {play ? (
+                                                                                            <span style={{ fontWeight: '600', color: '#1e293b' }}>{play.name}</span>
+                                                                                        ) : (
+                                                                                            <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    );
+                                                                } else {
+                                                                    // STANDARD LIST RENDERING
+                                                                    const playsInBox = getPlaysForSet(box.setId);
+                                                                    if (playsInBox.length === 0) {
+                                                                        return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
+                                                                    }
+                                                                    return (
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                                            {playsInBox.map((p, pIdx) => (
+                                                                                <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2' }}>
+                                                                                    <span style={{ color: '#94a3b8', width: '14px', textAlign: 'right', flexShrink: 0 }}>{pIdx + 1}.</span>
+                                                                                    <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
+                                                                                    {p.formation && <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 );
@@ -37571,6 +37670,9 @@
                             <button className={`btn ${viewMode === 'call-sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('call-sheet')}>
                                 SITUATIONS & SCRIPTS
                             </button>
+                            <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')}>
+                                SPREADSHEET
+                            </button>
                             <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
                                 STRIKE 'EM OUT
                             </button>
@@ -37685,6 +37787,7 @@
                     {/* View Content */}
                     <div style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px' }}>
                         {viewMode === 'call-sheet' && renderCallSheet()}
+                        {viewMode === 'sheet' && renderSheetView()}
                         {viewMode === 'matrix' && renderMatrix()}
                         {viewMode === 'player-touches' && renderPlayerTouches()}
                         {viewMode === 'priority' && renderPriorityPlays()}
@@ -48137,7 +48240,7 @@
                         }
                     </main >
                     {/* Global Modals */}
-                    <ManageWeekModal
+                    < ManageWeekModal
                         isOpen={showManageWeekModal}
                         onClose={() => setShowManageWeekModal(false)}
                         currentWeek={currentWeek}
