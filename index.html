@@ -6031,6 +6031,13 @@
                 if (play) {
                     // Update play with new slot - Check for Staples
                     const card = wbSettings[selectedCardId];
+
+                    // RESTRICTION: Rooski plays can ONLY be assigned to Rooski cards
+                    if (play.isRooski && (!card || card.type !== 'rooski')) {
+                        alert("Rooski plays can only be assigned to a Rooski card (16-slot grid).");
+                        return;
+                    }
+
                     if (card && card.type === 'staples') {
                         // NEW: Update ALL plays with matching signature
                         const signature = getPlaySignature(play);
@@ -7473,6 +7480,10 @@
                                             const playName = e.dataTransfer.getData('text/plain');
                                             if (playName) {
                                                 const p = plays.find(p => p.name === playName);
+                                                if (p && p.isRooski) {
+                                                    alert("Rooski plays can only be assigned to a Rooski card.");
+                                                    return;
+                                                }
                                                 handleUpdateRow(selectedCardId, item.id, { col1: playName, col1Id: p ? p.id : null });
                                             }
                                         }}
@@ -7498,6 +7509,10 @@
                                             const playName = e.dataTransfer.getData('text/plain');
                                             if (playName) {
                                                 const p = plays.find(p => p.name === playName);
+                                                if (p && p.isRooski) {
+                                                    alert("Rooski plays can only be assigned to a Rooski card.");
+                                                    return;
+                                                }
                                                 handleUpdateRow(selectedCardId, item.id, { col3: playName, col3Id: p ? p.id : null });
                                             }
                                         }}
@@ -25210,7 +25225,7 @@
                         )}
 
                         {/* THREE COLUMN LAYOUT */}
-                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '300px 1fr 1fr', gap: 0, overflow: 'hidden' }}>
+                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '300px 1fr 1fr 1fr', gap: 0, overflow: 'hidden' }}>
 
                             {/* LEFT COLUMN: MASTER PLAYBOOK SEARCH + INSTALL LIST */}
                             <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: 'white' }}>
@@ -25365,12 +25380,12 @@
                                 <div style={{ padding: '0.75rem', background: '#ecfdf5', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#047857', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>RUNS / RPOs</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#d1fae5', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => !p.type || p.type === 'Run').length}
+                                        {hydratedInstall.filter(p => !p.type || p.type === 'Run' || p.type === 'RPO').length}
                                     </span>
                                 </div>
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                                     <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => !p.type || p.type === 'Run')}
+                                        items={hydratedInstall.filter(p => !p.type || p.type === 'Run' || p.type === 'RPO')}
                                         type="Run"
                                         onListChange={(newItems) => handleListChange(newItems, 'Run')}
                                         onUpdatePlay={onUpdatePlay}
@@ -25387,10 +25402,10 @@
                                 </div>
                             </div>
 
-                            {/* RIGHT COLUMN: PASSES / SCREENS */}
-                            <div style={{ display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+                            {/* RIGHT COLUMN: PASSES */}
+                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: '#f8fafc' }}>
                                 <div style={{ padding: '0.75rem', background: '#eff6ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#1d4ed8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>PASSES / SCREENS</span>
+                                    <span>PASSES</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#dbeafe', borderRadius: '12px' }}>
                                         {hydratedInstall.filter(p => p.type === 'Pass').length}
                                     </span>
@@ -25400,6 +25415,33 @@
                                         items={hydratedInstall.filter(p => p.type === 'Pass')}
                                         type="Pass"
                                         onListChange={(newItems) => handleListChange(newItems, 'Pass')}
+                                        onUpdatePlay={onUpdatePlay}
+                                        handleRemoveFromInstall={handleRemoveFromInstall}
+                                        handleTogglePriority={handleTogglePriority}
+                                        getGamePlanStatus={getGamePlanStatus}
+                                        getScriptCount={getScriptCount}
+                                        availableSlots={availableSlots}
+                                        handleToggleNewPlay={handleToggleNewPlay}
+                                        newInstallIds={week.newInstallIds || []}
+                                        onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
+                                        onDuplicatePlay={handleDuplicatePlay}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* FAR RIGHT COLUMN: SCREENS */}
+                            <div style={{ display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+                                <div style={{ padding: '0.75rem', background: '#faf5ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#7e22ce', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>SCREENS</span>
+                                    <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#f3e8ff', borderRadius: '12px' }}>
+                                        {hydratedInstall.filter(p => p.type === 'Screen').length}
+                                    </span>
+                                </div>
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+                                    <InstallSortableColumn
+                                        items={hydratedInstall.filter(p => p.type === 'Screen')}
+                                        type="Screen"
+                                        onListChange={(newItems) => handleListChange(newItems, 'Screen')}
                                         onUpdatePlay={onUpdatePlay}
                                         handleRemoveFromInstall={handleRemoveFromInstall}
                                         handleTogglePriority={handleTogglePriority}
@@ -33382,6 +33424,28 @@
                                 {renderCategory('screens-week', 'This Week', getFilteredPlays('Screen', 'Week-Screen'), 1)}
                             </>
                         ))}
+
+                        {/* GLOBAL SEARCH RESULTS (Uncategorized / All) */}
+                        {searchTerm.length > 1 && (
+                            <div style={{ marginTop: '0', borderTop: '2px solid black' }}>
+                                <div style={{
+                                    padding: '10px 8px', fontWeight: '900', fontSize: '1rem',
+                                    background: '#fef3c7', /* Amber-100 for visibility */
+                                    borderBottom: '1px solid #d97706', color: '#78350f',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                }}>
+                                    <span>SEARCH RESULTS</span>
+                                    <span style={{ fontSize: '0.8rem', color: '#92400e' }}>
+                                        ({plays.filter(p => !p.archived && p.name.toLowerCase().includes(searchTerm.toLowerCase())).length})
+                                    </span>
+                                </div>
+                                <div>
+                                    {plays
+                                        .filter(p => !p.archived && p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                                        .map(renderDraggablePlay)}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -45874,14 +45938,23 @@
                 setView('new-play');
             };
 
-            const handleUpdatePlay = (updatedPlay) => {
-                if (Array.isArray(updatedPlay)) {
-                    // Batch update
-                    const updateMap = new Map(updatedPlay.map(p => [p.id, p]));
-                    setPlays(prev => prev.map(p => updateMap.has(p.id) ? updateMap.get(p.id) : p));
+            const handleUpdatePlay = (arg1, arg2) => {
+                if (typeof arg1 === 'string' || typeof arg1 === 'number') {
+                    // (id, updates) signature - used by InstallSortableColumn checkboxes
+                    const id = arg1;
+                    const updates = arg2;
+                    setPlays(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
                 } else {
-                    // Single update
-                    setPlays(prev => prev.map(p => p.id === updatedPlay.id ? updatedPlay : p));
+                    // (updatedPlay) signature - full object replacement
+                    const updatedPlay = arg1;
+                    if (Array.isArray(updatedPlay)) {
+                        // Batch update
+                        const updateMap = new Map(updatedPlay.map(p => [p.id, p]));
+                        setPlays(prev => prev.map(p => updateMap.has(p.id) ? updateMap.get(p.id) : p));
+                    } else {
+                        // Single update
+                        setPlays(prev => prev.map(p => p.id === updatedPlay.id ? updatedPlay : p));
+                    }
                 }
             };
 
