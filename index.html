@@ -33217,6 +33217,176 @@
             );
         };
 
+        const PlaybookSidebar = ({ plays, weekInstallIds = [] }) => {
+            const [searchTerm, setSearchTerm] = useState('');
+            // Store toggle state separately from search visibility
+            const [userExpanded, setUserExpanded] = useState({
+                'runs': true, 'passes': false, 'screens': false,
+                'runs-week': true // Default open
+            });
+
+            // Toggle function handling user interactions
+            const toggle = (id) => setUserExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+
+            // Memoize filtered plays to avoid recalculating on every render/keystroke
+            const getFilteredPlays = (type, subFilter) => {
+                let filtered = plays.filter(p => !p.archived);
+                // 1. Basic Type Filter
+                if (type === 'Run') filtered = filtered.filter(p => p.type === 'Run' || p.type === 'RPO');
+                if (type === 'Pass') filtered = filtered.filter(p => p.type === 'Pass' || p.type === 'Play Action');
+                if (type === 'Screen') filtered = filtered.filter(p => p.type === 'Screen');
+
+                // 2. Search Filter (Global within type)
+                if (searchTerm) {
+                    const term = searchTerm.toLowerCase();
+                    filtered = filtered.filter(p => p.name.toLowerCase().includes(term));
+                }
+
+                // 3. Sub-Filters
+                if (subFilter === 'Inside') return filtered.filter(p => p.concept?.includes('Inside') || p.tags?.includes('Inside'));
+                if (subFilter === 'Perimeter') return filtered.filter(p => p.concept?.includes('Outside') || p.concept?.includes('Perimeter') || p.tags?.includes('Outside'));
+                if (subFilter === 'RPO') return filtered.filter(p => p.type === 'RPO' || p.name.includes('RPO'));
+                if (subFilter === 'Week-Run') return filtered.filter(p => weekInstallIds.includes(p.id) && (p.type === 'Run' || p.type === 'RPO'));
+
+                if (subFilter === 'Quick') return filtered.filter(p => p.concept?.includes('Quick') || p.tags?.includes('Quick'));
+                if (subFilter === 'Intermediate') return filtered.filter(p => p.concept?.includes('Intermediate'));
+                if (subFilter === 'Shot') return filtered.filter(p => p.concept?.includes('Shot') || p.tags?.includes('Shot'));
+                if (subFilter === 'PA') return filtered.filter(p => p.type === 'Play Action' || p.name.includes('PA') || p.name.includes('Play Action'));
+                if (subFilter === 'Week-Pass') return filtered.filter(p => weekInstallIds.includes(p.id) && (p.type === 'Pass' || p.type === 'Play Action'));
+
+                if (subFilter === 'Week-Screen') return filtered.filter(p => weekInstallIds.includes(p.id) && p.type === 'Screen');
+
+                return filtered;
+            };
+
+            const renderDraggablePlay = (play) => (
+                <div
+                    key={play.id}
+                    draggable
+                    onDragStart={(e) => {
+                        e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id }));
+                        e.dataTransfer.effectAllowed = 'copy';
+                    }}
+                    style={{
+                        padding: '4px 8px', fontSize: '0.85rem', cursor: 'grab',
+                        borderBottom: '1px solid #f1f5f9', background: 'white',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        color: 'black' // Explicit black for high contrast
+                    }}
+                    title={play.name}
+                >
+                    {play.priority && <span style={{ color: '#ca8a04', marginRight: '4px', fontWeight: 'bold' }}>★</span>}
+                    {play.name}
+                </div>
+            );
+
+            const renderCategory = (id, label, items, level = 0) => {
+                // If searching, always expand if there are items. If not searching, use user state.
+                const isSearching = searchTerm.length > 0;
+                const isOpen = isSearching ? items.length > 0 : userExpanded[id];
+
+                // If searching and no items, hide the category entirely to reduce noise
+                if (isSearching && items.length === 0) return null;
+
+                return (
+                    <div style={{ marginLeft: level * 8 }}>
+                        <div
+                            onClick={() => toggle(id)}
+                            style={{
+                                padding: '6px 8px', fontWeight: 'bold', fontSize: '0.9rem',
+                                cursor: 'pointer', background: '#f1f5f9', borderBottom: '1px solid #cbd5e1',
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                color: 'black' // High contrast
+                            }}
+                        >
+                            <span>{label} <span style={{ fontWeight: 'normal', fontSize: '0.8em', color: '#64748b' }}>({items.length})</span></span>
+                            <span style={{ color: '#64748b' }}>{isOpen ? '▼' : '▶'}</span>
+                        </div>
+                        {isOpen && (
+                            <div style={{ borderLeft: '2px solid #e2e8f0' }}>
+                                {items.length > 0 ? items.map(renderDraggablePlay) : <div style={{ padding: '4px 8px', color: '#64748b', fontSize: '0.8rem', fontStyle: 'italic' }}>No plays</div>}
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const renderParentCategory = (id, label, children, hasResults) => {
+                const isSearching = searchTerm.length > 0;
+                // If searching, expand if any children have results (passed via prop or implied?)
+                // For parents, we'll just check if they are toggled or if we are searching (expand all parents on search for simplicity)
+                const isOpen = isSearching ? true : userExpanded[id];
+
+                return (
+                    <div>
+                        <div
+                            onClick={() => toggle(id)}
+                            style={{
+                                padding: '10px 8px', fontWeight: '900', fontSize: '1rem',
+                                cursor: 'pointer', background: '#e2e8f0', borderBottom: '1px solid #94a3b8',
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                color: 'black'
+                            }}
+                        >
+                            {label}
+                            <span style={{ color: '#475569' }}>{isOpen ? '▼' : '▶'}</span>
+                        </div>
+                        {isOpen && (
+                            <div>{children}</div>
+                        )}
+                    </div>
+                );
+            };
+
+
+            return (
+                <div style={{ width: '280px', borderRight: '2px solid black', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                    <div style={{ padding: '12px', borderBottom: '2px solid black', background: '#f8fafc' }}>
+                        <input
+                            placeholder={`Search ${plays.length} plays...`}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{
+                                width: '100%', padding: '8px', fontSize: '0.9rem',
+                                border: '1px solid #64748b', borderRadius: '4px',
+                                color: 'black'
+                            }}
+                        />
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        {/* RUNS / RPOS */}
+                        {renderParentCategory('runs', 'RUNS / RPOs', (
+                            <>
+                                {renderCategory('runs-inside', 'Inside Runs', getFilteredPlays('Run', 'Inside'), 1)}
+                                {renderCategory('runs-rpo', 'RPOs', getFilteredPlays('Run', 'RPO'), 1)}
+                                {renderCategory('runs-perimeter', 'Perimeter', getFilteredPlays('Run', 'Perimeter'), 1)}
+                                {renderCategory('runs-week', "This Week", getFilteredPlays('Run', 'Week-Run'), 1)}
+                            </>
+                        ))}
+
+                        {/* PASSES */}
+                        {renderParentCategory('passes', 'PASSES', (
+                            <>
+                                {renderCategory('passes-quick', 'Quick Game', getFilteredPlays('Pass', 'Quick'), 1)}
+                                {renderCategory('passes-inter', 'Intermediate', getFilteredPlays('Pass', 'Intermediate'), 1)}
+                                {renderCategory('passes-shot', 'Shots', getFilteredPlays('Pass', 'Shot'), 1)}
+                                {renderCategory('passes-pa', 'Play Action', getFilteredPlays('Pass', 'PA'), 1)}
+                                {renderCategory('passes-week', "This Week", getFilteredPlays('Pass', 'Week-Pass'), 1)}
+                            </>
+                        ))}
+
+                        {/* SCREENS */}
+                        {renderParentCategory('screens', 'SCREENS', (
+                            <>
+                                {renderCategory('screens-all', 'All Screens', getFilteredPlays('Screen'), 1)}
+                                {renderCategory('screens-week', 'This Week', getFilteredPlays('Screen', 'Week-Screen'), 1)}
+                            </>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
         const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
@@ -35048,14 +35218,14 @@
                     if (!play) return null;
 
                     const isFocused = wbAutocomplete.playId === playId;
-                    
+
                     // Filter available slots
                     const usedSlots = new Set(plays.filter(p => p.id !== playId && p.wristbandSlot).map(p => p.wristbandSlot));
                     const availableSlots = (validWristbandSlots || []).filter(slot => !usedSlots.has(slot));
-                    
+
                     const query = isFocused ? wbAutocomplete.query : (play.wristbandSlot || '');
-                    const filteredSlots = isFocused && query 
-                        ? availableSlots.filter(s => s.toString().includes(query)) 
+                    const filteredSlots = isFocused && query
+                        ? availableSlots.filter(s => s.toString().includes(query))
                         : []; // Only show when typing? Or show all available? Let's show filtered.
 
                     // Limit results
@@ -35097,7 +35267,7 @@
                             />
                             {isFocused && candidates.length > 0 && (
                                 <div style={{
-                                    position: 'absolute', top: '100%', right: 0, 
+                                    position: 'absolute', top: '100%', right: 0,
                                     background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px',
                                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50,
                                     maxHeight: '150px', overflowY: 'auto', minWidth: '60px'
@@ -35296,12 +35466,12 @@
                 const cols = box.gridColumns || 4;
                 const rowsCount = box.gridRows || 5;
                 const totalSlots = cols * rowsCount;
-                
+
                 // Ensure headings match columns
                 let headings = box.gridHeadings || [];
                 if (headings.length < cols) {
                     const diff = cols - headings.length;
-                    for (let i=0; i<diff; i++) headings.push(`COL ${headings.length + 1}`);
+                    for (let i = 0; i < diff; i++) headings.push(`COL ${headings.length + 1}`);
                 }
                 if (headings.length > cols) {
                     headings = headings.slice(0, cols);
@@ -35311,10 +35481,10 @@
                 const assignedPlays = (allPlays || []).filter(p => p.type !== 'GAP');
 
                 const updateLayout = (updates) => {
-                     const newLayouts = { ...gamePlanLayouts };
-                     const targetBox = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                     Object.assign(targetBox, updates);
-                     if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                    const newLayouts = { ...gamePlanLayouts };
+                    const targetBox = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                    Object.assign(targetBox, updates);
+                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                 };
 
                 return (
@@ -35325,7 +35495,7 @@
                                 <button className="btn btn-xs" style={{ background: 'white', color: 'black', border: '1px solid #cbd5e1' }} onClick={() => updateLayout({ gridColumns: Math.max(1, cols - 1) })}>-</button>
                                 <span style={{ fontWeight: 'bold', minWidth: '16px', textAlign: 'center' }}>{cols}</span>
                                 <button className="btn btn-xs" style={{ background: 'white', color: 'black', border: '1px solid #cbd5e1' }} onClick={() => updateLayout({ gridColumns: cols + 1 })}>+</button>
-                                
+
                                 <span style={{ width: '12px', borderRight: '1px solid #cbd5e1', height: '16px' }}></span>
                                 <span style={{ width: '4px' }}></span>
 
@@ -35351,7 +35521,7 @@
                                 )}
                             </div>
                             {headings.map((h, hIdx) => (
-                                <div key={hIdx} style={{ textAlign: 'center', borderRight: hIdx < cols-1 ? '1px solid #e2e8f0' : 'none', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', padding: '4px' }}>
+                                <div key={hIdx} style={{ textAlign: 'center', borderRight: hIdx < cols - 1 ? '1px solid #e2e8f0' : 'none', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', padding: '4px' }}>
                                     {isEditing ? (
                                         <input
                                             value={h}
@@ -35372,8 +35542,8 @@
                             {Array.from({ length: rowsCount }).map((_, rIdx) => (
                                 <React.Fragment key={rIdx}>
                                     {/* Row Header */}
-                                    <div style={{ 
-                                        fontSize: '0.6rem', color: '#94a3b8', fontWeight: 'bold', 
+                                    <div style={{
+                                        fontSize: '0.6rem', color: '#94a3b8', fontWeight: 'bold',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         borderRight: '1px solid #e2e8f0', borderBottom: '1px dotted #e2e8f0', padding: '2px'
                                     }}>
@@ -35384,8 +35554,8 @@
                                         const linearIdx = (rIdx * cols) + cIdx;
                                         const play = allPlays[linearIdx];
                                         return (
-                                            <div key={`${rIdx}-${cIdx}`} style={{ 
-                                                minHeight: '24px', borderRight: cIdx < cols-1 ? '1px solid #e2e8f0' : 'none', 
+                                            <div key={`${rIdx}-${cIdx}`} style={{
+                                                minHeight: '24px', borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                                                 borderBottom: '1px dotted #e2e8f0', display: 'flex', alignItems: 'center', padding: '0 4px',
                                                 background: play && play.type !== 'GAP' ? 'white' : 'transparent'
                                             }}>
@@ -36357,7 +36527,7 @@
                             const setId = `fzdnd_${zoneId}_${colIdx}`;
                             let newSets = [...(gamePlan?.sets || [])];
                             let setIndex = newSets.findIndex(s => s.id === setId);
-                            
+
                             if (setIndex === -1) {
                                 newSets.push({ id: setId, name: `${zoneId} - ${colIdx}`, playIds: [data.playId] });
                             } else {
@@ -36371,17 +36541,17 @@
                         }
                     } catch (e) { }
                 };
-                
+
                 const handleRemoveFromFZDnD = (zoneId, colIdx, playId) => {
-                     const setId = `fzdnd_${zoneId}_${colIdx}`;
-                     let newSets = [...(gamePlan?.sets || [])];
-                     let setIndex = newSets.findIndex(s => s.id === setId);
-                     if (setIndex !== -1) {
+                    const setId = `fzdnd_${zoneId}_${colIdx}`;
+                    let newSets = [...(gamePlan?.sets || [])];
+                    let setIndex = newSets.findIndex(s => s.id === setId);
+                    if (setIndex !== -1) {
                         const existingSet = { ...newSets[setIndex] };
                         existingSet.playIds = existingSet.playIds.filter(id => id !== playId);
                         newSets[setIndex] = existingSet;
                         onUpdateGamePlan({ ...gamePlan, sets: newSets });
-                     }
+                    }
                 };
 
                 const updateZoneNote = (zoneId, note) => {
@@ -36391,117 +36561,120 @@
                 };
 
                 const updatePlayWristband = (playId, slot) => {
-                     if (onUpdatePlay) {
+                    if (onUpdatePlay) {
                         const play = plays.find(p => p.id === playId);
                         if (play) {
                             onUpdatePlay({ ...play, wristbandSlot: slot });
                         }
-                     }
+                    }
                 };
 
                 return (
-                    <div style={{ height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
-                        {FZDND_ZONES.map((zone) => {
-                             const definedCols = zone.columns || ['Philosophy', '1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
-                             const hasPhilosophy = definedCols[0] === 'Philosophy';
-                             const dataCols = hasPhilosophy ? definedCols.slice(1) : definedCols;
+                    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+                        <PlaybookSidebar plays={plays} weekInstallIds={newInstallIds} />
+                        <div style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
+                            {FZDND_ZONES.map((zone) => {
+                                const definedCols = zone.columns || ['Philosophy', '1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
+                                const hasPhilosophy = definedCols[0] === 'Philosophy';
+                                const dataCols = hasPhilosophy ? definedCols.slice(1) : definedCols;
 
-                             return (
-                                <div key={zone.id} style={{ marginBottom: '0', border: '2px solid black' }}>
-                                    <div style={{ background: zone.color, color: zone.textColor, padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '1.4rem', textTransform: 'uppercase', fontStyle: 'italic', borderBottom: '2px solid black' }}>
-                                        {zone.title}
-                                    </div>
-                                    
-                                    <div style={{ display: 'grid', gridTemplateColumns: hasPhilosophy ? '125px 1fr' : '1fr' }}>
-                                        {hasPhilosophy && (
-                                            <div style={{ borderRight: '2px solid black', padding: '0', display: 'flex', flexDirection: 'column' }}>
-                                                <div style={{ padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '1.2rem', background: 'white', color: 'black', fontStyle: 'italic', borderBottom: '1px solid black' }}>
-                                                    Philosophy:
-                                                </div>
-                                                <textarea
-                                                    style={{ 
-                                                        flex: 1, width: '100%', border: 'none', padding: '12px', resize: 'none', outline: 'none', 
-                                                        fontFamily: 'inherit', minHeight: '150px', fontSize: '0.9rem', lineHeight: '1.4'
-                                                    }}
-                                                    placeholder="What is our team's identity here?&#10;What do I need to be reminded of in this zone?"
-                                                    value={(gamePlan?.zoneNotes || {})[zone.id] || ''}
-                                                    onChange={(e) => updateZoneNote(zone.id, e.target.value)}
-                                                    disabled={isLocked}
-                                                />
-                                            </div>
-                                        )}
+                                return (
+                                    <div key={zone.id} style={{ marginBottom: '0', border: '2px solid black' }}>
+                                        <div style={{ background: zone.color, color: zone.textColor, padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '1.4rem', textTransform: 'uppercase', fontStyle: 'italic', borderBottom: '2px solid black' }}>
+                                            {zone.title}
+                                        </div>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            {dataCols.length > 0 && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`, borderBottom: '1px solid black' }}>
-                                                    {dataCols.map((colName, cIdx) => (
-                                                        <div key={cIdx} style={{ padding: '8px', textAlign: 'center', fontWeight: '800', fontSize: '1.2rem', borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none', background: 'white', color: 'black', fontStyle: 'italic' }}>
-                                                            {colName}
-                                                        </div>
-                                                    ))}
+                                        <div style={{ display: 'grid', gridTemplateColumns: hasPhilosophy ? '125px 1fr' : '1fr' }}>
+                                            {hasPhilosophy && (
+                                                <div style={{ borderRight: '2px solid black', padding: '0', display: 'flex', flexDirection: 'column' }}>
+                                                    <div style={{ padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '1.2rem', background: 'white', color: 'black', fontStyle: 'italic', borderBottom: '1px solid black' }}>
+                                                        Philosophy:
+                                                    </div>
+                                                    <textarea
+                                                        style={{
+                                                            flex: 1, width: '100%', border: 'none', padding: '12px', resize: 'none', outline: 'none',
+                                                            fontFamily: 'inherit', minHeight: '150px', fontSize: '0.9rem', lineHeight: '1.4'
+                                                        }}
+                                                        placeholder="What is our team's identity here?&#10;What do I need to be reminded of in this zone?"
+                                                        value={(gamePlan?.zoneNotes || {})[zone.id] || ''}
+                                                        onChange={(e) => updateZoneNote(zone.id, e.target.value)}
+                                                        disabled={isLocked}
+                                                    />
                                                 </div>
                                             )}
 
-                                            {dataCols.length > 0 && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`, flex: 1 }}>
-                                                    {dataCols.map((colName, cIdx) => {
-                                                        const realIdx = hasPhilosophy ? cIdx + 1 : cIdx;
-                                                        const setId = `fzdnd_${zone.id}_${realIdx}`;
-                                                        const set = (gamePlan?.sets || []).find(s => s.id === setId);
-                                                        const zonePlays = set ? set.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean) : [];
-                                                        
-                                                        return (
-                                                            <div 
-                                                                key={cIdx} 
-                                                                style={{ borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none', minHeight: '150px', background: 'white' }}
-                                                                onDragOver={(e) => e.preventDefault()}
-                                                                onDrop={(e) => handleFZDnDDrop(e, zone.id, realIdx)}
-                                                            >
-                                                                <div style={{ padding: '0' }}>
-                                                                    {zonePlays.map((play, pIdx) => (
-                                                                        <div key={play.id} style={{ 
-                                                                            padding: '6px 8px', borderBottom: '1px solid #cbd5e1', fontSize: '0.9rem', fontWeight: '600',
-                                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: play.priority ? '#fef08a' : pIdx % 2 === 0 ? 'white' : '#f8fafc'
-                                                                        }}>
-                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                                                                                 {/* WRISTBAND INPUT */}
-                                                                                 <div style={{ position: 'relative', width: '36px' }}>
-                                                                                     <input
-                                                                                        type="text"
-                                                                                        value={play.wristbandSlot || ''}
-                                                                                        placeholder="#"
-                                                                                        onChange={(e) => updatePlayWristband(play.id, e.target.value)}
-                                                                                        onClick={(e) => e.stopPropagation()}
-                                                                                        style={{ 
-                                                                                            width: '100%', fontSize: '0.75rem', padding: '2px 4px', 
-                                                                                            border: '1px solid #94a3b8', borderRadius: '4px', textAlign: 'center',
-                                                                                            background: play.wristbandSlot ? '#dbeafe' : 'white',
-                                                                                            color: play.wristbandSlot ? '#1e40af' : '#64748b',
-                                                                                            fontWeight: 'bold'
-                                                                                        }}
-                                                                                     />
-                                                                                 </div>
-                                                                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
-                                                                            </div>
-                                                                            {!isLocked && (
-                                                                                <button onClick={() => handleRemoveFromFZDnD(zone.id, realIdx, play.id)} style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}>×</button>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                     {Array.from({ length: Math.max(0, 5 - zonePlays.length) }).map((_, i) => (
-                                                                        <div key={`empty-${i}`} style={{ height: '32px', borderBottom: '1px solid #e2e8f0' }}></div>
-                                                                    ))}
-                                                                </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                {dataCols.length > 0 && (
+                                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`, borderBottom: '1px solid black' }}>
+                                                        {dataCols.map((colName, cIdx) => (
+                                                            <div key={cIdx} style={{ padding: '8px', textAlign: 'center', fontWeight: '800', fontSize: '1.2rem', borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none', background: 'white', color: 'black', fontStyle: 'italic' }}>
+                                                                {colName}
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {dataCols.length > 0 && (
+                                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`, flex: 1 }}>
+                                                        {dataCols.map((colName, cIdx) => {
+                                                            const realIdx = hasPhilosophy ? cIdx + 1 : cIdx;
+                                                            const setId = `fzdnd_${zone.id}_${realIdx}`;
+                                                            const set = (gamePlan?.sets || []).find(s => s.id === setId);
+                                                            const zonePlays = set ? set.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean) : [];
+
+                                                            return (
+                                                                <div
+                                                                    key={cIdx}
+                                                                    style={{ borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none', minHeight: '150px', background: 'white' }}
+                                                                    onDragOver={(e) => e.preventDefault()}
+                                                                    onDrop={(e) => handleFZDnDDrop(e, zone.id, realIdx)}
+                                                                >
+                                                                    <div style={{ padding: '0' }}>
+                                                                        {zonePlays.map((play, pIdx) => (
+                                                                            <div key={play.id} style={{
+                                                                                padding: '6px 8px', borderBottom: '1px solid #cbd5e1', fontSize: '0.9rem', fontWeight: '600',
+                                                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: play.priority ? '#fef08a' : pIdx % 2 === 0 ? 'white' : '#f8fafc'
+                                                                            }}>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
+                                                                                    {/* WRISTBAND INPUT */}
+                                                                                    <div style={{ position: 'relative', width: '36px' }}>
+                                                                                        <input
+                                                                                            type="text"
+                                                                                            value={play.wristbandSlot || ''}
+                                                                                            placeholder="#"
+                                                                                            onChange={(e) => updatePlayWristband(play.id, e.target.value)}
+                                                                                            onClick={(e) => e.stopPropagation()}
+                                                                                            style={{
+                                                                                                width: '100%', fontSize: '0.75rem', padding: '2px 4px',
+                                                                                                border: '1px solid #94a3b8', borderRadius: '4px', textAlign: 'center',
+                                                                                                background: play.wristbandSlot ? '#dbeafe' : 'white',
+                                                                                                color: play.wristbandSlot ? '#1e40af' : '#64748b',
+                                                                                                fontWeight: 'bold'
+                                                                                            }}
+                                                                                        />
+                                                                                    </div>
+                                                                                </div>
+                                                                                {!isLocked && (
+                                                                                    <button onClick={() => handleRemoveFromFZDnD(zone.id, realIdx, play.id)} style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}>×</button>
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
+                                                                        {Array.from({ length: Math.max(0, 5 - zonePlays.length) }).map((_, i) => (
+                                                                            <div key={`empty-${i}`} style={{ height: '32px', borderBottom: '1px solid #e2e8f0' }}></div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                             );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
                 );
             };
@@ -36567,116 +36740,116 @@
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '0', gap: isSheetEditing ? '4px' : '0', padding: isSheetEditing ? '4px' : '0' }}>
                                             {visibleBoxes.map((box, bIdx) => {
-                                const renderBoxContent = () => {
-                                    if (box.type === 'grid') {
-                                        const cols = box.gridColumns || 4;
-                                        const rowsCount = box.gridRows || 5;
-                                        const totalSlots = cols * rowsCount;
-                                        
-                                        const gridPlays = (getGridPlays(box.setId, totalSlots) || []);
-                                        const headings = box.gridHeadings || Array(cols).fill('').map((_, i) => i === 0 ? 'LEFT HASH' : (i===cols-1 ? 'NOTES' : `COL ${i+1}`));
-                                        
-                                        const rows = [];
-                                        for (let i = 0; i < gridPlays.length; i += cols) {
-                                            rows.push(gridPlays.slice(i, i + cols));
-                                        }
+                                                const renderBoxContent = () => {
+                                                    if (box.type === 'grid') {
+                                                        const cols = box.gridColumns || 4;
+                                                        const rowsCount = box.gridRows || 5;
+                                                        const totalSlots = cols * rowsCount;
 
-                                        return (
-                                            <div style={{ display: 'grid', gridTemplateColumns: `min-content repeat(${cols}, 1fr)`, gap: '0', width: '100%' }}>
-                                                {/* Header Row */}
-                                                <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>#</div>
-                                                {headings.slice(0, cols).map((h, i) => (
-                                                    <div key={`h-${i}`} style={{ 
-                                                        padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center', 
-                                                        background: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                        borderRight: i < cols - 1 ? '1px solid #cbd5e1' : 'none',
-                                                        borderBottom: '1px solid #cbd5e1'
-                                                    }}>
-                                                        {h}
-                                                    </div>
-                                                ))}
+                                                        const gridPlays = (getGridPlays(box.setId, totalSlots) || []);
+                                                        const headings = box.gridHeadings || Array(cols).fill('').map((_, i) => i === 0 ? 'LEFT HASH' : (i === cols - 1 ? 'NOTES' : `COL ${i + 1}`));
 
-                                                {/* Data Rows */}
-                                                {rows.map((rowSlots, rIdx) => (
-                                                    <React.Fragment key={rIdx}>
-                                                        <div style={{ 
-                                                            padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold', 
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
-                                                            borderBottom: '1px dotted #f1f5f9'
-                                                        }}>
-                                                            {rIdx + 1}
-                                                        </div>
-                                                        {rowSlots.map((slot, cIdx) => {
-                                                            const play = plays.find(p => p.id === slot.id);
-                                                            return (
-                                                                <div key={cIdx} style={{ 
-                                                                    fontSize: '0.65rem',overflow: 'hidden',whiteSpace: 'nowrap',textOverflow: 'ellipsis',
-                                                                    background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
-                                                                    padding: '2px',minHeight: '16px',color: '#334155',
-                                                                    display: 'flex', alignItems: 'center',
-                                                                    borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
-                                                                    borderBottom: '1px dotted #e2e8f0'
-                                                                }} title={play ? play.name : ''}>
-                                                                    {play ? play.name : (slot.type === 'GAP' ? '' : '-')}
+                                                        const rows = [];
+                                                        for (let i = 0; i < gridPlays.length; i += cols) {
+                                                            rows.push(gridPlays.slice(i, i + cols));
+                                                        }
+
+                                                        return (
+                                                            <div style={{ display: 'grid', gridTemplateColumns: `min-content repeat(${cols}, 1fr)`, gap: '0', width: '100%' }}>
+                                                                {/* Header Row */}
+                                                                <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>#</div>
+                                                                {headings.slice(0, cols).map((h, i) => (
+                                                                    <div key={`h-${i}`} style={{
+                                                                        padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center',
+                                                                        background: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                                        borderRight: i < cols - 1 ? '1px solid #cbd5e1' : 'none',
+                                                                        borderBottom: '1px solid #cbd5e1'
+                                                                    }}>
+                                                                        {h}
+                                                                    </div>
+                                                                ))}
+
+                                                                {/* Data Rows */}
+                                                                {rows.map((rowSlots, rIdx) => (
+                                                                    <React.Fragment key={rIdx}>
+                                                                        <div style={{
+                                                                            padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold',
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
+                                                                            borderBottom: '1px dotted #f1f5f9'
+                                                                        }}>
+                                                                            {rIdx + 1}
+                                                                        </div>
+                                                                        {rowSlots.map((slot, cIdx) => {
+                                                                            const play = plays.find(p => p.id === slot.id);
+                                                                            return (
+                                                                                <div key={cIdx} style={{
+                                                                                    fontSize: '0.65rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                                                                                    background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
+                                                                                    padding: '2px', minHeight: '16px', color: '#334155',
+                                                                                    display: 'flex', alignItems: 'center',
+                                                                                    borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
+                                                                                    borderBottom: '1px dotted #e2e8f0'
+                                                                                }} title={play ? play.name : ''}>
+                                                                                    {play ? play.name : (slot.type === 'GAP' ? '' : '-')}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </React.Fragment>
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    if (box.type === 'script' && box.rows && box.rows.length > 0) {
+                                                        return (
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: '0', rowGap: '0' }}>
+                                                                {box.rows.map((row, rIdx) => {
+                                                                    const playLeft = plays.find(p => p.id === row.content);
+                                                                    const playRight = plays.find(p => p.id === row.contentRight);
+                                                                    return [
+                                                                        <div key={`${rIdx}-L`} style={{
+                                                                            display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
+                                                                            borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
+                                                                            borderRight: '1px solid #e2e8f0', paddingRight: '4px'
+                                                                        }}>
+                                                                            <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
+                                                                            {playLeft ? (
+                                                                                <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playLeft.name}</span>
+                                                                            ) : (
+                                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                                                                            )}
+                                                                        </div>,
+                                                                        <div key={`${rIdx}-R`} style={{
+                                                                            display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
+                                                                            borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
+                                                                            paddingLeft: '4px'
+                                                                        }}>
+                                                                            {playRight ? (
+                                                                                <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playRight.name}</span>
+                                                                            ) : (
+                                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>
+                                                                            )}
+                                                                        </div>
+                                                                    ];
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    const playsInBox = getPlaysForSet(box.setId);
+                                                    if (playsInBox.length === 0) {
+                                                        return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
+                                                    }
+                                                    return (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                            {playsInBox.map((p, pIdx) => (
+                                                                <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2' }}>
+                                                                    <span style={{ color: '#94a3b8', width: '14px', textAlign: 'right', flexShrink: 0 }}>{pIdx + 1}.</span>
+                                                                    <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
+                                                                    {p.formation && <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>}
                                                                 </div>
-                                                            );
-                                                        })}
-                                                    </React.Fragment>
-                                                ))}
-                                            </div>
-                                        );
-                                    }
-                                    if (box.type === 'script' && box.rows && box.rows.length > 0) {
-                                        return (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: '0', rowGap: '0' }}>
-                                                {box.rows.map((row, rIdx) => {
-                                                    const playLeft = plays.find(p => p.id === row.content);
-                                                    const playRight = plays.find(p => p.id === row.contentRight);
-                                                    return [
-                                                        <div key={`${rIdx}-L`} style={{ 
-                                                            display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', 
-                                                            borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
-                                                            borderRight: '1px solid #e2e8f0', paddingRight: '4px'
-                                                        }}>
-                                                            <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
-                                                            {playLeft ? (
-                                                                <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playLeft.name}</span>
-                                                            ) : (
-                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
-                                                            )}
-                                                        </div>,
-                                                        <div key={`${rIdx}-R`} style={{ 
-                                                            display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', 
-                                                            borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
-                                                            paddingLeft: '4px'
-                                                        }}>
-                                                            {playRight ? (
-                                                                <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playRight.name}</span>
-                                                            ) : (
-                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>
-                                                            )}
+                                                            ))}
                                                         </div>
-                                                    ];
-                                                })}
-                                            </div>
-                                        );
-                                    }
-                                    const playsInBox = getPlaysForSet(box.setId);
-                                    if (playsInBox.length === 0) {
-                                        return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
-                                    }
-                                    return (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                            {playsInBox.map((p, pIdx) => (
-                                                <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2' }}>
-                                                    <span style={{ color: '#94a3b8', width: '14px', textAlign: 'right', flexShrink: 0 }}>{pIdx + 1}.</span>
-                                                    <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
-                                                    {p.formation && <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    );
-                                };
+                                                    );
+                                                };
                                                 const playsInBox = getPlaysForSet(box.setId);
                                                 return (
                                                     <div
@@ -38262,7 +38435,7 @@
                             <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')}>
                                 PRIORITY PLAYS
                             </button>
-{/* Legacy View Removed */}
+                            {/* Legacy View Removed */}
                             <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')}>
                                 SITUATIONS & SCRIPTS
                             </button>
@@ -38281,14 +38454,14 @@
                         </div>
 
                         {/* Game Plan Statistics Ticker */}
-                                {/* Ticker temporarily removed */}
+                        {/* Ticker temporarily removed */}
                     </div>
 
                     {/* View Content */}
                     <div style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px' }}>
                         {viewMode === 'call-sheet' && renderCallSheet()}
                         {viewMode === 'sheet' && renderSheetView()}
-                            {viewMode === 'fzdnd' && renderFZDnDView()}
+                        {viewMode === 'fzdnd' && renderFZDnDView()}
                         {viewMode === 'matrix' && renderMatrix()}
                         {viewMode === 'player-touches' && renderPlayerTouches()}
                         {viewMode === 'priority' && renderPriorityPlays()}
@@ -48778,7 +48951,7 @@
 
         ReactDOM.render(
             <ErrorBoundary>
-      <AuthProvider>
+                <AuthProvider>
                     <App />
                 </AuthProvider>
             </ErrorBoundary>,
