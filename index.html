@@ -33344,19 +33344,19 @@
             };
 
             // Play Selector specific helper to get grid array (20 items)
-            const getGridPlays = (setId) => {
+            const getGridPlays = (setId, limit = 20) => {
                 let set = gamePlan?.sets?.find(s => s.id === setId);
                 if (!set && setId && setId.startsWith('ms_')) {
                     set = gamePlan?.miniScripts?.find(s => s.id === setId);
                 }
                 const rawIds = set ? [...set.playIds] : [];
                 // Pad to 20
-                while (rawIds.length < 20) {
+                while (rawIds.length < limit) {
                     rawIds.push('GAP');
                 }
                 // If more than 20, keep them? User asked for 10 rows. Let's just show 20 for now.
                 // We map rawIds to objects or 'GAP'
-                return rawIds.slice(0, 20).map((item, idx) => {
+                return rawIds.slice(0, limit).map((item, idx) => {
                     if (item === 'GAP') return { type: 'GAP', _index: idx, _raw: item };
 
                     if (typeof item === 'string') {
@@ -35239,122 +35239,114 @@
             };
 
             const renderGridBox = (box, sectionIdx, boxIdx, isEditing) => {
-                const headings = box.gridHeadings || ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
-                const allPlays = getGridPlays(box.setId);
-                const assignedPlays = allPlays.filter(p => p.type !== 'GAP');
+                const cols = box.gridColumns || 4;
+                const rowsCount = box.gridRows || 5;
+                const totalSlots = cols * rowsCount;
+                
+                // Ensure headings match columns
+                let headings = box.gridHeadings || [];
+                if (headings.length < cols) {
+                    const diff = cols - headings.length;
+                    for (let i=0; i<diff; i++) headings.push(`COL ${headings.length + 1}`);
+                }
+                if (headings.length > cols) {
+                    headings = headings.slice(0, cols);
+                }
+
+                const allPlays = getGridPlays(box.setId, totalSlots);
+                const assignedPlays = (allPlays || []).filter(p => p.type !== 'GAP');
+
+                const updateLayout = (updates) => {
+                     const newLayouts = { ...gamePlanLayouts };
+                     const targetBox = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                     Object.assign(targetBox, updates);
+                     if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                };
 
                 return (
                     <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        {isEditing && (
+                            <div style={{ marginBottom: '8px', padding: '6px', background: '#e2e8f0', borderRadius: '4px', display: 'flex', gap: '8px', alignItems: 'center', fontSize: '0.75rem', color: '#0f172a' }}>
+                                <span style={{ fontWeight: 'bold' }}>Columns:</span>
+                                <button className="btn btn-xs" style={{ background: 'white', color: 'black', border: '1px solid #cbd5e1' }} onClick={() => updateLayout({ gridColumns: Math.max(1, cols - 1) })}>-</button>
+                                <span style={{ fontWeight: 'bold', minWidth: '16px', textAlign: 'center' }}>{cols}</span>
+                                <button className="btn btn-xs" style={{ background: 'white', color: 'black', border: '1px solid #cbd5e1' }} onClick={() => updateLayout({ gridColumns: cols + 1 })}>+</button>
+                                
+                                <span style={{ width: '12px', borderRight: '1px solid #cbd5e1', height: '16px' }}></span>
+                                <span style={{ width: '4px' }}></span>
+
+                                <span style={{ fontWeight: 'bold' }}>Rows:</span>
+                                <button className="btn btn-xs" style={{ background: 'white', color: 'black', border: '1px solid #cbd5e1' }} onClick={() => updateLayout({ gridRows: Math.max(1, rowsCount - 1) })}>-</button>
+                                <span style={{ fontWeight: 'bold', minWidth: '16px', textAlign: 'center' }}>{rowsCount}</span>
+                                <button className="btn btn-xs" style={{ background: 'white', color: 'black', border: '1px solid #cbd5e1' }} onClick={() => updateLayout({ gridRows: rowsCount + 1 })}>+</button>
+                            </div>
+                        )}
                         {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '50px repeat(4, 1fr)', gap: '1px', marginBottom: '8px' }}>
-                            <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: `50px repeat(${cols}, 1fr)`, gap: '0', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
                                 {isEditing ? (
                                     <input
                                         value={box.cornerLabel || ''}
-                                        onChange={(e) => {
-                                            const newLayouts = { ...gamePlanLayouts };
-                                            newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].cornerLabel = e.target.value;
-                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                        }}
+                                        onChange={(e) => updateLayout({ cornerLabel: e.target.value })}
                                         style={{ width: '100%', fontSize: '0.6rem', border: 'none', background: 'transparent', textAlign: 'center', color: '#94a3b8' }}
-                                        placeholder="Label..."
+                                        placeholder="#"
                                     />
                                 ) : (
-                                    box.cornerLabel || ''
+                                    box.cornerLabel || '#'
                                 )}
                             </div>
                             {headings.map((h, hIdx) => (
-                                <div key={hIdx} style={{ textAlign: 'center' }}>
+                                <div key={hIdx} style={{ textAlign: 'center', borderRight: hIdx < cols-1 ? '1px solid #e2e8f0' : 'none', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', padding: '4px' }}>
                                     {isEditing ? (
                                         <input
                                             value={h}
                                             onChange={(e) => {
-                                                const newLayouts = { ...gamePlanLayouts };
-                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                                                if (!b.gridHeadings) b.gridHeadings = ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
-                                                b.gridHeadings[hIdx] = e.target.value;
-                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                const newHeadings = [...headings];
+                                                newHeadings[hIdx] = e.target.value;
+                                                updateLayout({ gridHeadings: newHeadings });
                                             }}
-                                            style={{ width: '100%', fontSize: '0.65rem', padding: '2px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '2px', fontWeight: 'bold' }}
+                                            style={{ width: '100%', fontSize: '0.6rem', border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}
                                         />
                                     ) : (
-                                        <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px' }}>{h}</div>
+                                        <span style={{ fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b' }}>{h}</span>
                                     )}
                                 </div>
                             ))}
-                        </div>
 
-                        {isEditing ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: '50px repeat(4, 1fr)', gap: '1px', background: '#e2e8f0', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                                {/* Render 5 Rows */}
-                                {Array.from({ length: 5 }).map((_, rIdx) => {
-                                    const rowStartIdx = rIdx * 4;
-                                    const rowPlays = allPlays.slice(rowStartIdx, rowStartIdx + 4);
-
-                                    return (
-                                        <React.Fragment key={rIdx}>
-                                            {/* Row Label */}
-                                            <div style={{ background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', borderRight: '1px solid #e2e8f0' }}>
-                                                <input
-                                                    value={(box.rowLabels && box.rowLabels[rIdx]) || ''}
-                                                    onChange={(e) => {
-                                                        const newLayouts = { ...gamePlanLayouts };
-                                                        const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                                                        if (!b.rowLabels) b.rowLabels = [];
-                                                        b.rowLabels[rIdx] = e.target.value;
-                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                    }}
-                                                    placeholder={(rIdx + 1).toString()}
-                                                    style={{ width: '100%', fontSize: '0.65rem', padding: '2px', textAlign: 'center', border: '1px solid transparent', background: 'transparent', fontWeight: 'bold', color: '#64748b' }}
-                                                    onFocus={e => e.target.style.borderColor = '#ddd'}
-                                                    onBlur={e => e.target.style.borderColor = 'transparent'}
-                                                />
+                            {/* Row Headers and Slots */}
+                            {Array.from({ length: rowsCount }).map((_, rIdx) => (
+                                <React.Fragment key={rIdx}>
+                                    {/* Row Header */}
+                                    <div style={{ 
+                                        fontSize: '0.6rem', color: '#94a3b8', fontWeight: 'bold', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        borderRight: '1px solid #e2e8f0', borderBottom: '1px dotted #e2e8f0', padding: '2px'
+                                    }}>
+                                        {rIdx + 1}
+                                    </div>
+                                    {/* Slot Cells */}
+                                    {Array.from({ length: cols }).map((_, cIdx) => {
+                                        const linearIdx = (rIdx * cols) + cIdx;
+                                        const play = allPlays[linearIdx];
+                                        return (
+                                            <div key={`${rIdx}-${cIdx}`} style={{ 
+                                                minHeight: '24px', borderRight: cIdx < cols-1 ? '1px solid #e2e8f0' : 'none', 
+                                                borderBottom: '1px dotted #e2e8f0', display: 'flex', alignItems: 'center', padding: '0 4px',
+                                                background: play && play.type !== 'GAP' ? 'white' : 'transparent'
+                                            }}>
+                                                {/* Droppable Zone Logic would go here in full implementation, but for simplified view: */}
+                                                {play && play.type !== 'GAP' ? (
+                                                    <span style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {play.name}
+                                                    </span>
+                                                ) : <span style={{ color: '#cbd5e1' }}>+</span>}
                                             </div>
-
-                                            {/* Row Plays (4 columns) */}
-                                            {rowPlays.map((p, colIdx) => {
-                                                const globalIdx = rowStartIdx + colIdx;
-                                                return (
-                                                    <div key={colIdx} style={{ background: 'white', minHeight: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
-                                                        <PlaySlot
-                                                            playId={p?.type === 'GAP' ? null : p?.id}
-                                                            isLocked={isLocked}
-                                                            placeholder="+"
-                                                            onUpdate={(pid) => handleGridCellUpdate(box.setId, globalIdx, pid)}
-                                                        />
-                                                    </div>
-                                                );
-                                            })}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div
-                                style={{ minHeight: '60px', cursor: isLocked ? 'default' : 'pointer', background: '#f8fafc', borderRadius: '4px', padding: '6px', border: '1px dashed #e2e8f0', flex: 1 }}
-                                onClick={() => !isLocked && openPlaySelector(box.setId)}
-                                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                                onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
-                            >
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                                    {assignedPlays.map((p, idx) => (
-                                        <div key={idx} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1e293b' }}>
-                                            • {p.name}
-                                        </div>
-                                    ))}
-                                    {assignedPlays.length === 0 && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', paddingTop: '10px' }}>Click to select plays</div>}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Custom Note Section Display */}
-                        {box.notes && (
-                            <div style={{ marginTop: '8px', padding: '6px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.8rem', color: '#92400e', fontStyle: 'italic' }}>
-                                <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem', display: 'block', marginBottom: '2px' }}>Notes:</span>
-                                {box.notes}
-                            </div>
-                        )}
+                                        );
+                                    })}
+                                </React.Fragment>
+                            ))}
+                        </div>
                     </div>
                 );
             };
@@ -36352,24 +36344,28 @@
                                             {visibleBoxes.map((box, bIdx) => {
                                 const renderBoxContent = () => {
                                     if (box.type === 'grid') {
-                                        const gridPlays = (getGridPlays(box.setId) || []);
-                                        const headings = box.gridHeadings || ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                                        const cols = box.gridColumns || 4;
+                                        const rowsCount = box.gridRows || 5;
+                                        const totalSlots = cols * rowsCount;
                                         
-                                        // Chunk plays into rows of 4
+                                        const gridPlays = (getGridPlays(box.setId, totalSlots) || []);
+                                        const headings = box.gridHeadings || Array(cols).fill('').map((_, i) => i === 0 ? 'LEFT HASH' : (i===cols-1 ? 'NOTES' : `COL ${i+1}`));
+                                        
+                                        // Chunk plays into rows
                                         const rows = [];
-                                        for (let i = 0; i < gridPlays.length; i += 4) {
-                                            rows.push(gridPlays.slice(i, i + 4));
+                                        for (let i = 0; i < gridPlays.length; i += cols) {
+                                            rows.push(gridPlays.slice(i, i + cols));
                                         }
 
                                         return (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'min-content repeat(4, 1fr)', gap: '0', width: '100%' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: `min-content repeat(${cols}, 1fr)`, gap: '0', width: '100%' }}>
                                                 {/* Header Row */}
                                                 <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>#</div>
-                                                {headings.map((h, i) => (
+                                                {headings.slice(0, cols).map((h, i) => (
                                                     <div key={`h-${i}`} style={{ 
                                                         padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center', 
                                                         background: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                        borderRight: i < headings.length - 1 ? '1px solid #cbd5e1' : 'none',
+                                                        borderRight: i < cols - 1 ? '1px solid #cbd5e1' : 'none',
                                                         borderBottom: '1px solid #cbd5e1'
                                                     }}>
                                                         {h}
@@ -36401,7 +36397,7 @@
                                                                     minHeight: '16px',
                                                                     color: '#334155',
                                                                     display: 'flex', alignItems: 'center',
-                                                                    borderRight: cIdx < 3 ? '1px solid #e2e8f0' : 'none',
+                                                                    borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                                                                     borderBottom: '1px dotted #e2e8f0'
                                                                 }} title={play ? play.name : ''}>
                                                                     {play ? play.name : (slot.type === 'GAP' ? '' : '-')}
