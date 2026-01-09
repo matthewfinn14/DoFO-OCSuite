@@ -36353,26 +36353,53 @@
                                 const renderBoxContent = () => {
                                     if (box.type === 'grid') {
                                         const gridPlays = (getGridPlays(box.setId) || []);
+                                        const headings = box.gridHeadings || ['LEFT HASH', 'MIDDLE', 'RIGHT HASH', 'NOTES'];
+                                        
+                                        // Chunk plays into rows of 4
+                                        const rows = [];
+                                        for (let i = 0; i < gridPlays.length; i += 4) {
+                                            rows.push(gridPlays.slice(i, i + 4));
+                                        }
+
                                         return (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px', width: '100%' }}>
-                                                {gridPlays.map((slot, gIdx) => {
-                                                    const play = plays.find(p => p.id === slot.id);
-                                                    return (
-                                                        <div key={gIdx} style={{ 
-                                                            fontSize: '0.65rem', 
-                                                            overflow: 'hidden', 
-                                                            whiteSpace: 'nowrap', 
-                                                            textOverflow: 'ellipsis', 
-                                                            background: slot.type === 'GAP' ? 'transparent' : '#f8fafc', 
-                                                            padding: '2px', 
-                                                            borderRadius: '2px',
-                                                            minHeight: '14px',
-                                                            color: '#334155'
-                                                        }} title={play ? play.name : ''}>
-                                                            {play ? play.name : (slot.type === 'GAP' ? '' : '-')}
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'min-content repeat(4, 1fr)', gap: '2px', width: '100%' }}>
+                                                {/* Header Row */}
+                                                <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>#</div>
+                                                {headings.map((h, i) => (
+                                                    <div key={`h-${i}`} style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center', background: '#f1f5f9', borderRadius: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {h}
+                                                    </div>
+                                                ))}
+
+                                                {/* Data Rows */}
+                                                {rows.map((rowSlots, rIdx) => (
+                                                    <React.Fragment key={rIdx}>
+                                                        {/* Row Label */}
+                                                        <div style={{ padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px' }}>
+                                                            {rIdx + 1}
                                                         </div>
-                                                    );
-                                                })}
+                                                        {/* Slots */}
+                                                        {rowSlots.map((slot, cIdx) => {
+                                                            const play = plays.find(p => p.id === slot.id);
+                                                            return (
+                                                                <div key={cIdx} style={{ 
+                                                                    fontSize: '0.65rem', 
+                                                                    overflow: 'hidden', 
+                                                                    whiteSpace: 'nowrap', 
+                                                                    textOverflow: 'ellipsis', 
+                                                                    background: slot.type === 'GAP' ? 'transparent' : '#f8fafc', 
+                                                                    padding: '2px', 
+                                                                    borderRadius: '2px',
+                                                                    minHeight: '16px',
+                                                                    color: '#334155',
+                                                                    display: 'flex', alignItems: 'center'
+                                                                }} title={play ? play.name : ''}>
+                                                                    {play ? play.name : (slot.type === 'GAP' ? '' : '-')}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </React.Fragment>
+                                                ))}
                                             </div>
                                         );
                                     }
