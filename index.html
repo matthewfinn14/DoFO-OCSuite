@@ -36362,11 +36362,16 @@
                                         }
 
                                         return (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'min-content repeat(4, 1fr)', gap: '2px', width: '100%' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'min-content repeat(4, 1fr)', gap: '0', width: '100%' }}>
                                                 {/* Header Row */}
                                                 <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>#</div>
                                                 {headings.map((h, i) => (
-                                                    <div key={`h-${i}`} style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center', background: '#f1f5f9', borderRadius: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    <div key={`h-${i}`} style={{ 
+                                                        padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center', 
+                                                        background: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                        borderRight: i < headings.length - 1 ? '1px solid #cbd5e1' : 'none',
+                                                        borderBottom: '1px solid #cbd5e1'
+                                                    }}>
                                                         {h}
                                                     </div>
                                                 ))}
@@ -36375,7 +36380,11 @@
                                                 {rows.map((rowSlots, rIdx) => (
                                                     <React.Fragment key={rIdx}>
                                                         {/* Row Label */}
-                                                        <div style={{ padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px' }}>
+                                                        <div style={{ 
+                                                            padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold', 
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
+                                                            borderBottom: '1px dotted #f1f5f9'
+                                                        }}>
                                                             {rIdx + 1}
                                                         </div>
                                                         {/* Slots */}
@@ -36389,10 +36398,11 @@
                                                                     textOverflow: 'ellipsis', 
                                                                     background: slot.type === 'GAP' ? 'transparent' : '#f8fafc', 
                                                                     padding: '2px', 
-                                                                    borderRadius: '2px',
                                                                     minHeight: '16px',
                                                                     color: '#334155',
-                                                                    display: 'flex', alignItems: 'center'
+                                                                    display: 'flex', alignItems: 'center',
+                                                                    borderRight: cIdx < 3 ? '1px solid #e2e8f0' : 'none',
+                                                                    borderBottom: '1px dotted #e2e8f0'
                                                                 }} title={play ? play.name : ''}>
                                                                     {play ? play.name : (slot.type === 'GAP' ? '' : '-')}
                                                                 </div>
@@ -36405,12 +36415,16 @@
                                     }
                                     if (box.type === 'script' && box.rows && box.rows.length > 0) {
                                         return (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: '8px', rowGap: '2px' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: '0', rowGap: '0' }}>
                                                 {box.rows.map((row, rIdx) => {
                                                     const playLeft = plays.find(p => p.id === row.content);
                                                     const playRight = plays.find(p => p.id === row.contentRight);
                                                     return [
-                                                        <div key={`${rIdx}-L`} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', borderBottom: '1px dotted #f1f5f9', overflow: 'hidden' }}>
+                                                        <div key={`${rIdx}-L`} style={{ 
+                                                            display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', 
+                                                            borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
+                                                            borderRight: '1px solid #e2e8f0', paddingRight: '4px'
+                                                        }}>
                                                             <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
                                                             {playLeft ? (
                                                                 <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playLeft.name}</span>
@@ -36418,7 +36432,11 @@
                                                                 <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
                                                             )}
                                                         </div>,
-                                                        <div key={`${rIdx}-R`} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', borderBottom: '1px dotted #f1f5f9', overflow: 'hidden' }}>
+                                                        <div key={`${rIdx}-R`} style={{ 
+                                                            display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', 
+                                                            borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
+                                                            paddingLeft: '4px'
+                                                        }}>
                                                             {playRight ? (
                                                                 <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playRight.name}</span>
                                                             ) : (
