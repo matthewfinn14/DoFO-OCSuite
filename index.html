@@ -600,152 +600,163 @@
                 display: none !important;
             }
 
-            /* Show print container */
-
-
-            /* 2x2 Grid Layout - Centered on page */
-            .wristband-print-grid {
-                display: grid;
-                grid-template-columns: 2.75in 2.75in;
-                grid-template-rows: 4.75in 4.75in;
-                gap: 0.5in 0.5in;
-                width: 6in;
-                /* 2 cards × 2.75in + 1 gap × 0.5in */
-                height: 10in;
-                /* 2 cards × 4.75in + 1 gap × 0.5in */
-                /* Center on page: (11 - 6) / 2 = 2.5in horizontal */
-                margin: -0.75in auto 0;
-                margin-left: 2.5in;
-                margin-right: 2.5in;
-                page-break-inside: avoid;
+            /* Print Preview specific styles */
+            .print-preview-header {
+                display: none !important;
             }
 
-            /* Individual Wristband Card - 4.75in × 2.75in landscape */
-            .wristband-print-card {
-                width: 4.75in;
-                height: 2.75in;
-                border: 2px solid black;
-                background: white;
-                overflow: hidden;
-                page-break-inside: avoid;
-                box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
+            .print-preview-content {
+                padding: 0 !important;
+                overflow: visible !important;
             }
+        }
 
-            /* Card header styling */
-            .wristband-print-card .print-card-header {
-                background: black;
-                color: white;
-                padding: 4px 8px;
-                font-weight: bold;
-                font-size: 9pt;
-                text-align: center;
-                display: flex;
-                justify-content: space-between;
-                border-bottom: 2px solid black;
-                flex-shrink: 0;
-            }
+        /* Show print container */
 
-            /* Colored wristband backgrounds */
-            /* Green shades - alternating */
-            .wristband-color-green-light {
-                background: #d1fae5 !important;
-            }
 
-            .wristband-color-green-medium {
-                background: #a7f3d0 !important;
-            }
+        /* 2x2 Grid Layout - Centered on page */
+        .wristband-print-grid {
+            display: grid;
+            grid-template-columns: 2.75in 2.75in;
+            grid-template-rows: 4.75in 4.75in;
+            gap: 0.5in 0.5in;
+            width: 6in;
+            /* 2 cards × 2.75in + 1 gap × 0.5in */
+            height: 10in;
+            /* 2 cards × 4.75in + 1 gap × 0.5in */
+            /* Center on page: (11 - 6) / 2 = 2.5in horizontal */
+            margin: -0.75in auto 0;
+            margin-left: 2.5in;
+            margin-right: 2.5in;
+            page-break-inside: avoid;
+        }
 
-            /* Orange shades - alternating */
-            .wristband-color-orange-light {
-                background: #fed7aa !important;
-            }
+        /* Individual Wristband Card - 4.75in × 2.75in landscape */
+        .wristband-print-card {
+            width: 4.75in;
+            height: 2.75in;
+            border: 2px solid black;
+            background: white;
+            overflow: hidden;
+            page-break-inside: avoid;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
 
-            .wristband-color-orange-medium {
-                background: #fdba74 !important;
-            }
+        /* Card header styling */
+        .wristband-print-card .print-card-header {
+            background: black;
+            color: white;
+            padding: 4px 8px;
+            font-weight: bold;
+            font-size: 9pt;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid black;
+            flex-shrink: 0;
+        }
 
-            /* Red shades - alternating */
-            .wristband-color-red-light {
-                background: #fecaca !important;
-            }
+        /* Colored wristband backgrounds */
+        /* Green shades - alternating */
+        .wristband-color-green-light {
+            background: #d1fae5 !important;
+        }
 
-            .wristband-color-red-medium {
-                background: #fca5a5 !important;
-            }
+        .wristband-color-green-medium {
+            background: #a7f3d0 !important;
+        }
 
-            /* Blue shades - alternating */
-            .wristband-color-blue-light {
-                background: #bfdbfe !important;
-            }
+        /* Orange shades - alternating */
+        .wristband-color-orange-light {
+            background: #fed7aa !important;
+        }
 
-            .wristband-color-blue-medium {
-                background: #93c5fd !important;
-            }
+        .wristband-color-orange-medium {
+            background: #fdba74 !important;
+        }
 
-            /* Yellow shades - alternating */
-            .wristband-color-yellow-light {
-                background: #fef08a !important;
-            }
+        /* Red shades - alternating */
+        .wristband-color-red-light {
+            background: #fecaca !important;
+        }
 
-            .wristband-color-yellow-medium {
-                background: #fde047 !important;
-            }
+        .wristband-color-red-medium {
+            background: #fca5a5 !important;
+        }
 
-            /* Purple shades - alternating */
-            .wristband-color-purple-light {
-                background: #e9d5ff !important;
-            }
+        /* Blue shades - alternating */
+        .wristband-color-blue-light {
+            background: #bfdbfe !important;
+        }
 
-            .wristband-color-purple-medium {
-                background: #d8b4fe !important;
-            }
+        .wristband-color-blue-medium {
+            background: #93c5fd !important;
+        }
 
-            /* Teal shades - alternating */
-            .wristband-color-teal-light {
-                background: #99f6e4 !important;
-            }
+        /* Yellow shades - alternating */
+        .wristband-color-yellow-light {
+            background: #fef08a !important;
+        }
 
-            .wristband-color-teal-medium {
-                background: #5eead4 !important;
-            }
+        .wristband-color-yellow-medium {
+            background: #fde047 !important;
+        }
 
-            /* Pink shades - alternating */
-            .wristband-color-pink-light {
-                background: #fbcfe8 !important;
-            }
+        /* Purple shades - alternating */
+        .wristband-color-purple-light {
+            background: #e9d5ff !important;
+        }
 
-            .wristband-color-pink-medium {
-                background: #f9a8d4 !important;
-            }
+        .wristband-color-purple-medium {
+            background: #d8b4fe !important;
+        }
 
-            /* Card content area */
-            .wristband-print-card .print-card-content {
-                flex: 1;
-                overflow: hidden;
-            }
+        /* Teal shades - alternating */
+        .wristband-color-teal-light {
+            background: #99f6e4 !important;
+        }
 
-            /* Table styling for print */
-            .wristband-print-card table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 6pt;
-                height: 100%;
-            }
+        .wristband-color-teal-medium {
+            background: #5eead4 !important;
+        }
 
-            .wristband-print-card td {
-                border: 1px solid #666;
-                padding: 1px 2px;
-                vertical-align: middle;
-            }
+        /* Pink shades - alternating */
+        .wristband-color-pink-light {
+            background: #fbcfe8 !important;
+        }
 
-            .wristband-print-card td:first-child {
-                font-weight: bold;
-                text-align: center;
-                width: 25px;
-                font-size: 5pt;
-            }
+        .wristband-color-pink-medium {
+            background: #f9a8d4 !important;
+        }
+
+        /* Card content area */
+        .wristband-print-card .print-card-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Table styling for print */
+        .wristband-print-card table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 6pt;
+            height: 100%;
+        }
+
+        .wristband-print-card td {
+            border: 1px solid #666;
+            padding: 1px 2px;
+            vertical-align: middle;
+        }
+
+        .wristband-print-card td:first-child {
+            font-weight: bold;
+            text-align: center;
+            width: 25px;
+            font-size: 5pt;
+        }
         }
 
         .wristband-print-card-spreadsheet.orange tbody tr:nth-child(odd) {
@@ -2232,7 +2243,7 @@
                                         )}
 
                                         {/* Play Name */}
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.name}</span>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{getPlayDisplayName(play)}</span>
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{play.formation}</div>
 
@@ -2428,7 +2439,7 @@
                             }}
                         >
                             <div style={{ overflow: 'hidden' }}>
-                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.name}</div>
+                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getPlayDisplayName(play)}</div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{play.formation}</div>
                             </div>
                             {!isLocked && (
@@ -5483,7 +5494,7 @@
                     <div className="play-content">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                                <h3 className="play-title">{play.name}</h3>
+                                <h3 className="play-title">{getPlayDisplayName(play)}</h3>
                                 {play.incomplete && (
                                     <span style={{
                                         background: '#eab308',
@@ -5724,7 +5735,7 @@
                                 {/* Bottom: Info (20%) */}
                                 <div className="wristband-grid-cell-header" style={{ flex: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6pt', fontWeight: 'bold', background: '#f5f5f5', textAlign: 'center', lineHeight: '1.1' }}>
                                     {slot ? (
-                                        <span>#{slot} {play?.name ? `- ${play.name.substring(0, 15)}` : ''}</span>
+                                        <span>#{slot} {play?.name ? `- ${getPlayDisplayName(play).substring(0, 15)}` : ''}</span>
                                     ) : null}
                                 </div>
                             </div>
@@ -7608,7 +7619,7 @@
                                                         }}>MS</span>
                                                     )}
 
-                                                    <span>{play.name}</span>
+                                                    <span>{getPlayDisplayName(play)}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center' }}>
                                                     {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>}
@@ -22224,7 +22235,7 @@
                                 <div style={{ maxHeight: '100px', overflowY: 'auto', background: 'var(--bg-card)', padding: '0.5rem', borderRadius: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {currentScriptPlays.map((p, idx) => (
                                         <div key={`script - play - ${idx} `} style={{ fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
-                                            <span>{idx + 1}. {p.name}</span>
+                                            <span>{idx + 1}. {getPlayDisplayName(p)}</span>
                                             <span style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => setCurrentScriptPlays(prev => prev.filter((_, i) => i !== idx))}>×</span>
                                         </div>
                                     ))}
@@ -22704,7 +22715,7 @@
                                                                 >
                                                                     <div style={{ padding: '1.5rem' }}>
                                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-                                                                            <div style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>{play.name}</div>
+                                                                            <div style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>{getPlayDisplayName(play)}</div>
                                                                             {play.tempo && play.tempo !== 'REGULAR' && (
                                                                                 <span style={{
                                                                                     fontSize: '0.75rem',
@@ -22972,7 +22983,7 @@
                                                                         >
                                                                             <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                                 {play.priority && <Icon name="Star" size={14} fill="gold" color="gold" />}
-                                                                                {play.name} {play.wristbandSlot ? <span style={{ fontWeight: 'normal' }}>({play.wristbandSlot})</span> : ''} {play.staplesSlot ? <span style={{ fontWeight: 'normal', color: '#b45309', marginLeft: '4px' }}>[{play.staplesSlot}]</span> : ''}
+                                                                                {getPlayDisplayName(play)} {play.wristbandSlot ? <span style={{ fontWeight: 'normal' }}>({play.wristbandSlot})</span> : ''} {play.staplesSlot ? <span style={{ fontWeight: 'normal', color: '#b45309', marginLeft: '4px' }}>[{play.staplesSlot}]</span> : ''}
                                                                                 {play.tempo && play.tempo !== 'REGULAR' && (
                                                                                     <span style={{
                                                                                         fontSize: '0.65rem',
@@ -23215,7 +23226,7 @@
                                     >
                                         <div style={{ padding: '1.5rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>{play.name}</div>
+                                                <div style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>{getPlayDisplayName(play)}</div>
                                                 {play.tempo && play.tempo !== 'REGULAR' && (
                                                     <span style={{
                                                         fontSize: '0.75rem',
@@ -24578,7 +24589,7 @@
                                     <div key={play.id} className="card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{play.name}</div>
+                                                <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{getPlayDisplayName(play)}</div>
                                                 {play.priority && <Icon name="Star" size={14} style={{ fill: '#eab308', color: '#eab308' }} />}
                                             </div>
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -25058,7 +25069,7 @@
                 // `listType` arg gives us this ('Run', 'Pass', 'Screen').
 
                 const currentRuns = allHydrated.filter(p => isRun(p) && !newIdsSet.has(p.id));
-               const currentPasses = allHydrated.filter(p => isPass(p) && !newIdsSet.has(p.id));
+                const currentPasses = allHydrated.filter(p => isPass(p) && !newIdsSet.has(p.id));
                 const currentScreens = allHydrated.filter(p => isScreen(p) && !newIdsSet.has(p.id));
 
                 let finalIds = [];
@@ -25088,13 +25099,13 @@
                 // The previous code had it. Let's supporting it for the MAIN types.
                 newItems.forEach(p => {
                     if (listType === 'Run' && !isRun(p)) {
-                                     .id, { type: 'Run' });
+                        onUpdatePlay(p.id, { type: 'Run' });
                     }
                     if (listType === 'Pass' && !isPass(p)) {
-                                      id, { type: 'Pass' });
+                        onUpdatePlay(p.id, { type: 'Pass' });
                     }
                     if (listType === 'Screen' && !isScreen(p)) {
-                                       d, { type: 'Screen' });
+                        onUpdatePlay(p.id, { type: 'Screen' });
                     }
                 });
             };
@@ -25331,7 +25342,7 @@
                                                     {/* Play Info */}
                                                     <div style={{ flex: 1, overflow: 'hidden' }}>
                                                         <div style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            {play.name}
+                                                            {getPlayDisplayName(play)}
                                                         </div>
                                                         <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.formation}</div>
                                                     </div>
@@ -25397,7 +25408,7 @@
                                             return lastWeekPlays.map(play => (
                                                 <div key={play.id} className="card" style={{ padding: '0.4rem 0.6rem', marginBottom: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                        <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.8rem' }}>{play.name}</div>
+                                                        <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.8rem' }}>{getPlayDisplayName(play)}</div>
                                                         <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
                                                             {play.formation} • {play.type || 'Run'}
                                                         </div>
@@ -25558,7 +25569,7 @@
                                     {/* HEADER */}
                                     <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.9rem' }}>{play.name}</div>
+                                            <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.9rem' }}>{getPlayDisplayName(play)}</div>
                                             <button
                                                 onClick={() => setAssignmentModalState(null)}
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
@@ -33393,7 +33404,7 @@
                     title={play.name}
                 >
                     {play.priority && <span style={{ color: '#ca8a04', marginRight: '4px', fontWeight: 'bold' }}>★</span>}
-                    {play.name}
+                    {getPlayDisplayName(play)}
                 </div>
             );
 
@@ -33541,7 +33552,8 @@
             const [showWristband, setShowWristband] = useState(true);
             const [wristbandFocus, setWristbandFocus] = useState(null);
             const [wbAutocomplete, setWbAutocomplete] = useState({ playId: null, query: '' });
-            const [showDumbCallSheet, setShowDumbCallSheet] = useState(false); // Dumb Call Sheet Toggle
+            const [showPrintPreview, setShowPrintPreview] = useState(false); // Print Preview Toggle
+            const [printPreviewTab, setPrintPreviewTab] = useState('staples'); // Selected tab for print preview
 
             const validWristbandSlots = useMemo(() => {
                 if (!wbSettings) return [];
@@ -34868,7 +34880,7 @@
                     >
                         {play ? (
                             <div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', display: 'flex', alignItems: 'center' }}>
-                                <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{play.name}</span>
+                                <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{getPlayDisplayName(play)}</span>
                                 {(!play.formation || !play.name.toLowerCase().includes(play.formation.toLowerCase())) && (
                                     <span style={{ fontSize: '0.85em', color: '#334155', marginLeft: '6px' }}>{play.formation}</span>
                                 )}
@@ -35237,7 +35249,7 @@
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 {play.priority && <Icon name="Star" size={12} fill="gold" color="gold" />}
-                                                {play.name}
+                                                {getPlayDisplayName(play)}
                                                 {play.wristbandSlot && (
                                                     <span style={{
                                                         marginLeft: '6px',
@@ -35701,7 +35713,7 @@
                                                 {/* Droppable Zone Logic would go here in full implementation, but for simplified view: */}
                                                 {play && play.type !== 'GAP' ? (
                                                     <span style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                        {play.name}
+                                                        {getPlayDisplayName(play)}
                                                     </span>
                                                 ) : <span style={{ color: '#cbd5e1' }}>+</span>}
                                             </div>
@@ -36884,12 +36896,26 @@
                                             color: '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                                         }}>
                                             {isSheetEditing ? (
-                                                <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                                                <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                                                     <input
                                                         value={section.title}
                                                         onChange={(e) => handleUpdateSheetSection(sIdx, { ...section, title: e.target.value })}
                                                         style={{ flex: 1, padding: '2px 4px', fontSize: '0.8rem', fontWeight: 'bold' }}
                                                     />
+                                                    <button
+                                                        className="btn-sm"
+                                                        onClick={() => handleUpdateSheetSection(sIdx, { ...section, expandToFill: !section.expandToFill })}
+                                                        style={{
+                                                            background: section.expandToFill ? 'var(--accent)' : '#e2e8f0',
+                                                            color: section.expandToFill ? 'white' : '#64748b',
+                                                            fontSize: '0.7rem',
+                                                            padding: '4px 8px',
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                        title={section.expandToFill ? 'Return to fixed width layout' : 'Expand boxes to fill row equally'}
+                                                    >
+                                                        {section.expandToFill ? '📏 Fixed Width' : '↔️ Expand to Fill'}
+                                                    </button>
                                                     <button className="btn-sm" style={{ color: '#ef4444' }} onClick={() => handleDeleteSheetSection(sIdx)}>
                                                         <Icon name="Trash2" size={14} />
                                                     </button>
@@ -36898,7 +36924,13 @@
                                                 <span>{section.title}</span>
                                             )}
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '0', gap: isSheetEditing ? '4px' : '0', padding: isSheetEditing ? '4px' : '0' }}>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(7, 1fr)',
+                                            borderTop: '0',
+                                            gap: isSheetEditing ? '4px' : '0',
+                                            padding: isSheetEditing ? '4px' : '0'
+                                        }}>
                                             {visibleBoxes.map((box, bIdx) => {
                                                 const renderBoxContent = () => {
                                                     if (box.type === 'grid') {
@@ -36950,7 +36982,7 @@
                                                                                     borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                                                                                     borderBottom: '1px dotted #e2e8f0'
                                                                                 }} title={play ? play.name : ''}>
-                                                                                    {play ? play.name : (slot.type === 'GAP' ? '' : '-')}
+                                                                                    {play ? getPlayDisplayName(play) : (slot.type === 'GAP' ? '' : '-')}
                                                                                 </div>
                                                                             );
                                                                         })}
@@ -36969,7 +37001,8 @@
                                                                         <div key={`${rIdx}-L`} style={{
                                                                             display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
                                                                             borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
-                                                                            borderRight: '1px solid #e2e8f0', paddingRight: '4px'
+                                                                            borderRight: '1px solid #e2e8f0', paddingRight: '4px',
+                                                                            background: playLeft?.priority ? '#fef08a' : 'transparent'
                                                                         }}>
                                                                             <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
                                                                             {playLeft ? (
@@ -36981,7 +37014,8 @@
                                                                         <div key={`${rIdx}-R`} style={{
                                                                             display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
                                                                             borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
-                                                                            paddingLeft: '4px'
+                                                                            paddingLeft: '4px',
+                                                                            background: playRight?.priority ? '#fef08a' : 'transparent'
                                                                         }}>
                                                                             {playRight ? (
                                                                                 <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playRight.name}</span>
@@ -37001,7 +37035,7 @@
                                                     return (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                                             {playsInBox.map((p, pIdx) => (
-                                                                <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2' }}>
+                                                                <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', background: p.priority ? '#fef08a' : 'transparent' }}>
                                                                     <span style={{ color: '#94a3b8', width: '14px', textAlign: 'right', flexShrink: 0 }}>{pIdx + 1}.</span>
                                                                     <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
                                                                     {p.formation && <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>}
@@ -37028,7 +37062,42 @@
                                                         }}
                                                         onDrop={(e) => handleSheetBoxDrop(e, sIdx, bIdx)}
                                                         style={{
-                                                            gridColumn: `span ${box.colSpan > 1 ? box.colSpan : (box.type === 'grid' ? 5 : 2)}`,
+                                                            gridColumn: (() => {
+                                                                if (!section.expandToFill) {
+                                                                    return `span ${box.colSpan > 1 ? box.colSpan : (box.type === 'grid' ? 5 : 2)}`;
+                                                                }
+                                                                
+                                                                // Calculate which row this box is in and how many boxes are in that row
+                                                                let cumulativeSpan = 0;
+                                                                let currentRowBoxes = [];
+                                                                
+                                                                for (let i = 0; i <= bIdx; i++) {
+                                                                    const b = visibleBoxes[i];
+                                                                    const bSpan = b.colSpan > 1 ? b.colSpan : (b.type === 'grid' ? 5 : 2);
+                                                                    
+                                                                    if (cumulativeSpan + bSpan > 7 && currentRowBoxes.length > 0) {
+                                                                        // This box starts a new row
+                                                                        currentRowBoxes = [i];
+                                                                        cumulativeSpan = bSpan;
+                                                                    } else {
+                                                                        currentRowBoxes.push(i);
+                                                                        cumulativeSpan += bSpan;
+                                                                    }
+                                                                }
+                                                                
+                                                                // Calculate span for equal distribution in this row
+                                                                const boxesInRow = currentRowBoxes.length;
+                                                                const spanPerBox = Math.floor(7 / boxesInRow);
+                                                                const isLastInRow = currentRowBoxes[currentRowBoxes.length - 1] === bIdx;
+                                                                
+                                                                // Last box in row gets remaining columns
+                                                                if (isLastInRow) {
+                                                                    const usedColumns = spanPerBox * (boxesInRow - 1);
+                                                                    return `span ${7 - usedColumns}`;
+                                                                } else {
+                                                                    return `span ${spanPerBox}`;
+                                                                }
+                                                            })(),
                                                             borderBottom: !isSheetEditing && Math.floor(bIdx / 2) < Math.ceil(visibleBoxes.length / 2) - 1 ? '1px solid #cbd5e1' : 'none',
                                                             borderRight: !isSheetEditing && bIdx % 2 === 0 ? '1px solid #cbd5e1' : 'none',
                                                             border: isSheetEditing ? '1px solid #e2e8f0' : undefined,
@@ -38243,7 +38312,7 @@
                                                                     setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY });
                                                                 }}
                                                             >
-                                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{play.name}</div>
+                                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getPlayDisplayName(play)}</div>
                                                                 {!isLocked && (
                                                                     <div
                                                                         onClick={() => handleClearCell(rIdx, cIdx)}
@@ -38608,8 +38677,8 @@
                             <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
                                 PLAYER TOUCHES
                             </button>
-                            <button className={`btn ${showDumbCallSheet ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowDumbCallSheet(!showDumbCallSheet)} style={{ border: '2px solid var(--accent)' }}>
-                                {showDumbCallSheet ? 'HIDE SHEET BUILDER' : 'DUMB SHEET'}
+                            <button className={`btn ${showPrintPreview ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowPrintPreview(!showPrintPreview)} style={{ border: '2px solid var(--accent)' }}>
+                                {showPrintPreview ? 'CLOSE PREVIEW' : 'PRINT PREVIEW'}
                             </button>
                         </div>
 
@@ -38634,16 +38703,90 @@
                     {renderSectionConfigurationModal()}
                     {renderBoxEditorModal()}
                     {renderSituationAssignmentModal()}
-                    {/* Dumb Call Sheet Overlay */}
-                    <DumbCallSheet
-                        gamePlanData={gamePlan}
-                        priorityPlays={plays.filter(p => p.priority)} // Or use specific priority list if available
-                        gamePlanLayouts={gamePlanLayouts}
-                        savedItems={gamePlanLayouts?.DUMB_SHEET || []}
-                        onSaveItems={(items) => onUpdateLayouts && onUpdateLayouts({ ...gamePlanLayouts, DUMB_SHEET: items })}
-                        isVisible={showDumbCallSheet}
-                        onClose={() => setShowDumbCallSheet(false)}
-                    />
+                    {/* Print Preview Modal */}
+                    {showPrintPreview && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.9)', zIndex: 9999,
+                            display: 'flex', flexDirection: 'column'
+                        }}>
+                            {/* Header with tab selector and controls */}
+                            <div className="print-preview-header" style={{ background: 'var(--bg)', padding: '1rem', borderBottom: '2px solid var(--accent)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        <button
+                                            className={`btn ${printPreviewTab === 'staples' ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setPrintPreviewTab('staples')}
+                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        >
+                                            STAPLES
+                                        </button>
+                                        <button
+                                            className={`btn ${printPreviewTab === 'priority' ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setPrintPreviewTab('priority')}
+                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        >
+                                            PRIORITY PLAYS
+                                        </button>
+                                        <button
+                                            className={`btn ${printPreviewTab === 'sheet' ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setPrintPreviewTab('sheet')}
+                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        >
+                                            SITUATIONS & SCRIPTS
+                                        </button>
+                                        <button
+                                            className={`btn ${printPreviewTab === 'matrix' ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setPrintPreviewTab('matrix')}
+                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        >
+                                            STRIKE 'EM OUT
+                                        </button>
+                                        <button
+                                            className={`btn ${printPreviewTab === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setPrintPreviewTab('fzdnd')}
+                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        >
+                                            FZDnD
+                                        </button>
+                                        <button
+                                            className={`btn ${printPreviewTab === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setPrintPreviewTab('player-touches')}
+                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        >
+                                            PLAYER TOUCHES
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={() => window.print()}
+                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        >
+                                            🖨️ PRINT
+                                        </button>
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => setShowPrintPreview(false)}
+                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        >
+                                            ✕ CLOSE
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Print content area */}
+                            <div className="print-preview-content" style={{ flex: 1, overflow: 'auto', background: 'white', padding: '2rem' }}>
+                                {printPreviewTab === 'staples' && renderStaples()}
+                                {printPreviewTab === 'priority' && renderPriorityPlays()}
+                                {printPreviewTab === 'sheet' && renderSheetView()}
+                                {printPreviewTab === 'matrix' && renderMatrix()}
+                                {printPreviewTab === 'fzdnd' && renderFZDnDView()}
+                                {printPreviewTab === 'player-touches' && renderPlayerTouches()}
+                            </div>
+                        </div>
+                    )}
 
                 </div>
             );
@@ -43908,6 +44051,32 @@
         };
 
 
+
+        // Helper function to get play name with assignment suffix
+        const getPlayDisplayName = (play) => {
+            if (!play || !play.name) return '';
+            
+            let suffix = '';
+            
+            // Check for mini script (A or B)
+            if (play.isMiniScript && play.wristbandSlot) {
+                // Extract letter from wristband slot (e.g., "A" from "A1" or "B" from "B2")
+                const letter = play.wristbandSlot.charAt(0);
+                if (letter === 'A' || letter === 'B') {
+                    suffix = letter;
+                }
+            }
+            // Check for Rooski card
+            else if (play.isRooski && play.wristbandSlot) {
+                suffix = 'R';
+            }
+            // Check for traditional wristband
+            else if (play.wristbandSlot && !play.isRooski && !play.isMiniScript) {
+                suffix = 'T';
+            }
+            
+            return play.name + suffix;
+        };
 
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
