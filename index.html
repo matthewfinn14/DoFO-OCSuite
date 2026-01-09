@@ -35476,6 +35476,10 @@
                     summaryText = `${playCount} Situational Plays`;
                 }
 
+                // Default spans: Grid = 5, Script = 2
+                const defaultSpan = box.type === 'grid' ? 5 : 2;
+                const span = box.colSpan || defaultSpan;
+
                 return (
                     <div
                         key={box.setId}
@@ -35488,7 +35492,7 @@
                             handleDrop(e, sectionIdx, boxIdx);
                         }}
                         style={{
-                            gridColumn: `span ${box.colSpan || 1}`,
+                            gridColumn: `span ${span}`,
                             border: isEditing ? '2px solid var(--accent)' : '1px solid #ddd',
                             borderRadius: '4px', overflow: 'hidden',
                             minHeight: '80px', // Smaller collapsed height
@@ -36078,7 +36082,7 @@
                                         /* Default/Grid Layout */
                                         <div
                                             style={{
-                                                display: 'grid', gridTemplateColumns: `repeat(4, 1fr)`, gap: '4px',
+                                                display: 'grid', gridTemplateColumns: `repeat(7, 1fr)`, gap: '4px',
                                                 minHeight: '100px', // Ensure empty sections are drop targets
                                                 border: isLocked ? 'none' : '1px dashed #cbd5e1', // Visual cue
                                                 borderRadius: '8px',
@@ -36167,6 +36171,8 @@
                     header: 'New Box',
                     setId: `box_${Date.now()}`,
                     color: '#3b82f6',
+                    type: 'script', // Default to script
+                    colSpan: 2, // Default width
                     rows: []
                 };
                 const newLayouts = { ...gamePlanLayouts };
@@ -36309,7 +36315,7 @@
                             )}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1rem', alignItems: 'start' }}>
                             {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
                                 // Show all boxes in edit mode
                                 const visibleBoxes = isSheetEditing ? (section.boxes || []) : (section.boxes || []).filter(b => !b.hidden);
@@ -36318,7 +36324,7 @@
                                 return (
                                     <div
                                         key={sIdx}
-                                        style={{ breakInside: 'avoid', marginBottom: '0.5rem', border: isSheetEditing ? '1px dashed #3b82f6' : '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', background: 'white', display: 'flex', flexDirection: 'column' }}
+                                        style={{ gridColumn: '1 / -1', breakInside: 'avoid', marginBottom: '0.5rem', border: isSheetEditing ? '1px dashed #3b82f6' : '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', background: 'white', display: 'flex', flexDirection: 'column' }}
                                         onDragOver={handleSheetSectionDragOver}
                                         onDrop={(e) => handleSheetSectionDrop(e, sIdx)}
                                     >
@@ -36342,8 +36348,78 @@
                                                 <span>{section.title}</span>
                                             )}
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '0', gap: isSheetEditing ? '4px' : '0', padding: isSheetEditing ? '4px' : '0' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '0', gap: isSheetEditing ? '4px' : '0', padding: isSheetEditing ? '4px' : '0' }}>
                                             {visibleBoxes.map((box, bIdx) => {
+                                const renderBoxContent = () => {
+                                    if (box.type === 'grid') {
+                                        const gridPlays = (getGridPlays(box.setId) || []);
+                                        return (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px', width: '100%' }}>
+                                                {gridPlays.map((slot, gIdx) => {
+                                                    const play = plays.find(p => p.id === slot.id);
+                                                    return (
+                                                        <div key={gIdx} style={{ 
+                                                            fontSize: '0.65rem', 
+                                                            overflow: 'hidden', 
+                                                            whiteSpace: 'nowrap', 
+                                                            textOverflow: 'ellipsis', 
+                                                            background: slot.type === 'GAP' ? 'transparent' : '#f8fafc', 
+                                                            padding: '2px', 
+                                                            borderRadius: '2px',
+                                                            minHeight: '14px',
+                                                            color: '#334155'
+                                                        }} title={play ? play.name : ''}>
+                                                            {play ? play.name : (slot.type === 'GAP' ? '' : '-')}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    }
+                                    if (box.type === 'script' && box.rows && box.rows.length > 0) {
+                                        return (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: '8px', rowGap: '2px' }}>
+                                                {box.rows.map((row, rIdx) => {
+                                                    const playLeft = plays.find(p => p.id === row.content);
+                                                    const playRight = plays.find(p => p.id === row.contentRight);
+                                                    return [
+                                                        <div key={`${rIdx}-L`} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', borderBottom: '1px dotted #f1f5f9', overflow: 'hidden' }}>
+                                                            <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
+                                                            {playLeft ? (
+                                                                <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playLeft.name}</span>
+                                                            ) : (
+                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                                                            )}
+                                                        </div>,
+                                                        <div key={`${rIdx}-R`} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', borderBottom: '1px dotted #f1f5f9', overflow: 'hidden' }}>
+                                                            {playRight ? (
+                                                                <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playRight.name}</span>
+                                                            ) : (
+                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>
+                                                            )}
+                                                        </div>
+                                                    ];
+                                                })}
+                                            </div>
+                                        );
+                                    }
+                                    // Default
+                                    const playsInBox = getPlaysForSet(box.setId);
+                                    if (playsInBox.length === 0) {
+                                        return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
+                                    }
+                                    return (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                            {playsInBox.map((p, pIdx) => (
+                                                <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2' }}>
+                                                    <span style={{ color: '#94a3b8', width: '14px', textAlign: 'right', flexShrink: 0 }}>{pIdx + 1}.</span>
+                                                    <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
+                                                    {p.formation && <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                };
                                                 const playsInBox = getPlaysForSet(box.setId);
                                                 return (
                                                     <div
@@ -36362,6 +36438,7 @@
                                                         }}
                                                         onDrop={(e) => handleSheetBoxDrop(e, sIdx, bIdx)}
                                                         style={{
+                                                            gridColumn: `span ${box.colSpan > 1 ? box.colSpan : (box.type === 'grid' ? 5 : 2)}`,
                                                             borderBottom: !isSheetEditing && Math.floor(bIdx / 2) < Math.ceil(visibleBoxes.length / 2) - 1 ? '1px solid #cbd5e1' : 'none',
                                                             borderRight: !isSheetEditing && bIdx % 2 === 0 ? '1px solid #cbd5e1' : 'none',
                                                             border: isSheetEditing ? '1px solid #e2e8f0' : undefined,
@@ -36400,45 +36477,7 @@
                                                         {/* Sheet Box Content */}
                                                         <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
                                                             {/* Render Strategy: Script Rows vs Assigned Plays */}
-                                                            {(() => {
-                                                                if (box.type === 'script' && box.rows && box.rows.length > 0) {
-                                                                    // SCRIPT RENDERING
-                                                                    return (
-                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                                                            {box.rows.map((row, rIdx) => {
-                                                                                const play = plays.find(p => p.id === row.content);
-                                                                                return (
-                                                                                    <div key={rIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', borderBottom: '1px dotted #f1f5f9' }}>
-                                                                                        <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
-                                                                                        {play ? (
-                                                                                            <span style={{ fontWeight: '600', color: '#1e293b' }}>{play.name}</span>
-                                                                                        ) : (
-                                                                                            <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
-                                                                                        )}
-                                                                                    </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    );
-                                                                } else {
-                                                                    // STANDARD LIST RENDERING
-                                                                    const playsInBox = getPlaysForSet(box.setId);
-                                                                    if (playsInBox.length === 0) {
-                                                                        return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
-                                                                    }
-                                                                    return (
-                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                                                            {playsInBox.map((p, pIdx) => (
-                                                                                <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2' }}>
-                                                                                    <span style={{ color: '#94a3b8', width: '14px', textAlign: 'right', flexShrink: 0 }}>{pIdx + 1}.</span>
-                                                                                    <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
-                                                                                    {p.formation && <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>}
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                            })()}
+                                                            {renderBoxContent()}
                                                         </div>
                                                     </div>
                                                 );
@@ -37984,103 +38023,7 @@
                         </div>
 
                         {/* Game Plan Statistics Ticker */}
-                        {(() => {
-                            // 1. Calculate New Plays (Manually flagged in Install Manager)
-                            const newPlaysCount = (newInstallIds || []).length;
-
-                            // 2. Calculate unique plays in game plan
-                            const allGamePlanPlayIds = new Set();
-                            Object.values(gamePlan?.sets || {}).forEach(set => {
-                                (set.playIds || []).forEach(item => {
-                                    const id = typeof item === 'object' ? item.id : item;
-                                    if (id) {
-                                        allGamePlanPlayIds.add(id);
-                                    }
-                                });
-                            });
-                            Object.values(gamePlan?.miniScripts || {}).forEach(script => {
-                                (script.playIds || []).forEach(item => {
-                                    const id = typeof item === 'object' ? item.id : item;
-                                    if (id) {
-                                        allGamePlanPlayIds.add(id);
-                                    }
-                                });
-                            });
-
-                            // Include plays from Layouts (Call Sheet)
-                            // Include plays from Layouts (Call Sheet)
-                            Object.values(gamePlanLayouts || {}).forEach(layout => {
-                                (layout.sections || []).forEach(section => {
-                                    (section.boxes || []).forEach(box => {
-                                        (box.rows || []).forEach(row => {
-                                            if (row.content) {
-                                                allGamePlanPlayIds.add(row.content);
-                                            }
-                                        });
-                                    });
-                                });
-                            });
-                            const uniquePlaysCount = allGamePlanPlayIds.size;
-
-                            // 3. Calculate total offensive practice script slots
-                            let totalScriptSlots = 0;
-                            Object.values(practicePlans || {}).forEach(plan => {
-                                (plan.segments || []).forEach(seg => {
-                                    if (seg.hasScript && seg.script && seg.script.length > 0) {
-                                        // Only count offensive scripts (exclude special teams)
-                                        if (!seg.isSpecialTeams) {
-                                            totalScriptSlots += seg.script.length;
-                                        }
-                                    }
-                                });
-                            });
-
-                            return (
-                                <div style={{
-                                    display: 'flex',
-                                    gap: '1rem',
-                                    padding: '0.5rem 1rem',
-                                    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-                                    borderRadius: '24px',
-                                    border: '1px solid var(--border)',
-                                    alignItems: 'center'
-                                }}>
-                                    {/* New Plays */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0ea5e9' }}>
-                                            {newPlaysCount}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
-                                            New
-                                        </div>
-                                    </div>
-
-                                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-
-                                    {/* Unique Plays */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#374151' }}>
-                                            {uniquePlaysCount}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
-                                            Unique
-                                        </div>
-                                    </div>
-
-                                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-
-                                    {/* Script Slots */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#6366f1' }}>
-                                            {totalScriptSlots}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '600' }}>
-                                            Slots
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                                {/* Ticker temporarily removed */}
                     </div>
 
                     {/* View Content */}
@@ -48576,7 +48519,7 @@
 
         ReactDOM.render(
             <ErrorBoundary>
-                <AuthProvider>
+      <AuthProvider>
                     <App />
                 </AuthProvider>
             </ErrorBoundary>,
