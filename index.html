@@ -33223,7 +33223,7 @@
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
             const [assignmentModalState, setAssignmentModalState] = useState(null); // { playId, x, y }
 
-            const [viewMode, setViewMode] = useState('call-sheet'); // 'call-sheet', 'matrix', 'list'
+            const [viewMode, setViewMode] = useState('sheet'); // 'sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
             const [showPlaySelector, setShowPlaySelector] = useState(false);
             const [playSelectorFilters, setPlaySelectorFilters] = useState({ formation: '', concept: '', tag: '', situation: '' });
@@ -38050,11 +38050,9 @@
                             <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')}>
                                 PRIORITY PLAYS
                             </button>
-                            <button className={`btn ${viewMode === 'call-sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('call-sheet')}>
-                                SITUATIONS & SCRIPTS
-                            </button>
+{/* Legacy View Removed */}
                             <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')}>
-                                SPREADSHEET
+                                SITUATIONS & SCRIPTS
                             </button>
                             <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
                                 STRIKE 'EM OUT
