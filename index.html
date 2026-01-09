@@ -8273,8 +8273,8 @@
                             if (s.name) items.add(s.name);
                         });
                     }
-                    if (gamePlan.sets) {
-                        Object.values(gamePlan.sets).forEach(s => {
+                    if (gamePlan?.sets) {
+                        Object.values(gamePlan?.sets).forEach(s => {
                             if (s.name) items.add(s.name);
                         });
                     }
@@ -34410,7 +34410,7 @@
                 if (!playId || !box || !box.setId) return;
 
                 const isScript = box.type === 'script';
-                const collection = isScript ? (gamePlan.miniScripts || {}) : (gamePlan.sets || {});
+                const collection = isScript ? (gamePlan.miniScripts || {}) : (gamePlan?.sets || {});
                 const targetId = box.setId;
                 const currentData = collection[targetId] || { playIds: [], assignedPlayIds: [] };
 
@@ -35043,6 +35043,87 @@
                 const tempos = box.tempos || {};
                 const protocolList = box.customTempos || PLAY_PROTOCOLS;
 
+                const renderWristbandInput = (playId) => {
+                    const play = plays.find(p => p.id === playId);
+                    if (!play) return null;
+
+                    const isFocused = wbAutocomplete.playId === playId;
+                    
+                    // Filter available slots
+                    const usedSlots = new Set(plays.filter(p => p.id !== playId && p.wristbandSlot).map(p => p.wristbandSlot));
+                    const availableSlots = (validWristbandSlots || []).filter(slot => !usedSlots.has(slot));
+                    
+                    const query = isFocused ? wbAutocomplete.query : (play.wristbandSlot || '');
+                    const filteredSlots = isFocused && query 
+                        ? availableSlots.filter(s => s.toString().includes(query)) 
+                        : []; // Only show when typing? Or show all available? Let's show filtered.
+
+                    // Limit results
+                    const candidates = filteredSlots.slice(0, 10);
+
+                    return (
+                        <div style={{ position: 'relative', marginLeft: '6px' }}>
+                            <input
+                                placeholder="#"
+                                value={isFocused ? wbAutocomplete.query : (play.wristbandSlot || '')}
+                                onFocus={() => setWbAutocomplete({ playId, query: play.wristbandSlot || '' })}
+                                onChange={(e) => {
+                                    setWbAutocomplete({ playId, query: e.target.value });
+                                    // Also update play immediately if it matches exact? Or wait for selection?
+                                    // User expects "type to filter", then select. 
+                                    // But maybe they just want to type "A12" and be done.
+                                    // Let's update play on blur or exact match if validation needed.
+                                    // For now, just update local query state.
+                                }}
+                                onBlur={() => {
+                                    // Delay to allow click
+                                    setTimeout(() => {
+                                        if (wbAutocomplete.playId === playId) {
+                                            // Commit value on blur if valid? Or just keep what they typed?
+                                            // If they typed something valid that's not in the list (maybe custom?), let it stick?
+                                            // Let's safe update:
+                                            if (onUpdatePlay) onUpdatePlay({ ...play, wristbandSlot: wbAutocomplete.query });
+                                            setWbAutocomplete({ playId: null, query: '' });
+                                        }
+                                    }, 200);
+                                }}
+                                style={{
+                                    width: '36px', fontSize: '0.75rem', padding: '2px 4px',
+                                    border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center',
+                                    background: play.wristbandSlot ? '#dbeafe' : 'white',
+                                    color: play.wristbandSlot ? '#1e40af' : '#64748b',
+                                    fontWeight: 'bold'
+                                }}
+                            />
+                            {isFocused && candidates.length > 0 && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', right: 0, 
+                                    background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50,
+                                    maxHeight: '150px', overflowY: 'auto', minWidth: '60px'
+                                }}>
+                                    {candidates.map(slot => (
+                                        <div
+                                            key={slot}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault(); // Prevent blur
+                                                if (onUpdatePlay) onUpdatePlay({ ...play, wristbandSlot: slot });
+                                                setWbAutocomplete({ playId: null, query: '' });
+                                            }}
+                                            style={{
+                                                padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer',
+                                                borderBottom: '1px solid #f1f5f9', hover: { background: '#f8fafc' } // Inline hover not supported, relying on standard behavior
+                                            }}
+                                        >
+                                            {slot}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                };
+
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'white', borderRadius: '4px', height: '100%' }}>
                         {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
@@ -35081,33 +35162,38 @@
                                         </div>
 
                                         {/* Left Play Slot */}
-                                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
-                                            <PlaySlot
-                                                playId={row.content}
-                                                isLocked={isLocked}
-                                                onUpdate={(pid) => {
-                                                    const newLayouts = { ...gamePlanLayouts };
-                                                    const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                                                    if (!targetSection.rows) targetSection.rows = [];
-                                                    if (!targetSection.rows[rowIdx]) targetSection.rows[rowIdx] = { id: Date.now(), label: (rowIdx + 1).toString(), content: '' };
-
-                                                    targetSection.rows[rowIdx].content = pid;
-                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                }}
-                                            />
+                                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center', paddingRight: '4px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <PlaySlot
+                                                    playId={row.content}
+                                                    isLocked={isLocked}
+                                                    onUpdate={(pid) => {
+                                                        const newLayouts = { ...gamePlanLayouts };
+                                                        const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                        if (!targetSection.rows) targetSection.rows = [];
+                                                        if (!targetSection.rows[rowIdx]) targetSection.rows[rowIdx] = { id: Date.now(), label: (rowIdx + 1).toString(), content: '' };
+                                                        targetSection.rows[rowIdx].content = pid;
+                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                    }}
+                                                />
+                                            </div>
+                                            {renderWristbandInput(row.content)}
                                         </div>
 
                                         {/* Right Play Slot */}
-                                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
-                                            <PlaySlot
-                                                playId={row.contentRight}
-                                                isLocked={isLocked}
-                                                onUpdate={(pid) => {
-                                                    const newLayouts = { ...gamePlanLayouts };
-                                                    newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].contentRight = pid;
-                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                }}
-                                            />
+                                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: 'white', minHeight: '40px', display: 'flex', alignItems: 'center', paddingRight: '4px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <PlaySlot
+                                                    playId={row.contentRight}
+                                                    isLocked={isLocked}
+                                                    onUpdate={(pid) => {
+                                                        const newLayouts = { ...gamePlanLayouts };
+                                                        newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].contentRight = pid;
+                                                        if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                                    }}
+                                                />
+                                            </div>
+                                            {renderWristbandInput(row.contentRight)}
                                         </div>
                                     </div>
 
@@ -35124,17 +35210,10 @@
                                                     if (onUpdateLayouts) onUpdateLayouts(newLayouts);
                                                 }}
                                                 style={{
-                                                    fontSize: '0.65rem',
-                                                    fontWeight: 'bold',
-                                                    padding: '2px 4px',
-                                                    borderRadius: '12px',
-                                                    border: '1px solid #e2e8f0',
-                                                    background: '#f1f5f9',
-                                                    cursor: !isLocked ? 'pointer' : 'default',
+                                                    fontSize: '0.65rem', fontWeight: 'bold', padding: '2px 4px', borderRadius: '12px',
+                                                    border: '1px solid #e2e8f0', background: '#f1f5f9', cursor: !isLocked ? 'pointer' : 'default',
                                                     color: protocolList.find(p => p.id === (tempos[rowIdx] || 'REGULAR'))?.color || '#64748b',
-                                                    appearance: 'none',
-                                                    textAlign: 'center',
-                                                    minWidth: '100px'
+                                                    appearance: 'none', textAlign: 'center', minWidth: '100px'
                                                 }}
                                             >
                                                 {protocolList.map(proto => (
@@ -35161,76 +35240,51 @@
                                 </button>
                             )}
                         </div>
-
-                        {/* Custom Note Section Display */}
                         {box.notes && (
                             <div style={{ marginTop: '8px', padding: '6px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.8rem', color: '#92400e', fontStyle: 'italic' }}>
                                 <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem', display: 'block', marginBottom: '2px' }}>Notes:</span>
                                 {box.notes}
                             </div>
                         )}
-
-
                         {isEditing && (
                             <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '12px', marginTop: '12px' }}>
                                 <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Manage Script Tempos</div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
                                     {(box.customTempos || PLAY_PROTOCOLS).map((proto, pIdx) => (
                                         <div key={proto.id || pIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                                            <input
-                                                type="color"
-                                                value={proto.color}
-                                                onChange={(e) => {
-                                                    const newLayouts = { ...gamePlanLayouts };
-                                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                                                    if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
-                                                    b.customTempos[pIdx] = { ...b.customTempos[pIdx], color: e.target.value };
-                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                }}
-                                                style={{ width: '24px', height: '24px', border: 'none', padding: 0, background: 'none', cursor: 'pointer' }}
-                                            />
-                                            <input
-                                                value={proto.label}
-                                                onChange={(e) => {
-                                                    const newLayouts = { ...gamePlanLayouts };
-                                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                                                    if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
-                                                    b.customTempos[pIdx] = { ...b.customTempos[pIdx], label: e.target.value };
-                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                }}
-                                                style={{ fontSize: '0.8rem', flex: 1, border: 'none', background: 'transparent', fontWeight: '500' }}
-                                            />
-                                            <button
-                                                className="btn-sm"
-                                                onClick={() => {
-                                                    const newLayouts = { ...gamePlanLayouts };
-                                                    const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
-                                                    if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
-                                                    b.customTempos.splice(pIdx, 1);
-                                                    if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                }}
-                                                style={{ border: 'none', background: 'none', color: '#ef4444', padding: '0 4px', cursor: 'pointer' }}
-                                            ><Icon name="Trash2" size={14} /></button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <input
-                                        placeholder="Add tempo label..."
-                                        style={{ flex: 1, fontSize: '0.8rem', padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                const label = e.target.value.trim();
-                                                if (!label) return;
+                                            <input type="color" value={proto.color} onChange={(e) => {
                                                 const newLayouts = { ...gamePlanLayouts };
                                                 const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
                                                 if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
-                                                b.customTempos.push({ id: `custom_${Date.now()}`, label, color: '#64748b' });
+                                                b.customTempos[pIdx] = { ...b.customTempos[pIdx], color: e.target.value };
                                                 if (onUpdateLayouts) onUpdateLayouts(newLayouts);
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                    />
+                                            }} style={{ width: '24px', height: '24px', border: 'none', padding: 0, background: 'none', cursor: 'pointer' }} />
+                                            <input value={proto.label} onChange={(e) => {
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                b.customTempos[pIdx] = { ...b.customTempos[pIdx], label: e.target.value };
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            }} style={{ flex: 1, border: 'none', background: 'transparent', fontWeight: 'bold', color: '#334155' }} />
+                                            <button onClick={() => {
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                b.customTempos = b.customTempos.filter((_, i) => i !== pIdx);
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            }} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
+                                        </div>
+                                    ))}
+                                    <input placeholder="Add tempo label..." onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.target.value) {
+                                            const newLayouts = { ...gamePlanLayouts };
+                                            const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                            if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                            b.customTempos.push({ id: `custom_${Date.now()}`, label: e.target.value, color: '#3b82f6' });
+                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            e.target.value = '';
+                                        }
+                                    }} style={{ padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.8rem' }} />
                                 </div>
                             </div>
                         )}
@@ -36281,6 +36335,177 @@
                 setDraggedCell(null);
             };
 
+            const renderFZDnDView = () => {
+                const FZDND_ZONES = [
+                    { id: 'openers', title: 'Openers vs.', color: '#fef08a', textColor: 'black', columns: ['Philosophy', '1st & 10', '2nd & <5', '2nd & 5+', '3rd & <5', '3rd & 5+'] },
+                    { id: 'black', title: 'Black Zone (Goalline to -10)', color: 'black', textColor: 'white' },
+                    { id: 'red', title: 'Red Zone (-10 to -40)', color: '#ef4444', textColor: 'white' },
+                    { id: 'yellow', title: 'Yellow Zone (-40 to +40)', color: '#fef08a', textColor: 'black' },
+                    { id: 'gold', title: 'Gold Zone - Take A Shot (+40 to Endzone)', color: '#f59e0b', textColor: 'black' },
+                    { id: 'green', title: 'Green Zone (+20 to Endzone)', color: '#22c55e', textColor: 'black' },
+                    { id: '4min', title: '4:00 Offense', color: '#1e1b4b', textColor: '#fef08a' }, // Dark Blue
+                    { id: '2min', title: '2:00 Offense', color: '#dc2626', textColor: 'black', columns: ['Philosophy', 'Personnel', 'Timeouts', 'Max Protect', 'First Downs', 'Think Plays'] },
+                    { id: '2pt', title: 'Two Point Plays', color: 'black', textColor: 'white', columns: [] }
+                ];
+
+                const handleFZDnDDrop = (e, zoneId, colIdx) => {
+                    e.preventDefault();
+                    if (isLocked) return;
+                    try {
+                        const data = JSON.parse(e.dataTransfer.getData('application/react-dnd'));
+                        if (data && data.playId) {
+                            const setId = `fzdnd_${zoneId}_${colIdx}`;
+                            let newSets = [...(gamePlan?.sets || [])];
+                            let setIndex = newSets.findIndex(s => s.id === setId);
+                            
+                            if (setIndex === -1) {
+                                newSets.push({ id: setId, name: `${zoneId} - ${colIdx}`, playIds: [data.playId] });
+                            } else {
+                                const existingSet = { ...newSets[setIndex] };
+                                if (!existingSet.playIds.includes(data.playId)) {
+                                    existingSet.playIds = [...existingSet.playIds, data.playId];
+                                    newSets[setIndex] = existingSet;
+                                }
+                            }
+                            onUpdateGamePlan({ ...gamePlan, sets: newSets });
+                        }
+                    } catch (e) { }
+                };
+                
+                const handleRemoveFromFZDnD = (zoneId, colIdx, playId) => {
+                     const setId = `fzdnd_${zoneId}_${colIdx}`;
+                     let newSets = [...(gamePlan?.sets || [])];
+                     let setIndex = newSets.findIndex(s => s.id === setId);
+                     if (setIndex !== -1) {
+                        const existingSet = { ...newSets[setIndex] };
+                        existingSet.playIds = existingSet.playIds.filter(id => id !== playId);
+                        newSets[setIndex] = existingSet;
+                        onUpdateGamePlan({ ...gamePlan, sets: newSets });
+                     }
+                };
+
+                const updateZoneNote = (zoneId, note) => {
+                    const newNotes = { ...(gamePlan?.zoneNotes || {}) };
+                    newNotes[zoneId] = note;
+                    onUpdateGamePlan({ ...gamePlan, zoneNotes: newNotes });
+                };
+
+                const updatePlayWristband = (playId, slot) => {
+                     if (onUpdatePlay) {
+                        const play = plays.find(p => p.id === playId);
+                        if (play) {
+                            onUpdatePlay({ ...play, wristbandSlot: slot });
+                        }
+                     }
+                };
+
+                return (
+                    <div style={{ height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
+                        {FZDND_ZONES.map((zone) => {
+                             const definedCols = zone.columns || ['Philosophy', '1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
+                             const hasPhilosophy = definedCols[0] === 'Philosophy';
+                             const dataCols = hasPhilosophy ? definedCols.slice(1) : definedCols;
+
+                             return (
+                                <div key={zone.id} style={{ marginBottom: '0', border: '2px solid black' }}>
+                                    <div style={{ background: zone.color, color: zone.textColor, padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '1.4rem', textTransform: 'uppercase', fontStyle: 'italic', borderBottom: '2px solid black' }}>
+                                        {zone.title}
+                                    </div>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: hasPhilosophy ? '125px 1fr' : '1fr' }}>
+                                        {hasPhilosophy && (
+                                            <div style={{ borderRight: '2px solid black', padding: '0', display: 'flex', flexDirection: 'column' }}>
+                                                <div style={{ padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '1.2rem', background: 'white', color: 'black', fontStyle: 'italic', borderBottom: '1px solid black' }}>
+                                                    Philosophy:
+                                                </div>
+                                                <textarea
+                                                    style={{ 
+                                                        flex: 1, width: '100%', border: 'none', padding: '12px', resize: 'none', outline: 'none', 
+                                                        fontFamily: 'inherit', minHeight: '150px', fontSize: '0.9rem', lineHeight: '1.4'
+                                                    }}
+                                                    placeholder="What is our team's identity here?&#10;What do I need to be reminded of in this zone?"
+                                                    value={(gamePlan?.zoneNotes || {})[zone.id] || ''}
+                                                    onChange={(e) => updateZoneNote(zone.id, e.target.value)}
+                                                    disabled={isLocked}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            {dataCols.length > 0 && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`, borderBottom: '1px solid black' }}>
+                                                    {dataCols.map((colName, cIdx) => (
+                                                        <div key={cIdx} style={{ padding: '8px', textAlign: 'center', fontWeight: '800', fontSize: '1.2rem', borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none', background: 'white', color: 'black', fontStyle: 'italic' }}>
+                                                            {colName}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {dataCols.length > 0 && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`, flex: 1 }}>
+                                                    {dataCols.map((colName, cIdx) => {
+                                                        const realIdx = hasPhilosophy ? cIdx + 1 : cIdx;
+                                                        const setId = `fzdnd_${zone.id}_${realIdx}`;
+                                                        const set = (gamePlan?.sets || []).find(s => s.id === setId);
+                                                        const zonePlays = set ? set.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean) : [];
+                                                        
+                                                        return (
+                                                            <div 
+                                                                key={cIdx} 
+                                                                style={{ borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none', minHeight: '150px', background: 'white' }}
+                                                                onDragOver={(e) => e.preventDefault()}
+                                                                onDrop={(e) => handleFZDnDDrop(e, zone.id, realIdx)}
+                                                            >
+                                                                <div style={{ padding: '0' }}>
+                                                                    {zonePlays.map((play, pIdx) => (
+                                                                        <div key={play.id} style={{ 
+                                                                            padding: '6px 8px', borderBottom: '1px solid #cbd5e1', fontSize: '0.9rem', fontWeight: '600',
+                                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: play.priority ? '#fef08a' : pIdx % 2 === 0 ? 'white' : '#f8fafc'
+                                                                        }}>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                                                                 {/* WRISTBAND INPUT */}
+                                                                                 <div style={{ position: 'relative', width: '36px' }}>
+                                                                                     <input
+                                                                                        type="text"
+                                                                                        value={play.wristbandSlot || ''}
+                                                                                        placeholder="#"
+                                                                                        onChange={(e) => updatePlayWristband(play.id, e.target.value)}
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                        style={{ 
+                                                                                            width: '100%', fontSize: '0.75rem', padding: '2px 4px', 
+                                                                                            border: '1px solid #94a3b8', borderRadius: '4px', textAlign: 'center',
+                                                                                            background: play.wristbandSlot ? '#dbeafe' : 'white',
+                                                                                            color: play.wristbandSlot ? '#1e40af' : '#64748b',
+                                                                                            fontWeight: 'bold'
+                                                                                        }}
+                                                                                     />
+                                                                                 </div>
+                                                                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
+                                                                            </div>
+                                                                            {!isLocked && (
+                                                                                <button onClick={() => handleRemoveFromFZDnD(zone.id, realIdx, play.id)} style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}>×</button>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                     {Array.from({ length: Math.max(0, 5 - zonePlays.length) }).map((_, i) => (
+                                                                        <div key={`empty-${i}`} style={{ height: '32px', borderBottom: '1px solid #e2e8f0' }}></div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                             );
+                        })}
+                    </div>
+                );
+            };
+
             const renderSheetView = () => {
                 return (
                     <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
@@ -36351,7 +36576,6 @@
                                         const gridPlays = (getGridPlays(box.setId, totalSlots) || []);
                                         const headings = box.gridHeadings || Array(cols).fill('').map((_, i) => i === 0 ? 'LEFT HASH' : (i===cols-1 ? 'NOTES' : `COL ${i+1}`));
                                         
-                                        // Chunk plays into rows
                                         const rows = [];
                                         for (let i = 0; i < gridPlays.length; i += cols) {
                                             rows.push(gridPlays.slice(i, i + cols));
@@ -36375,7 +36599,6 @@
                                                 {/* Data Rows */}
                                                 {rows.map((rowSlots, rIdx) => (
                                                     <React.Fragment key={rIdx}>
-                                                        {/* Row Label */}
                                                         <div style={{ 
                                                             padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold', 
                                                             display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
@@ -36383,19 +36606,13 @@
                                                         }}>
                                                             {rIdx + 1}
                                                         </div>
-                                                        {/* Slots */}
                                                         {rowSlots.map((slot, cIdx) => {
                                                             const play = plays.find(p => p.id === slot.id);
                                                             return (
                                                                 <div key={cIdx} style={{ 
-                                                                    fontSize: '0.65rem', 
-                                                                    overflow: 'hidden', 
-                                                                    whiteSpace: 'nowrap', 
-                                                                    textOverflow: 'ellipsis', 
-                                                                    background: slot.type === 'GAP' ? 'transparent' : '#f8fafc', 
-                                                                    padding: '2px', 
-                                                                    minHeight: '16px',
-                                                                    color: '#334155',
+                                                                    fontSize: '0.65rem',overflow: 'hidden',whiteSpace: 'nowrap',textOverflow: 'ellipsis',
+                                                                    background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
+                                                                    padding: '2px',minHeight: '16px',color: '#334155',
                                                                     display: 'flex', alignItems: 'center',
                                                                     borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                                                                     borderBottom: '1px dotted #e2e8f0'
@@ -36444,7 +36661,6 @@
                                             </div>
                                         );
                                     }
-                                    // Default
                                     const playsInBox = getPlaysForSet(box.setId);
                                     if (playsInBox.length === 0) {
                                         return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
@@ -38053,6 +38269,9 @@
                             <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
                                 STRIKE 'EM OUT
                             </button>
+                            <button className={`btn ${viewMode === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('fzdnd')}>
+                                FZDnD
+                            </button>
                             <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
                                 PLAYER TOUCHES
                             </button>
@@ -38069,6 +38288,7 @@
                     <div style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px' }}>
                         {viewMode === 'call-sheet' && renderCallSheet()}
                         {viewMode === 'sheet' && renderSheetView()}
+                            {viewMode === 'fzdnd' && renderFZDnDView()}
                         {viewMode === 'matrix' && renderMatrix()}
                         {viewMode === 'player-touches' && renderPlayerTouches()}
                         {viewMode === 'priority' && renderPriorityPlays()}
