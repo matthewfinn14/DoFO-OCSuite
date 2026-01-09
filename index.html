@@ -2243,13 +2243,15 @@
                                                 type="checkbox"
                                                 checked={!!play.priority}
                                                 onChange={(e) => {
+                                                    const newVal = !play.priority;
+                                                    setLocalItems(prev => prev.map(p => p.id === play.id ? { ...p, priority: newVal } : p));
                                                     handleTogglePriority(play.id);
                                                 }}
                                                 onClick={e => e.stopPropagation()}
                                                 onMouseDown={e => e.stopPropagation()}
                                                 style={{ cursor: 'pointer', margin: 0 }}
                                             />
-                                            <span style={{ color: '#64748b' }}>Star</span>
+                                            <span style={{ color: '#64748b' }}>Priority</span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <input
@@ -2267,7 +2269,9 @@
                                                 type="checkbox"
                                                 checked={!!play.isRooski}
                                                 onChange={(e) => {
-                                                    onUpdatePlay(play.id, { isRooski: e.target.checked });
+                                                    const newVal = e.target.checked;
+                                                    setLocalItems(prev => prev.map(p => p.id === play.id ? { ...p, isRooski: newVal } : p));
+                                                    onUpdatePlay(play.id, { isRooski: newVal });
                                                 }}
                                                 onClick={e => e.stopPropagation()}
                                                 onMouseDown={e => e.stopPropagation()}
@@ -2280,7 +2284,9 @@
                                                 type="checkbox"
                                                 checked={!!play.isMiniScript}
                                                 onChange={(e) => {
-                                                    onUpdatePlay(play.id, { isMiniScript: e.target.checked });
+                                                    const newVal = e.target.checked;
+                                                    setLocalItems(prev => prev.map(p => p.id === play.id ? { ...p, isMiniScript: newVal } : p));
+                                                    onUpdatePlay(play.id, { isMiniScript: newVal });
                                                 }}
                                                 onClick={e => e.stopPropagation()}
                                                 onMouseDown={e => e.stopPropagation()}
@@ -2367,17 +2373,7 @@
                                     </div>
                                 </div>
 
-                                {/* Duplicate Button */}
-                                {onDuplicatePlay && (
-                                    <button
-                                        className="btn-ghost"
-                                        onClick={(e) => { e.stopPropagation(); onDuplicatePlay(play.id); }}
-                                        style={{ padding: '2px', color: '#3b82f6', flexShrink: 0, marginRight: '2px' }}
-                                        title="Duplicate Play"
-                                    >
-                                        <Icon name="Copy" size={14} />
-                                    </button>
-                                )}
+
 
                                 {/* Remove Button */}
                                 <button
@@ -25014,47 +25010,93 @@
 
             const handleListChange = (newItems, listType) => {
                 // Determine the NEW State for the whole Install List
-                // We need to merge this new partial list with the OTHER partial list
+                // We need to merge this new partial list with the REST of the list
+                // without losing items from other columns.
 
-                // 1. Identify IDs in the new partial list
+                // 1. Get current full list
+                const fullListIds = week.installList || [];
+
+                // 2. Identify IDs in the new partial list (the column that changed)
                 const newIdsSet = new Set(newItems.map(p => p.id));
 
-                // 2. Helper to fetch the *other* list from source of truth, removing any that moved here
-                const getOtherList = (otherType) => {
-                    const fullList = week.installList || [];
-                    const mapped = fullList.map(id => plays.find(p => p.id === id)).filter(Boolean);
-                    // Standard filter for the other type
-                    const others = mapped.filter(p => {
-                        if (listType === 'Run') return p.type === 'Pass'; // If I am Run, other is Pass
-                        return (!p.type || p.type === 'Run'); // If I am Pass, other is Run
-                    });
-                    // CRITICAL: Filter out any ID that is present in the NEW list (moved items)
-                    return others.filter(p => !newIdsSet.has(p.id));
-                };
+                // 3. Get all items currently in the full list that are NOT in this new partial list
+                // We preserve their relative order as much as possible
+                const otherIds = fullListIds.filter(id => !newIdsSet.has(id));
 
-                // 3. Update Types if needed
-                newItems.forEach(p => {
-                    if (listType === 'Run' && p.type === 'Pass') {
-                        setTimeout(() => onUpdatePlay(p.id, { type: 'Run' }), 0);
-                    } else if (listType === 'Pass' && (!p.type || p.type === 'Run')) {
-                        setTimeout(() => onUpdatePlay(p.id, { type: 'Pass' }), 0);
-                    }
-                });
+                // 4. Combine based on column implementation
+                // If we want to maintain the "Runs, then Passes, then Screens" order in the raw list,
+                // we can try to do that, but simply concatenating [others(filtered)] + [new] might shuffle them.
+                // A better approach for ReactSortable "multi-drag" or "columns" is:
+                // We trust the *filters* to separate them visually.
+                // So the `installList` order just needs to contain everyone.
+                // However, if we just append, items might jump around if we re-render.
+                // Ideally, we want to Replace the items that "belong" to this column with the new order,
+                // and leave the others alone.
 
-                // 4. Combine
-                const myIds = newItems.map(p => p.id);
-                const otherIds = getOtherList(listType === 'Run' ? 'Pass' : 'Run').map(p => p.id);
+                // But `handleListChange` is triggered by ReactSortable which gives us the NEW list for THIS column.
 
-                // Consistently order: Runs then Passes
-                let combinedIds;
+                // Strategy:
+                // Reconstruct the master list by concatenating the columns in a verified order.
+                // But we only have the "new" state for ONE column. We need the "current" state for the others.
+
+                // Fetch all hydrated plays to sort them into buckets
+                const allHydrated = fullListIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
+
+                // Define buckets based on the SAME logic as the UI rendering
+                // RUNS: Run, RPO, or undefined
+                // PASSES: Pass, QUICK, INTER, SHOT, PAP
+                // SCREENS: Screen, GADGET
+
+                const isRun = (p) => !p.type || p.type === 'Run' || p.type === 'RPO';
+                const isPass = (p) => ['Pass', 'QUICK', 'INTER', 'SHOT', 'PAP'].includes(p.type);
+                const isScreen = (p) => ['Screen', 'GADGET'].includes(p.type);
+
+                // Bucket the *other* items (those not in the current modified column)
+                // Actually, simpler:
+                // If I am modifying 'Pass' column:
+                // New Master List = [CurrentRuns] + [NewPasses] + [CurrentScree     // We need to know which column we are modifying to re-assemble correctly.
+                // `listType` arg gives us this ('Run', 'Pass', 'Screen').
+
+                const currentRuns = allHydrated.filter(p => isRun(p) && !newIdsSet.has(p.id));
+               const currentPasses = allHydrated.filter(p => isPass(p) && !newIdsSet.has(p.id));
+                const currentScreens = allHydrated.filter(p => isScreen(p) && !newIdsSet.has(p.id));
+
+                let finalIds = [];
+
                 if (listType === 'Run') {
-                    combinedIds = [...myIds, ...otherIds];
+                    // We are updating Run column. 
+                    // New Runs + Old Passes + Old Screens
+                    finalIds = [...newItems.map(p => p.id), ...currentPasses.map(p => p.id), ...currentScreens.map(p => p.id)];
+                } else if (listType === 'Pass') {
+                    // Old Runs + New Passes + Old Screens
+                    finalIds = [...currentRuns.map(p => p.id), ...newItems.map(p => p.id), ...currentScreens.map(p => p.id)];
+                } else if (listType === 'Screen') {
+                    // Old Runs + Old Passes + New Screens
+                    finalIds = [...currentRuns.map(p => p.id), ...currentPasses.map(p => p.id), ...newItems.map(p => p.id)];
                 } else {
-                    combinedIds = [...otherIds, ...myIds];
+                    // Fallback
+                    finalIds = [...otherIds, ...newItems.map(p => p.id)];
                 }
 
                 // Update Week
-                onUpdateWeek(week.id, 'installList', combinedIds);
+                onUpdateWeek(week.id, 'installList', finalIds);
+
+                // Handle Type mutations if drag-between-columns is authorized
+                // (Optional: If we want dragging from Run -> Pass to change type to Pass)
+                // For now, let's keep it handled by the user explicitly changing type via Modal, 
+                // unless we want drag-to-sort to also be drag-to-convert.
+                // The previous code had it. Let's supporting it for the MAIN types.
+                newItems.forEach(p => {
+                    if (listType === 'Run' && !isRun(p)) {
+                                     .id, { type: 'Run' });
+                    }
+                    if (listType === 'Pass' && !isPass(p)) {
+                                      id, { type: 'Pass' });
+                    }
+                    if (listType === 'Screen' && !isScreen(p)) {
+                                       d, { type: 'Screen' });
+                    }
+                });
             };
 
             const getWristbandSlot = (playId) => {
@@ -25407,12 +25449,12 @@
                                 <div style={{ padding: '0.75rem', background: '#eff6ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#1d4ed8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>PASSES</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#dbeafe', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => p.type === 'Pass').length}
+                                        {hydratedInstall.filter(p => ['Pass', 'QUICK', 'INTER', 'SHOT', 'PAP'].includes(p.type)).length}
                                     </span>
                                 </div>
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                                     <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => p.type === 'Pass')}
+                                        items={hydratedInstall.filter(p => ['Pass', 'QUICK', 'INTER', 'SHOT', 'PAP'].includes(p.type))}
                                         type="Pass"
                                         onListChange={(newItems) => handleListChange(newItems, 'Pass')}
                                         onUpdatePlay={onUpdatePlay}
@@ -25432,14 +25474,14 @@
                             {/* FAR RIGHT COLUMN: SCREENS */}
                             <div style={{ display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
                                 <div style={{ padding: '0.75rem', background: '#faf5ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#7e22ce', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>SCREENS</span>
+                                    <span>SCREENS & GADGETS</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#f3e8ff', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => p.type === 'Screen').length}
+                                        {hydratedInstall.filter(p => ['Screen', 'GADGET'].includes(p.type)).length}
                                     </span>
                                 </div>
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                                     <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => p.type === 'Screen')}
+                                        items={hydratedInstall.filter(p => ['Screen', 'GADGET'].includes(p.type))}
                                         type="Screen"
                                         onListChange={(newItems) => handleListChange(newItems, 'Screen')}
                                         onUpdatePlay={onUpdatePlay}
@@ -25512,10 +25554,11 @@
                                     display: 'flex', flexDirection: 'column', overflow: 'hidden'
                                 }} onClick={e => e.stopPropagation()}>
 
+
                                     {/* HEADER */}
                                     <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Assign Situations</div>
+                                            <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.9rem' }}>{play.name}</div>
                                             <button
                                                 onClick={() => setAssignmentModalState(null)}
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
@@ -25523,6 +25566,38 @@
                                                 ×
                                             </button>
                                         </div>
+
+                                        {/* Play Type Toggles */}
+                                        <div style={{ marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Play Type</div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                {['Run', 'RPO', 'Pass', 'QUICK', 'INTER', 'SHOT', 'PAP', 'Screen', 'GADGET'].map(type => {
+                                                    const isSelected = (!play.type && type === 'Run') || play.type === type;
+                                                    return (
+                                                        <button
+                                                            key={type}
+                                                            onClick={() => {
+                                                                if (onUpdatePlay) onUpdatePlay(playId, { type });
+                                                            }}
+                                                            className="btn-xs"
+                                                            style={{
+                                                                background: isSelected ? '#3b82f6' : 'white',
+                                                                color: isSelected ? 'white' : '#64748b',
+                                                                border: isSelected ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                                                                fontSize: '0.7rem',
+                                                                padding: '2px 6px',
+                                                                cursor: 'pointer',
+                                                                borderRadius: '4px'
+                                                            }}
+                                                        >
+                                                            {type}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '4px' }}>Assign Situations</div>
 
                                         {/* Checkboxes */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -36669,17 +36744,30 @@
 
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                 {dataCols.length > 0 && (
-                                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`, borderBottom: '1px solid black' }}>
+                                                    <div style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`,
+                                                        flex: 1,
+                                                        borderBottom: '1px solid black'
+                                                    }}>
+                                                        {/* HEADERS */}
                                                         {dataCols.map((colName, cIdx) => (
-                                                            <div key={cIdx} style={{ padding: '8px', textAlign: 'center', fontWeight: '800', fontSize: '1.2rem', borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none', background: 'white', color: 'black', fontStyle: 'italic' }}>
+                                                            <div key={`header-${cIdx}`} style={{
+                                                                padding: '8px',
+                                                                textAlign: 'center',
+                                                                fontWeight: '800',
+                                                                fontSize: '1.0rem',
+                                                                borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none',
+                                                                borderBottom: '1px solid black',
+                                                                background: 'white',
+                                                                color: 'black',
+                                                                fontStyle: 'italic'
+                                                            }}>
                                                                 {colName}
                                                             </div>
                                                         ))}
-                                                    </div>
-                                                )}
 
-                                                {dataCols.length > 0 && (
-                                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${dataCols.length}, 1fr)`, flex: 1 }}>
+                                                        {/* CONTENT COLUMNS */}
                                                         {dataCols.map((colName, cIdx) => {
                                                             const realIdx = hasPhilosophy ? cIdx + 1 : cIdx;
                                                             const setId = `fzdnd_${zone.id}_${realIdx}`;
@@ -36688,16 +36776,24 @@
 
                                                             return (
                                                                 <div
-                                                                    key={cIdx}
-                                                                    style={{ borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none', minHeight: '150px', background: 'white' }}
+                                                                    key={`content-${cIdx}`}
+                                                                    style={{
+                                                                        borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none',
+                                                                        minHeight: '150px',
+                                                                        background: 'white',
+                                                                        display: 'flex',
+                                                                        flexDirection: 'column'
+                                                                    }}
                                                                     onDragOver={(e) => e.preventDefault()}
                                                                     onDrop={(e) => handleFZDnDDrop(e, zone.id, realIdx)}
                                                                 >
-                                                                    <div style={{ padding: '0' }}>
+                                                                    <div style={{ padding: '0', flex: 1 }}>
                                                                         {zonePlays.map((play, pIdx) => (
                                                                             <div key={play.id} style={{
-                                                                                padding: '6px 8px', borderBottom: '1px solid #cbd5e1', fontSize: '0.9rem', fontWeight: '600',
-                                                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: play.priority ? '#fef08a' : pIdx % 2 === 0 ? 'white' : '#f8fafc'
+                                                                                padding: '4px 6px', borderBottom: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: '600',
+                                                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                                                background: play.priority ? '#fef08a' : pIdx % 2 === 0 ? 'white' : '#f8fafc',
+                                                                                color: 'black'
                                                                             }}>
                                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                                                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
