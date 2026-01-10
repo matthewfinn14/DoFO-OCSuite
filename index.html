@@ -2245,10 +2245,10 @@
                                         {/* Play Name */}
                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{getPlayDisplayName(play)}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{play.formation}</div>
+
 
                                     {/* Flags: Rooski / Mini Script / New? */}
-                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.7rem', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.7rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <input
                                                 type="checkbox"
@@ -2305,10 +2305,6 @@
                                             />
                                             <span style={{ color: '#64748b' }}>Mini Script</span>
                                         </div>
-                                    </div>
-
-                                    {/* Status Badges */}
-                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', fontSize: '0.7rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                         {/* WB Slot UI */}
                                         <div style={{ position: 'relative' }}>
                                             <button
@@ -2382,6 +2378,8 @@
                                             )}
                                         </div>
                                     </div>
+
+
                                 </div>
 
 
@@ -36932,6 +36930,46 @@
                                             padding: isSheetEditing ? '4px' : '0'
                                         }}>
                                             {visibleBoxes.map((box, bIdx) => {
+                                                // Determine if this is the first box in a row (for row-level expand button)
+                                                let isFirstInRow = false;
+                                                let currentBoxRowNumber = 1;
+                                                let cumulativeSpan = 0;
+
+                                                for (let i = 0; i < bIdx; i++) {
+                                                    const b = visibleBoxes[i];
+                                                    const bSpan = b.colSpan > 1 ? b.colSpan : (b.type === 'grid' ? 5 : 2);
+
+                                                    if (cumulativeSpan > 0 && cumulativeSpan + bSpan > 7) {
+                                                        currentBoxRowNumber++;
+                                                        cumulativeSpan = bSpan;
+                                                    } else {
+                                                        cumulativeSpan += bSpan;
+                                                    }
+                                                }
+
+                                                // Check if this is the first box in this row
+                                                if (bIdx === 0) {
+                                                    isFirstInRow = true;
+                                                } else {
+                                                    // Calculate the row number of the PREVIOUS box (bIdx - 1)
+                                                    let prevBoxRowNumber = 1;
+                                                    let prevCumulativeSpan = 0;
+
+                                                    for (let i = 0; i <= bIdx - 1; i++) {
+                                                        const b = visibleBoxes[i];
+                                                        const bSpan = b.colSpan > 1 ? b.colSpan : (b.type === 'grid' ? 5 : 2);
+
+                                                        if (prevCumulativeSpan > 0 && prevCumulativeSpan + bSpan > 7) {
+                                                            prevBoxRowNumber++;
+                                                            prevCumulativeSpan = bSpan;
+                                                        } else {
+                                                            prevCumulativeSpan += bSpan;
+                                                        }
+                                                    }
+
+                                                    isFirstInRow = currentBoxRowNumber !== prevBoxRowNumber;
+                                                }
+
                                                 const renderBoxContent = () => {
                                                     if (box.type === 'grid') {
                                                         const cols = box.gridColumns || 4;
@@ -37066,15 +37104,15 @@
                                                                 if (!section.expandToFill) {
                                                                     return `span ${box.colSpan > 1 ? box.colSpan : (box.type === 'grid' ? 5 : 2)}`;
                                                                 }
-                                                                
+
                                                                 // Calculate which row this box is in and how many boxes are in that row
                                                                 let cumulativeSpan = 0;
                                                                 let currentRowBoxes = [];
-                                                                
+
                                                                 for (let i = 0; i <= bIdx; i++) {
                                                                     const b = visibleBoxes[i];
                                                                     const bSpan = b.colSpan > 1 ? b.colSpan : (b.type === 'grid' ? 5 : 2);
-                                                                    
+
                                                                     if (cumulativeSpan + bSpan > 7 && currentRowBoxes.length > 0) {
                                                                         // This box starts a new row
                                                                         currentRowBoxes = [i];
@@ -37084,12 +37122,12 @@
                                                                         cumulativeSpan += bSpan;
                                                                     }
                                                                 }
-                                                                
+
                                                                 // Calculate span for equal distribution in this row
                                                                 const boxesInRow = currentRowBoxes.length;
                                                                 const spanPerBox = Math.floor(7 / boxesInRow);
                                                                 const isLastInRow = currentRowBoxes[currentRowBoxes.length - 1] === bIdx;
-                                                                
+
                                                                 // Last box in row gets remaining columns
                                                                 if (isLastInRow) {
                                                                     const usedColumns = spanPerBox * (boxesInRow - 1);
@@ -37135,6 +37173,36 @@
 
                                                         {/* Sheet Box Content */}
                                                         <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
+                                                            {/* Row Expand Badge - only show on first box of each row */}
+                                                            {isFirstInRow && isSheetEditing && (
+                                                                <button
+                                                                    className="btn-sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const expandedRows = section.expandedRows || [];
+                                                                        const isExpanded = expandedRows.includes(currentBoxRowNumber);
+                                                                        const newExpandedRows = isExpanded
+                                                                            ? expandedRows.filter(r => r !== currentBoxRowNumber)
+                                                                            : [...expandedRows, currentBoxRowNumber];
+                                                                        handleUpdateSheetSection(sIdx, { ...section, expandedRows: newExpandedRows });
+                                                                    }}
+                                                                    style={{
+                                                                        position: 'absolute',
+                                                                        top: '2px',
+                                                                        left: '2px',
+                                                                        background: (section.expandedRows || []).includes(currentBoxRowNumber) ? 'var(--accent)' : '#e2e8f0',
+                                                                        color: (section.expandedRows || []).includes(currentBoxRowNumber) ? 'white' : '#64748b',
+                                                                        fontSize: '0.6rem',
+                                                                        padding: '2px 4px',
+                                                                        zIndex: 100,
+                                                                        borderRadius: '3px'
+                                                                    }}
+                                                                    title={(section.expandedRows || []).includes(currentBoxRowNumber) ? 'Fixed Width' : 'Expand Row'}
+                                                                >
+                                                                    {(section.expandedRows || []).includes(currentBoxRowNumber) ? '📏' : '↔️'}
+                                                                </button>
+                                                            )}
+
                                                             {/* Render Strategy: Script Rows vs Assigned Plays */}
                                                             {renderBoxContent()}
                                                         </div>
@@ -44055,9 +44123,9 @@
         // Helper function to get play name with assignment suffix
         const getPlayDisplayName = (play) => {
             if (!play || !play.name) return '';
-            
+
             let suffix = '';
-            
+
             // Check for mini script (A or B)
             if (play.isMiniScript && play.wristbandSlot) {
                 // Extract letter from wristband slot (e.g., "A" from "A1" or "B" from "B2")
@@ -44074,7 +44142,7 @@
             else if (play.wristbandSlot && !play.isRooski && !play.isMiniScript) {
                 suffix = 'T';
             }
-            
+
             return play.name + suffix;
         };
 
