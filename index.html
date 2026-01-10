@@ -1090,8 +1090,10 @@
                 if (data.roleTasks) {
                     localStorage.setItem('staff_role_tasks', JSON.stringify(data.roleTasks));
                 }
-                if (data.rooskiLib) {
-                    localStorage.setItem('rooski_ol_library', JSON.stringify(data.rooskiLib));
+                if (data.wizLib) {
+                    localStorage.setItem('wiz_ol_library', JSON.stringify(data.wizLib));
+                } else if (data.rooskiLib) {
+                    localStorage.setItem('wiz_ol_library', JSON.stringify(data.rooskiLib));
                 }
                 // Wristband Settings
                 if (data.wbSettings) {
@@ -2310,17 +2312,17 @@
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <input
                                                 type="checkbox"
-                                                checked={!!play.isRooski}
+                                                checked={!!(play.isWiz || play.isRooski)}
                                                 onChange={(e) => {
                                                     const newVal = e.target.checked;
-                                                    setLocalItems(prev => prev.map(p => p.id === play.id ? { ...p, isRooski: newVal } : p));
-                                                    onUpdatePlay(play.id, { isRooski: newVal });
+                                                    setLocalItems(prev => prev.map(p => p.id === play.id ? { ...p, isWiz: newVal } : p));
+                                                    onUpdatePlay(play.id, { isWiz: newVal });
                                                 }}
                                                 onClick={e => e.stopPropagation()}
                                                 onMouseDown={e => e.stopPropagation()}
                                                 style={{ cursor: 'pointer', margin: 0 }}
                                             />
-                                            <span style={{ color: '#64748b' }}>Rooski</span>
+                                            <span style={{ color: '#64748b' }}>Wiz</span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <input
@@ -3078,7 +3080,7 @@
         };
 
         // --- PLAY DIAGRAM EDITOR ---
-        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], rooskiLibrary = [], setRooskiLibrary = () => { }, positionNames = {}, readOnly = false }) => {
+        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], wizLibrary = [], setWizLibrary = () => { }, positionNames = {}, readOnly = false }) => {
 
             // Helper for default formation (Red QB, Blue Skill, Black OL)
             const getDefaultFormation = () => {
@@ -3093,8 +3095,8 @@
                 // OL radius=15. Place at +18 to clear line.
                 // QB Shotgun at 5 yds = +100px.
 
-                if (mode === 'rooski-oline') {
-                    // O-Line Rooski Default (T-G-C-G-T) - Large Text, Arched
+                if (mode === 'wiz-oline') {
+                    // O-Line Wiz Default (T-G-C-G-T) - Large Text, Arched
                     // Los is 340. C at LOS. G at +15, T at +30.
                     const initialSize = 170;
                     return [
@@ -3106,8 +3108,8 @@
                     ];
                 }
 
-                if (mode === 'rooski-skill') {
-                    // Skill Rooski Default (11 Players)
+                if (mode === 'wiz-skill') {
+                    // Skill Wiz Default (11 Players)
                     // OL is smaller text (approx 40px) and tighter spacing.
                     // "Behind the LOS" -> Push Y down.
                     const initialSize = 40;
@@ -3234,14 +3236,14 @@
             const [showLineOptions, setShowLineOptions] = useState(false); // Dropdown for line options
             const [selectedPlayerIcon, setSelectedPlayerIcon] = useState({ label: 'Q', shape: 'circle' });
 
-            // Text Size State for Rooski OL
-            const [rooskiTextSize, setRooskiTextSize] = useState(170);
+            // Text Size State for Wiz OL
+            const [wizTextSize, setWizTextSize] = useState(170);
             const [customLetterInput, setCustomLetterInput] = useState('');
 
             // Field Position State (for dynamic yard lines)
             const [fieldPosition, setFieldPosition] = useState(50); // Starting yard line (0-100)
 
-            // Formation Selector State (for Rooski Skill)
+            // Formation Selector State (for Wiz Skill)
             const [selectedFormationId, setSelectedFormationId] = useState('');
 
 
@@ -3314,8 +3316,8 @@
             const [selectedIds, setSelectedIds] = useState(new Set());
             const [selectionBox, setSelectionBox] = useState(null);
 
-            // Rooski Library State (Lifted to App)
-            // rooskiLibrary passed as prop
+            // Wiz Library State (Lifted to App)
+            // wizLibrary passed as prop
             const [showSaveModal, setShowSaveModal] = useState(false);
             const [saveName, setSaveName] = useState('');
 
@@ -3334,14 +3336,14 @@
                     elements: elements
                 };
 
-                const updatedLibrary = [...rooskiLibrary, newPreset];
-                setRooskiLibrary(updatedLibrary);
-                localStorage.setItem('rooski_ol_library', JSON.stringify(updatedLibrary));
+                const updatedLibrary = [...wizLibrary, newPreset];
+                setWizLibrary(updatedLibrary);
+                localStorage.setItem('wiz_ol_library', JSON.stringify(updatedLibrary));
                 setShowSaveModal(false);
             };
 
-            const loadRooskiPreset = (presetId) => {
-                const preset = rooskiLibrary.find(p => p.id === parseInt(presetId));
+            const loadWizPreset = (presetId) => {
+                const preset = wizLibrary.find(p => p.id === parseInt(presetId));
                 if (preset) {
                     if (elements.length > 0 && !window.confirm(`Load "${preset.name}"? This will replace current drawing.`)) return;
                     // Ensure IDs are unique to avoid conflicts if re-saving?
@@ -3354,11 +3356,11 @@
                 }
             };
 
-            const deleteRooskiPreset = (presetId) => {
+            const deleteWizPreset = (presetId) => {
                 if (!window.confirm("Delete this preset?")) return;
-                const updatedLibrary = rooskiLibrary.filter(p => p.id !== parseInt(presetId));
-                setRooskiLibrary(updatedLibrary);
-                localStorage.setItem('rooski_ol_library', JSON.stringify(updatedLibrary));
+                const updatedLibrary = wizLibrary.filter(p => p.id !== parseInt(presetId));
+                setWizLibrary(updatedLibrary);
+                localStorage.setItem('wiz_ol_library', JSON.stringify(updatedLibrary));
             };
 
             // Drag State
@@ -3679,8 +3681,8 @@
                 // (Drag Logic moved up)
             };
 
-            // Rooski Skill Formation (Custom Colors/Labels)
-            const getRooskiFormation = (forcedSize) => {
+            // Wiz Skill Formation (Custom Colors/Labels)
+            const getWizFormation = (forcedSize) => {
                 const center = 400;
                 const los = 340; // Same geometry as default
 
@@ -3695,12 +3697,12 @@
                 const cB = '#3b82f6'; // Blue (RB)
 
                 return [
-                    // OL - Text Only (Respects rooskiTextSize)
-                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cOL, label: 'C', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
-                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 170, y: los + 18 + 15 }], color: cOL, label: 'G', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
-                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 170, y: los + 18 + 15 }], color: cOL, label: 'G', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
-                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 340, y: los + 18 + 30 }], color: cOL, label: 'T', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
-                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 340, y: los + 18 + 30 }], color: cOL, label: 'T', shape: 'text-only', fontSize: forcedSize || rooskiTextSize },
+                    // OL - Text Only (Respects wizTextSize)
+                    { id: Date.now() + 1, type: 'player', points: [{ x: center, y: los + 18 }], color: cOL, label: 'C', shape: 'text-only', fontSize: forcedSize || wizTextSize },
+                    { id: Date.now() + 2, type: 'player', points: [{ x: center - 170, y: los + 18 + 15 }], color: cOL, label: 'G', shape: 'text-only', fontSize: forcedSize || wizTextSize },
+                    { id: Date.now() + 3, type: 'player', points: [{ x: center + 170, y: los + 18 + 15 }], color: cOL, label: 'G', shape: 'text-only', fontSize: forcedSize || wizTextSize },
+                    { id: Date.now() + 4, type: 'player', points: [{ x: center - 340, y: los + 18 + 30 }], color: cOL, label: 'T', shape: 'text-only', fontSize: forcedSize || wizTextSize },
+                    { id: Date.now() + 5, type: 'player', points: [{ x: center + 340, y: los + 18 + 30 }], color: cOL, label: 'T', shape: 'text-only', fontSize: forcedSize || wizTextSize },
                     // QB - Red
                     { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 100 }], color: cQB, label: 'Q', shape: 'circle' },
                     // B (was RB) - Blue
@@ -3721,10 +3723,10 @@
                 updateElements(getDefaultFormation());
             };
 
-            const handleRooskiOffense = () => {
+            const handleWizOffense = () => {
                 if (elements.length > 0 && !window.confirm('Clear current diagram?')) return;
-                setRooskiTextSize(170); // Ensure state is updated for controls
-                updateElements(getRooskiFormation(170)); // Pass explicit size
+                setWizTextSize(170); // Ensure state is updated for controls
+                updateElements(getWizFormation(170)); // Pass explicit size
             };
 
             const handleClickElement = (elId) => {
@@ -3951,8 +3953,8 @@
             };
 
             // Toggle Rooski Node (Y or F)
-            // Toggle Rooski Node (Generic)
-            const toggleRooskiNode = (label) => {
+            // Toggle Wiz Node (Generic)
+            const toggleWizNode = (label) => {
                 setElements(prev => {
                     const exists = prev.find(e => e.label === label && e.type === 'player');
                     if (exists) {
@@ -3964,7 +3966,7 @@
                         let shape = 'square';
                         let color = '#3b82f6'; // Skill blue default
 
-                        if (mode === 'rooski-oline') {
+                        if (mode === 'wiz-oline') {
                             shape = 'text-only';
                             color = '#000000';
                             // Place below the main line so user can drag into place
@@ -3985,7 +3987,7 @@
                             label: label,
                             shape: shape,
                             variant: 'filled',
-                            fontSize: mode === 'rooski-oline' ? rooskiTextSize : undefined
+                            fontSize: mode === 'wiz-oline' ? wizTextSize : undefined
                         }];
                     }
                 });
@@ -4001,7 +4003,7 @@
                             {/* --- GROUP 1: DRAWING TOOLS & COLORS (LEFT) --- */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <div className="btn-group" style={{ display: 'flex', gap: '0.25rem' }}>
-                                    {TOOLS.filter(t => t.id !== 'delete' && !(mode === 'rooski-oline' && t.id === 'player')).map(tool => {
+                                    {TOOLS.filter(t => t.id !== 'delete' && !(mode === 'wiz-oline' && t.id === 'player')).map(tool => {
                                         if (tool.id === 'line') {
                                             return (
                                                 <div key={tool.id} style={{ position: 'relative' }}>
@@ -4062,7 +4064,7 @@
 
                             {/* --- GROUP 2: CONFIG & SELECTORS (CENTER) --- */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                {mode !== 'rooski-oline' && (
+                                {mode !== 'wiz-oline' && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                         <label style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 'bold' }}>Field:</label>
                                         <select value={fieldPosition} onChange={(e) => setFieldPosition(parseInt(e.target.value))} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', color: '#1e293b', backgroundColor: 'white' }}>
@@ -4071,7 +4073,7 @@
                                     </div>
                                 )}
 
-                                {mode.startsWith('rooski') && formations.length > 0 && (
+                                {mode.startsWith('wiz') && formations.length > 0 && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                         <label style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 'bold' }}>Formation:</label>
                                         <select value={selectedFormationId} onChange={(e) => { setSelectedFormationId(e.target.value); if (e.target.value) loadFormation(e.target.value); }} style={{ padding: '0.25rem 1.5rem 0.25rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', color: '#1e293b', backgroundColor: 'white' }}>
@@ -4081,34 +4083,34 @@
                                     </div>
                                 )}
 
-                                {(mode === 'rooski-oline' || mode === 'rooski-skill') && (
+                                {(mode === 'wiz-oline' || mode === 'wiz-skill') && (
                                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', background: '#e0f2fe', padding: '0.25rem 0.4rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
                                         <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#0369a1' }}>Personnel:</span>
-                                        {mode === 'rooski-skill' && (
+                                        {mode === 'wiz-skill' && (
                                             <div style={{ display: 'flex', gap: '2px' }}>
-                                                <button className={`btn ${elements.some(e => e.label === 'Y') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRooskiNode('Y')} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ Y</button>
-                                                <button className={`btn ${elements.some(e => e.label === 'F') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRooskiNode('F')} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ F</button>
+                                                <button className={`btn ${elements.some(e => e.label === 'Y') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleWizNode('Y')} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ Y</button>
+                                                <button className={`btn ${elements.some(e => e.label === 'F') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleWizNode('F')} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ F</button>
                                             </div>
                                         )}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                                             <input type="text" value={customLetterInput} onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())} placeholder="A" maxLength={2} style={{ width: '25px', padding: '1px', textAlign: 'center', fontSize: '0.8rem', color: '#1e293b', border: '1px solid #94a3b8', borderRadius: '2px' }} />
-                                            <button className="btn btn-secondary" onClick={() => { if (customLetterInput) { toggleRooskiNode(customLetterInput); setCustomLetterInput(''); } }} disabled={!customLetterInput} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ Add</button>
+                                            <button className="btn btn-secondary" onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }} disabled={!customLetterInput} style={{ padding: '0.1rem 0.4rem', fontSize: '0.8rem', color: '#1e293b' }}>+ Add</button>
                                         </div>
 
-                                        {mode === 'rooski-oline' && (
+                                        {mode === 'wiz-oline' && (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.25rem', padding: '0 0.25rem', borderLeft: '1px solid #7dd3fc' }}>
-                                                <button className="btn btn-secondary" onClick={() => { const s = Math.max(12, rooskiTextSize - 4); setRooskiTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.3rem', fontSize: '0.9rem', color: '#1e293b' }}>-</button>
-                                                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', minWidth: '1.2rem', textAlign: 'center' }}>{rooskiTextSize}</span>
-                                                <button className="btn btn-secondary" onClick={() => { const s = Math.min(200, rooskiTextSize + 4); setRooskiTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.3rem', fontSize: '0.9rem', color: '#1e293b' }}>+</button>
+                                                <button className="btn btn-secondary" onClick={() => { const s = Math.max(12, wizTextSize - 4); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.3rem', fontSize: '0.9rem', color: '#1e293b' }}>-</button>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', minWidth: '1.2rem', textAlign: 'center' }}>{wizTextSize}</span>
+                                                <button className="btn btn-secondary" onClick={() => { const s = Math.min(200, wizTextSize + 4); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.3rem', fontSize: '0.9rem', color: '#1e293b' }}>+</button>
                                             </div>
                                         )}
 
-                                        {mode === 'rooski-oline' && (
+                                        {mode === 'wiz-oline' && (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', background: '#fffbeb', padding: '0.15rem 0.25rem', borderRadius: '4px', border: '1px solid #fcd34d' }}>
                                                 <button className="btn btn-secondary" onClick={initiateSave} title="Save to library" style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', color: '#1e293b', border: 'none', background: 'transparent' }}><Icon name="Save" size={12} /></button>
-                                                <select style={{ padding: '1px', fontSize: '0.75rem', width: '80px', color: '#1e293b', border: 'none', background: 'transparent' }} onChange={(e) => { if (e.target.value) { loadRooskiPreset(e.target.value); e.target.value = ""; } }} defaultValue="">
+                                                <select style={{ padding: '1px', fontSize: '0.75rem', width: '80px', color: '#1e293b', border: 'none', background: 'transparent' }} onChange={(e) => { if (e.target.value) { loadWizPreset(e.target.value); e.target.value = ""; } }} defaultValue="">
                                                     <option value="" disabled>Lib...</option>
-                                                    {rooskiLibrary.map(preset => (<option key={preset.id} value={preset.id}>{preset.name}</option>))}
+                                                    {wizLibrary.map(preset => (<option key={preset.id} value={preset.id}>{preset.name}</option>))}
                                                 </select>
                                             </div>
                                         )}
@@ -4147,7 +4149,7 @@
                                     <button className="btn btn-secondary" onClick={handleQuickOffense} title="11-Man Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', color: '#1e293b', background: 'white', border: '1px solid #ccc' }}>⚡ Quick 11</button>
                                     <button className="btn btn-secondary" onClick={handleScoutDefense} title="Scout Defense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#374151', color: 'white' }}>🛡 Scout Def</button>
                                     <button className="btn btn-secondary" onClick={handleScoutOffense} title="Scout Offense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#eab308', color: 'black' }}>⚔️ Scout Off</button>
-                                    <button className="btn btn-secondary" onClick={handleRooskiOffense} title="Rooski Skill Colors" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>🎨 Rooski</button>
+                                    <button className="btn btn-secondary" onClick={handleWizOffense} title="Wiz Skill Colors" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>🎨 Wiz</button>
                                 </div>
                             )}
 
@@ -4234,14 +4236,14 @@
                                         <text x="20" y="345" fontSize="12" fontWeight="bold" fill="#000">LOS</text>
                                         <text x="780" y="345" fontSize="12" fontWeight="bold" fill="#000" textAnchor="end">LOS</text>
                                     </g>
-                                ) : mode === 'rooski-oline' ? (
+                                ) : mode === 'wiz-oline' ? (
                                     <g>
                                         <rect width="100%" height="100%" fill="white" />
-                                        {/* No grid lines or yard markers for Rooski OL */}
+                                        {/* No grid lines or yard markers for Wiz OL */}
                                     </g>
                                 ) : (
                                     <g>
-                                        {/* Simple/Rooski Field */}
+                                        {/* Simple/Wiz Field */}
                                         <rect width="100%" height="100%" fill="white" />
                                         <rect width="100%" height="100%" fill="url(#grid)" />
 
@@ -4521,10 +4523,10 @@
         };
 
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], rooskiLibrary, setRooskiLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [] }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [] }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
-            const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'rooski-oline', 'rooski-skill', 'detailed'
+            const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'wiz-oline', 'wiz-skill', 'detailed'
             const [formData, setFormData] = useState({
                 playCategory: '', // Existing field
                 formation: '',
@@ -4539,12 +4541,11 @@
                 levelTags: [], // [NEW] Level Tagging
                 image: null,
                 diagramData: null, // New: Diagram elements
-                rooskiOlineData: null, // O-Line Rooski
-                rooskiMode: 'diagram', // 'diagram' or 'image'
-                rooskiImage: null,
-                rooskiSkillData: null, // Skill Rooski
-                rooskiSkillMode: 'diagram', // 'diagram' or 'image'
-                rooskiSkillImage: null,
+                wizOlineData: null, // O-Line Wiz
+                wizOlineMode: 'diagram', // 'diagram' or 'image'
+                wizSkillData: null, // Skill Wiz
+                wizSkillMode: 'diagram', // 'diagram' or 'image'
+                wizSkillImage: null,
                 scenarios: [], // Array of Detailed Scenarios
                 activeScenarioId: null, // ID of scenario being edited
                 wristbandSlot: '',
@@ -4567,7 +4568,16 @@
                 navTag: '',
                 autoCompleteValues: {}, // For suggestions
                 syntaxValues: {}, // Keep existing syntax values just in case
-                ...initialData // Merge existing data ON TOP of defaults
+                ...(() => {
+                    const merged = { ...initialData };
+                    // Migration for backward compatibility
+                    if (merged.rooskiOlineData && !merged.wizOlineData) merged.wizOlineData = merged.rooskiOlineData;
+                    if (merged.rooskiSkillData && !merged.wizSkillData) merged.wizSkillData = merged.rooskiSkillData;
+                    if (merged.rooskiMode && !merged.wizOlineMode) merged.wizOlineMode = merged.rooskiMode;
+                    if (merged.rooskiSkillMode && !merged.wizSkillMode) merged.wizSkillMode = merged.rooskiSkillMode;
+                    if (merged.rooskiImage && !merged.wizOlineImage) merged.wizOlineImage = merged.rooskiImage;
+                    return merged;
+                })()
             });
 
             // Play Name Parser State
@@ -4773,7 +4783,7 @@
                 if (file) {
                     const reader = new FileReader();
                     reader.onloadend = () => {
-                        setFormData(prev => ({ ...prev, rooskiSkillImage: reader.result }));
+                        setFormData(prev => ({ ...prev, wizSkillImage: reader.result }));
                     };
                     reader.readAsDataURL(file);
                 }
@@ -4922,41 +4932,41 @@
                             initialData={formData.diagramData}
                             onSave={handleSaveDiagram}
                             onCancel={() => setIsDiagramming(false)}
-                            rooskiLibrary={rooskiLibrary}
-                            setRooskiLibrary={setRooskiLibrary}
+                            wizLibrary={wizLibrary}
+                            setWizLibrary={setWizLibrary}
                             positionNames={positionNames}
                         />
                     )}
 
-                    {/* Rooski O-Line Editor Modal */}
-                    {activeDiagramMode === 'rooski-oline' && (
+                    {/* Wiz O-Line Editor Modal */}
+                    {activeDiagramMode === 'wiz-oline' && (
                         <PlayDiagramEditor
-                            initialData={formData.rooskiOlineData ? { elements: formData.rooskiOlineData } : null}
-                            mode="rooski-oline"
+                            initialData={formData.wizOlineData ? { elements: formData.wizOlineData } : null}
+                            mode="wiz-oline"
                             onSave={(data) => {
-                                setFormData({ ...formData, rooskiOlineData: data.elements });
+                                setFormData({ ...formData, wizOlineData: data.elements });
                                 setActiveDiagramMode(null);
                             }}
                             onCancel={() => setActiveDiagramMode(null)}
-                            rooskiLibrary={rooskiLibrary}
-                            setRooskiLibrary={setRooskiLibrary}
+                            wizLibrary={wizLibrary}
+                            setWizLibrary={setWizLibrary}
                             positionNames={positionNames}
                         />
                     )}
 
-                    {/* Rooski Skill Editor Modal */}
-                    {activeDiagramMode === 'rooski-skill' && (
+                    {/* Wiz Skill Editor Modal */}
+                    {activeDiagramMode === 'wiz-skill' && (
                         <PlayDiagramEditor
-                            initialData={formData.rooskiSkillData ? { elements: formData.rooskiSkillData } : null}
-                            mode="rooski-skill"
+                            initialData={formData.wizSkillData ? { elements: formData.wizSkillData } : null}
+                            mode="wiz-skill"
                             formations={formations}
                             onSave={(data) => {
-                                setFormData({ ...formData, rooskiSkillData: data.elements });
+                                setFormData({ ...formData, wizSkillData: data.elements });
                                 setActiveDiagramMode(null);
                             }}
                             onCancel={() => setActiveDiagramMode(null)}
-                            rooskiLibrary={rooskiLibrary}
-                            setRooskiLibrary={setRooskiLibrary}
+                            wizLibrary={wizLibrary}
+                            setWizLibrary={setWizLibrary}
                             positionNames={positionNames}
                         />
                     )}
@@ -4971,8 +4981,8 @@
                                 setActiveDiagramMode(null);
                             }}
                             onCancel={() => setActiveDiagramMode(null)}
-                            rooskiLibrary={rooskiLibrary}
-                            setRooskiLibrary={setRooskiLibrary}
+                            wizLibrary={wizLibrary}
+                            setWizLibrary={setWizLibrary}
                             positionNames={positionNames}
                         />
                     )}
@@ -5045,11 +5055,11 @@
                                         />
                                     </div>
                                     <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                                        <label className="form-label">Rooski / Short Name <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'normal' }}>(Optional)</span></label>
+                                        <label className="form-label">Wiz / Short Name <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'normal' }}>(Optional)</span></label>
                                         <input
                                             className="form-input"
-                                            value={formData.rooskiName || ''}
-                                            onChange={e => setFormData({ ...formData, rooskiName: e.target.value })}
+                                            value={formData.wizName || ''}
+                                            onChange={e => setFormData({ ...formData, wizName: e.target.value })}
                                             placeholder="Short name for 4x4 grids..."
                                         />
                                     </div>
@@ -5176,11 +5186,11 @@
                                         />
                                     </div>
                                     <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                                        <label className="form-label">Rooski / Short Name <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'normal' }}>(Optional)</span></label>
+                                        <label className="form-label">Wiz / Short Name <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'normal' }}>(Optional)</span></label>
                                         <input
                                             className="form-input"
-                                            value={formData.rooskiName || ''}
-                                            onChange={e => setFormData({ ...formData, rooskiName: e.target.value })}
+                                            value={formData.wizName || ''}
+                                            onChange={e => setFormData({ ...formData, wizName: e.target.value })}
                                             placeholder="Short name for 4x4 grids..."
                                         />
                                     </div>
@@ -5251,20 +5261,20 @@
                         </div>
                         {/* DIAGRAMS SECTION: SIDE-BY-SIDE DIAGRAMS */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
-                            {/* Rooski O-Line Diagram */}
+                            {/* Wiz O-Line Diagram */}
                             <div className="form-group" style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                     <label className="form-label" style={{ margin: 0, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <Icon name="Users" size={16} style={{ color: 'var(--accent)' }} />
-                                        Rooski O-Line Diagram
+                                        Wiz O-Line Diagram
                                     </label>
                                     <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem' }}>
-                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'diagram' }))} style={{ background: 'none', border: 'none', color: (formData.rooskiMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: (formData.rooskiMode || 'diagram') === 'diagram' ? 'bold' : 'normal', cursor: 'pointer' }}>Diagram</button>
-                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, rooskiMode: 'upload' }))} style={{ background: 'none', border: 'none', color: formData.rooskiMode === 'upload' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: formData.rooskiMode === 'upload' ? 'bold' : 'normal', cursor: 'pointer' }}>Upload</button>
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, wizOlineMode: 'diagram' }))} style={{ background: 'none', border: 'none', color: (formData.wizOlineMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: (formData.wizOlineMode || 'diagram') === 'diagram' ? 'bold' : 'normal', cursor: 'pointer' }}>Diagram</button>
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, wizOlineMode: 'upload' }))} style={{ background: 'none', border: 'none', color: formData.wizOlineMode === 'upload' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: formData.wizOlineMode === 'upload' ? 'bold' : 'normal', cursor: 'pointer' }}>Upload</button>
                                     </div>
                                 </div>
                                 <div style={{ minHeight: '150px', background: 'var(--bg-input)', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', position: 'relative' }}>
-                                    {formData.rooskiMode === 'upload' ? (
+                                    {formData.wizOlineMode === 'upload' ? (
                                         formData.image ? (
                                             <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                                                 <img src={formData.image} alt="O-Line" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -5285,12 +5295,12 @@
                                             </div>
                                         )
                                     ) : (
-                                        formData.rooskiOlineData && formData.rooskiOlineData.length > 0 ? (
-                                            <div onClick={() => setActiveDiagramMode('rooski-oline')} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
-                                                {renderDiagramPreview(formData.rooskiOlineData)}
+                                        formData.wizOlineData && formData.wizOlineData.length > 0 ? (
+                                            <div onClick={() => setActiveDiagramMode('wiz-oline')} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
+                                                {renderDiagramPreview(formData.wizOlineData)}
                                             </div>
                                         ) : (
-                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-oline')}>
+                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('wiz-oline')}>
                                                 <Icon name="Plus" size={16} /> Create Diagram
                                             </button>
                                         )
@@ -5298,26 +5308,26 @@
                                 </div>
                             </div>
 
-                            {/* Rooski Skill Diagram */}
+                            {/* Wiz Skill Diagram */}
                             <div className="form-group" style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                     <label className="form-label" style={{ margin: 0, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <Icon name="Target" size={16} style={{ color: 'var(--accent)' }} />
-                                        Rooski Skill Diagram
+                                        Wiz Skill Diagram
                                     </label>
                                     <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem' }}>
-                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, rooskiSkillMode: 'diagram' }))} style={{ background: 'none', border: 'none', color: (formData.rooskiSkillMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: (formData.rooskiSkillMode || 'diagram') === 'diagram' ? 'bold' : 'normal', cursor: 'pointer' }}>Diagram</button>
-                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, rooskiSkillMode: 'upload' }))} style={{ background: 'none', border: 'none', color: formData.rooskiSkillMode === 'upload' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: formData.rooskiSkillMode === 'upload' ? 'bold' : 'normal', cursor: 'pointer' }}>Upload</button>
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, wizSkillMode: 'diagram' }))} style={{ background: 'none', border: 'none', color: (formData.wizSkillMode || 'diagram') === 'diagram' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: (formData.wizSkillMode || 'diagram') === 'diagram' ? 'bold' : 'normal', cursor: 'pointer' }}>Diagram</button>
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, wizSkillMode: 'upload' }))} style={{ background: 'none', border: 'none', color: formData.wizSkillMode === 'upload' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: formData.wizSkillMode === 'upload' ? 'bold' : 'normal', cursor: 'pointer' }}>Upload</button>
                                     </div>
                                 </div>
                                 <div style={{ minHeight: '150px', background: 'var(--bg-input)', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', position: 'relative' }}>
-                                    {formData.rooskiSkillMode === 'upload' ? (
-                                        formData.rooskiSkillImage ? (
+                                    {formData.wizSkillMode === 'upload' ? (
+                                        formData.wizSkillImage ? (
                                             <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                                                <img src={formData.rooskiSkillImage} alt="Skill" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                <img src={formData.wizSkillImage} alt="Skill" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                                 <button
                                                     type="button"
-                                                    onClick={(e) => { e.stopPropagation(); setFormData(prev => ({ ...prev, rooskiSkillImage: null })); }}
+                                                    onClick={(e) => { e.stopPropagation(); setFormData(prev => ({ ...prev, wizSkillImage: null })); }}
                                                     style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
                                                     ×
@@ -5332,12 +5342,12 @@
                                             </div>
                                         )
                                     ) : (
-                                        formData.rooskiSkillData && formData.rooskiSkillData.length > 0 ? (
-                                            <div onClick={() => setActiveDiagramMode('rooski-skill')} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
-                                                {renderDiagramPreview(formData.rooskiSkillData)}
+                                        formData.wizSkillData && formData.wizSkillData.length > 0 ? (
+                                            <div onClick={() => setActiveDiagramMode('wiz-skill')} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
+                                                {renderDiagramPreview(formData.wizSkillData)}
                                             </div>
                                         ) : (
-                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('rooski-skill')}>
+                                            <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('wiz-skill')}>
                                                 <Icon name="Plus" size={16} /> Create Diagram
                                             </button>
                                         )
@@ -5806,7 +5816,7 @@
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [staplesInputs, setStaplesInputs] = useState({}); // Track input values for Staples slots
             const [editingSlot, setEditingSlot] = useState(null); // Slot currently being edited (for Rooski name)
-            const [tempRooskiName, setTempRooskiName] = useState(''); // Temp value for Rooski name edit
+            const [tempWizName, setTempWizName] = useState(''); // Temp value for Wiz name edit
 
             // Layout constants
             const rowHeight = 11;
@@ -5995,11 +6005,9 @@
                 if (!p.name) return '';
 
                 let s = p.name.trim();
-                const form = (p.formation || '').trim();
-
-                // 1. Strip structural formations from start
                 // We define "Structural" as anything not in the usual color list
                 const colors = ['RED', 'BLUE', 'GRN', 'GREEN', 'BRIGHT', 'BRT', 'ORNG', 'ORANGE', 'GOLD', 'BRN', 'BROWN', 'TEAL', 'PINK', 'PURPLE', 'YELLOW'];
+                const form = p.formation || '';
                 const isColorFormation = colors.includes(form.toUpperCase());
 
                 if (form && !isColorFormation) {
@@ -6031,9 +6039,12 @@
                     // Update play with new slot - Check for Staples
                     const card = wbSettings[selectedCardId];
 
-                    // RESTRICTION: Rooski plays can ONLY be assigned to Rooski cards
-                    if (play.isRooski && (!card || card.type !== 'rooski')) {
-                        alert("Rooski plays can only be assigned to a Rooski card (16-slot grid).");
+                    // RESTRICTION: Wiz plays can ONLY be assigned to Wiz cards
+                    const isWizCard = card && (card.type === 'wiz' || card.type === 'rooski');
+                    const isWizPlay = play.isWiz || play.isRooski;
+
+                    if (isWizPlay && !isWizCard) {
+                        alert("Wiz plays can only be assigned to a Wiz card (16-slot grid).");
                         return;
                     }
 
@@ -6056,25 +6067,25 @@
                 }
             };
 
-            // Handle saving the Rooski short name
-            // Handle saving the Rooski short name
-            const handleSaveRooskiName = (playId, slot) => {
+            // Handle saving the Wiz short name
+            const handleSaveWizName = (playId, slot) => {
                 if (!playId) return;
                 const play = plays.find(p => p.id === playId);
                 const activeCard = wbSettings[selectedCardId];
-                const viewType = activeCard?.rooskiView || 'skill';
+                // Wiz or Rooski type fallback
+                const viewType = activeCard?.wizView || activeCard?.rooskiView || 'skill';
 
                 if (play) {
                     if (viewType === 'skill') {
-                        onUpdatePlay({ ...play, rooskiSkillName: tempRooskiName });
+                        onUpdatePlay({ ...play, wizSkillName: tempWizName });
                     } else if (viewType === 'oline') {
-                        onUpdatePlay({ ...play, rooskiOlineName: tempRooskiName });
+                        onUpdatePlay({ ...play, wizOlineName: tempWizName });
                     } else {
-                        onUpdatePlay({ ...play, rooskiName: tempRooskiName }); // Fallback
+                        onUpdatePlay({ ...play, wizName: tempWizName }); // Fallback
                     }
                 }
                 setEditingSlot(null);
-                setTempRooskiName('');
+                setTempWizName('');
             };
 
             const handleUpdateRow = (cardId, rowId, updates) => {
@@ -7167,12 +7178,12 @@
 
                 // Determine which data to use based on type
                 let data = null;
-                if (type === 'skill' && play.rooskiSkillData) {
-                    // rooskiSkillData is an array of elements, wrap it in the expected structure
-                    data = { elements: play.rooskiSkillData };
-                } else if (type === 'oline' && play.rooskiOlineData) {
-                    // rooskiOlineData is an array of elements, wrap it in the expected structure
-                    data = { elements: play.rooskiOlineData };
+                if (type === 'skill' && (play.wizSkillData || play.rooskiSkillData)) {
+                    // wizSkillData is an array of elements
+                    data = { elements: play.wizSkillData || play.rooskiSkillData };
+                } else if (type === 'oline' && (play.wizOlineData || play.rooskiOlineData)) {
+                    // wizOlineData is an array of elements
+                    data = { elements: play.wizOlineData || play.rooskiOlineData };
                 } else if (play.diagramData) {
                     // diagramData should already have the { elements: [...] } structure
                     data = play.diagramData;
@@ -7269,7 +7280,7 @@
                 );
             };
 
-            const renderRooskiGrid = (slots, title, viewType) => {
+            const renderWizGrid = (slots, title, viewType) => {
                 // 4x4 Grid for 3x5 card - each cell has diagram on top, coordinate/name below
                 const rows = [];
                 for (let i = 0; i < slots.length; i += 4) {
@@ -7277,7 +7288,7 @@
                 }
 
                 return (
-                    <div className="rooski-grid-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
+                    <div className="wiz-grid-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
                         {/* Header - Split layout */}
                         <div style={{
                             background: 'black',
@@ -7289,7 +7300,7 @@
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         }}>
-                            <span style={{ textTransform: 'uppercase' }}>ROOSKI</span>
+                            <span style={{ textTransform: 'uppercase' }}>WIZ</span>
                             <span>{title}</span>
                         </div>
                         {/* Grid */}
@@ -7304,7 +7315,6 @@
                                         if (play) {
                                             if (viewType === 'skill') {
                                                 // Show all plays except those explicitly marked for O-Line only
-                                                // This allows Standard plays (with basic diagramData) to show up
                                                 shouldShowPlay = !play.isOlineOnly;
                                             } else if (viewType === 'oline') {
                                                 // Show all plays in O-Line view
@@ -7325,10 +7335,43 @@
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     cursor: isClickable ? 'pointer' : 'default',
-                                                    background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white'
+                                                    background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white',
+                                                    position: 'relative'
                                                 }}
                                                 onClick={() => handleAssignSlot(slot)}
                                             >
+                                                {/* Unassign Button (X) */}
+                                                {displayPlay && (
+                                                    <div
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onUpdatePlay(displayPlay.id, { wristbandSlot: '' });
+                                                        }}
+                                                        title="Unassign Play"
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '2px',
+                                                            right: '2px',
+                                                            width: '14px',
+                                                            height: '14px',
+                                                            background: 'rgba(255, 255, 255, 0.9)',
+                                                            border: '1px solid #fee2e2',
+                                                            borderRadius: '3px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            fontSize: '10px',
+                                                            color: '#dc2626',
+                                                            fontWeight: 'bold',
+                                                            zIndex: 10
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#fee2e2'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)'}
+                                                    >
+                                                        ✕
+                                                    </div>
+                                                )}
                                                 {/* Diagram area - takes up most of the cell */}
                                                 <div style={{
                                                     flex: 1,
@@ -7344,9 +7387,10 @@
                                                 {/* Bottom row: Coordinate (left) | Play Name (right) */}
                                                 <div style={{
                                                     display: 'flex',
-                                                    borderTop: '1px solid #ccc',
-                                                    height: '18px',
-                                                    minHeight: '18px'
+                                                    borderTop: '1px solid #000',
+                                                    height: '14px',
+                                                    minHeight: '14px',
+                                                    background: '#fff'
                                                 }}>
                                                     {/* Coordinate cell */}
                                                     <div
@@ -7355,25 +7399,26 @@
                                                                 e.stopPropagation();
                                                                 // Revert logic: Clear the specific name for the current view
                                                                 if (viewType === 'skill') {
-                                                                    onUpdatePlay({ ...displayPlay, rooskiSkillName: '' });
+                                                                    onUpdatePlay(displayPlay.id, { wizSkillName: '' });
                                                                 } else if (viewType === 'oline') {
-                                                                    onUpdatePlay({ ...displayPlay, rooskiOlineName: '' });
+                                                                    onUpdatePlay(displayPlay.id, { wizOlineName: '' });
                                                                 }
                                                             }
                                                         }}
                                                         title="Click to revert to full play call"
                                                         style={{
-                                                            width: '35px',
-                                                            minWidth: '35px',
+                                                            width: '28px',
+                                                            minWidth: '28px',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
-                                                            fontSize: '8pt',
+                                                            fontSize: '7pt',
                                                             fontWeight: 'bold',
                                                             color: '#000',
-                                                            borderRight: '1px solid #ccc',
+                                                            borderRight: '1px solid #000',
                                                             background: 'white',
-                                                            cursor: displayPlay ? 'pointer' : 'default'
+                                                            cursor: displayPlay ? 'pointer' : 'default',
+                                                            lineHeight: 1
                                                         }}>
                                                         {slot}
                                                     </div>
@@ -7382,17 +7427,24 @@
                                                     <div
                                                         style={{
                                                             flex: 1,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
                                                             minWidth: 0, // Allow flex child to shrink below content size
-                                                                         alignItems: 'center',
                                                             justifyContent: 'center',
-                                                            fontSize: '7pt',
+                                                            fontSize: '6.5pt',
+                                                            fontWeight: 'bold',
                                                             padding: '0 2px',
                                                             textAlign: 'center',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
+                                                            lineHeight: 1,
                                                             whiteSpace: 'nowrap',
-                                                            background: 'white',
-                                                                                             }}
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis'
+                                                        }}>
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        background: 'white',
+                                                        }}
                                                         onClick={(e) => {
                                                             if (displayPlay) {
                                                                 e.stopPropagation(); // Prevent slot assignment
@@ -7401,31 +7453,31 @@
                                                                 // Resolve current name based on view
                                                                 let currentName = displayPlay.name;
                                                                 if (viewType === 'skill') {
-                                                                    currentName = displayPlay.rooskiSkillName || displayPlay.rooskiName || displayPlay.name;
+                                                                    currentName = displayPlay.wizSkillName || displayPlay.wizName || displayPlay.rooskiSkillName || displayPlay.rooskiName || displayPlay.name;
                                                                 } else if (viewType === 'oline') {
-                                                                    currentName = displayPlay.rooskiOlineName || displayPlay.rooskiName || displayPlay.name;
+                                                                    currentName = displayPlay.wizOlineName || displayPlay.wizName || displayPlay.rooskiOlineName || displayPlay.rooskiName || displayPlay.name;
                                                                 }
 
-                                                                setTempRooskiName(currentName);
+                                                                setTempWizName(currentName);
                                                             }
                                                         }}
                                                     >
                                                         {editingSlot === slot ? (
                                                             <input
                                                                 autoFocus
-                                                                value={tempRooskiName}
-                                                                onChange={(e) => setTempRooskiName(e.target.value)}
+                                                                value={tempWizName}
+                                                                onChange={(e) => setTempWizName(e.target.value)}
                                                                 startDate={(e) => e.stopPropagation()}
                                                                 onClick={(e) => e.stopPropagation()}
-                                                                onBlur={() => handleSaveRooskiName(displayPlay.id, slot)}
+                                                                onBlur={() => handleSaveWizName(displayPlay.id, slot)}
                                                                 onKeyDown={(e) => {
                                                                     if (e.key === 'Enter') {
-                                                                        handleSaveRooskiName(displayPlay.id, slot);
+                                                                        handleSaveWizName(displayPlay.id, slot);
                                                                     }
                                                                 }}
-                                                               style={{
+                                                                style={{
                                                                     width: '100%',
-                                                                   height: '100%',
+                                                                    height: '100%',
                                                                     border: 'none',
                                                                     outline: 'none',
                                                                     textAlign: 'center',
@@ -7438,8 +7490,8 @@
                                                         ) : (
                                                             displayPlay ? (
                                                                 viewType === 'skill'
-                                                                    ? (displayPlay.rooskiSkillName || displayPlay.rooskiName || displayPlay.name)
-                                                                    : (displayPlay.rooskiOlineName || displayPlay.rooskiName || displayPlay.name)
+                                                                    ? (displayPlay.wizSkillName || displayPlay.wizName || displayPlay.rooskiSkillName || displayPlay.rooskiName || displayPlay.name)
+                                                                    : (displayPlay.wizOlineName || displayPlay.wizName || displayPlay.rooskiOlineName || displayPlay.rooskiName || displayPlay.name)
                                                             ) : ''
                                                         )}
                                                     </div>
@@ -7450,7 +7502,7 @@
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </div >
                 );
             };
 
@@ -7464,8 +7516,8 @@
                     return slots;
                 }
 
-                if (card && card.type === 'rooski') {
-                    // Rooski uses 16 slots: X01-X16 where X is the series number
+                if (card && (card.type === 'rooski' || card.type === 'wiz')) {
+                    // Wiz (formerly Rooski) uses 16 slots: X01-X16
                     const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : (cardId === 'card3' ? 3 : (cardId === 'card4' ? 4 : (cardId === 'card5' ? 5 : 6))));
                     const slots = [];
                     for (let i = 1; i <= 16; i++) {
@@ -7683,7 +7735,7 @@
                                                             borderRadius: '4px',
                                                             fontWeight: 'bold',
                                                             border: '1px solid #fecaca'
-                                                        }}>R</span>
+                                                        }}>W</span>
                                                     )}
 
                                                     {/* Mini Script Badge */}
@@ -7810,7 +7862,7 @@
                                     <select
                                         className="form-input"
                                         style={{ width: 'auto', padding: '4px 8px' }}
-                                        value={activeCard.type}
+                                        value={activeCard.type === 'rooski' ? 'wiz' : activeCard.type}
                                         onChange={e => handleLayoutChange(e.target.value)}
                                         disabled={selectedCardId === 'staples'}
                                     >
@@ -7818,7 +7870,7 @@
 
                                         <option value="mini-scripts">Mini-Scripts</option>
 
-                                        <option value="rooski">Rooski (16-slot grid)</option>
+                                        <option value="wiz">Wiz (16-slot grid)</option>
 
                                     </select>
                                 </div>
@@ -7861,15 +7913,15 @@
                                         </select>
                                     </div>
                                 )}
-                                {activeCard.type === 'rooski' && (
+                                {(activeCard.type === 'rooski' || activeCard.type === 'wiz') && (
                                     <>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>View:</label>
                                             <select
                                                 className="form-input"
                                                 style={{ width: 'auto', padding: '4px 8px' }}
-                                                value={activeCard.rooskiView || 'skill'}
-                                                onChange={e => updateCard(selectedCardId, { rooskiView: e.target.value })}
+                                                value={activeCard.wizView || activeCard.rooskiView || 'skill'}
+                                                onChange={e => updateCard(selectedCardId, { wizView: e.target.value })}
                                             >
                                                 <option value="skill">Skill Positions</option>
                                                 <option value="oline">O-Line</option>
@@ -7957,16 +8009,16 @@
                                         <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
                                     </div>
                                     */}
-                                    {activeCard.type === 'rooski' ? (
+                                    {activeCard.type === 'rooski' || activeCard.type === 'wiz' ? (
                                         <div style={{
                                             width: '100%',
                                             aspectRatio: '5 / 3',
                                             margin: '0 auto'
                                         }}>
-                                            {renderRooskiGrid(
+                                            {renderWizGrid(
                                                 getSlotsForCard(selectedCardId),
                                                 `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
-                                                activeCard.rooskiView || 'skill'
+                                                activeCard.wizView || activeCard.rooskiView || 'skill'
                                             )}
                                         </div>
                                     ) : activeCard.type === 'audible' ? (
@@ -8000,14 +8052,14 @@
                                 ))}
                             </div>
                         </div>
-                    ) : activeCard && activeCard.type === 'rooski' ? (
+                    ) : activeCard && (activeCard.type === 'rooski' || activeCard.type === 'wiz') ? (
                         <>
                             {/* Skill Version - Page 1 */}
                             <div className="wristband-print-container" style={{ display: 'none', pageBreakAfter: 'always' }}>
                                 <div className="wristband-print-grid">
                                     {[1, 2, 3, 4].map(copyNum => (
                                         <div key={copyNum} className="wristband-print-card">
-                                            {renderRooskiGrid(
+                                            {renderWizGrid(
                                                 getSlotsForCard(selectedCardId),
                                                 `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
                                                 'skill'
@@ -8022,7 +8074,7 @@
                                 <div className="wristband-print-grid">
                                     {[1, 2, 3, 4].map(copyNum => (
                                         <div key={copyNum} className="wristband-print-card">
-                                            {renderRooskiGrid(
+                                            {renderWizGrid(
                                                 getSlotsForCard(selectedCardId),
                                                 `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
                                                 'oline'
@@ -25794,7 +25846,7 @@
                 ],
                 game: [
                     { id: 'call_sheet', label: 'Call Sheet', desc: 'Simplified, high-contrast call sheet', icon: 'Grid' },
-                    { id: 'wristbands', label: 'Wristband Wizard', desc: '3x5" Wristband Inserts', icon: 'Columns' },
+                    { id: 'wristbands', label: 'Wristband Builder', desc: '3x5" Wristband Inserts', icon: 'Columns' },
                     { id: 'pregame', label: 'Pre-game Timeline', desc: 'Print game day itinerary', icon: 'Clock' },
                     { id: 'game_report', label: 'Game Report', desc: 'Post-game summary and stats', icon: 'BarChart' }
                 ],
@@ -35483,7 +35535,7 @@
                         <div style={{ position: 'relative', marginLeft: '6px' }}>
                             <input
                                 placeholder="#"
-                                value={isFocused ? wbAutocomplete.query : (play.wristbandSlot || '')}
+                                value={isFocused ? wbAutocomplete.query : (getWristbandLabel(play) || '')}
                                 onFocus={() => setWbAutocomplete({ playId, query: play.wristbandSlot || '' })}
                                 onChange={(e) => {
                                     setWbAutocomplete({ playId, query: e.target.value });
@@ -37148,7 +37200,12 @@
                                                                                                 borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                                                                                                 borderBottom: '1px dotted #e2e8f0'
                                                                                             }} title={play ? play.name : ''}>
-                                                                                                {play ? getPlayDisplayName(play) : (slot.type === 'GAP' ? '' : '-')}
+                                                                                                {play ? (
+                                                                                                    <>
+                                                                                                        {getWristbandLabel(play) && <span style={{ marginRight: '3px', fontSize: '0.9em', fontWeight: 'bold', color: '#3b82f6' }}>{getWristbandLabel(play)}</span>}
+                                                                                                        {getPlayDisplayName(play)}
+                                                                                                    </>
+                                                                                                ) : (slot.type === 'GAP' ? '' : '-')}
                                                                                             </div>
                                                                                         );
                                                                                     })}
@@ -37172,7 +37229,10 @@
                                                                                     }}>
                                                                                         <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
                                                                                         {playLeft ? (
-                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playLeft.name}</span>
+                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                                                {playLeft.name}
+                                                                                                {getWristbandLabel(playLeft) && <span style={{ marginLeft: '4px', fontSize: '0.7em', color: '#3b82f6' }}>{getWristbandLabel(playLeft)}</span>}
+                                                                                            </span>
                                                                                         ) : (
                                                                                             <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
                                                                                         )}
@@ -37184,7 +37244,10 @@
                                                                                         background: playRight?.priority ? '#fef08a' : 'transparent'
                                                                                     }}>
                                                                                         {playRight ? (
-                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playRight.name}</span>
+                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                                                {playRight.name}
+                                                                                                {getWristbandLabel(playRight) && <span style={{ marginLeft: '4px', fontSize: '0.7em', color: '#3b82f6' }}>{getWristbandLabel(playRight)}</span>}
+                                                                                            </span>
                                                                                         ) : (
                                                                                             <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>
                                                                                         )}
@@ -40016,7 +40079,7 @@
                         'oc-dashboard-custom-focus', 'oc-dashboard-duties', 'oc-dashboard-metrics',
                         'fatigue-thresholds', 'position-fatigue-values', 'program_budget_data', 'program_onboarding_data',
                         'oc-dashboard-position-names', 'player_daily_connections', 'player_weight_logs', 'staff_role_tasks',
-                        'rooski_ol_library', 'oc-dashboard-weeks'
+                        'wiz_ol_library', 'oc-dashboard-weeks'
                     ];
 
                     const schoolData = {
@@ -40093,7 +40156,7 @@
                                 if (k === 'player_daily_connections') schoolData.dailyConnections = JSON.parse(val);
                                 if (k === 'player_weight_logs') schoolData.weightLogs = JSON.parse(val);
                                 if (k === 'staff_role_tasks') schoolData.roleTasks = JSON.parse(val);
-                                if (k === 'rooski_ol_library') schoolData.rooskiLib = JSON.parse(val);
+                                if (k === 'wiz_ol_library') schoolData.wizLib = JSON.parse(val);
                             }
                         });
                     }
@@ -40192,7 +40255,7 @@
                         'oc-dashboard-custom-focus', 'oc-dashboard-duties', 'oc-dashboard-metrics',
                         'fatigue-thresholds', 'position-fatigue-values', 'program_budget_data', 'program_onboarding_data',
                         'oc-dashboard-position-names', 'player_daily_connections', 'player_weight_logs', 'staff_role_tasks',
-                        'rooski_ol_library', 'oc-dashboard-weeks',
+                        'wiz_ol_library', 'oc-dashboard-weeks',
                         'hc_school_id', 'hc_school_name' // Clear name too
                     ];
                     keys.forEach(k => localStorage.removeItem(k));
@@ -41809,7 +41872,7 @@
                         'oc-dashboard-custom-focus', 'oc-dashboard-duties', 'oc-dashboard-metrics',
                         'fatigue-thresholds', 'position-fatigue-values', 'program_budget_data', 'program_onboarding_data',
                         'oc-dashboard-position-names', 'player_daily_connections', 'player_weight_logs', 'staff_role_tasks',
-                        'rooski_ol_library', 'oc-dashboard-weeks',
+                        'wiz_ol_library', 'oc-dashboard-weeks',
                         'oc-dashboard-game-plans', 'oc-dashboard-scripts',
                         'oc-dashboard-logo', 'oc-dashboard-theme', 'oc-dashboard-accent',
                         'hc_school_billing', 'hc_school_id', 'hc_school_name', 'hc-active-year', 'hc-visible-features'
@@ -43474,7 +43537,7 @@
         };
 
         // --- INSTALL SLIDESHOW COMPONENT ---
-        const RenderInstallSlideshow = ({ plays, rooskiLibrary, positionNames }) => {
+        const RenderInstallSlideshow = ({ plays, wizLibrary, positionNames }) => {
             const [currentIndex, setCurrentIndex] = useState(0);
 
             // Filter plays that have isInstall: true
@@ -43517,7 +43580,7 @@
                             mode="standard"
                             readOnly={true}
                             positionNames={positionNames}
-                            rooskiLibrary={rooskiLibrary}
+                            wizLibrary={wizLibrary}
                         />
                     </div>
                 </div>
@@ -44255,16 +44318,53 @@
                     suffix = letter;
                 }
             }
-            // Check for Rooski card
+            // Check for Wiz card
+            else if (play.isWiz && play.wristbandSlot) {
+                suffix = 'W';
+            }
+            // Check for Rooski card (Legacy)
             else if (play.isRooski && play.wristbandSlot) {
                 suffix = 'R';
             }
             // Check for traditional wristband
-            else if (play.wristbandSlot && !play.isRooski && !play.isMiniScript) {
+            else if (play.wristbandSlot && !play.isWiz && !play.isRooski && !play.isMiniScript) {
                 suffix = 'T';
             }
 
             return play.name + suffix;
+        };
+
+        const getWristbandLabel = (play) => {
+            if (!play || !play.wristbandSlot) return null;
+            let suffix = 'T'; // Default Traditional
+            if (play.isWiz || play.isRooski) suffix = 'W';
+            else if (play.isMiniScript) {
+                // If slot already has letter (e.g. A101), maybe don't append? 
+                // User example: 101A. 
+                // If slot is "101", append "A" or "B"? 
+                // We don't know which A or B unless it's in the slot string or we check something.
+                // Looking at getPlayDisplayName logic: "Extract letter from wristband slot... const letter = play.wristbandSlot.charAt(0)".
+                // If the slot is "A101", letter is A. 
+                // If the slot is just numbers "101", we might default to A? 
+                // Let's mimic getPlayDisplayName logic: if first char is A or B, use that.
+                const first = play.wristbandSlot.charAt(0).toUpperCase();
+                if (first === 'A' || first === 'B') suffix = ''; // Already has it? Or is it a prefix? 
+                // User request example: "101A".
+                // Existing logic: const letter = play.wristbandSlot.charAt(0); if (letter === 'A' || letter === 'B') suffix = letter;
+                // If the slot is stored as "A101", then showing "A101A" is wrong.
+                // If slot is stored as "101", showing "101A" is right.
+                // Let's assume standard behavior: append T/W. For MiniScript, if it looks like a standard number, append 'A' (primary) or maybe just leave it if ambiguous?
+                // Safer: Check if the slot ENDS with a letter.
+                // If play.wristbandSlot is "101", and isMiniScript -> "101A" (or B? We lack context).
+                // User prompt: "mini scripts would have an A or B behind it".
+                // Let's default to 'A' if no letter found, but respecting existing letters.
+                suffix = 'A';
+                if (/[a-zA-Z]/.test(play.wristbandSlot)) suffix = ''; // Already has a letter
+            }
+            // Check if slot already ends with the intended suffix to avoid double suffix
+            if (play.wristbandSlot.trim().toUpperCase().endsWith(suffix)) return play.wristbandSlot;
+
+            return play.wristbandSlot + suffix;
         };
 
         const PracticeReportView = ({ weeks, plays, playSyntax = [], parsePlayName }) => {
@@ -44947,8 +45047,9 @@
                 return saved ? JSON.parse(saved) : {};
             });
 
-            const [rooskiLibrary, setRooskiLibrary] = useState(() => {
-                const saved = localStorage.getItem('rooski_ol_library');
+            // Initialize Wiz Library from LocalStorage (or Rooski legacy)
+            const [wizLibrary, setWizLibrary] = useState(() => {
+                const saved = localStorage.getItem('wiz_ol_library') || localStorage.getItem('rooski_ol_library');
                 return saved ? JSON.parse(saved) : [];
             });
 
@@ -45063,9 +45164,10 @@
             }, [weightLogs]);
 
             useEffect(() => {
-                localStorage.setItem('rooski_ol_library', JSON.stringify(rooskiLibrary));
-                if (authUser) syncToFirestore(authUser.uid, 'rooskiLib', rooskiLibrary);
-            }, [rooskiLibrary]);
+                localStorage.setItem('wiz_ol_library', JSON.stringify(wizLibrary));
+                localStorage.setItem('rooski_ol_library', JSON.stringify(wizLibrary)); // Legacy backup
+                if (authUser) syncToFirestore(authUser.uid, 'wizLib', wizLibrary);
+            }, [wizLibrary]);
 
 
             useEffect(() => {
@@ -45300,7 +45402,7 @@
                         <button className={`nav-item ${isActive && view === 'wristband' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('wristband'); }}
                             style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Watch" size={12} /> Wristband Wizard
+                            <Icon name="Watch" size={12} /> Wristband Builder
                         </button>
                         <button className={`nav-item ${isActive && view === 'practice-scripts' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('practice-scripts'); }}
@@ -46589,8 +46691,8 @@
                         availableMiniScripts={currentWeek.offensiveGamePlan?.miniScripts || []}
                         initialAssignedScriptIds={editingPlay ? (currentWeek.offensiveGamePlan?.miniScripts || []).filter(s => s.playIds.includes(editingPlay.id)).map(s => s.id) : []}
                         formations={formations}
-                        rooskiLibrary={rooskiLibrary}
-                        setRooskiLibrary={setRooskiLibrary}
+                        wizLibrary={wizLibrary}
+                        setWizLibrary={setWizLibrary}
                         positionNames={positionNames}
                     />
                 )
@@ -46859,7 +46961,7 @@
                     { id: 'dailyConnections', label: 'Daily Connections', data: getLocal('player_daily_connections', []) },
                     { id: 'weightLogs', label: 'Weight Logs', data: getLocal('player_weight_logs', {}) },
                     { id: 'roleTasks', label: 'Role Specific Tasks', data: getLocal('staff_role_tasks', []) },
-                    { id: 'rooskiLib', label: 'Rooski Library', data: getLocal('rooski_ol_library', {}) },
+                    { id: 'wizLib', label: 'Wiz Library', data: getLocal('wiz_ol_library', {}) },
                     {
                         id: 'wbSettings', label: 'Wristband Settings', data: {
                             wb1Opp: localStorage.getItem('hc_wb1_opponent'),
@@ -49189,8 +49291,8 @@
                                     onCancel={() => { setEditingPlay(null); setView('playbook'); }}
                                     onDelete={handleDeletePlay}
                                     initialData={editingPlay}
-                                    rooskiLibrary={rooskiLibrary}
-                                    setRooskiLibrary={setRooskiLibrary}
+                                    wizLibrary={wizLibrary}
+                                    setWizLibrary={setWizLibrary}
                                     positionNames={positionNames}
                                     formations={formations}
                                     playSyntax={playSyntax}
@@ -49683,11 +49785,11 @@
 
             static getDerivedStateFromError(error) {
                 return { hasError: true };
-        }
+            }
 
-     componentDidCatch(error, errorInfo) {
+            componentDidCatch(error, errorInfo) {
                 this.setState({ error, errorInfo });
-                console.error("Uncaught error:", error, errorInfo);
+                console.error("Caught error:", error, errorInfo);
             }
 
 
@@ -49713,9 +49815,9 @@
                 <AuthProvider>
                     <App />
                 </AuthProvider>
-            </ErrorBoundary>,
-            document.getElementById('root')
-        );
+   ErrorBoundary>,
+                document.getElementById('root')
+                );
     </script>
 </body>
 
