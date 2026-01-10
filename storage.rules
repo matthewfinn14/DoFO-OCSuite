@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Config: Allow authenticated read of config if needed, or specific public assets
+    // For now, no specific public config is defined.
+
+    // Schools Isolation
+    // Files must be stored at: /schools/{schoolId}/{fileName}
+    match /schools/{schoolId}/{allPaths=**} {
+      // Allow read/write if the user has a membership document for this school
+      allow read, write: if request.auth != null &&
+        firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)/memberships/$(schoolId));
+    }
+    
+    // User Private Folder (Optional, for profile pics etc)
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Default Deny
+    // Implicitly denies everything else
+  }
+}

@@ -129,88 +129,11 @@
             }
 
             /* Print Styles */
-            @media print {
-                @page {
-                    size: letter landscape;
-                    margin: 0;
-                }
-
-                /* Hide the main app root and everything else */
-                body>* {
-                    display: none !important;
-                }
-
-                /* BUT show the print portal */
-                .print-only-portal {
-                    display: block !important;
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: white;
-                    z-index: 99999;
-                }
-
-                .print-only-portal * {
-                    visibility: visible !important;
-                }
-
-                /* Ensure body allows printing */
-                body,
-                html {
-                    visibility: visible !important;
-                    height: auto !important;
-                    overflow: visible !important;
-                    background: white !important;
-                }
-            }
-
-            /* Screen Styles for Portal */
-            .print-only-portal {
-                display: none;
-            }
-
-            .print-only-scripts {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                z-index: 99998;
-                display: block !important;
-            }
-
-            /* Travel Packet Printing Exception */
-            .travel-print-container,
-            .travel-print-container * {
-                visibility: visible;
-            }
-
-            .travel-print-container {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                background: white;
-                color: black;
-                padding: 2rem;
-                z-index: 99998;
-                display: block !important;
-            }
-
-            /* Hide UI Elements completely */
-            .onboarding-wizard-wrapper,
+            /* Hide UI Chrome */
             .sidebar,
-            .no-print {
-                display: none !important;
-            }
-
-            /* Reset standard styles override */
-            .main-content {
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-
+            .app-toolbar,
+            .print-preview-header,
+            .hide-on-print,
             button,
             .btn,
             input,
@@ -218,240 +141,349 @@
                 display: none !important;
             }
 
-
-
-            .wristband-print-container>* {
-                display: flex !important;
+            /* Ensure Print Preview Modal behaves nicely */
+            .print-preview-modal-wrapper {
+                position: absolute !important;
+                background: white !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                top: 0 !important;
+                left: 0 !important;
+                z-index: 99999 !important;
             }
 
-            .wristband-card {
-                width: 4.75in;
-                height: 2.75in;
-                border: 2px solid black !important;
-                display: flex;
-                flex-direction: column;
-                background: white;
-                overflow: hidden;
-                /* Ensure content stays within 5x3 */
+            .print-preview-content {
+                padding: 0 !important;
+                overflow: visible !important;
             }
 
-            .wristband-card-header {
-                font-size: 9.5pt;
-                font-weight: bold;
-                background: black !important;
-                color: white !important;
-                text-align: center;
-                padding: 2px 0;
-                border-bottom: 2px solid black;
-                text-transform: uppercase;
+            /* Reset Game Plan Containers for Print */
+            .app-container,
+            .main-content,
+            .game-plan-container,
+            .game-plan-content {
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
+                flex: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
 
-            .wristband-content {
-                flex: 1;
-                display: flex;
-                border-top: 1px solid black;
-            }
-
-            .wristband-col {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .wristband-col:first-child {
-                border-right: 2px solid black;
-                /* Split columns clearly */
-            }
-
-            .wristband-row {
-                flex: 1;
-                /* Distribute height evenly */
-                display: flex;
-                border-bottom: 1px solid black;
-                align-items: center;
-                overflow: hidden;
-            }
-
-            .wristband-row:last-child {
-                border-bottom: none;
-            }
-
-            .wristband-num {
-                width: 27px;
-                /* Fixed width */
-                font-size: 7.5pt;
-                font-weight: bold;
-                background: #f0f0f0 !important;
-                /* Light grey for numbers */
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-right: 1px solid black;
-                height: 100%;
-                color: black;
-            }
-
-            .wristband-play {
-                flex: 1;
-                font-size: 7.5pt;
-                /* Smaller font to fit */
-                font-weight: bold;
-                padding: 0 4px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                display: flex;
-                align-items: center;
-                height: 100%;
-            }
-
-            /* Alternating row colors for readability if desired, but user image showed white/tan strips */
-            /* Let's try to match user sample roughly or keep clean white */
-            .wristband-row:nth-child(odd) .wristband-play {
-                background: white;
-            }
-
-            .wristband-row:nth-child(even) .wristband-play {
-                background: #ffedd5 !important;
-                /* Orange-ish tint like screenshot */
-            }
-
-            /* Specific overrides for color classes if we pass them */
-            .wristband-card.green .wristband-row:nth-child(even) .wristband-play {
-                background: #dcfce7 !important;
-            }
-
-            /* --- NEW WRISTBAND STYLES --- */
-
-            /* Grid Card (Diagrams) */
-            .wristband-grid-card {
-                width: 4.75in;
-                height: 2.75in;
-                border: 2px solid black !important;
-                background: white;
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                grid-template-rows: repeat(5, 1fr);
+            /* Ensure content utilizes full width and avoids breaks */
+            .print-preview-content>div {
                 width: 100%;
-                height: 100%;
-                box-sizing: border-box;
             }
 
-            .wristband-grid-cell {
-                border-right: 1px solid black;
-                border-bottom: 1px solid black;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-                position: relative;
+            table,
+            tr,
+            td,
+            .box,
+            .call-sheet-section,
+            .call-sheet-grid {
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
 
-            /* Remove right border for last column */
-            .wristband-grid-cell:nth-child(4n) {
-                border-right: none;
+            /* BUT show the print portal */
+            .print-only-portal {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: auto !important;
+                background: white;
+                z-index: 99999;
             }
 
-            /* Remove bottom border for last row */
-            .wristband-grid-cell:nth-nth-child(n+17) {
-                /* 17-20 are last row */
-                border-bottom: none;
+            .print-only-portal * {
+                visibility: visible !important;
             }
 
-            /* Actually simpler: just let container border handle edges? 
+            /* Ensure body allows printing */
+            body,
+            html {
+                visibility: visible !important;
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+            }
+        }
+
+        /* Screen Styles for Portal */
+        .print-only-portal {
+            display: none;
+        }
+
+        .print-only-scripts {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 99998;
+            display: block !important;
+        }
+
+        /* Travel Packet Printing Exception */
+        .travel-print-container,
+        .travel-print-container * {
+            visibility: visible;
+        }
+
+        .travel-print-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            color: black;
+            padding: 2rem;
+            z-index: 99998;
+            display: block !important;
+        }
+
+
+
+
+
+
+
+
+
+        .wristband-print-container>* {
+            display: flex !important;
+        }
+
+        .wristband-card {
+            width: 4.75in;
+            height: 2.75in;
+            border: 2px solid black !important;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            overflow: hidden;
+            /* Ensure content stays within 5x3 */
+        }
+
+        .wristband-card-header {
+            font-size: 9.5pt;
+            font-weight: bold;
+            background: black !important;
+            color: white !important;
+            text-align: center;
+            padding: 2px 0;
+            border-bottom: 2px solid black;
+            text-transform: uppercase;
+        }
+
+        .wristband-content {
+            flex: 1;
+            display: flex;
+            border-top: 1px solid black;
+        }
+
+        .wristband-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wristband-col:first-child {
+            border-right: 2px solid black;
+            /* Split columns clearly */
+        }
+
+        .wristband-row {
+            flex: 1;
+            /* Distribute height evenly */
+            display: flex;
+            border-bottom: 1px solid black;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .wristband-row:last-child {
+            border-bottom: none;
+        }
+
+        .wristband-num {
+            width: 27px;
+            /* Fixed width */
+            font-size: 7.5pt;
+            font-weight: bold;
+            background: #f0f0f0 !important;
+            /* Light grey for numbers */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid black;
+            height: 100%;
+            color: black;
+        }
+
+        .wristband-play {
+            flex: 1;
+            font-size: 7.5pt;
+            /* Smaller font to fit */
+            font-weight: bold;
+            padding: 0 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        /* Alternating row colors for readability if desired, but user image showed white/tan strips */
+        /* Let's try to match user sample roughly or keep clean white */
+        .wristband-row:nth-child(odd) .wristband-play {
+            background: white;
+        }
+
+        .wristband-row:nth-child(even) .wristband-play {
+            background: #ffedd5 !important;
+            /* Orange-ish tint like screenshot */
+        }
+
+        /* Specific overrides for color classes if we pass them */
+        .wristband-card.green .wristband-row:nth-child(even) .wristband-play {
+            background: #dcfce7 !important;
+        }
+
+        /* --- NEW WRISTBAND STYLES --- */
+
+        /* Grid Card (Diagrams) */
+        .wristband-grid-card {
+            width: 4.75in;
+            height: 2.75in;
+            border: 2px solid black !important;
+            background: white;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .wristband-grid-cell {
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Remove right border for last column */
+        .wristband-grid-cell:nth-child(4n) {
+            border-right: none;
+        }
+
+        /* Remove bottom border for last row */
+        .wristband-grid-cell:nth-nth-child(n+17) {
+            /* 17-20 are last row */
+            border-bottom: none;
+        }
+
+        /* Actually simpler: just let container border handle edges? 
                 Grid borders are tricky. Let's strictly border right/bottom and overlap or use gap.
                 Gap is bad for print alignment. 
                 Let's use outline/negative margin or standard table-like borders.
              */
 
-            .wristband-grid-cell-header {
-                font-size: 5.5pt;
-                font-weight: bold;
-                background: #eee;
-                border-bottom: 1px solid #ccc;
-                padding: 1px 2px;
-                display: flex;
-                justify-content: space-between;
-                white-space: nowrap;
-            }
+        .wristband-grid-cell-header {
+            font-size: 5.5pt;
+            font-weight: bold;
+            background: #eee;
+            border-bottom: 1px solid #ccc;
+            padding: 1px 2px;
+            display: flex;
+            justify-content: space-between;
+            white-space: nowrap;
+        }
 
-            .wristband-grid-cell-body {
-                flex: 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-            }
+        .wristband-grid-cell-body {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
 
-            .wristband-grid-cell-footer {
-                font-size: 6.5pt;
-                font-weight: 800;
-                text-align: center;
-                background: black;
-                color: white;
-                padding: 1px 0;
-                white-space: nowrap;
-                overflow: hidden;
-            }
+        .wristband-grid-cell-footer {
+            font-size: 6.5pt;
+            font-weight: 800;
+            text-align: center;
+            background: black;
+            color: white;
+            padding: 1px 0;
+            white-space: nowrap;
+            overflow: hidden;
+        }
 
-            /* --- DEPTH CHART PRINT STYLES --- */
-            .depth-chart-container {
-                display: block !important;
-                height: auto !important;
-                overflow: visible !important;
-            }
+        /* --- DEPTH CHART PRINT STYLES --- */
+        .depth-chart-container {
+            display: block !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
 
-            .depth-chart-viewport {
-                display: block !important;
-                height: auto !important;
-                min-height: 0 !important;
-                overflow: visible !important;
-                border: none !important;
-            }
+        .depth-chart-viewport {
+            display: block !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            border: none !important;
+        }
 
-            /* Hide controls when printing */
-            .depth-chart-controls {
-                display: none !important;
-            }
+        /* Hide controls when printing */
+        .depth-chart-controls {
+            display: none !important;
+        }
 
-            /* Updated Text List Styles (High Contrast) */
-            .wristband-card.text-list .wristband-card-header {
-                background: black !important;
-                color: white !important;
-                font-size: 10.5pt;
-                text-transform: uppercase;
-                padding: 4px 0;
-            }
+        /* Updated Text List Styles (High Contrast) */
+        .wristband-card.text-list .wristband-card-header {
+            background: black !important;
+            color: white !important;
+            font-size: 10.5pt;
+            text-transform: uppercase;
+            padding: 4px 0;
+        }
 
-            .wristband-card.text-list .wristband-row {
-                border-bottom: 1px solid black;
-                height: 12.5%;
-                /* 8 rows per column for 16 items? Or stick to 20-25? User wants specific count. */
-                /* User sample 1 had 301-316 per col? No, sample 2 has 25 rows (101-125). */
-            }
+        .wristband-card.text-list .wristband-row {
+            border-bottom: 1px solid black;
+            height: 12.5%;
+            /* 8 rows per column for 16 items? Or stick to 20-25? User wants specific count. */
+            /* User sample 1 had 301-316 per col? No, sample 2 has 25 rows (101-125). */
+        }
 
-            .wristband-card.text-list .wristband-num {
-                background: black !important;
-                color: white !important;
-                font-weight: bold;
-                font-size: 8.5pt;
-                width: 30px;
-            }
+        .wristband-card.text-list .wristband-num {
+            background: black !important;
+            color: white !important;
+            font-weight: bold;
+            font-size: 8.5pt;
+            width: 30px;
+        }
 
-            .wristband-card.text-list .wristband-play {
-                font-size: 8.5pt;
-                font-weight: bold;
-                color: black;
-            }
+        .wristband-card.text-list .wristband-play {
+            font-size: 8.5pt;
+            font-weight: bold;
+            color: black;
+        }
 
-            .wristband-card.text-list .wristband-row:nth-child(even) .wristband-play {
-                background: #e5e5e5 !important;
-                /* Light Grey striping instead of orange */
-            }
+        .wristband-card.text-list .wristband-row:nth-child(even) .wristband-play {
+            background: #e5e5e5 !important;
+            /* Light Grey striping instead of orange */
+        }
 
-            .wristband-card.text-list.green .wristband-row:nth-child(even) .wristband-play {
-                background: #dcfce7 !important;
-                /* Keep green tint for green band */
-            }
+        .wristband-card.text-list.green .wristband-row:nth-child(even) .wristband-play {
+            background: #dcfce7 !important;
+            /* Keep green tint for green band */
+        }
         }
 
         /* --- WRISTBAND BUILDER SCREEN STYLES --- */
@@ -5012,6 +5044,15 @@
                                             required
                                         />
                                     </div>
+                                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                                        <label className="form-label">Rooski / Short Name <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'normal' }}>(Optional)</span></label>
+                                        <input
+                                            className="form-input"
+                                            value={formData.rooskiName || ''}
+                                            onChange={e => setFormData({ ...formData, rooskiName: e.target.value })}
+                                            placeholder="Short name for 4x4 grids..."
+                                        />
+                                    </div>
                                     {/* Draggable Parsed Components */}
                                     {parsedComponents && (
                                         <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
@@ -5132,6 +5173,15 @@
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
                                             placeholder="e.g. TRIBE / Spider 2 Y Banana"
                                             required
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                                        <label className="form-label">Rooski / Short Name <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'normal' }}>(Optional)</span></label>
+                                        <input
+                                            className="form-input"
+                                            value={formData.rooskiName || ''}
+                                            onChange={e => setFormData({ ...formData, rooskiName: e.target.value })}
+                                            placeholder="Short name for 4x4 grids..."
                                         />
                                     </div>
 
@@ -5755,6 +5805,8 @@
             const [quickAddSuggestions, setQuickAddSuggestions] = useState([]);
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [staplesInputs, setStaplesInputs] = useState({}); // Track input values for Staples slots
+            const [editingSlot, setEditingSlot] = useState(null); // Slot currently being edited (for Rooski name)
+            const [tempRooskiName, setTempRooskiName] = useState(''); // Temp value for Rooski name edit
 
             // Layout constants
             const rowHeight = 11;
@@ -5870,65 +5922,7 @@
                 setStaplesInputs(inputs);
             }, [slotMap]);
 
-            // Auto-cleanup Ghost Assignments (Rooski/Mini-Scripts overflow)
-            useEffect(() => {
-                if (!wbSettings || !selectedCardId) return;
 
-                const card = wbSettings[selectedCardId];
-                if (!card) return;
-
-                let startSlot = 0;
-                if (selectedCardId === 'card1') startSlot = 101;
-                else if (selectedCardId === 'card2') startSlot = 201;
-                else if (selectedCardId === 'card3') startSlot = 301;
-                else if (selectedCardId === 'card4') startSlot = 401;
-                else if (selectedCardId === 'card5') startSlot = 501;
-                else if (selectedCardId === 'card6') startSlot = 601;
-
-                if (startSlot === 0) return;
-
-                const updates = [];
-
-                if (card.type === 'rooski') {
-                    const maxRooski = startSlot + 15;
-                    const maxStandard = startSlot + 47; // Standard 48 slots
-
-                    // Identify ghosts: plays assigned to > maxRooski but within standard range
-                    plays.forEach(p => {
-                        if (!p.wristbandSlot) return;
-                        const slotStr = p.wristbandSlot.toString();
-                        const slot = parseInt(slotStr, 10);
-
-                        if (slot > maxRooski && slot <= maxStandard) {
-                            updates.push({ ...p, wristbandSlot: '' });
-                        }
-                    });
-
-                } else if (card.type === 'mini-scripts') {
-                    const minStandard = startSlot;
-                    const maxStandard = startSlot + 99; // Wide net
-
-                    // Identify ghosts: plays assigned to numeric slots (Traditional) when in Mini-Scripts
-                    plays.forEach(p => {
-                        if (!p.wristbandSlot) return;
-                        const slotStr = p.wristbandSlot.toString();
-
-                        // If it's pure number, it's a Traditional ghost in Mini-Scripts land
-                        // Mini-Scripts use "101A", "101B"
-                        if (/^\d+$/.test(slotStr)) {
-                            const slot = parseInt(slotStr, 10);
-                            if (slot >= minStandard && slot <= maxStandard) {
-                                updates.push({ ...p, wristbandSlot: '' });
-                            }
-                        }
-                    });
-                }
-
-                if (updates.length > 0) {
-                    // Use setTimeout to avoid render-cycle conflicts if immediate
-                    setTimeout(() => onUpdatePlay(updates), 0);
-                }
-            }, [wbSettings, selectedCardId, plays]); // Dependency on plays ensures we re-check if data loads later
 
 
             // Sync Mini-Script assignments (101A/101B)
@@ -6060,6 +6054,27 @@
                     }
                     setSelectedPlayId(null); // Deselect after assignment
                 }
+            };
+
+            // Handle saving the Rooski short name
+            // Handle saving the Rooski short name
+            const handleSaveRooskiName = (playId, slot) => {
+                if (!playId) return;
+                const play = plays.find(p => p.id === playId);
+                const activeCard = wbSettings[selectedCardId];
+                const viewType = activeCard?.rooskiView || 'skill';
+
+                if (play) {
+                    if (viewType === 'skill') {
+                        onUpdatePlay({ ...play, rooskiSkillName: tempRooskiName });
+                    } else if (viewType === 'oline') {
+                        onUpdatePlay({ ...play, rooskiOlineName: tempRooskiName });
+                    } else {
+                        onUpdatePlay({ ...play, rooskiName: tempRooskiName }); // Fallback
+                    }
+                }
+                setEditingSlot(null);
+                setTempRooskiName('');
             };
 
             const handleUpdateRow = (cardId, rowId, updates) => {
@@ -7288,9 +7303,12 @@
                                         let shouldShowPlay = false;
                                         if (play) {
                                             if (viewType === 'skill') {
-                                                shouldShowPlay = play.rooskiSkillData && !play.isOlineOnly;
+                                                // Show all plays except those explicitly marked for O-Line only
+                                                // This allows Standard plays (with basic diagramData) to show up
+                                                shouldShowPlay = !play.isOlineOnly;
                                             } else if (viewType === 'oline') {
-                                                shouldShowPlay = play.rooskiOlineData;
+                                                // Show all plays in O-Line view
+                                                shouldShowPlay = true;
                                             }
                                         }
 
@@ -7301,7 +7319,8 @@
                                             <div
                                                 key={slot}
                                                 style={{
-                                                    flex: 1,
+                                                    width: '25%', // Fixed width
+                                                    flexShrink: 0, // Prevent shrinking
                                                     borderRight: cIndex < 3 ? '1px solid black' : 'none',
                                                     display: 'flex',
                                                     flexDirection: 'column',
@@ -7330,36 +7349,99 @@
                                                     minHeight: '18px'
                                                 }}>
                                                     {/* Coordinate cell */}
-                                                    <div style={{
-                                                        width: '35px',
-                                                        minWidth: '35px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '8pt',
-                                                        fontWeight: 'bold',
-                                                        color: '#000',
-                                                        borderRight: '1px solid #ccc',
-                                                        background: 'white'
-                                                    }}>
+                                                    <div
+                                                        onClick={(e) => {
+                                                            if (displayPlay) {
+                                                                e.stopPropagation();
+                                                                // Revert logic: Clear the specific name for the current view
+                                                                if (viewType === 'skill') {
+                                                                    onUpdatePlay({ ...displayPlay, rooskiSkillName: '' });
+                                                                } else if (viewType === 'oline') {
+                                                                    onUpdatePlay({ ...displayPlay, rooskiOlineName: '' });
+                                                                }
+                                                            }
+                                                        }}
+                                                        title="Click to revert to full play call"
+                                                        style={{
+                                                            width: '35px',
+                                                            minWidth: '35px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '8pt',
+                                                            fontWeight: 'bold',
+                                                            color: '#000',
+                                                            borderRight: '1px solid #ccc',
+                                                            background: 'white',
+                                                            cursor: displayPlay ? 'pointer' : 'default'
+                                                        }}>
                                                         {slot}
                                                     </div>
 
                                                     {/* Play name cell */}
-                                                    <div style={{
-                                                        flex: 1,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '7pt',
-                                                        padding: '0 2px',
-                                                        textAlign: 'center',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
-                                                        background: 'white'
-                                                    }}>
-                                                        {displayPlay ? displayPlay.name : ''}
+                                                    <div
+                                                        style={{
+                                                            flex: 1,
+                                                            minWidth: 0, // Allow flex child to shrink below content size
+                                                                         alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '7pt',
+                                                            padding: '0 2px',
+                                                            textAlign: 'center',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap',
+                                                            background: 'white',
+                                                                                             }}
+                                                        onClick={(e) => {
+                                                            if (displayPlay) {
+                                                                e.stopPropagation(); // Prevent slot assignment
+                                                                setEditingSlot(slot);
+
+                                                                // Resolve current name based on view
+                                                                let currentName = displayPlay.name;
+                                                                if (viewType === 'skill') {
+                                                                    currentName = displayPlay.rooskiSkillName || displayPlay.rooskiName || displayPlay.name;
+                                                                } else if (viewType === 'oline') {
+                                                                    currentName = displayPlay.rooskiOlineName || displayPlay.rooskiName || displayPlay.name;
+                                                                }
+
+                                                                setTempRooskiName(currentName);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {editingSlot === slot ? (
+                                                            <input
+                                                                autoFocus
+                                                                value={tempRooskiName}
+                                                                onChange={(e) => setTempRooskiName(e.target.value)}
+                                                                startDate={(e) => e.stopPropagation()}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onBlur={() => handleSaveRooskiName(displayPlay.id, slot)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        handleSaveRooskiName(displayPlay.id, slot);
+                                                                    }
+                                                                }}
+                                                               style={{
+                                                                    width: '100%',
+                                                                   height: '100%',
+                                                                    border: 'none',
+                                                                    outline: 'none',
+                                                                    textAlign: 'center',
+                                                                    fontSize: '7pt',
+                                                                    padding: 0,
+                                                                    margin: 0,
+                                                                    background: '#f0f9ff'
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            displayPlay ? (
+                                                                viewType === 'skill'
+                                                                    ? (displayPlay.rooskiSkillName || displayPlay.rooskiName || displayPlay.name)
+                                                                    : (displayPlay.rooskiOlineName || displayPlay.rooskiName || displayPlay.name)
+                                                            ) : ''
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -25679,7 +25761,7 @@
                                         })}
                                         {(!gamePlanLayouts?.CALL_SHEET?.sections?.length) && (
                                             <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
-                                                No situations configured. Go to Settings > Call Sheet Layout.
+                                                No situations configured. Go to Settings &gt; Call Sheet Layout.
                                             </div>
                                         )}
                                     </div>
@@ -26102,9 +26184,11 @@
                                                 let shouldShowPlay = false;
                                                 if (play) {
                                                     if (viewType === 'skill') {
-                                                        shouldShowPlay = play.rooskiSkillData && !play.isOlineOnly;
+                                                        // Relaxed filtering to allow Standard plays
+                                                        shouldShowPlay = !play.isOlineOnly;
                                                     } else if (viewType === 'oline') {
-                                                        shouldShowPlay = play.rooskiOlineData;
+                                                        // Relaxed filtering for oline view
+                                                        shouldShowPlay = true;
                                                     } else {
                                                         shouldShowPlay = true; // standard/diagram view
                                                     }
@@ -26114,7 +26198,8 @@
 
                                                 return (
                                                     <div key={slot} style={{
-                                                        flex: 1,
+                                                        width: '25%', // Fixed width for print
+                                                        flexShrink: 0,
                                                         borderRight: cIndex < 3 ? '1px solid black' : 'none',
                                                         display: 'flex',
                                                         flexDirection: 'column',
@@ -26127,8 +26212,8 @@
                                                         {/* Info Row */}
                                                         <div style={{ display: 'flex', borderTop: '1px solid #ccc', height: '14px', minHeight: '14px', fontSize: '8px' }}>
                                                             <div style={{ width: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>{slot}</div>
-                                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', paddingLeft: '2px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                                                {displayPlay ? displayPlay.name : ''}
+                                                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', paddingLeft: '2px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                                                {displayPlay ? (displayPlay.rooskiName || displayPlay.name) : ''}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -33552,6 +33637,7 @@
             const [wbAutocomplete, setWbAutocomplete] = useState({ playId: null, query: '' });
             const [showPrintPreview, setShowPrintPreview] = useState(false); // Print Preview Toggle
             const [printPreviewTab, setPrintPreviewTab] = useState('staples'); // Selected tab for print preview
+            const [printScale, setPrintScale] = useState(0.85); // Default to 85% for better fit
 
             const validWristbandSlots = useMemo(() => {
                 if (!wbSettings) return [];
@@ -38738,10 +38824,10 @@
 
 
             return (
-                <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)', gap: '1rem' }}>
+                <div className="game-plan-container" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)', gap: '1rem' }}>
 
                     {/* Toolbar */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
+                    <div className="app-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                             <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')}>
                                 STAPLES
@@ -38772,7 +38858,7 @@
                     </div>
 
                     {/* View Content */}
-                    <div style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px' }}>
+                    <div className="game-plan-content" style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px' }}>
                         {viewMode === 'call-sheet' && renderCallSheet()}
                         {viewMode === 'sheet' && renderSheetView()}
                         {viewMode === 'fzdnd' && renderFZDnDView()}
@@ -38789,10 +38875,10 @@
                     {renderBoxEditorModal()}
                     {renderSituationAssignmentModal()}
                     {/* Print Preview Modal */}
-                    {showPrintPreview && (
-                        <div style={{
+                    {showPrintPreview && ReactDOM.createPortal(
+                        <div className="print-preview-modal-wrapper print-only-portal" style={{
                             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.9)', zIndex: 9999,
+                            background: 'white', zIndex: 9999,
                             display: 'flex', flexDirection: 'column'
                         }}>
                             {/* Header with tab selector and controls */}
@@ -38842,38 +38928,56 @@
                                             PLAYER TOUCHES
                                         </button>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={() => window.print()}
-                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '8px' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Scale:</span>
+                                        <select
+                                            value={printScale}
+                                            onChange={(e) => setPrintScale(parseFloat(e.target.value))}
+                                            style={{ fontSize: '0.8rem', padding: '0.2rem', borderRadius: '4px', border: '1px solid #ccc' }}
                                         >
-                                            🖨️ PRINT
-                                        </button>
-                                        <button
-                                            className="btn btn-secondary"
-                                            onClick={() => setShowPrintPreview(false)}
-                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                                        >
-                                            ✕ CLOSE
-                                        </button>
+                                            <option value={1}>100%</option>
+                                            <option value={0.9}>90%</option>
+                                            <option value={0.85}>85%</option>
+                                            <option value={0.75}>75%</option>
+                                            <option value={0.67}>67%</option>
+                                            <option value={0.5}>50%</option>
+                                        </select>
                                     </div>
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={() => window.print()}
+                                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                    >
+                                        🖨️ PRINT
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => setShowPrintPreview(false)}
+                                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                    >
+                                        ✕ CLOSE
+                                    </button>
                                 </div>
                             </div>
 
                             {/* Print content area */}
                             <div className="print-preview-content" style={{ flex: 1, overflow: 'auto', background: 'white', padding: '2rem' }}>
-                                {printPreviewTab === 'staples' && renderStaples()}
-                                {printPreviewTab === 'priority' && renderPriorityPlays()}
-                                {printPreviewTab === 'sheet' && renderSheetView()}
-                                {printPreviewTab === 'matrix' && renderMatrix()}
-                                {printPreviewTab === 'fzdnd' && renderFZDnDView()}
-                                {printPreviewTab === 'player-touches' && renderPlayerTouches()}
+                                <div style={{ zoom: printScale, transformOrigin: 'top left' }}>
+                                    {printPreviewTab === 'staples' && renderStaples()}
+                                    {printPreviewTab === 'priority' && renderPriorityPlays()}
+                                    {printPreviewTab === 'sheet' && renderSheetView()}
+                                    {printPreviewTab === 'matrix' && renderMatrix()}
+                                    {printPreviewTab === 'fzdnd' && renderFZDnDView()}
+                                    {printPreviewTab === 'player-touches' && renderPlayerTouches()}
+                                </div>
                             </div>
-                        </div>
+                        </div>,
+                        document.body
                     )}
 
-                </div>
+                </div >
             );
         };
 
@@ -49579,9 +49683,9 @@
 
             static getDerivedStateFromError(error) {
                 return { hasError: true };
-            }
+        }
 
-            componentDidCatch(error, errorInfo) {
+     componentDidCatch(error, errorInfo) {
                 this.setState({ error, errorInfo });
                 console.error("Uncaught error:", error, errorInfo);
             }

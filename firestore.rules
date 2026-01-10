@@ -2,9 +2,60 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // allow read/write access to all documents to any user signed in to the application
-    match /{document=**} {
+
+    // --- HELPER FUNCTIONS ---
+    function isMemberOf(schoolId) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)/memberships/$(schoolId));
+    }
+
+    // --- USERS ---
+    // Strictly private. Only the user can access their own profile.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /memberships/{schoolId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // --- SCHOOLS (TEAMS) ---
+    // Collaborative data. Access restricted to team members.
+    match /schools/{schoolId} {
+      // Creation: Any auth user can create a new school.
+      allow create: if request.auth != null;
+      
+      // Read/Update/Delete: Must be a member of the school.
+      allow read, update, delete: if request.auth != null && isMemberOf(schoolId);
+
+      // Subcollections (roster, plays, practice_plans, etc.)
+      match /{allChildren=**} {
+        allow read, write: if request.auth != null && isMemberOf(schoolId);
+      }
+    }
+
+    // --- GLOBAL RESOURCES ---
+    
+    // Global Templates: Readable by all, writable by all (for demo/sharing purposes)
+    match /global_templates/{templateId} {
       allow read, write: if request.auth != null;
+    }
+
+    // Invites: Used to invite other coaches. 
+    match /invites/{email} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Config: App configuration (billing, access control)
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      // Write restricted to admins (manually managed or specifically authorized)
+      // For this implementation, we default to false to protect config.
+      allow write: if false; 
+      
+      match /{allChildren=**} {
+         allow read: if request.auth != null;
+         allow write: if false;
+      }
     }
   }
 }
