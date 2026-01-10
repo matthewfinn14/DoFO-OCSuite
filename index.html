@@ -34454,6 +34454,19 @@
                 setEditingHeader(null);
             };
 
+            const toggleSectionExpansion = (sectionIdx) => {
+                const newLayouts = { ...gamePlanLayouts };
+                const sheet = { ...newLayouts.CALL_SHEET };
+                const section = { ...sheet.sections[sectionIdx] };
+
+                // Toggle expansion state
+                section.expandToFill = !section.expandToFill;
+
+                sheet.sections[sectionIdx] = section;
+                newLayouts.CALL_SHEET = sheet;
+                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+            };
+
             const toggleVisibility = (sectionIdx, rowIdx) => {
                 if (!onUpdateLayouts) return;
                 const newLayouts = { ...gamePlanLayouts };
@@ -35827,7 +35840,7 @@
             };
             const renderFieldPositionSection = (section, sectionIdx) => renderGridSection(section, sectionIdx);
 
-            const renderBox = (box, sectionIdx, boxIdx) => {
+            const renderBox = (box, sectionIdx, boxIdx, isExpanded = false) => {
                 const isEditing = editingHeader && editingHeader.sectionIdx === sectionIdx && editingHeader.rowIdx === boxIdx;
                 const isBoxEditing = editingBox && editingBox.sectionIdx === sectionIdx && editingBox.boxIdx === boxIdx;
 
@@ -35857,7 +35870,14 @@
                             handleDrop(e, sectionIdx, boxIdx);
                         }}
                         style={{
-                            gridColumn: `span ${span}`,
+                            // Flexbox expansion logic
+                            // Flexbox expansion logic
+                            flexGrow: isExpanded ? span : 0,
+                            gridColumn: isExpanded ? 'auto' : `span ${span}`,
+                            maxWidth: isExpanded ? '100%' : undefined,
+                            minWidth: isExpanded ? '125px' : undefined, // Force wrap if too squished
+                            flexBasis: isExpanded ? '0' : undefined, // Ignore size, use grow ratio
+
                             border: isEditing ? '2px solid var(--accent)' : '1px solid #ddd',
                             borderRadius: '4px', overflow: 'hidden',
                             minHeight: '80px', // Smaller collapsed height
@@ -36317,6 +36337,28 @@
                                                         />
                                                     </div>
 
+                                                    {idx >= 0 && (
+                                                        <button
+                                                            className="btn-sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleSectionExpansion(idx);
+                                                                setEditingHeader(null);
+                                                            }}
+                                                            style={{
+                                                                background: section.expandToFill ? '#dcfce7' : '#e0f2fe',
+                                                                color: section.expandToFill ? '#166534' : '#0369a1',
+                                                                border: section.expandToFill ? '1px solid #86efac' : '1px solid #bae6fd',
+                                                                width: '100%', fontSize: '0.8rem', padding: '6px', cursor: 'pointer',
+                                                                borderRadius: '4px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px',
+                                                                marginBottom: '4px'
+                                                            }}
+                                                        >
+                                                            <Icon name={section.expandToFill ? "Minimize" : "Maximize"} size={12} />
+                                                            {section.expandToFill ? "Fixed Width" : "Expand to Fill"}
+                                                        </button>
+                                                    )}
+
                                                     {/* Delete Section */}
                                                     {idx >= 0 && (
                                                         <button
@@ -36447,7 +36489,10 @@
                                         /* Default/Grid Layout */
                                         <div
                                             style={{
-                                                display: 'grid', gridTemplateColumns: `repeat(7, 1fr)`, gap: '4px',
+                                                display: section.expandToFill ? 'flex' : 'grid',
+                                                flexWrap: section.expandToFill ? 'wrap' : undefined,
+                                                gridTemplateColumns: section.expandToFill ? undefined : `repeat(7, 1fr)`,
+                                                gap: '4px',
                                                 minHeight: '100px', // Ensure empty sections are drop targets
                                                 border: isLocked ? 'none' : '1px dashed #cbd5e1', // Visual cue
                                                 borderRadius: '8px',
@@ -36484,7 +36529,7 @@
                                                 setDraggedCell(null);
                                             }}
                                         >
-                                            {(section.boxes || []).map((box, boxIdx) => renderBox(box, idx, boxIdx))}
+                                            {(section.boxes || []).map((box, boxIdx) => renderBox(box, idx, boxIdx, section.expandToFill))}
                                         </div>
                                     )}
                                 </div>
@@ -36923,292 +36968,261 @@
                                             )}
                                         </div>
                                         <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: 'repeat(7, 1fr)',
+                                            display: 'flex', flexDirection: 'column',
                                             borderTop: '0',
-                                            gap: isSheetEditing ? '4px' : '0',
                                             padding: isSheetEditing ? '4px' : '0'
                                         }}>
-                                            {visibleBoxes.map((box, bIdx) => {
-                                                // Determine if this is the first box in a row (for row-level expand button)
-                                                let isFirstInRow = false;
-                                                let currentBoxRowNumber = 1;
-                                                let cumulativeSpan = 0;
+                                            {(() => {
+                                                // 1. Group boxes into rows based on Grid Logic (7 cols)
+                                                const rows = [];
+                                                let currentRow = [];
+                                                let currentSpan = 0;
 
-                                                for (let i = 0; i < bIdx; i++) {
-                                                    const b = visibleBoxes[i];
-                                                    const bSpan = b.colSpan > 1 ? b.colSpan : (b.type === 'grid' ? 5 : 2);
+                                                visibleBoxes.forEach((box, bIdx) => {
+                                                    const span = Number(box.colSpan) > 1 ? Number(box.colSpan) : (box.type === 'grid' ? 5 : 2);
 
-                                                    if (cumulativeSpan > 0 && cumulativeSpan + bSpan > 7) {
-                                                        currentBoxRowNumber++;
-                                                        cumulativeSpan = bSpan;
-                                                    } else {
-                                                        cumulativeSpan += bSpan;
+                                                    if (currentSpan + span > 7 && currentRow.length > 0) {
+                                                        // Push previous row
+                                                        rows.push(currentRow);
+                                                        // Start new row
+                                                        currentRow = [];
+                                                        currentSpan = 0;
                                                     }
+
+                                                    currentRow.push({ box, originalIndex: bIdx, span });
+                                                    currentSpan += span;
+                                                });
+
+                                                if (currentRow.length > 0) {
+                                                    rows.push(currentRow);
                                                 }
 
-                                                // Check if this is the first box in this row
-                                                if (bIdx === 0) {
-                                                    isFirstInRow = true;
-                                                } else {
-                                                    // Calculate the row number of the PREVIOUS box (bIdx - 1)
-                                                    let prevBoxRowNumber = 1;
-                                                    let prevCumulativeSpan = 0;
+                                                // 2. Render each row
+                                                return rows.map((rowBoxes, rIdx) => (
+                                                    <div key={rIdx} style={{
+                                                        display: section.expandToFill ? 'flex' : 'grid',
+                                                        gridTemplateColumns: section.expandToFill ? undefined : 'repeat(7, 1fr)',
+                                                        width: '100%',
+                                                        gap: isSheetEditing ? '4px' : '0',
+                                                        marginBottom: isSheetEditing ? '4px' : '0'
+                                                    }}>
+                                                        {rowBoxes.map(({ box, originalIndex: bIdx, span }, i) => {
+                                                            // Calculate isFirstInRow for legacy badge logic (simplified)
+                                                            const isFirstInRow = i === 0;
+                                                            const currentBoxRowNumber = rIdx + 1; // 1-based row number
 
-                                                    for (let i = 0; i <= bIdx - 1; i++) {
-                                                        const b = visibleBoxes[i];
-                                                        const bSpan = b.colSpan > 1 ? b.colSpan : (b.type === 'grid' ? 5 : 2);
 
-                                                        if (prevCumulativeSpan > 0 && prevCumulativeSpan + bSpan > 7) {
-                                                            prevBoxRowNumber++;
-                                                            prevCumulativeSpan = bSpan;
-                                                        } else {
-                                                            prevCumulativeSpan += bSpan;
-                                                        }
-                                                    }
+                                                            const renderBoxContent = () => {
+                                                                if (box.type === 'grid') {
+                                                                    const cols = box.gridColumns || 4;
+                                                                    const rowsCount = box.gridRows || 5;
+                                                                    const totalSlots = cols * rowsCount;
 
-                                                    isFirstInRow = currentBoxRowNumber !== prevBoxRowNumber;
-                                                }
+                                                                    const gridPlays = (getGridPlays(box.setId, totalSlots) || []);
+                                                                    const headings = box.gridHeadings || Array(cols).fill('').map((_, i) => i === 0 ? 'LEFT HASH' : (i === cols - 1 ? 'NOTES' : `COL ${i + 1}`));
 
-                                                const renderBoxContent = () => {
-                                                    if (box.type === 'grid') {
-                                                        const cols = box.gridColumns || 4;
-                                                        const rowsCount = box.gridRows || 5;
-                                                        const totalSlots = cols * rowsCount;
-
-                                                        const gridPlays = (getGridPlays(box.setId, totalSlots) || []);
-                                                        const headings = box.gridHeadings || Array(cols).fill('').map((_, i) => i === 0 ? 'LEFT HASH' : (i === cols - 1 ? 'NOTES' : `COL ${i + 1}`));
-
-                                                        const rows = [];
-                                                        for (let i = 0; i < gridPlays.length; i += cols) {
-                                                            rows.push(gridPlays.slice(i, i + cols));
-                                                        }
-
-                                                        return (
-                                                            <div style={{ display: 'grid', gridTemplateColumns: `min-content repeat(${cols}, 1fr)`, gap: '0', width: '100%' }}>
-                                                                {/* Header Row */}
-                                                                <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>#</div>
-                                                                {headings.slice(0, cols).map((h, i) => (
-                                                                    <div key={`h-${i}`} style={{
-                                                                        padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center',
-                                                                        background: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                                        borderRight: i < cols - 1 ? '1px solid #cbd5e1' : 'none',
-                                                                        borderBottom: '1px solid #cbd5e1'
-                                                                    }}>
-                                                                        {h}
-                                                                    </div>
-                                                                ))}
-
-                                                                {/* Data Rows */}
-                                                                {rows.map((rowSlots, rIdx) => (
-                                                                    <React.Fragment key={rIdx}>
-                                                                        <div style={{
-                                                                            padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold',
-                                                                            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
-                                                                            borderBottom: '1px dotted #f1f5f9'
-                                                                        }}>
-                                                                            {rIdx + 1}
-                                                                        </div>
-                                                                        {rowSlots.map((slot, cIdx) => {
-                                                                            const play = plays.find(p => p.id === slot.id);
-                                                                            return (
-                                                                                <div key={cIdx} style={{
-                                                                                    fontSize: '0.65rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-                                                                                    background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
-                                                                                    padding: '2px', minHeight: '16px', color: '#334155',
-                                                                                    display: 'flex', alignItems: 'center',
-                                                                                    borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
-                                                                                    borderBottom: '1px dotted #e2e8f0'
-                                                                                }} title={play ? play.name : ''}>
-                                                                                    {play ? getPlayDisplayName(play) : (slot.type === 'GAP' ? '' : '-')}
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </React.Fragment>
-                                                                ))}
-                                                            </div>
-                                                        );
-                                                    }
-                                                    if (box.type === 'script' && box.rows && box.rows.length > 0) {
-                                                        return (
-                                                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: '0', rowGap: '0' }}>
-                                                                {box.rows.map((row, rIdx) => {
-                                                                    const playLeft = plays.find(p => p.id === row.content);
-                                                                    const playRight = plays.find(p => p.id === row.contentRight);
-                                                                    return [
-                                                                        <div key={`${rIdx}-L`} style={{
-                                                                            display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
-                                                                            borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
-                                                                            borderRight: '1px solid #e2e8f0', paddingRight: '4px',
-                                                                            background: playLeft?.priority ? '#fef08a' : 'transparent'
-                                                                        }}>
-                                                                            <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
-                                                                            {playLeft ? (
-                                                                                <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playLeft.name}</span>
-                                                                            ) : (
-                                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
-                                                                            )}
-                                                                        </div>,
-                                                                        <div key={`${rIdx}-R`} style={{
-                                                                            display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
-                                                                            borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
-                                                                            paddingLeft: '4px',
-                                                                            background: playRight?.priority ? '#fef08a' : 'transparent'
-                                                                        }}>
-                                                                            {playRight ? (
-                                                                                <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playRight.name}</span>
-                                                                            ) : (
-                                                                                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>
-                                                                            )}
-                                                                        </div>
-                                                                    ];
-                                                                })}
-                                                            </div>
-                                                        );
-                                                    }
-                                                    const playsInBox = getPlaysForSet(box.setId);
-                                                    if (playsInBox.length === 0) {
-                                                        return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
-                                                    }
-                                                    return (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                                            {playsInBox.map((p, pIdx) => (
-                                                                <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', background: p.priority ? '#fef08a' : 'transparent' }}>
-                                                                    <span style={{ color: '#94a3b8', width: '14px', textAlign: 'right', flexShrink: 0 }}>{pIdx + 1}.</span>
-                                                                    <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
-                                                                    {p.formation && <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    );
-                                                };
-                                                const playsInBox = getPlaysForSet(box.setId);
-                                                return (
-                                                    <div
-                                                        key={bIdx}
-                                                        draggable={isSheetEditing}
-                                                        onDragStart={(e) => {
-                                                            if (!isSheetEditing) return;
-                                                            setDraggedCell({ sectionIdx: sIdx, boxIdx: bIdx }); // Reuse draggedCell state for simplicity or create new one? defined as { sectionIdx, rowIdx } so keys match intended usage if we treat rowIdx as boxIdx
-                                                            e.dataTransfer.effectAllowed = 'move';
-                                                            e.stopPropagation();
-                                                        }}
-                                                        onDragOver={(e) => {
-                                                            if (!isSheetEditing) return;
-                                                            e.preventDefault();
-                                                            e.dataTransfer.dropEffect = 'move';
-                                                        }}
-                                                        onDrop={(e) => handleSheetBoxDrop(e, sIdx, bIdx)}
-                                                        style={{
-                                                            gridColumn: (() => {
-                                                                if (!section.expandToFill) {
-                                                                    return `span ${box.colSpan > 1 ? box.colSpan : (box.type === 'grid' ? 5 : 2)}`;
-                                                                }
-
-                                                                // Calculate which row this box is in and how many boxes are in that row
-                                                                let cumulativeSpan = 0;
-                                                                let currentRowBoxes = [];
-
-                                                                for (let i = 0; i <= bIdx; i++) {
-                                                                    const b = visibleBoxes[i];
-                                                                    const bSpan = b.colSpan > 1 ? b.colSpan : (b.type === 'grid' ? 5 : 2);
-
-                                                                    if (cumulativeSpan + bSpan > 7 && currentRowBoxes.length > 0) {
-                                                                        // This box starts a new row
-                                                                        currentRowBoxes = [i];
-                                                                        cumulativeSpan = bSpan;
-                                                                    } else {
-                                                                        currentRowBoxes.push(i);
-                                                                        cumulativeSpan += bSpan;
+                                                                    const rows = [];
+                                                                    for (let i = 0; i < gridPlays.length; i += cols) {
+                                                                        rows.push(gridPlays.slice(i, i + cols));
                                                                     }
-                                                                }
 
-                                                                // Calculate span for equal distribution in this row
-                                                                const boxesInRow = currentRowBoxes.length;
-                                                                const spanPerBox = Math.floor(7 / boxesInRow);
-                                                                const isLastInRow = currentRowBoxes[currentRowBoxes.length - 1] === bIdx;
+                                                                    return (
+                                                                        <div style={{ display: 'grid', gridTemplateColumns: `min-content repeat(${cols}, 1fr)`, gap: '0', width: '100%' }}>
+                                                                            {/* Header Row */}
+                                                                            <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>#</div>
+                                                                            {headings.slice(0, cols).map((h, i) => (
+                                                                                <div key={`h-${i}`} style={{
+                                                                                    padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center',
+                                                                                    background: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                                                    borderRight: i < cols - 1 ? '1px solid #cbd5e1' : 'none',
+                                                                                    borderBottom: '1px solid #cbd5e1'
+                                                                                }}>
+                                                                                    {h}
+                                                                                </div>
+                                                                            ))}
 
-                                                                // Last box in row gets remaining columns
-                                                                if (isLastInRow) {
-                                                                    const usedColumns = spanPerBox * (boxesInRow - 1);
-                                                                    return `span ${7 - usedColumns}`;
-                                                                } else {
-                                                                    return `span ${spanPerBox}`;
+                                                                            {/* Data Rows */}
+                                                                            {rows.map((rowSlots, rIdx) => (
+                                                                                <React.Fragment key={rIdx}>
+                                                                                    <div style={{
+                                                                                        padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold',
+                                                                                        display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
+                                                                                        borderBottom: '1px dotted #f1f5f9'
+                                                                                    }}>
+                                                                                        {rIdx + 1}
+                                                                                    </div>
+                                                                                    {rowSlots.map((slot, cIdx) => {
+                                                                                        const play = plays.find(p => p.id === slot.id);
+                                                                                        return (
+                                                                                            <div key={cIdx} style={{
+                                                                                                fontSize: '0.65rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                                                                                                background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
+                                                                                                padding: '2px', minHeight: '16px', color: '#334155',
+                                                                                                display: 'flex', alignItems: 'center',
+                                                                                                borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
+                                                                                                borderBottom: '1px dotted #e2e8f0'
+                                                                                            }} title={play ? play.name : ''}>
+                                                                                                {play ? getPlayDisplayName(play) : (slot.type === 'GAP' ? '' : '-')}
+                                                                                            </div>
+                                                                                        );
+                                                                                    })}
+                                                                                </React.Fragment>
+                                                                            ))}
+                                                                        </div>
+                                                                    );
                                                                 }
-                                                            })(),
-                                                            borderBottom: !isSheetEditing && Math.floor(bIdx / 2) < Math.ceil(visibleBoxes.length / 2) - 1 ? '1px solid #cbd5e1' : 'none',
-                                                            borderRight: !isSheetEditing && bIdx % 2 === 0 ? '1px solid #cbd5e1' : 'none',
-                                                            border: isSheetEditing ? '1px solid #e2e8f0' : undefined,
-                                                            background: 'white',
-                                                            minHeight: '120px',
-                                                            cursor: isSheetEditing ? 'grab' : 'pointer',
-                                                            display: 'flex', flexDirection: 'column',
-                                                            opacity: (draggedCell?.sectionIdx === sIdx && draggedCell?.boxIdx === bIdx) ? 0.5 : 1
-                                                        }}
-                                                        onClick={() => {
-                                                            if (!isSheetEditing) setEditingBox({ box, sectionIdx: sIdx, boxIdx: bIdx });
-                                                        }}
-                                                    >
-                                                        {/* Sheet Box Header */}
-                                                        <div style={{
-                                                            padding: '4px 8px',
-                                                            background: box.color || '#3b82f6',
-                                                            color: 'white',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: 'bold',
-                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                                                        }}>
-                                                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{box.header}</span>
-                                                            {isSheetEditing ? (
+                                                                if (box.type === 'script' && box.rows && box.rows.length > 0) {
+                                                                    return (
+                                                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: '0', rowGap: '0' }}>
+                                                                            {box.rows.map((row, rIdx) => {
+                                                                                const playLeft = plays.find(p => p.id === row.content);
+                                                                                const playRight = plays.find(p => p.id === row.contentRight);
+                                                                                return [
+                                                                                    <div key={`${rIdx}-L`} style={{
+                                                                                        display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
+                                                                                        borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
+                                                                                        borderRight: '1px solid #e2e8f0', paddingRight: '4px',
+                                                                                        background: playLeft?.priority ? '#fef08a' : 'transparent'
+                                                                                    }}>
+                                                                                        <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
+                                                                                        {playLeft ? (
+                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playLeft.name}</span>
+                                                                                        ) : (
+                                                                                            <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                                                                                        )}
+                                                                                    </div>,
+                                                                                    <div key={`${rIdx}-R`} style={{
+                                                                                        display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
+                                                                                        borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
+                                                                                        paddingLeft: '4px',
+                                                                                        background: playRight?.priority ? '#fef08a' : 'transparent'
+                                                                                    }}>
+                                                                                        {playRight ? (
+                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{playRight.name}</span>
+                                                                                        ) : (
+                                                                                            <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                ];
+                                                                            })}
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                const playsInBox = getPlaysForSet(box.setId);
+                                                                if (playsInBox.length === 0) {
+                                                                    return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
+                                                                }
+                                                                return (
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                                        {playsInBox.map((p, pIdx) => (
+                                                                            <div key={pIdx} style={{ display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2', background: p.priority ? '#fef08a' : 'transparent' }}>
+                                                                                <span style={{ color: '#94a3b8', width: '14px', textAlign: 'right', flexShrink: 0 }}>{pIdx + 1}.</span>
+                                                                                <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
+                                                                                {p.formation && <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                );
+                                                            };
+                                                            const playsInBox = getPlaysForSet(box.setId);
+
+                                                            return (
                                                                 <div
-                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteSheetBox(sIdx, bIdx); }}
-                                                                    style={{ cursor: 'pointer', padding: '0 4px' }}
-                                                                >
-                                                                    ×
-                                                                </div>
-                                                            ) : (
-                                                                <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{playsInBox.length}</span>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Sheet Box Content */}
-                                                        <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
-                                                            {/* Row Expand Badge - only show on first box of each row */}
-                                                            {isFirstInRow && isSheetEditing && (
-                                                                <button
-                                                                    className="btn-sm"
-                                                                    onClick={(e) => {
+                                                                    key={bIdx}
+                                                                    draggable={isSheetEditing}
+                                                                    onDragStart={(e) => {
+                                                                        if (!isSheetEditing) return;
+                                                                        setDraggedCell({ sectionIdx: sIdx, boxIdx: bIdx });
+                                                                        e.dataTransfer.effectAllowed = 'move';
                                                                         e.stopPropagation();
-                                                                        const expandedRows = section.expandedRows || [];
-                                                                        const isExpanded = expandedRows.includes(currentBoxRowNumber);
-                                                                        const newExpandedRows = isExpanded
-                                                                            ? expandedRows.filter(r => r !== currentBoxRowNumber)
-                                                                            : [...expandedRows, currentBoxRowNumber];
-                                                                        handleUpdateSheetSection(sIdx, { ...section, expandedRows: newExpandedRows });
                                                                     }}
+                                                                    onDragOver={(e) => {
+                                                                        if (!isSheetEditing) return;
+                                                                        e.preventDefault();
+                                                                        e.dataTransfer.dropEffect = 'move';
+                                                                    }}
+                                                                    onDrop={(e) => handleSheetBoxDrop(e, sIdx, bIdx)}
                                                                     style={{
-                                                                        position: 'absolute',
-                                                                        top: '2px',
-                                                                        left: '2px',
-                                                                        background: (section.expandedRows || []).includes(currentBoxRowNumber) ? 'var(--accent)' : '#e2e8f0',
-                                                                        color: (section.expandedRows || []).includes(currentBoxRowNumber) ? 'white' : '#64748b',
-                                                                        fontSize: '0.6rem',
-                                                                        padding: '2px 4px',
-                                                                        zIndex: 100,
-                                                                        borderRadius: '3px'
+                                                                        flexGrow: section.expandToFill ? span : 0,
+                                                                        flexBasis: section.expandToFill ? '0' : undefined,
+                                                                        minWidth: section.expandToFill ? '125px' : undefined,
+                                                                        gridColumn: section.expandToFill ? 'auto' : `span ${span}`,
+                                                                        borderBottom: !isSheetEditing && Math.floor(bIdx / 2) < Math.ceil(visibleBoxes.length / 2) - 1 ? '1px solid #cbd5e1' : 'none',
+                                                                        borderRight: !isSheetEditing && bIdx % 2 === 0 ? '1px solid #cbd5e1' : 'none',
+                                                                        border: isSheetEditing ? '1px solid #e2e8f0' : undefined,
+                                                                        background: 'white',
+                                                                        minHeight: '120px',
+                                                                        cursor: isSheetEditing ? 'grab' : 'pointer',
+                                                                        display: 'flex', flexDirection: 'column',
+                                                                        opacity: (draggedCell?.sectionIdx === sIdx && draggedCell?.boxIdx === bIdx) ? 0.5 : 1
                                                                     }}
-                                                                    title={(section.expandedRows || []).includes(currentBoxRowNumber) ? 'Fixed Width' : 'Expand Row'}
+                                                                    onClick={() => {
+                                                                        if (!isSheetEditing) setEditingBox({ box, sectionIdx: sIdx, boxIdx: bIdx });
+                                                                    }}
                                                                 >
-                                                                    {(section.expandedRows || []).includes(currentBoxRowNumber) ? '📏' : '↔️'}
-                                                                </button>
-                                                            )}
+                                                                    {/* Sheet Box Header */}
+                                                                    <div style={{
+                                                                        padding: '4px 8px',
+                                                                        background: box.color || '#3b82f6',
+                                                                        color: 'white',
+                                                                        fontSize: '0.75rem',
+                                                                        fontWeight: 'bold',
+                                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                                                    }}>
+                                                                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{box.header}</span>
+                                                                        {isSheetEditing ? (
+                                                                            <div
+                                                                                onClick={(e) => { e.stopPropagation(); handleDeleteSheetBox(sIdx, bIdx); }}
+                                                                                style={{ cursor: 'pointer', padding: '0 4px' }}
+                                                                            >
+                                                                                ×
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{playsInBox.length}</span>
+                                                                        )}
+                                                                    </div>
 
-                                                            {/* Render Strategy: Script Rows vs Assigned Plays */}
-                                                            {renderBoxContent()}
-                                                        </div>
+                                                                    {/* Sheet Box Content */}
+                                                                    <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
+                                                                        {/* Row Expand Badge - only show on first box of each row */}
+                                                                        {isFirstInRow && isSheetEditing && (
+                                                                            <button
+                                                                                className="btn-sm"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    const expandedRows = section.expandedRows || [];
+                                                                                    const isExpanded = expandedRows.includes(currentBoxRowNumber);
+                                                                                    const newExpandedRows = isExpanded
+                                                                                        ? expandedRows.filter(r => r !== currentBoxRowNumber)
+                                                                                        : [...expandedRows, currentBoxRowNumber];
+                                                                                    handleUpdateSheetSection(sIdx, { ...section, expandedRows: newExpandedRows });
+                                                                                }}
+                                                                                style={{
+                                                                                    position: 'absolute',
+                                                                                    top: '2px',
+                                                                                    left: '2px',
+                                                                                    background: (section.expandedRows || []).includes(currentBoxRowNumber) ? 'var(--accent)' : '#e2e8f0',
+                                                                                    color: (section.expandedRows || []).includes(currentBoxRowNumber) ? 'white' : '#64748b',
+                                                                                    fontSize: '0.6rem',
+                                                                                    padding: '2px 4px',
+                                                                                    zIndex: 100,
+                                                                                    borderRadius: '3px'
+                                                                                }}
+                                                                                title={(section.expandedRows || []).includes(currentBoxRowNumber) ? 'Fixed Width' : 'Expand Row'}
+                                                                            >
+                                                                                {(section.expandedRows || []).includes(currentBoxRowNumber) ? '📏' : '↔️'}
+                                                                            </button>
+                                                                        )}
+
+                                                                        {/* Render Strategy: Script Rows vs Assigned Plays */}
+                                                                        {renderBoxContent()}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
-                                                );
-                                            })}
+                                                ))
+                                            })()}
                                             {isSheetEditing && (
                                                 <div
                                                     style={{
@@ -37222,32 +37236,35 @@
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
+                                    </div >
                                 );
-                            })}
+                            })
+                            }
 
-                            {isSheetEditing && (
-                                <button
-                                    style={{
-                                        border: '2px dashed #cbd5e1',
-                                        height: '80px',
-                                        width: '100%',
-                                        gridColumn: '1 / -1',
-                                        background: '#f1f5f9',
-                                        color: '#475569',
-                                        fontWeight: '600',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        fontSize: '0.9rem',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                    }}
-                                    onClick={handleAddSheetSection}
-                                >
-                                    <span style={{ fontSize: '1.2rem' }}>+</span> Add New Section
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                            {
+                                isSheetEditing && (
+                                    <button
+                                        style={{
+                                            border: '2px dashed #cbd5e1',
+                                            height: '80px',
+                                            width: '100%',
+                                            gridColumn: '1 / -1',
+                                            background: '#f1f5f9',
+                                            color: '#475569',
+                                            fontWeight: '600',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.9rem',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                        }}
+                                        onClick={handleAddSheetSection}
+                                    >
+                                        <span style={{ fontSize: '1.2rem' }}>+</span> Add New Section
+                                    </button>
+                                )
+                            }
+                        </div >
+                    </div >
                 );
             };
 
@@ -45174,7 +45191,7 @@
                         <button className={`nav-item ${isActive && view === 'game-plan' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('game-plan'); }}
                             style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="Clipboard" size={12} /> Game Plans
+                            <Icon name="Clipboard" size={12} /> Game Planner
                         </button>
                         <button className={`nav-item ${isActive && view === 'wristband' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('wristband'); }}
@@ -46712,7 +46729,7 @@
                     { id: 'roster', label: 'Roster', data: getLocal('oc-dashboard-roster', []) },
                     { id: 'plays', label: 'Playbook', data: getLocal('oc-dashboard-plays', []) },
                     { id: 'staff', label: 'Staff', data: getLocal('oc-dashboard-staff', []) },
-                    { id: 'weeks', label: 'Game Plans & Scripts', data: getLocal('oc-dashboard-weeks', []) },
+                    { id: 'weeks', label: 'Game Planner & Scripts', data: getLocal('oc-dashboard-weeks', []) },
                     { id: 'masterTasks', label: 'Tasks', data: getLocal('oc-dashboard-master-tasks', []) },
                     { id: 'attendance', label: 'Attendance', data: getLocal('attendance_log', []) },
                     { id: 'inventory', label: 'Equipment Inventory', data: getLocal('oc-dashboard-equipment-inventory', []) },
