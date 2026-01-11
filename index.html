@@ -24675,7 +24675,7 @@
                     });
 
                     const finalName = playNameParts.join(' ').trim() || row[0];
-                    return { name: finalName, formation, type: type || 'Run' };
+                    return { name: finalName, formation, type: type || '' };
                 });
 
                 newPlays.forEach(playData => {
@@ -24939,42 +24939,48 @@
 
                 const safeGamePlan = gamePlan || {};
                 const isScript = box.type === 'script';
+                const collectionKey = isScript ? 'miniScripts' : 'sets';
                 const targetId = box.setId;
 
-                // Treat as Objects (Maps)
-                const collectionMap = isScript ? (safeGamePlan.miniScripts || {}) : (safeGamePlan.sets || {});
-                const existingItem = collectionMap[targetId] || { id: targetId, playIds: [], assignedPlayIds: [] };
+                const updatedGamePlan = { ...safeGamePlan };
 
-                // Initialize if missing
-                const currentAssignedIds = existingItem.assignedPlayIds || [];
+                // Ensure collection array exists
+                if (!Array.isArray(updatedGamePlan[collectionKey])) {
+                    updatedGamePlan[collectionKey] = [];
+                }
 
-                const isAssigned = currentAssignedIds.includes(playId);
+                // Find existing set/script in the array
+                const existingItem = updatedGamePlan[collectionKey].find(item => item.id === targetId);
+
+                // Get current assigned IDs
+                const currentData = existingItem || { playIds: [], assignedPlayIds: [] };
+                let currentAssigned = currentData.assignedPlayIds || currentData.playIds || [];
+
+                const isAssigned = currentAssigned.includes(playId);
                 let newAssignedIds;
 
                 if (isAssigned) {
-                    newAssignedIds = currentAssignedIds.filter(id => id !== playId);
+                    newAssignedIds = currentAssigned.filter(id => id !== playId);
                 } else {
-                    newAssignedIds = [...currentAssignedIds, playId];
+                    newAssignedIds = [...currentAssigned, playId];
                 }
 
-                // Create updated item
-                const newItem = { ...existingItem, assignedPlayIds: newAssignedIds };
-
-                // Update Collection Object
-                const newCollectionMap = {
-                    ...collectionMap,
-                    [targetId]: newItem
-                };
-
-                // Update gamePlan
-                const newGamePlan = { ...safeGamePlan };
-                if (isScript) {
-                    newGamePlan.miniScripts = newCollectionMap;
+                if (existingItem) {
+                    // Update existing item
+                    updatedGamePlan[collectionKey] = updatedGamePlan[collectionKey].map(item =>
+                        item.id === targetId
+                            ? { ...item, assignedPlayIds: newAssignedIds }
+                            : item
+                    );
                 } else {
-                    newGamePlan.sets = newCollectionMap;
+                    // Create new item
+                    updatedGamePlan[collectionKey] = [
+                        ...updatedGamePlan[collectionKey],
+                        { id: targetId, name: targetId, assignedPlayIds: newAssignedIds, playIds: [] }
+                    ];
                 }
 
-                onUpdateGamePlan(newGamePlan);
+                onUpdateGamePlan(updatedGamePlan);
             };
 
             const getPlaySituations = (playId) => {
@@ -25126,11 +25132,8 @@
                     // Get the play
                     const play = plays.find(p => p.id === playId);
 
-                    // Prepare updates: Reset priority (always start unstarred) + Default type if missing
+                    // Prepare updates: Reset priority (always start unstarred)
                     const updates = { priority: false };
-                    if (play && !play.type) {
-                        updates.type = 'Run';
-                    }
                     onUpdatePlay(playId, updates);
 
                     // Create new installList or append to existing
@@ -25537,65 +25540,55 @@
                                     </div>
                                 </div>
 
-                                {/* Last Week's Game Plan */}
+                                {/* Uncategorized Plays - Prompt to tag them */}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                    <div style={{ padding: '0.75rem', background: '#f0fdf4', borderBottom: '1px solid var(--border)' }}>
-                                        <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold', color: '#15803d' }}>Last Week's Game Plan</h4>
-                                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.7rem', color: '#166534' }}>
-                                            Quick reference from previous week.
+                                    <div style={{ padding: '0.75rem', background: '#fef2f2', borderBottom: '1px solid var(--border)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold', color: '#991b1b' }}>Uncategorized Plays</h4>
+                                            <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#fee2e2', color: '#991b1b', borderRadius: '12px', fontWeight: 'bold' }}>
+                                                {hydratedInstall.filter(p => !p.type).length}
+                                            </span>
+                                        </div>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.7rem', color: '#b91c1c' }}>
+                                            Tag these to move to Run/Pass/Screen columns.
                                         </p>
                                     </div>
                                     <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
                                         {(() => {
-                                            // Get previous week
-                                            const currentIndex = weeks.findIndex(w => w.id === currentWeekId);
-                                            const prevWeek = currentIndex > 0 ? weeks[currentIndex - 1] : null;
+                                            const uncategorized = hydratedInstall.filter(p => !p.type);
 
-                                            if (!prevWeek || !prevWeek.offensiveGamePlan || !prevWeek.offensiveGamePlan.sets) {
+                                            if (uncategorized.length === 0) {
                                                 return (
                                                     <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                                                        No previous week data.
+                                                        All installed plays are categorized.
                                                     </div>
                                                 );
                                             }
 
-                                            // Collect all play IDs from last week's game plan
-                                            const lastWeekPlayIds = new Set();
-                                            prevWeek.offensiveGamePlan.sets.forEach(set => {
-                                                if (set.playIds) {
-                                                    set.playIds.forEach(id => lastWeekPlayIds.add(id));
-                                                }
-                                            });
-
-                                            // Hydrate with play objects
-                                            const lastWeekPlays = Array.from(lastWeekPlayIds)
-                                                .map(id => plays.find(p => p.id === id))
-                                                .filter(Boolean);
-
-                                            if (lastWeekPlays.length === 0) {
-                                                return (
-                                                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                                                        No plays in last week's game plan.
-                                                    </div>
-                                                );
-                                            }
-
-                                            return lastWeekPlays.map(play => (
-                                                <div key={play.id} className="card" style={{ padding: '0.4rem 0.6rem', marginBottom: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            return uncategorized.map(play => (
+                                                <div
+                                                    key={play.id}
+                                                    className="card"
+                                                    style={{
+                                                        padding: '0.5rem 0.6rem',
+                                                        marginBottom: '0.25rem',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        borderLeft: '3px solid #ef4444',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onClick={(e) => setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY })}
+                                                >
                                                     <div style={{ flex: 1, overflow: 'hidden' }}>
                                                         <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.8rem' }}>{getPlayDisplayName(play)}</div>
                                                         <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                                            {play.formation} • {play.type || 'Run'}
+                                                            {play.formation || 'No Formation'} • Needs Type Tag
                                                         </div>
                                                     </div>
-                                                    <button
-                                                        className="btn btn-secondary"
-                                                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
-                                                        onClick={() => handleAddToInstall(play.id)}
-                                                        disabled={installList.includes(play.id)}
-                                                    >
-                                                        {installList.includes(play.id) ? <Icon name="Check" size={12} /> : <Icon name="Plus" size={12} />}
-                                                    </button>
+                                                    <div style={{ color: '#ef4444' }}>
+                                                        <Icon name="Tag" size={14} />
+                                                    </div>
                                                 </div>
                                             ));
                                         })()}
@@ -25608,12 +25601,12 @@
                                 <div style={{ padding: '0.75rem', background: '#ecfdf5', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#047857', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>RUNS / RPOs</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#d1fae5', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => !p.type || p.type === 'Run' || p.type === 'RPO').length}
+                                        {hydratedInstall.filter(p => p.type === 'Run' || p.type === 'RPO').length}
                                     </span>
                                 </div>
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                                     <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => !p.type || p.type === 'Run' || p.type === 'RPO')}
+                                        items={hydratedInstall.filter(p => p.type === 'Run' || p.type === 'RPO')}
                                         type="Run"
                                         onListChange={(newItems) => handleListChange(newItems, 'Run')}
                                         onUpdatePlay={onUpdatePlay}
@@ -34923,37 +34916,48 @@
                 if (!playId || !box || !box.setId) return;
 
                 const isScript = box.type === 'script';
-                const collection = isScript ? (gamePlan.miniScripts || {}) : (gamePlan?.sets || {});
+                const collectionKey = isScript ? 'miniScripts' : 'sets';
                 const targetId = box.setId;
-                const currentData = collection[targetId] || { playIds: [], assignedPlayIds: [] };
 
-                // Initialize if missing
-                if (!currentData.assignedPlayIds) currentData.assignedPlayIds = [];
+                const updatedGamePlan = { ...gamePlan };
 
-                const isAssigned = currentData.assignedPlayIds.includes(playId);
+                // Ensure collection array exists
+                if (!Array.isArray(updatedGamePlan[collectionKey])) {
+                    updatedGamePlan[collectionKey] = [];
+                }
+
+                // Find existing set/script in the array
+                const existingItem = updatedGamePlan[collectionKey].find(item => item.id === targetId);
+
+                // Get current assigned IDs
+                const currentData = existingItem || { playIds: [], assignedPlayIds: [] };
+                let currentAssigned = currentData.assignedPlayIds || currentData.playIds || [];
+
+                const isAssigned = currentAssigned.includes(playId);
                 let newAssignedIds;
 
                 if (isAssigned) {
-                    newAssignedIds = currentData.assignedPlayIds.filter(id => id !== playId);
+                    newAssignedIds = currentAssigned.filter(id => id !== playId);
                 } else {
-                    newAssignedIds = [...currentData.assignedPlayIds, playId];
+                    newAssignedIds = [...currentAssigned, playId];
                 }
 
-                // Update gamePlan
-                const newGamePlan = { ...gamePlan };
-                if (isScript) {
-                    newGamePlan.miniScripts = {
-                        ...newGamePlan.miniScripts,
-                        [targetId]: { ...currentData, assignedPlayIds: newAssignedIds }
-                    };
+                if (existingItem) {
+                    // Update existing item
+                    updatedGamePlan[collectionKey] = updatedGamePlan[collectionKey].map(item =>
+                        item.id === targetId
+                            ? { ...item, assignedPlayIds: newAssignedIds }
+                            : item
+                    );
                 } else {
-                    newGamePlan.sets = {
-                        ...newGamePlan.sets,
-                        [targetId]: { ...currentData, assignedPlayIds: newAssignedIds }
-                    };
+                    // Create new item
+                    updatedGamePlan[collectionKey] = [
+                        ...updatedGamePlan[collectionKey],
+                        { id: targetId, name: targetId, assignedPlayIds: newAssignedIds, playIds: [] }
+                    ];
                 }
 
-                onUpdateGamePlan(newGamePlan);
+                onUpdateGamePlan(updatedGamePlan);
             };
 
             const getPlaySituations = (playId) => {
@@ -35250,7 +35254,9 @@
                 if (!setId) return null;
 
                 // Get the set/script data object
-                const setData = gamePlan?.sets?.[setId] || gamePlan?.miniScripts?.[setId] || {};
+                const sets = Array.isArray(gamePlan?.sets) ? gamePlan.sets : [];
+                const scripts = Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts : [];
+                const setData = sets.find(s => s.id === setId) || scripts.find(s => s.id === setId) || {};
 
                 // Get assigned play IDs (safely defaulting to empty array)
                 // Note: handling both 'playIds' and 'assignedPlayIds' for backward compatibility/migration
@@ -35258,8 +35264,8 @@
 
                 // PATCH: For Opening Script, aggregate from Left/Right hash sets AND Install List situations
                 if (setId === 'opening_script') {
-                    const leftSet = gamePlan?.sets?.['opening_script_left'] || {};
-                    const rightSet = gamePlan?.sets?.['opening_script_right'] || {};
+                    const leftSet = sets.find(s => s.id === 'opening_script_left') || {};
+                    const rightSet = sets.find(s => s.id === 'opening_script_right') || {};
                     const leftIds = leftSet.assignedPlayIds || leftSet.playIds || [];
                     const rightIds = rightSet.assignedPlayIds || rightSet.playIds || [];
 
@@ -35404,8 +35410,8 @@
                                             background: 'white',
                                             border: '1px solid #e2e8f0',
                                             borderRadius: '6px',
-                                            padding: '0.75rem',
-                                            marginBottom: '0.5rem',
+                                            padding: '0.4rem',
+                                            marginBottom: '0.25rem',
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '0.5rem',
@@ -35478,9 +35484,7 @@
                                                     </span>
                                                 )}
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                                {play.formation} {play.concept && `• ${play.concept}`}
-                                            </div>
+
                                         </div>
 
                                         {/* Remove Button */}
@@ -45417,7 +45421,7 @@
                         formation: '',
                         tags: [],
                         incomplete: true, // Mark as incomplete
-                        type: 'Run' // Default type
+                        type: '' // No default type (goes to Uncategorized)
                     };
                 }
                 setPlays(prev => [...prev, newPlay]);
@@ -46976,7 +46980,7 @@
                     });
 
                     const finalName = playNameParts.join(' ').trim() || row[0];
-                    return { name: finalName, formation, type: type || 'Run' };
+                    return { name: finalName, formation, type: type || '' };
                 });
 
                 newPlays.forEach(playData => {
