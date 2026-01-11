@@ -25456,10 +25456,10 @@
                         )}
 
                         {/* THREE COLUMN LAYOUT */}
-                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '300px 1fr 1fr 1fr', gap: 0, overflow: 'hidden' }}>
+                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '300px 1fr 1fr 1fr', gap: 0, overflow: 'hidden', minHeight: 0 }}>
 
                             {/* LEFT COLUMN: MASTER PLAYBOOK SEARCH + INSTALL LIST */}
-                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: 'white' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: 'white', minHeight: 0 }}>
                                 {/* Master Playbook Search Section */}
                                 <div style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
                                     <div style={{ padding: '0.75rem', background: '#f1f5f9', borderBottom: '1px solid var(--border)' }}>
@@ -25541,7 +25541,7 @@
                                 </div>
 
                                 {/* Uncategorized Plays - Prompt to tag them */}
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
                                     <div style={{ padding: '0.75rem', background: '#fef2f2', borderBottom: '1px solid var(--border)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold', color: '#991b1b' }}>Uncategorized Plays</h4>
@@ -25597,7 +25597,7 @@
                             </div>
 
                             {/* MIDDLE COLUMN: RUNS / RPOs */}
-                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: '#f8fafc', minHeight: 0 }}>
                                 <div style={{ padding: '0.75rem', background: '#ecfdf5', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#047857', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>RUNS / RPOs</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#d1fae5', borderRadius: '12px' }}>
@@ -25624,7 +25624,7 @@
                             </div>
 
                             {/* RIGHT COLUMN: PASSES */}
-                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: '#f8fafc', minHeight: 0 }}>
                                 <div style={{ padding: '0.75rem', background: '#eff6ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#1d4ed8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>PASSES</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#dbeafe', borderRadius: '12px' }}>
@@ -25651,7 +25651,7 @@
                             </div>
 
                             {/* FAR RIGHT COLUMN: SCREENS */}
-                            <div style={{ display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', background: '#f8fafc', minHeight: 0 }}>
                                 <div style={{ padding: '0.75rem', background: '#faf5ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#7e22ce', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>SCREENS & GADGETS</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#f3e8ff', borderRadius: '12px' }}>
