@@ -46942,8 +46942,8 @@
             };
 
             const handleToggleSelect = (playId) => {
-                setSelectedPlays(prev >
-                    prev.includes(playId
+                setSelectedPlays(prev =>
+                    prev.includes(playId)
                         ? prev.filter(id => id !== playId)
                         : [...prev, playId]
                 );
