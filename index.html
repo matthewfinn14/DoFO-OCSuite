@@ -46940,6 +46940,14 @@
                 );
             };
 
+            const handleToggleSelect = (playId) => {
+                setSelectedPlays(prev =>
+                    prev.includes(playId)
+                        ? prev.filter(id => id !== playId)
+                        : [...prev, playId]
+                );
+            };
+
             const handleDeleteSelected = (e) => {
                 // Prevent event bubbling and default action to avoid conflicts with other handlers
                 if (e) {
