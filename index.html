@@ -9037,6 +9037,7 @@
                                         key={day}
                                         className={`btn ${selectedDay === day ? 'btn-primary' : 'btn-secondary'}`}
                                         onClick={() => setSelectedDay(day)}
+                                        style={{ textDecoration: 'none', border: 'none', outline: 'none', boxShadow: 'none' }}
                                     >
                                         {day}
                                     </button>
@@ -9460,6 +9461,7 @@
                                 key={day}
                                 className={`btn ${selectedDay === day ? 'btn-primary' : 'btn-secondary'}`}
                                 onClick={() => { setSelectedDay(day); setSelectedSegmentId(null); }}
+                                style={{ textDecoration: 'none', border: 'none', outline: 'none', boxShadow: 'none' }}
                             >
                                 {day}
                             </button>
