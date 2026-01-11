@@ -9030,7 +9030,7 @@
 
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem' }}>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 {days.map(day => (
                                     <button
@@ -9454,7 +9454,7 @@
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
                     {/* Day Tabs */}
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', paddingBottom: '0.5rem' }}>
                         {days.map(day => (
                             <button
                                 key={day}
@@ -10623,13 +10623,17 @@
                             position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
                             backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
                             display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(2px)'
-                        }}>
+                        }}
+                            onClick={() => setShowScriptView(false)}
+                        >
                             <div style={{
                                 width: '95%', maxWidth: '1400px', height: '90vh',
                                 backgroundColor: 'var(--bg-panel)', borderRadius: 'var(--radius)',
                                 display: 'flex', flexDirection: 'column', overflow: 'hidden',
                                 boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-                            }}>
+                            }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 {/* Modal Header */}
                                 <div style={{
                                     padding: '1rem', borderBottom: '1px solid var(--border)',
@@ -10848,8 +10852,8 @@
                                                 {/* Left: Script Table */}
                                                 <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
                                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                                        <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-panel)', zIndex: 1 }}>
-                                                            <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                                                        <thead style={{ background: 'var(--bg-panel)' }}>
+                                                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                                                 <th style={{ padding: '0.5rem', textAlign: 'left', width: '40px' }}>#</th>
                                                                 <th style={{ padding: '0.5rem', textAlign: 'left', width: '60px' }}>Hash</th>
                                                                 {showYardLine ? (
@@ -11141,6 +11145,17 @@
                             </div>
                         </div>
                     )}
+
+                    {/* Notes Modal */}
+                    {notesModalSegmentId && (
+                        <NotesModal
+                            segmentId={notesModalSegmentId}
+                            plan={plan}
+                            staff={staff}
+                            onClose={() => setNotesModalSegmentId(null)}
+                            onUpdateNotes={(segmentId, coachId, note) => updateSegmentNotes(segmentId, coachId, note)}
+                        />
+                    )}
                 </div>
             );
         };
@@ -11366,7 +11381,8 @@
                     {/* Notes Modal */}
                     {notesModalSegmentId && (
                         <NotesModal
-                            segment={plan.segments.find(s => s.id === notesModalSegmentId)}
+                            segmentId={notesModalSegmentId}
+                            plan={plan}
                             staff={staff}
                             onClose={() => setNotesModalSegmentId(null)}
                             onUpdateNotes={(segmentId, coachId, note) => updateSegmentNotes(segmentId, coachId, note)}
