@@ -5864,6 +5864,53 @@
                             updates[cardKey] = { ...card, type: 'mini-scripts', version: 'v1' };
                             hasMigration = true;
                         }
+
+                        // CLEANUP: Fix corrupted row data where col0/col1/col2/col3 are objects instead of strings
+                        if (card && (card.type === 'mini-scripts' || card.type === 'modular' || card.type === 'wiz' || card.type === 'rooski') && card.rows) {
+                            const cleanedRows = card.rows.map(row => {
+                                const cleanedRow = { ...row };
+                                // Check each column and replace if it's an object or looks like corrupted data
+                                ['col0', 'col1', 'col2', 'col3'].forEach(colKey => {
+                                    const value = cleanedRow[colKey];
+                                    // Check if it's an object
+                                    if (value && typeof value === 'object') {
+                                        console.warn(`Cleaning corrupted ${colKey} in ${cardKey} row ${row.id} (object)`);
+                                        cleanedRow[colKey] = ''; // Replace object with empty string
+                                    }
+                                    // Check if it's a string that looks like corrupted data
+                                    else if (value && typeof value === 'string') {
+                                        // Check for various corruption patterns:
+                                        // 1. Contains CSS property names (full or partial)
+                                        // 2. Contains object-like syntax (quotes, colons, braces)
+                                        // 3. Contains common corruption fragments
+                                        const corruptionPatterns = [
+                                            'whiteSpace:', 'background:', 'overflow:', 'textOverflow:',
+                                            'whiteSpa', 'backgro', 'overfl', 'textOv',  // Partial matches
+                                            '>sis', 'sis\'', 'nowr', 'ellip',  // Common corruption fragments
+                                            '\':', '\': \'', '{ ', ' }',  // Object syntax
+                                        ];
+
+                                        const isCorrupted = corruptionPatterns.some(pattern => value.includes(pattern));
+
+                                        if (isCorrupted) {
+                                            console.warn(`Cleaning corrupted ${colKey} in ${cardKey} row ${row.id}: "${value}"`);
+                                            cleanedRow[colKey] = ''; // Replace corrupted string with empty string
+                                        }
+                                    }
+                                });
+                                return cleanedRow;
+                            });
+
+                            // Only update if we actually cleaned something
+                            const needsCleaning = card.rows.some((row, idx) =>
+                                JSON.stringify(row) !== JSON.stringify(cleanedRows[idx])
+                            );
+
+                            if (needsCleaning) {
+                                updates[cardKey] = { ...card, rows: cleanedRows };
+                                hasMigration = true;
+                            }
+                        }
                     });
 
                     if (hasMigration) {
@@ -7438,12 +7485,8 @@
                                                             lineHeight: 1,
                                                             whiteSpace: 'nowrap',
                                                             overflow: 'hidden',
-                                                            textOverflow: 'ellipsis'
-                                                        }}>
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
-                                                        background: 'white',
+                                                            textOverflow: 'ellipsis',
+                                                            background: 'white'
                                                         }}
                                                         onClick={(e) => {
                                                             if (displayPlay) {
@@ -35227,48 +35270,52 @@
                 // Handle adding a play
                 const handleAddPlay = (playId) => {
                     if (!assignedPlayIds.includes(playId)) {
-                        const updatedWeek = { ...currentWeek };
+                        const updatedGamePlan = { ...gamePlan };
 
-                        // Ensure collection object exists
-                        if (!updatedWeek.offensiveGamePlan[collectionKey]) {
-                            updatedWeek.offensiveGamePlan[collectionKey] = {};
+                        // Ensure collection array exists
+                        if (!updatedGamePlan[collectionKey]) {
+                            updatedGamePlan[collectionKey] = [];
                         }
 
-                        // Get current data for this item
-                        const currentCollection = updatedWeek.offensiveGamePlan[collectionKey];
-                        const currentItemData = currentCollection[setId] || { playIds: [], assignedPlayIds: [] };
-
-                        // Update assignedPlayIds
+                        // Find existing set/script in the array
+                        const existingItem = updatedGamePlan[collectionKey].find(item => item.id === setId);
                         const newAssignedIds = [...assignedPlayIds, playId];
 
-                        // Save back maintaining object structure
-                        currentCollection[setId] = {
-                            ...currentItemData,
-                            assignedPlayIds: newAssignedIds,
-                            playIds: newAssignedIds
-                        };
+                        if (existingItem) {
+                            // Update existing item
+                            updatedGamePlan[collectionKey] = updatedGamePlan[collectionKey].map(item =>
+                                item.id === setId
+                                    ? { ...item, assignedPlayIds: newAssignedIds, playIds: newAssignedIds }
+                                    : item
+                            );
+                        } else {
+                            // Create new item
+                            updatedGamePlan[collectionKey] = [
+                                ...updatedGamePlan[collectionKey],
+                                { id: setId, name: setId, assignedPlayIds: newAssignedIds, playIds: newAssignedIds }
+                            ];
+                        }
 
-                        onUpdateWeek(updatedWeek);
+                        onUpdateGamePlan(updatedGamePlan);
                     }
                 };
 
                 // Handle removing a play
                 const handleRemovePlay = (playId) => {
-                    const updatedWeek = { ...currentWeek };
+                    const updatedGamePlan = { ...gamePlan };
 
-                    if (!updatedWeek.offensiveGamePlan[collectionKey]) return;
+                    if (!updatedGamePlan[collectionKey]) return;
 
-                    const currentCollection = updatedWeek.offensiveGamePlan[collectionKey];
-                    const currentItemData = currentCollection[setId] || { playIds: [], assignedPlayIds: [] };
                     const newAssignedIds = assignedPlayIds.filter(id => id !== playId);
 
-                    currentCollection[setId] = {
-                        ...currentItemData,
-                        assignedPlayIds: newAssignedIds,
-                        playIds: newAssignedIds
-                    };
+                    // Update the item in the array
+                    updatedGamePlan[collectionKey] = updatedGamePlan[collectionKey].map(item =>
+                        item.id === setId
+                            ? { ...item, assignedPlayIds: newAssignedIds, playIds: newAssignedIds }
+                            : item
+                    );
 
-                    onUpdateWeek(updatedWeek);
+                    onUpdateGamePlan(updatedGamePlan);
                 };
 
                 // Handle reordering plays
@@ -35279,21 +35326,20 @@
                     const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
                     if (newIndex < 0 || newIndex >= assignedPlayIds.length) return;
 
-                    const updatedWeek = { ...currentWeek };
-                    if (!updatedWeek.offensiveGamePlan[collectionKey]) return;
+                    const updatedGamePlan = { ...gamePlan };
+                    if (!updatedGamePlan[collectionKey]) return;
 
-                    const currentCollection = updatedWeek.offensiveGamePlan[collectionKey];
-                    const currentItemData = currentCollection[setId] || { playIds: [], assignedPlayIds: [] };
                     const newPlayIds = [...assignedPlayIds];
                     [newPlayIds[currentIndex], newPlayIds[newIndex]] = [newPlayIds[newIndex], newPlayIds[currentIndex]];
 
-                    currentCollection[setId] = {
-                        ...currentItemData,
-                        assignedPlayIds: newPlayIds,
-                        playIds: newPlayIds
-                    };
+                    // Update the item in the array
+                    updatedGamePlan[collectionKey] = updatedGamePlan[collectionKey].map(item =>
+                        item.id === setId
+                            ? { ...item, assignedPlayIds: newPlayIds, playIds: newPlayIds }
+                            : item
+                    );
 
-                    onUpdateWeek(updatedWeek);
+                    onUpdateGamePlan(updatedGamePlan);
                 };
 
                 return (
@@ -35476,43 +35522,6 @@
                 const box = section.boxes[boxIdx];
                 if (!box) return null;
 
-                return (
-                    <div style={{
-                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }} onClick={() => setEditingBox(null)}>
-                        <div style={{
-                            width: '95%', maxWidth: '1300px', maxHeight: '90vh',
-                            background: 'white', borderRadius: '8px',
-                            display: 'flex', flexDirection: 'column',
-                            overflow: 'hidden'
-                        }} onClick={e => e.stopPropagation()}>
-                            <div style={{ padding: '1rem', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: box.color || '#f8fafc', color: 'white' }}>
-                                <h3 style={{ margin: 0, textTransform: 'uppercase' }}>Edit {box.header}</h3>
-                                <button className="btn" onClick={() => setEditingBox(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white' }}>Close</button>
-                            </div>
-                            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                                {/* Left Panel: QUICK LIST */}
-                                <div style={{ width: '350px', borderRight: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                                    {renderAssignedPlaysPanel(box)}
-                                </div>
-
-                                {/* Right Panel: Editor */}
-                                <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
-                                    {box.type === 'script' ? renderScriptBox(box, sectionIdx, boxIdx, true) : renderGridBox(box, sectionIdx, boxIdx, true)}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const renderScriptBox = (box, sectionIdx, boxIdx, isEditing) => {
-                const rows = (box.rows && box.rows.length > 0) ? box.rows : [{ id: 'default', label: '1', content: '' }];
-                const tempos = box.tempos || {};
-                const protocolList = box.customTempos || PLAY_PROTOCOLS;
-
                 const renderWristbandInput = (playId) => {
                     const play = plays.find(p => p.id === playId);
                     if (!play) return null;
@@ -35539,19 +35548,11 @@
                                 onFocus={() => setWbAutocomplete({ playId, query: play.wristbandSlot || '' })}
                                 onChange={(e) => {
                                     setWbAutocomplete({ playId, query: e.target.value });
-                                    // Also update play immediately if it matches exact? Or wait for selection?
-                                    // User expects "type to filter", then select. 
-                                    // But maybe they just want to type "A12" and be done.
-                                    // Let's update play on blur or exact match if validation needed.
-                                    // For now, just update local query state.
                                 }}
                                 onBlur={() => {
                                     // Delay to allow click
                                     setTimeout(() => {
                                         if (wbAutocomplete.playId === playId) {
-                                            // Commit value on blur if valid? Or just keep what they typed?
-                                            // If they typed something valid that's not in the list (maybe custom?), let it stick?
-                                            // Let's safe update:
                                             if (onUpdatePlay) onUpdatePlay({ ...play, wristbandSlot: wbAutocomplete.query });
                                             setWbAutocomplete({ playId: null, query: '' });
                                         }
@@ -35593,6 +35594,46 @@
                         </div>
                     );
                 };
+
+
+                return (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }} onClick={() => setEditingBox(null)}>
+                        <div style={{
+                            width: '95%', maxWidth: '1300px', maxHeight: '90vh',
+                            background: 'white', borderRadius: '8px',
+                            display: 'flex', flexDirection: 'column',
+                            overflow: 'hidden'
+                        }} onClick={e => e.stopPropagation()}>
+                            <div style={{ padding: '1rem', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: box.color || '#f8fafc', color: 'white' }}>
+                                <h3 style={{ margin: 0, textTransform: 'uppercase' }}>Edit {box.header}</h3>
+                                <button className="btn" onClick={() => setEditingBox(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white' }}>Close</button>
+                            </div>
+                            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                                {/* Left Panel: QUICK LIST */}
+                                <div style={{ width: '350px', borderRight: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                                    {renderAssignedPlaysPanel(box)}
+                                </div>
+
+                                {/* Right Panel: Editor */}
+                                <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+                                    {box.type === 'script' ? renderScriptBox(box, sectionIdx, boxIdx, true, renderWristbandInput) : renderGridBox(box, sectionIdx, boxIdx, true, renderWristbandInput)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderScriptBox = (box, sectionIdx, boxIdx, isEditing, renderWristbandInput) => {
+                const rows = (box.rows && box.rows.length > 0) ? box.rows : [{ id: 'default', label: '1', content: '' }];
+                const tempos = box.tempos || {};
+                const protocolList = box.customTempos || PLAY_PROTOCOLS;
+
+
 
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'white', borderRadius: '4px', height: '100%' }}>
@@ -35762,7 +35803,7 @@
                 );
             };
 
-            const renderGridBox = (box, sectionIdx, boxIdx, isEditing) => {
+            const renderGridBox = (box, sectionIdx, boxIdx, isEditing, renderWristbandInput) => {
                 const cols = box.gridColumns || 4;
                 const rowsCount = box.gridRows || 5;
                 const totalSlots = cols * rowsCount;
@@ -35853,18 +35894,62 @@
                                     {Array.from({ length: cols }).map((_, cIdx) => {
                                         const linearIdx = (rIdx * cols) + cIdx;
                                         const play = allPlays[linearIdx];
+
+                                        const handleGridCellUpdate = (newPlayId) => {
+                                            // 1. Get current plays (including GAPs)
+                                            const currentPlays = [...allPlays];
+
+                                            // 2. Update the specific slot
+                                            // If newPlayId is null, it becomes a GAP. 
+                                            // If it's a valid ID, we verify it exists.
+
+                                            if (newPlayId) {
+                                                const targetPlay = plays.find(p => p.id === newPlayId);
+                                                if (targetPlay) {
+                                                    currentPlays[linearIdx] = targetPlay;
+                                                }
+                                            } else {
+                                                currentPlays[linearIdx] = { type: 'GAP' };
+                                            }
+
+                                            // 3. Convert back to ID list for storage
+                                            // 'GAP' objects should be stored as 'GAP' strings or nulls depending on how getGridPlays expects them.
+                                            // Looking at getGridPlays, it pads with 'GAP'. So we should likely store the IDs or 'GAP'.
+
+                                            // Actually, let's look at how data is stored.
+                                            // It seems we store an array of IDs in `assignedPlayIds`.
+                                            // getGridPlays pads this array.
+
+                                            // So we just need to reconstruct the `assignedPlayIds` array from our `currentPlays`
+                                            // But we only want to persist up to the last non-gap? Or minimal set?
+                                            // The simplest valid storage is the full array of IDs/'GAP's up to the grid size.
+
+                                            const newAssignedIds = currentPlays.map(p => (p && p.id) ? p.id : 'GAP');
+
+                                            // Clean up trailing GAPs if desired, or keep them to preserve structure?
+                                            // To be safe and preserve "empty" slots in middle, we keep them.
+
+                                            updateLayout({ assignedPlayIds: newAssignedIds });
+                                        };
+
                                         return (
                                             <div key={`${rIdx}-${cIdx}`} style={{
-                                                minHeight: '24px', borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
-                                                borderBottom: '1px dotted #e2e8f0', display: 'flex', alignItems: 'center', padding: '0 4px',
-                                                background: play && play.type !== 'GAP' ? 'white' : 'transparent'
+                                                minHeight: '40px', // Increased height for better interaction
+                                                borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
+                                                borderBottom: '1px dotted #e2e8f0',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                padding: '2px',
+                                                background: play && play.type !== 'GAP' ? 'white' : 'transparent',
+                                                position: 'relative'
                                             }}>
-                                                {/* Droppable Zone Logic would go here in full implementation, but for simplified view: */}
-                                                {play && play.type !== 'GAP' ? (
-                                                    <span style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                        {getPlayDisplayName(play)}
-                                                    </span>
-                                                ) : <span style={{ color: '#cbd5e1' }}>+</span>}
+                                                <PlaySlot
+                                                    playId={play && play.type !== 'GAP' ? play.id : null}
+                                                    onUpdate={handleGridCellUpdate}
+                                                    isLocked={!isEditing}
+                                                    placeholder="+"
+                                                    showWristband={true} // Enable wristband display if available in PlaySlot
+                                                    renderWristbandInput={renderWristbandInput} // Pass the hoisted renderer
+                                                />
                                             </div>
                                         );
                                     })}
@@ -49729,7 +49814,7 @@
                                 <div style={{
                                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                                     background: 'rgba(0,0,0,0.85)', zIndex: 10001,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    display: 'flex', ntejustent: 'center'
                                 }}>
                                     <div className="card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center', padding: '2rem', border: '1px solid var(--border)', background: 'var(--bg-panel)', borderRadius: 'var(--radius)' }}>
                                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
@@ -49815,9 +49900,9 @@
                 <AuthProvider>
                     <App />
                 </AuthProvider>
-   ErrorBoundary>,
-                document.getElementById('root')
-                );
+            </ErrorBoundary>,
+            document.getElementById('root')
+        );
     </script>
 </body>
 
