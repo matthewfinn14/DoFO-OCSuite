@@ -21339,7 +21339,7 @@
                                                 { key: 'wristband', label: 'Wristband Builder' },
                                                 { key: 'practiceScripts', label: 'Practice Scripts' },
                                                 { key: 'dumbCallsheet', label: 'Dumb Call Sheet' },
-                                                { key: 'smartCallsheet', label: 'Smart Call Sheet' }
+
                                             ]
                                         },
                                         {
@@ -21361,6 +21361,7 @@
                                                 { key: 'attendanceApp', label: 'Attendance App' },
                                                 { key: 'coachApp', label: 'Practice Coach App' },
                                                 { key: 'callsheet', label: 'Situations and Scripts' },
+                                                { key: 'smartCallsheet', label: 'Smart Call Sheet' },
                                                 { key: 'simulator', label: 'Play-Calling Simulator' },
                                                 { key: 'pressbox', label: 'Pressbox' },
                                                 { key: 'specialTeams', label: 'Special Teams' }
@@ -46941,8 +46942,8 @@
             };
 
             const handleToggleSelect = (playId) => {
-                setSelectedPlays(prev =>
-                    prev.includes(playId)
+                setSelectedPlays(prev >
+                    prev.includes(playId
                         ? prev.filter(id => id !== playId)
                         : [...prev, playId]
                 );
