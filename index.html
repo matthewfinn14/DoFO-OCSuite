@@ -45000,7 +45000,7 @@
             });
 
             const [visibleFeatures, setVisibleFeatures] = useState(() => {
-                const saved = localStorage.getItem('hc-visible-features');
+                const saved = localStorage.getItem('hc-visible-features-v2');
                 const DEFAULT_FEATURES = {
                     staffMeeting: {
                         enabled: true,
@@ -45029,7 +45029,7 @@
                             wristband: true,
                             practiceScripts: true,
                             dumbCallsheet: true,
-                            smartCallsheet: true
+
                         }
                     },
                     program: {
@@ -45054,6 +45054,7 @@
                             attendanceApp: true,
                             coachApp: true,
                             callsheet: true,
+                            smartCallsheet: true,
                             simulator: true,
                             pressbox: true,
                             specialTeams: true
@@ -48687,6 +48688,15 @@
                                                         style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
                                                     >
                                                         <Icon name="UserCheck" size={16} style={{ marginRight: '8px' }} /> Attendance App
+                                                    </button>
+                                                )}
+                                                {visibleFeatures.apps?.items?.smartCallsheet && (
+                                                    <button
+                                                        className={`nav-item ${view === 'smart-call-sheet' ? 'active' : ''}`}
+                                                        onClick={() => setView('smart-call-sheet')}
+                                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}
+                                                    >
+                                                        <Icon name="Smartphone" size={16} style={{ marginRight: '8px' }} /> Smart Call Sheet
                                                     </button>
                                                 )}
                                                 {visibleFeatures.apps?.items?.coachApp && (
