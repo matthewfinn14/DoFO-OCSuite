@@ -36127,7 +36127,7 @@
 
                             border: isEditing ? '2px solid var(--accent)' : '1px solid #ddd',
                             borderRadius: '4px', overflow: 'hidden',
-                            minHeight: 'auto', // Removed fixed min-height for cleaner auto-scaling
+                            minHeight: '80px', // Smaller collapsed height
                             backgroundColor: 'white', cursor: !isLocked ? 'move' : 'default',
                             opacity: draggedCell && draggedCell.sectionIdx === sectionIdx && draggedCell.rowIdx === boxIdx ? 0.5 : (box.hidden && !isLocked ? 0.5 : 1),
                             display: (box.hidden && isLocked) ? 'none' : 'block',
@@ -37409,7 +37409,7 @@
                                                                         borderRight: !isSheetEditing && bIdx % 2 === 0 ? '1px solid #cbd5e1' : 'none',
                                                                         border: isSheetEditing ? '1px solid #e2e8f0' : undefined,
                                                                         background: 'white',
-                                                                        minHeight: isSheetEditing ? '120px' : 'auto',
+                                                                        minHeight: '120px',
                                                                         cursor: isSheetEditing ? 'grab' : 'pointer',
                                                                         display: 'flex', flexDirection: 'column',
                                                                         opacity: (draggedCell?.sectionIdx === sIdx && draggedCell?.boxIdx === bIdx) ? 0.5 : 1
