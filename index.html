@@ -21632,7 +21632,7 @@
         };
 
 
-        const SmartCallSheet = ({ weeks = [], currentWeek = {}, gamePlan = {}, situation, plays, onUpdateSituation, zonePhilosophies, onUpdatePhilosophy, onUpdateGamePlan, onQuickAddPlay, activePlay, setActivePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS }) => {
+        const SmartCallSheet = ({ weeks = [], currentWeek = {}, gamePlan = {}, situation, plays, onUpdateSituation, zonePhilosophies, onUpdatePhilosophy, onUpdateGamePlan, onQuickAddPlay, activePlay, setActivePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, practicePlans = {} }) => {
             const [selectedSection, setSelectedSection] = useState(null); // null = main menu, otherwise section key
             const [selectedHash, setSelectedHash] = useState('left'); // For opening script submenu
             const [selected2MinCategory, setSelected2MinCategory] = useState('oob_yac'); // For 2-minute submenu
@@ -21994,7 +21994,8 @@
 
                                 // Calculate total practice script slots for the week
                                 let totalScriptSlots = 0;
-                                practicePlans.forEach(plan => {
+                                const plansList = Array.isArray(practicePlans) ? practicePlans : Object.values(practicePlans || {});
+                                plansList.forEach(plan => {
                                     plan.segments.forEach(seg => {
                                         if (seg.hasScript && seg.script && seg.script.length > 0) {
                                             totalScriptSlots += seg.script.length;
@@ -31190,6 +31191,7 @@
                             onUpdateSituation={setGameState}
                             onUpdateGamePlan={onUpdateGamePlan}
                             onPlaySelected={setSelectedPlay}
+                            practicePlans={currentWeek.practicePlans || {}}
                         />
                     </div>
                 </div>
@@ -49756,7 +49758,7 @@
                         )}
                         {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} weeks={weeks} currentWeek={currentWeek} />}
                         {view === 'staff-app' && <StaffApp staff={staff} currentUser={currentUser} dutyAssignments={dutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} onUpdateStaff={(updatedStaff) => syncToFirestore('staff', updatedStaff)} />}
-                        {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophies={currentWeek.zonePhilosophies || {}} onUpdatePhilosophy={handleUpdateZonePhilosophies} onUpdateGamePlan={handleUpdateGamePlan} weeks={weeks} currentWeek={currentWeek} />}
+                        {view === 'smart-call-sheet' && <SmartCallSheet gamePlan={currentWeek.offensiveGamePlan} situation={currentWeek.situation} playSyntax={playSyntax} formations={formations} positionNames={positionNames} zonePhilosophies={currentWeek.zonePhilosophies || {}} onUpdatePhilosophy={handleUpdateZonePhilosophies} onUpdateGamePlan={handleUpdateGamePlan} weeks={weeks} currentWeek={currentWeek} practicePlans={currentWeek.practicePlans || {}} />}
                         {/* Legacy DumbCallSheet removed from here */}
                         {view === 'play-call-simulator' && <PlayCallSimulator plays={plays} gamePlan={currentWeek.offensiveGamePlan} />}
                         {view === 'special-teams-setup' && renderSetup('SPECIAL_TEAMS')}
