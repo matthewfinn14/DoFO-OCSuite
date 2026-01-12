@@ -49791,6 +49791,7 @@
                         }
 
                         {view === 'testing' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} />}
+                        {view === 'testing-records' && <TestingRecords roster={roster} programRecords={programRecords} onUpdateRecords={setProgramRecords} />}
                         {view === 'ironman' && <PlayerMetrics roster={roster} metrics={metrics} onUpdateMetrics={setMetrics} viewCategory="ironman" />}
                         {view === 'ratings' && <ImpactRatings roster={roster} ratings={metrics} onUpdateRatings={setMetrics} />}
                         {view === 'pressbox' && <Pressbox plays={plays} gameLog={gameLog} onUpdateGameLog={handleUpdateGameLog} currentWeek={currentWeek} teamLogo={teamLogo} opponentLogo={currentWeek.opponentData?.logo || ''} gameStart={currentWeek.gameStart || {}} situation={currentWeek.situation} onUpdateSituation={handleUpdateSituation} formations={formations} activePlay={activePlay} onUpdateActivePlay={setActivePlay} />}
