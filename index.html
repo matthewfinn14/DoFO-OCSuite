@@ -33729,7 +33729,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {} }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
@@ -39044,6 +39044,82 @@
                             <button className={`btn ${showPrintPreview ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowPrintPreview(!showPrintPreview)} style={{ border: '2px solid var(--accent)' }}>
                                 {showPrintPreview ? 'CLOSE PREVIEW' : 'PRINT PREVIEW'}
                             </button>
+                            {/* Stats Ticker */}
+                            {(() => {
+                                // Calculate unique plays in game plan
+                                const allGamePlanPlayIds = new Set();
+                                Object.values(gamePlan?.sets || {}).forEach(set => {
+                                    (set.playIds || []).forEach(item => {
+                                        const id = typeof item === 'object' ? item.id : item;
+                                        if (id) allGamePlanPlayIds.add(id);
+                                    });
+                                });
+                                Object.values(gamePlan?.miniScripts || {}).forEach(script => {
+                                    (script.playIds || []).forEach(item => {
+                                        const id = typeof item === 'object' ? item.id : item;
+                                        if (id) allGamePlanPlayIds.add(id);
+                                    });
+                                });
+                                const uniquePlaysCount = allGamePlanPlayIds.size;
+
+                                // Calculate new plays (plays added this week that weren't in previous weeks)
+                                const previousWeekPlayIds = new Set();
+                                weeks.forEach(w => {
+                                    if (w.weekNumber < currentWeek.weekNumber) {
+                                        const prevGamePlan = w.gamePlan || {};
+                                        Object.values(prevGamePlan.sets || {}).forEach(set => {
+                                            (set.playIds || []).forEach(item => {
+                                                const id = typeof item === 'object' ? item.id : item;
+                                                if (id) previousWeekPlayIds.add(id);
+                                            });
+                                        });
+                                        Object.values(prevGamePlan.miniScripts || {}).forEach(script => {
+                                            (script.playIds || []).forEach(item => {
+                                                const id = typeof item === 'object' ? item.id : item;
+                                                if (id) previousWeekPlayIds.add(id);
+                                            });
+                                        });
+                                    }
+                                });
+                                const newPlaysCount = Array.from(allGamePlanPlayIds).filter(id => !previousWeekPlayIds.has(id)).length;
+
+                                // Calculate total practice script slots for the week
+                                let totalScriptSlots = 0;
+                                const plansList = Array.isArray(practicePlans) ? practicePlans : Object.values(practicePlans || {});
+                                plansList.forEach(plan => {
+                                    plan.segments.forEach(seg => {
+                                        if (seg.hasScript && seg.script && seg.script.length > 0) {
+                                            totalScriptSlots += seg.script.length;
+                                        }
+                                    });
+                                });
+
+                                return (
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        background: '#e0e7ff',
+                                        borderRadius: '24px',
+                                        padding: '0.25rem 1rem',
+                                        marginLeft: '1rem',
+                                        border: '1px solid #c7d2fe',
+                                        height: '38px' // Match button height
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', marginRight: '1rem', paddingRight: '1rem', borderRight: '1px solid #a5b4fc' }}>
+                                            <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white', marginRight: '0.25rem' }}>{uniquePlaysCount}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 'bold' }}>Unique</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', marginRight: '1rem', paddingRight: '1rem', borderRight: '1px solid #a5b4fc' }}>
+                                            <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#059669', marginRight: '0.25rem' }}>{newPlaysCount}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>New</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#6366f1', marginRight: '0.25rem' }}>{totalScriptSlots}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Slots</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Game Plan Statistics Ticker */}
@@ -49449,7 +49525,7 @@
 
                         {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} />}
                         {view === 'practice-report' && <PracticeReportView weeks={weeks} plays={plays} playSyntax={playSyntax} parsePlayName={parsePlayName} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} onUpdateLayouts={(newLayouts) => {
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} weeks={weeks} currentWeek={currentWeek} onUpdateLayouts={(newLayouts) => {
                             setGamePlanLayouts(newLayouts);
                             // Auto-add focus items involved in the layout
                             if (newLayouts?.CALL_SHEET?.sections) {
