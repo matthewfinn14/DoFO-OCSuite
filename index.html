@@ -10824,12 +10824,32 @@
 
                                                     } else {
                                                         // Standard Set/Script Lookup
-                                                        const setData = gamePlan?.sets?.[selectedGamePlanSection] ||
-                                                            gamePlan?.miniScripts?.[selectedGamePlanSection];
+                                                        // Standard Set/Script Lookup
+                                                        let setData = null;
+                                                        // Handle sets as Array (primary) or Object (fallback)
+                                                        if (gamePlan?.sets) {
+                                                            if (Array.isArray(gamePlan.sets)) {
+                                                                setData = gamePlan.sets.find(s => s.id === selectedGamePlanSection);
+                                                            } else {
+                                                                setData = gamePlan.sets[selectedGamePlanSection];
+                                                            }
+                                                        }
+                                                        // Fallback to miniScripts
+                                                        if (!setData && gamePlan?.miniScripts) {
+                                                            if (Array.isArray(gamePlan.miniScripts)) {
+                                                                setData = gamePlan.miniScripts.find(s => s.id === selectedGamePlanSection);
+                                                            } else {
+                                                                setData = gamePlan.miniScripts[selectedGamePlanSection];
+                                                            }
+                                                        }
 
                                                         if (setData && (setData.assignedPlayIds || setData.playIds)) {
                                                             const ids = setData.assignedPlayIds || setData.playIds || [];
-                                                            items = ids.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                                                            items = ids.map(item => {
+                                                                // Handle both string IDs and object IDs (e.g. { id: '...', tempo: '...' })
+                                                                const playId = (typeof item === 'object' && item !== null && item.id) ? item.id : item;
+                                                                return plays.find(p => p.id === playId);
+                                                            }).filter(Boolean);
                                                         }
                                                     }
                                                 }
@@ -30331,6 +30351,7 @@
         const PracticeCoachApp = ({ staff = [], roster = [], plans = [], plays = [], drills = [], weeks = [], currentWeek = {} }) => {
             const { isPremium } = useSchoolPlan(); // School Plan Hook
 
+            /*
             if (!isPremium) {
                 return (
                     <div className="card" style={{ padding: '3rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -30345,11 +30366,15 @@
                     </div>
                 );
             }
+            */
 
             // Convert plans object to array if needed to handle {Monday: {}, Tuesday: {}} structure
             const planList = Array.isArray(plans) ? plans : Object.values(plans);
 
-            const [selectedCoachId, setSelectedCoachId] = useState(staff.length > 0 ? staff[0].id : '');
+            // Preview Mode: Ensure we have at least one coach
+            const effectiveStaff = staff.length > 0 ? staff : [{ id: 'preview_coach', name: 'Preview Coach', role: 'Head Coach' }];
+
+            const [selectedCoachId, setSelectedCoachId] = useState(effectiveStaff[0].id);
             const [viewMode, setViewMode] = useState('home'); // home, practice
             const [selectedPlanId, setSelectedPlanId] = useState('');
             const [currentPeriodIndex, setCurrentPeriodIndex] = useState(0);
@@ -30357,7 +30382,7 @@
             const [activeFeedbackPlayerId, setActiveFeedbackPlayerId] = useState(null);
 
             // Get selected coach
-            const selectedCoach = staff.find(c => c.id === selectedCoachId) || (staff.length > 0 ? staff[0] : null);
+            const selectedCoach = effectiveStaff.find(c => c.id === selectedCoachId) || effectiveStaff[0];
 
             // Get selected plan
             const selectedPlan = planList.find(p => p.id === selectedPlanId) || (planList.length > 0 ? planList[0] : null);
@@ -30379,7 +30404,7 @@
                 }
             }, [planList]);
 
-            if (!selectedCoach) return <div className="p-4 text-center">No staff found. Please add staff members.</div>;
+            // if (!selectedCoach) return <div className="p-4 text-center">No staff found. Please add staff members.</div>;
 
             const handleNextPeriod = () => {
                 if (selectedPlan && currentPeriodIndex < selectedPlan.segments.length - 1) {
@@ -30408,7 +30433,7 @@
                                     onChange={e => setSelectedCoachId(e.target.value)}
                                     style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.9rem', cursor: 'pointer' }}
                                 >
-                                    {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
+                                    {effectiveStaff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
                                 </select>
                             </div>
                         </div>
@@ -49855,7 +49880,7 @@
 
                         {view === 'grading' && <GameGradingView roster={roster} gameLog={currentWeek.gameLog} gameGrades={gameGrades} onUpdateGameGrades={setGameGrades} />}
                         {view === 'player-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} depthCharts={depthCharts} positionNames={positionNames} />}
-                        {view === 'attendance-app' && <PlayerApp roster={roster} attendance={attendance} setAttendance={setAttendance} getPlayerWeightLogs={getPlayerWeightLogs} addWeightLog={addWeightLog} tasks={masterTasks} onUpdateTasks={setMasterTasks} dailyConnections={dailyConnections} setDailyConnections={setDailyConnections} currentWeek={currentWeek} culturalCalibration={culturalCalibration} depthCharts={depthCharts} positionNames={positionNames} />}
+                        {view === 'attendance-app' && <MobileAttendanceApp roster={roster} attendance={attendance} setAttendance={setAttendance} />}
                         {view === 'practice' && (
                             <PracticeScriptBuilder
                                 mode="plan"
