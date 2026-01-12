@@ -39022,21 +39022,20 @@
                     {/* Toolbar */}
                     <div className="app-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')}>
-                                STAPLES
+                            <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
+                                STRIKE 'EM OUT
+                            </button>
+                            <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')}>
+                                SITUATIONS & SCRIPTS
+                            </button>
+                            <button className={`btn ${viewMode === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('fzdnd')}>
+                                FZDnD
                             </button>
                             <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')}>
                                 PRIORITY PLAYS
                             </button>
-                            {/* Legacy View Removed */}
-                            <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')}>
-                                SITUATIONS & SCRIPTS
-                            </button>
-                            <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')}>
-                                STRIKE 'EM OUT
-                            </button>
-                            <button className={`btn ${viewMode === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('fzdnd')}>
-                                FZDnD
+                            <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')}>
+                                STAPLES
                             </button>
                             <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')}>
                                 PLAYER TOUCHES
