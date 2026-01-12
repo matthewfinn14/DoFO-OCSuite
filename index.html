@@ -1351,6 +1351,21 @@
             };
         };
 
+        const FZDND_ZONES = [
+            { id: 'red', title: 'Red Zone (20-Goalline)', color: '#fee2e2' },
+            { id: 'orange', title: 'Orange Zone (40-20)', color: '#ffedd5' },
+            { id: 'yellow', title: 'Yellow Zone (-40 to +40)', color: '#fef9c3' },
+            { id: 'green', title: 'Green Zone (-20 to -40)', color: '#dcfce7' },
+            { id: 'backedup', title: 'Backed Up (Goalline-10)', color: '#f1f5f9' }
+        ];
+
+        const PRIORITY_CATEGORIES = [
+            { id: 'must_use', label: 'Must Use', color: 'bg-red-100 text-red-800' },
+            { id: 'alert', label: 'Alert/Kill', color: 'bg-amber-100 text-amber-800' },
+            { id: 'check_with_me', label: 'Check w/ Me', color: 'bg-blue-100 text-blue-800' },
+            { id: 'waste', label: 'Waste', color: 'bg-gray-100 text-gray-800' }
+        ];
+
         const signup = (email, password, loginMode = 'coach') => {
             localStorage.setItem('user_type', loginMode);
             return window.auth.createUserWithEmailAndPassword(email, password);
@@ -10781,15 +10796,8 @@
                                             if (scriptTab === 'gameplan') {
                                                 if (!selectedGamePlanSection) {
                                                     // Return list of Sections from LAYOUTS
-                                                    const sections = (gamePlanLayouts?.CALL_SHEET?.sections || [])
-                                                        .flatMap(section => section.boxes.map(box => ({
-                                                            id: box.setId,
-                                                            name: box.header,
-                                                            type: 'section_group',
-                                                            itemCount: (gamePlan?.sets?.[box.setId]?.assignedPlayIds?.length || 0) +
-                                                                (gamePlan?.miniScripts?.[box.setId]?.assignedPlayIds?.length || 0)
-                                                        })));
-                                                    return sections;
+                                                    // Items removed as requested
+                                                    return [];
                                                 } else {
                                                     // Return plays in selected section
                                                     // Check if it's a Matrix Formation
@@ -11017,65 +11025,12 @@
                                                                             style={{ width: '100%', fontSize: '0.8rem', padding: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                                                                             onClick={() => {
                                                                                 setScriptTab('gameplan');
-                                                                                setGameplanDropdownOpen(!gameplanDropdownOpen);
+                                                                                setSelectedGamePlanSection(null);
                                                                             }}
                                                                         >
-                                                                            Gameplan <Icon name="ChevronDown" size={12} />
+                                                                            Gameplan
                                                                         </button>
 
-                                                                        {gameplanDropdownOpen && (
-                                                                            <div style={{
-                                                                                position: 'absolute', top: '100%', left: 0, right: -100, // Extend width slightly if needed, or keep 0
-                                                                                minWidth: '200px',
-                                                                                backgroundColor: 'var(--bg-panel)',
-                                                                                border: '1px solid var(--border)',
-                                                                                borderRadius: 'var(--radius)',
-                                                                                maxHeight: '400px', overflowY: 'auto',
-                                                                                zIndex: 50,
-                                                                                marginTop: '4px',
-                                                                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                                                                            }}>
-                                                                                {/* Sections */}
-                                                                                <div style={{ padding: '0.5rem', fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-sub)', position: 'sticky', top: 0 }}>
-                                                                                    SCRIPTS & SITS
-                                                                                </div>
-                                                                                {(gamePlanLayouts?.CALL_SHEET?.sections || []).flatMap(section => section.boxes).map((box, i) => (
-                                                                                    <div
-                                                                                        key={box.setId || i}
-                                                                                        onClick={() => {
-                                                                                            setScriptTab('gameplan');
-                                                                                            setSelectedGamePlanSection(box.setId);
-                                                                                            setGameplanDropdownOpen(false);
-                                                                                        }}
-                                                                                        style={{ padding: '0.5rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: '0.8rem' }}
-                                                                                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-main)'}
-                                                                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                                                                    >
-                                                                                        {box.header}
-                                                                                    </div>
-                                                                                ))}
-
-                                                                                {/* Matrix Formations */}
-                                                                                <div style={{ padding: '0.5rem', fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-sub)', position: 'sticky', top: 0 }}>
-                                                                                    FORMATIONS
-                                                                                </div>
-                                                                                {(gamePlanLayouts?.MATRIX?.formations || []).map(row => (
-                                                                                    <div
-                                                                                        key={row.id}
-                                                                                        onClick={() => {
-                                                                                            setScriptTab('gameplan');
-                                                                                            setSelectedGamePlanSection(row.id);
-                                                                                            setGameplanDropdownOpen(false);
-                                                                                        }}
-                                                                                        style={{ padding: '0.5rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: '0.8rem' }}
-                                                                                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-main)'}
-                                                                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                                                                    >
-                                                                                        {row.label}
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
                                                                     </div>
 
                                                                     {['bank', 'situations'].map(tab => (
@@ -11096,52 +11051,150 @@
                                                             </>
                                                         )}
                                                     </div>
-                                                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                            {getSidePanelItems().map((item, idx) => (
-                                                                <div
-                                                                    key={idx}
-                                                                    style={{
-                                                                        padding: '0.5rem',
-                                                                        backgroundColor: 'var(--bg-panel)',
-                                                                        border: '1px solid var(--border)',
-                                                                        borderRadius: 'var(--radius)',
-                                                                        cursor: 'pointer',
-                                                                        display: 'flex',
-                                                                        justifyContent: 'space-between',
-                                                                        alignItems: 'center'
-                                                                    }}
-                                                                    onClick={() => {
-                                                                        if (item.type === 'section_group') {
-                                                                            setSelectedGamePlanSection(item.id);
-                                                                        } else {
-                                                                            handleAddFromSidePanel(item, scriptTab === 'situations' ? 'situation' : 'play');
-                                                                        }
-                                                                    }}
-                                                                    className="hover-card"
-                                                                >
-                                                                    <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                        {item.priority && <Icon name="Star" size={12} fill="gold" color="gold" />}
-                                                                        {item.name}
-                                                                    </span>
-                                                                    {item.type === 'section_group' && (
-                                                                        <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--bg-main)', padding: '2px 6px', borderRadius: '10px' }}>
-                                                                            {item.itemCount}
-                                                                        </span>
-                                                                    )}
-                                                                    {scriptTab !== 'situations' && item.type !== 'section_group' && (
-                                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
-                                                                            {item.type}
-                                                                        </span>
-                                                                    )}
+                                                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                                                        {scriptTab === 'gameplan' && !selectedGamePlanSection ? (
+                                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                {/* Scripts & Situations */}
+                                                                <div style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-sub)' }}>
+                                                                    SCRIPTS & SITUATIONS
                                                                 </div>
-                                                            ))}
-                                                            {getSidePanelItems().length === 0 && (
-                                                                <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '2rem' }}>
-                                                                    No items found.
+                                                                {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => (
+                                                                    <div key={section.id || sIdx}>
+                                                                        <div style={{ padding: '0.25rem 0.5rem', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text-main)' }}>
+                                                                            {section.title || `Section ${sIdx + 1}`}
+                                                                        </div>
+                                                                        {(section.boxes || []).map((box, bIdx) => (
+                                                                            <div
+                                                                                key={box.setId || bIdx}
+                                                                                onClick={() => {
+                                                                                    setScriptTab('gameplan');
+                                                                                    setSelectedGamePlanSection(box.setId);
+                                                                                }}
+                                                                                style={{ padding: '0.25rem 0.5rem 0.25rem 1.5rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                                                                                className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                                            >
+                                                                                {box.header || `Box ${bIdx + 1}`}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                ))}
+
+                                                                {/* Strike 'Em Out (Matrix) */}
+                                                                <div style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-sub)', marginTop: '0.5rem' }}>
+                                                                    STRIKE 'EM OUT
                                                                 </div>
-                                                            )}
-                                                        </div>
+
+                                                                {/* Formations */}
+                                                                <div style={{ padding: '0.25rem 0.5rem', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text-main)' }}>Formations</div>
+                                                                {(gamePlanLayouts?.MATRIX?.formations || []).map((row, rIdx) => (
+                                                                    <div
+                                                                        key={row.id || rIdx}
+                                                                        onClick={() => {
+                                                                            setScriptTab('gameplan');
+                                                                            setSelectedGamePlanSection(row.id);
+                                                                        }}
+                                                                        style={{ padding: '0.25rem 0.5rem 0.25rem 1.5rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                                                                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                                    >
+                                                                        {row.label}
+                                                                    </div>
+                                                                ))}
+
+                                                                {/* Play Types */}
+                                                                {gamePlanLayouts?.MATRIX?.playTypes?.length > 0 && (
+                                                                    <>
+                                                                        <div style={{ padding: '0.25rem 0.5rem', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text-main)' }}>Play Types</div>
+                                                                        {gamePlanLayouts.MATRIX.playTypes.map((pt, ptIdx) => (
+                                                                            <div
+                                                                                key={pt.id || ptIdx}
+                                                                                style={{ padding: '0.25rem 0.5rem 0.25rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                                                                            >
+                                                                                {pt.label || pt.name || pt.id}
+                                                                            </div>
+                                                                        ))}
+                                                                    </>
+                                                                )}
+
+                                                                {/* Columns */}
+                                                                {gamePlanLayouts?.MATRIX?.cols?.length > 0 && (
+                                                                    <>
+                                                                        <div style={{ padding: '0.25rem 0.5rem', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text-main)' }}>Columns</div>
+                                                                        {gamePlanLayouts.MATRIX.cols.map((col, cIdx) => (
+                                                                            <div
+                                                                                key={col.id || cIdx}
+                                                                                style={{ padding: '0.25rem 0.5rem 0.25rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                                                                            >
+                                                                                {col.label || col.header || col.id}
+                                                                            </div>
+                                                                        ))}
+                                                                    </>
+                                                                )}
+
+                                                                {/* FZDnD */}
+                                                                <div style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-sub)', marginTop: '0.5rem' }}>
+                                                                    FZDnD
+                                                                </div>
+                                                                {FZDND_ZONES.map(zone => (
+                                                                    <div
+                                                                        key={zone.id}
+                                                                        onClick={() => {
+                                                                            setScriptTab('gameplan');
+                                                                            setSelectedGamePlanSection(`fzdnd_${zone.id}`);
+                                                                        }}
+                                                                        style={{ padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                                                                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                                    >
+                                                                        {zone.title}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem' }}>
+                                                                {getSidePanelItems().map((item, idx) => (
+                                                                    <div
+                                                                        key={idx}
+                                                                        style={{
+                                                                            padding: '0.5rem',
+                                                                            backgroundColor: 'var(--bg-panel)',
+                                                                            border: '1px solid var(--border)',
+                                                                            borderRadius: 'var(--radius)',
+                                                                            cursor: 'pointer',
+                                                                            display: 'flex',
+                                                                            justifyContent: 'space-between',
+                                                                            alignItems: 'center'
+                                                                        }}
+                                                                        onClick={() => {
+                                                                            if (item.type === 'section_group') {
+                                                                                setSelectedGamePlanSection(item.id);
+                                                                            } else {
+                                                                                handleAddFromSidePanel(item, scriptTab === 'situations' ? 'situation' : 'play');
+                                                                            }
+                                                                        }}
+                                                                        className="hover-card"
+                                                                    >
+                                                                        <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                            {item.priority && <Icon name="Star" size={12} fill="gold" color="gold" />}
+                                                                            {item.name}
+                                                                        </span>
+                                                                        {item.type === 'section_group' && (
+                                                                            <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--bg-main)', padding: '2px 6px', borderRadius: '10px' }}>
+                                                                                {item.itemCount}
+                                                                            </span>
+                                                                        )}
+                                                                        {scriptTab !== 'situations' && item.type !== 'section_group' && (
+                                                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
+                                                                                {item.type}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                                {getSidePanelItems().length === 0 && (
+                                                                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '2rem' }}>
+                                                                        No items found.
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
