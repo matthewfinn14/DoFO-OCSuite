@@ -33858,12 +33858,17 @@
             };
 
             // Play Selector specific helper to get grid array (20 items)
-            const getGridPlays = (setId, limit = 20) => {
-                let set = gamePlan?.sets?.find(s => s.id === setId);
-                if (!set && setId && setId.startsWith('ms_')) {
-                    set = gamePlan?.miniScripts?.find(s => s.id === setId);
+            const getGridPlays = (setId, limit = 20, assignedIds = null) => {
+                let rawIds = [];
+                if (assignedIds && Array.isArray(assignedIds) && assignedIds.length > 0) {
+                    rawIds = [...assignedIds];
+                } else {
+                    let set = gamePlan?.sets?.find(s => s.id === setId);
+                    if (!set && setId && setId.startsWith('ms_')) {
+                        set = gamePlan?.miniScripts?.find(s => s.id === setId);
+                    }
+                    rawIds = set ? [...set.playIds] : [];
                 }
-                const rawIds = set ? [...set.playIds] : [];
                 // Pad to 20
                 while (rawIds.length < limit) {
                     rawIds.push('GAP');
@@ -35863,7 +35868,7 @@
                     headings = headings.slice(0, cols);
                 }
 
-                const allPlays = getGridPlays(box.setId, totalSlots);
+                const allPlays = getGridPlays(box.setId, totalSlots, box.assignedPlayIds);
                 const assignedPlays = (allPlays || []).filter(p => p.type !== 'GAP');
 
                 const updateLayout = (updates) => {
@@ -37305,7 +37310,7 @@
                                                                     const rowsCount = box.gridRows || 5;
                                                                     const totalSlots = cols * rowsCount;
 
-                                                                    const gridPlays = (getGridPlays(box.setId, totalSlots) || []);
+                                                                    const gridPlays = (getGridPlays(box.setId, totalSlots, box.assignedPlayIds) || []);
                                                                     const headings = box.gridHeadings || Array(cols).fill('').map((_, i) => i === 0 ? 'LEFT HASH' : (i === cols - 1 ? 'NOTES' : `COL ${i + 1}`));
 
                                                                     const rows = [];
