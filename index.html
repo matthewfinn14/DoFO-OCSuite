@@ -45618,11 +45618,7 @@
                             <Icon name="FileText" size={12} /> Practice Scripts
                         </button>
 
-                        <button className={`nav-item ${isActive && view === 'dumb-call-sheet' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('dumb-call-sheet'); }}
-                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="FileText" size={12} /> Dumb Call Sheet
-                        </button>
+
                         <button className={`nav-item ${isActive && view === 'pregame' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('pregame'); }}
                             style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
