@@ -39022,25 +39022,25 @@
                     {/* Toolbar */}
                     <div className="app-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')} style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                                 STRIKE 'EM OUT
                             </button>
-                            <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')} style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                                 SITUATIONS & SCRIPTS
                             </button>
-                            <button className={`btn ${viewMode === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('fzdnd')} style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('fzdnd')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                                 FZDnD
                             </button>
-                            <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')} style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                                 PRIORITY PLAYS
                             </button>
-                            <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')} style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                                 STAPLES
                             </button>
-                            <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')} style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                                 PLAYER TOUCHES
                             </button>
-                            <button className={`btn ${showPrintPreview ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowPrintPreview(!showPrintPreview)} style={{ border: '2px solid var(--accent)' }}>
+                            <button className={`btn ${showPrintPreview ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowPrintPreview(!showPrintPreview)} style={{ border: '2px solid var(--accent)', height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                                 {showPrintPreview ? 'CLOSE PREVIEW' : 'PRINT PREVIEW'}
                             </button>
                             {/* Stats Ticker */}
