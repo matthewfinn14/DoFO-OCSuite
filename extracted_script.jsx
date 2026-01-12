@@ -7058,7 +7058,7 @@ const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, sta
 
             </div>
 
-            {/* Script View Modal - Moved outside flex container */}
+            {/* Script View Modal - Max Z-Index Fix */}
             {showScriptView && (
                 <div
                     style={{
@@ -7067,18 +7067,19 @@ const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, sta
                         left: 0,
                         width: '100vw',
                         height: '100vh',
-                        backgroundColor: 'rgba(0,0,0,0.5)',
-                        zIndex: 999,
-                        backdropFilter: 'blur(2px)'
+                        backgroundColor: 'rgba(0,0,0,0.85)',
+                        zIndex: 2147483646,
+                        backdropFilter: 'blur(4px)'
                     }}
                     onClick={() => setShowScriptView(false)}
+                    className="no-print"
                 />
             )}
-            <div className="script-view-panel" style={{
+            <div className="script-view-panel no-print" style={{
                 display: showScriptView ? 'flex' : 'none',
                 flexDirection: 'column',
                 position: 'fixed',
-                zIndex: 1000,
+                zIndex: 2147483647,
                 backgroundColor: 'var(--bg-panel)',
                 padding: '2rem',
                 overflow: 'hidden',
@@ -7098,7 +7099,7 @@ const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, sta
                     maxWidth: '1200px',
                     borderRadius: '12px',
                     border: '1px solid var(--border)',
-                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.1)'
                 })
             }}>
                 {(() => {
@@ -7176,7 +7177,7 @@ const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, sta
                                                             updateSegment(selectedSegmentId, 'script', newScript);
                                                         }}
                                                     >
-                                                        <option value=""></option>
+                                                        <option value="">--</option>
                                                         <option value="L">L</option>
                                                         <option value="M">M</option>
                                                         <option value="R">R</option>

@@ -141,6 +141,15 @@
                 display: none !important;
             }
 
+            .print-only-scripts {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 99998;
+            }
+
             /* Ensure Print Preview Modal behaves nicely */
             .print-preview-modal-wrapper {
                 position: absolute !important;
@@ -218,12 +227,7 @@
         }
 
         .print-only-scripts {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 99998;
-            display: block !important;
+            display: none;
         }
 
         /* Travel Packet Printing Exception */
@@ -10623,7 +10627,7 @@
                     {showScriptView && selectedSegmentId && (
                         <div style={{
                             position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-                            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2147483647,
                             display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(2px)'
                         }}
                             onClick={() => setShowScriptView(false)}
@@ -32098,7 +32102,7 @@
                     </div>
 
                     {/* 4-COLUMN DASHBOARD (Task List) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', flex: 1, minHeight: 0 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1.5rem', flex: 1, minHeight: 0 }}>
                         {
                             ['today', 'thisWeek', 'thisMonth', 'someday'].map(col => {
                                 const titleMap = { today: 'Today', thisWeek: 'This Week', thisMonth: 'This Month', someday: 'Someday' };
