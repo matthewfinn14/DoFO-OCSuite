@@ -35933,7 +35933,26 @@
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         borderRight: '1px solid #e2e8f0', borderBottom: '1px dotted #e2e8f0', padding: '2px'
                                     }}>
-                                        {rIdx + 1}
+                                        {isEditing ? (
+                                            <input
+                                                value={(box.gridRowLabels && box.gridRowLabels[rIdx]) || (rIdx + 1).toString()}
+                                                onChange={(e) => {
+                                                    const newLabels = [...(box.gridRowLabels || [])];
+                                                    // Ensure array is padded up to this index if it was empty/short
+                                                    for (let i = 0; i <= rIdx; i++) {
+                                                        if (newLabels[i] === undefined) newLabels[i] = (i + 1).toString();
+                                                    }
+                                                    newLabels[rIdx] = e.target.value;
+                                                    updateLayout({ gridRowLabels: newLabels });
+                                                }}
+                                                style={{
+                                                    width: '100%', fontSize: '0.6rem', border: 'none', background: 'transparent',
+                                                    textAlign: 'center', fontWeight: 'bold', color: '#94a3b8'
+                                                }}
+                                            />
+                                        ) : (
+                                            (box.gridRowLabels && box.gridRowLabels[rIdx]) || (rIdx + 1)
+                                        )}
                                     </div>
                                     {/* Slot Cells */}
                                     {Array.from({ length: cols }).map((_, cIdx) => {
@@ -37297,7 +37316,9 @@
                                                                     return (
                                                                         <div style={{ display: 'grid', gridTemplateColumns: `min-content repeat(${cols}, 1fr)`, gap: '0', width: '100%' }}>
                                                                             {/* Header Row */}
-                                                                            <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>#</div>
+                                                                            <div style={{ padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', alignSelf: 'end' }}>
+                                                                                {box.cornerLabel || '#'}
+                                                                            </div>
                                                                             {headings.slice(0, cols).map((h, i) => (
                                                                                 <div key={`h-${i}`} style={{
                                                                                     padding: '2px', fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b', textAlign: 'center',
@@ -37317,7 +37338,7 @@
                                                                                         display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
                                                                                         borderBottom: '1px dotted #f1f5f9'
                                                                                     }}>
-                                                                                        {rIdx + 1}
+                                                                                        {(box.gridRowLabels && box.gridRowLabels[rIdx]) || (rIdx + 1)}
                                                                                     </div>
                                                                                     {rowSlots.map((slot, cIdx) => {
                                                                                         const play = plays.find(p => p.id === slot.id);
