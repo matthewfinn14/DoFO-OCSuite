@@ -3291,12 +3291,13 @@ const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', f
     );
 };
 
-const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], rooskiLibrary, setRooskiLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'] }) => {
+const PlayInput = ({ onSave, onCancel, onDelete, initialData, rooskiLibrary, setRooskiLibrary, positionNames, formations, playSyntax, termLibrary, programLevels, availableMiniScripts, initialAssignedScriptIds, playCategories = [], playBuckets = [] }) => {
     const [isDiagramming, setIsDiagramming] = useState(false);
     const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
     const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'rooski-oline', 'rooski-skill', 'detailed'
     const [formData, setFormData] = useState({
         playCategory: '', // Existing field
+        playBucket: '', // Added bucket
         formation: '',
         formationTag: '',
         name: '',
@@ -3614,6 +3615,32 @@ const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScrip
                                 <Icon name="ClipboardList" size={20} style={{ color: 'var(--accent)' }} />
                                 PLAY CALL
                             </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                                <div className="form-group" style={{ margin: 0 }}>
+                                    <label className="form-label">Category</label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.playCategory || ''}
+                                        onChange={e => setFormData({ ...formData, playCategory: e.target.value })}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                    >
+                                        <option value="">Select Category...</option>
+                                        {playCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group" style={{ margin: 0 }}>
+                                    <label className="form-label">Bucket</label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.playBucket || ''}
+                                        onChange={e => setFormData({ ...formData, playBucket: e.target.value })}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                    >
+                                        <option value="">Select Bucket...</option>
+                                        {playBuckets.map(b => <option key={b} value={b}>{b}</option>)}
+                                    </select>
+                                </div>
+                            </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
                                 {playSyntax.map(comp => (
                                     <div key={comp.id} className="form-group" style={{ margin: 0 }}>
@@ -3648,6 +3675,32 @@ const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScrip
                             <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <Icon name="ClipboardList" size={20} style={{ color: 'var(--accent)' }} />
                                 PLAY CALL
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                                <div className="form-group" style={{ margin: 0 }}>
+                                    <label className="form-label">Category</label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.playCategory || ''}
+                                        onChange={e => setFormData({ ...formData, playCategory: e.target.value })}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                    >
+                                        <option value="">Select Category...</option>
+                                        {playCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group" style={{ margin: 0 }}>
+                                    <label className="form-label">Bucket</label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.playBucket || ''}
+                                        onChange={e => setFormData({ ...formData, playBucket: e.target.value })}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                    >
+                                        <option value="">Select Bucket...</option>
+                                        {playBuckets.map(b => <option key={b} value={b}>{b}</option>)}
+                                    </select>
+                                </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                                 <div className="form-group" style={{ margin: 0 }}>
@@ -36565,6 +36618,8 @@ const App = () => {
     const [termLibrary, setTermLibrary] = useLocalStorage('oc-dashboard-term-library', {});
     const [defenseTermLibrary, setDefenseTermLibrary] = useLocalStorage('oc-dashboard-term-library-defense', {});
     const [stTermLibrary, setStTermLibrary] = useLocalStorage('oc-dashboard-term-library-st', {});
+    const [playCategories, setPlayCategories] = useLocalStorage('oc-dashboard-play-categories', ['Run', 'Pass', 'RPO', 'Screen', 'PA Pass', 'Gadget']); // [RESTORED]
+    const [playBuckets, setPlayBuckets] = useLocalStorage('oc-dashboard-play-buckets', ['Quick', 'Dropback', 'Sprint', 'Boot', 'Naked', 'Screen', 'Draw', 'Gap', 'Zone']); // [RESTORED]
     const [setupTab, setSetupTab] = useState('positions');
     const [setupCategory, setSetupCategory] = useState(null);
 
@@ -36963,6 +37018,8 @@ const App = () => {
     {
         view === 'new-play' && (
             <PlayInput
+                playCategories={playCategories}
+                playBuckets={playBuckets}
                 onSave={handleSavePlay}
                 onCancel={() => { setEditingPlay(null); setView('playbook'); }}
                 onDelete={handleDeletePlay}
@@ -37528,6 +37585,36 @@ const App = () => {
                     >
                         <Icon name="BookOpen" size={16} /> Term Library
                     </button>
+                    {(phase === 'OFFENSE') && (
+                        <>
+                            <button
+                                className={`btn-ghost`}
+                                style={{
+                                    borderRadius: 0,
+                                    padding: '1rem 1.5rem',
+                                    borderBottom: setupTab === 'categories' ? '3px solid var(--accent)' : '3px solid transparent',
+                                    fontWeight: setupTab === 'categories' ? 'bold' : 'normal',
+                                    color: setupTab === 'categories' ? 'var(--text-primary)' : 'var(--text-secondary)'
+                                }}
+                                onClick={() => setSetupTab('categories')}
+                            >
+                                <Icon name="List" size={16} /> Categories
+                            </button>
+                            <button
+                                className={`btn-ghost`}
+                                style={{
+                                    borderRadius: 0,
+                                    padding: '1rem 1.5rem',
+                                    borderBottom: setupTab === 'buckets' ? '3px solid var(--accent)' : '3px solid transparent',
+                                    fontWeight: setupTab === 'buckets' ? 'bold' : 'normal',
+                                    color: setupTab === 'buckets' ? 'var(--text-primary)' : 'var(--text-secondary)'
+                                }}
+                                onClick={() => setSetupTab('buckets')}
+                            >
+                                <Icon name="Grid" size={16} /> Buckets
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 <div style={{ padding: '1.5rem', flex: 1 }}>
@@ -37701,6 +37788,64 @@ const App = () => {
                                     </div>
                                 </div>
                             )}
+
+                    {setupTab === 'categories' && (
+                        <div style={{ maxWidth: '800px' }}>
+                            <h3 style={{ marginBottom: '1rem' }}>Play Categories</h3>
+                            <p style={{ opacity: 0.7, marginBottom: '1.5rem' }}>Define high-level categories for your plays (e.g. Run, Pass, RPO).</p>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                                <form onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const val = e.target.elements.newCat.value.trim();
+                                    if (val && !playCategories.includes(val)) {
+                                        setPlayCategories([...playCategories, val]);
+                                        e.target.reset();
+                                    }
+                                }} style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                                    <input name="newCat" className="form-input" placeholder="New Category Name" />
+                                    <button type="submit" className="btn btn-primary">Add</button>
+                                </form>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {playCategories.map(cat => (
+                                    <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '6px', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 500 }}>{cat}</span>
+                                        <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => setPlayCategories(playCategories.filter(c => c !== cat))}>
+                                            <Icon name="Trash" size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {setupTab === 'buckets' && (
+                        <div style={{ maxWidth: '800px' }}>
+                            <h3 style={{ marginBottom: '1rem' }}>Play Buckets</h3>
+                            <p style={{ opacity: 0.7, marginBottom: '1.5rem' }}>Define specific buckets/families for your plays (e.g. Dropback, Quick, Sprint).</p>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                                <form onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const val = e.target.elements.newBucket.value.trim();
+                                    if (val && !playBuckets.includes(val)) {
+                                        setPlayBuckets([...playBuckets, val]);
+                                        e.target.reset();
+                                    }
+                                }} style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                                    <input name="newBucket" className="form-input" placeholder="New Bucket Name" />
+                                    <button type="submit" className="btn btn-primary">Add</button>
+                                </form>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {playBuckets.map(bucket => (
+                                    <div key={bucket} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '6px', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 500 }}>{bucket}</span>
+                                        <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => setPlayBuckets(playBuckets.filter(b => b !== bucket))}>
+                                            <Icon name="Trash" size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -38713,6 +38858,8 @@ const App = () => {
 
                 {view === 'new-play' && (
                     <PlayInput
+                        playCategories={playCategories}
+                        playBuckets={playBuckets}
                         onSave={handleSavePlay}
                         onCancel={() => { setEditingPlay(null); setView('playbook'); }}
                         onDelete={handleDeletePlay}
