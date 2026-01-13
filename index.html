@@ -10197,6 +10197,13 @@
                                                                 }
                                                             }}
                                                             onClick={e => e.stopPropagation()}
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                handleSegmentChange(seg.id, 'type', val);
+
+                                                                // Auto-clear focus if not allowed in new type (optional, but cleaner)
+                                                                // For now, we trust the dropdown filter to guide next edit
+                                                            }}
                                                         >
                                                             <option value="">-- Select Type --</option>
                                                             {availableSegmentTypes.map(t => (
@@ -10218,7 +10225,10 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
                                                                     <option value="">-- Offense --</option>
-                                                                    {availableFocusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                                    {/* Filtered Focus Items */}
+                                                                    {(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
+                                                                        ? segmentSettings[seg.type].allowedFocusItems.filter(f => availableFocusItems.includes(f))
+                                                                        : availableFocusItems).map(item => <option key={item} value={item}>{item}</option>)}
                                                                 </select>
                                                             )}
                                                         </td>
@@ -10233,7 +10243,10 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
                                                                     <option value="">-- Defense --</option>
-                                                                    {availableFocusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                                    {/* Filtered Focus Items */}
+                                                                    {(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
+                                                                        ? segmentSettings[seg.type].allowedFocusItems.filter(f => availableFocusItems.includes(f))
+                                                                        : availableFocusItems).map(item => <option key={item} value={item}>{item}</option>)}
                                                                 </select>
                                                             )}
                                                         </td>
@@ -44891,6 +44904,213 @@
             );
         };
 
+        // --- HIERARCHY EDITOR COMPONENT ---
+        const HierarchyEditor = ({ segmentTypes, focusItems, settings, onUpdateSettings, onAddSegment, onAddFocus, deleteConfirmation, setDeleteConfirmation, onDeleteSegment, onDeleteFocus }) => {
+            const [selectedSegment, setSelectedSegment] = useState(null);
+
+            // Filter focus items based on link checkboxes
+            const isFocusAllowed = (seg, focus) => {
+                const segSettings = settings[seg] || {};
+                // If no specific allowed list exists, EVERYTHING is allowed (default behavior)
+                if (!segSettings.allowedFocusItems || segSettings.allowedFocusItems.length === 0) return true;
+                return segSettings.allowedFocusItems.includes(focus);
+            };
+
+            const toggleFocusLink = (seg, focus) => {
+                const segSettings = settings[seg] || { showHash: true, showDefense: true };
+                let currentAllowed = segSettings.allowedFocusItems || [];
+
+                // If currently "All Allowed" (empty), and we click one, we must first "Exclude All Others". 
+                // Wait, if I start checking boxes, it implies "Only these are allowed".
+                // So if currentAllowed is empty, and I click 'A', then 'A' is the ONLY one allowed.
+
+                if (!currentAllowed.includes(focus)) {
+                    // ADDING
+                    // Logic: If I add one, and it was empty, then effectively I just switched from "All" to "One".
+                    const newAllowed = [...currentAllowed, focus];
+                    onUpdateSettings({
+                        ...settings,
+                        [seg]: { ...segSettings, allowedFocusItems: newAllowed }
+                    });
+                } else {
+                    // REMOVING
+                    const newAllowed = currentAllowed.filter(f => f !== focus);
+                    onUpdateSettings({
+                        ...settings,
+                        [seg]: { ...segSettings, allowedFocusItems: newAllowed }
+                    });
+                }
+            };
+
+            // Helper to check if a segment has ANY restrictions
+            const hasRestrictions = (seg) => {
+                const segSettings = settings[seg] || {};
+                return segSettings.allowedFocusItems && segSettings.allowedFocusItems.length > 0;
+            };
+
+            return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', height: '100%', minHeight: 0 }}>
+                    {/* LEFT: Segment Types */}
+                    <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+                        <h4 style={{ marginTop: 0, marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                            Segment Types
+                        </h4>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                id="new-segment-type"
+                                className="form-input"
+                                placeholder="New Segment..."
+                            />
+                            <button className="btn btn-primary" onClick={() => {
+                                const val = document.getElementById('new-segment-type').value.trim();
+                                if (val) {
+                                    onAddSegment(val);
+                                    document.getElementById('new-segment-type').value = '';
+                                }
+                            }}>Add</button>
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {segmentTypes.map(item => {
+                                const segSettings = settings[item] || { showHash: true, showDefense: true };
+                                const isSelected = selectedSegment === item;
+                                const restrictedCount = segSettings.allowedFocusItems?.length || 0;
+
+                                return (
+                                    <div
+                                        key={item}
+                                        onClick={() => setSelectedSegment(item)}
+                                        style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            padding: '0.5rem',
+                                            background: isSelected ? 'var(--primary)' : 'var(--bg-panel)',
+                                            color: isSelected ? 'white' : 'inherit',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            border: isSelected ? '1px solid var(--primary-dark)' : '1px solid transparent'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <span style={{ fontWeight: '600' }}>{item}</span>
+                                            <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>
+                                                <label onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={segSettings.showHash !== false}
+                                                        onChange={(e) => {
+                                                            onUpdateSettings({
+                                                                ...settings,
+                                                                [item]: { ...segSettings, showHash: e.target.checked }
+                                                            });
+                                                        }}
+                                                    /> Hash
+                                                </label>
+                                                <label onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={segSettings.showDefense !== false}
+                                                        onChange={(e) => {
+                                                            onUpdateSettings({
+                                                                ...settings,
+                                                                [item]: { ...segSettings, showDefense: e.target.checked }
+                                                            });
+                                                        }}
+                                                    /> Def
+                                                </label>
+                                            </div>
+                                            {restrictedCount > 0 && (
+                                                <span style={{ fontSize: '0.7rem', fontStyle: 'italic', opacity: 0.8 }}>
+                                                    {restrictedCount} focus items allowed
+                                                </span>
+                                            )}
+                                        </div>
+                                        {deleteConfirmation?.list === 'segments' && deleteConfirmation?.item === item ? (
+                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                <button className="btn btn-icon" style={{ color: 'var(--success)' }} onClick={(e) => { e.stopPropagation(); onDeleteSegment(item); }}>
+                                                    <Icon name="Check" size={14} />
+                                                </button>
+                                                <button className="btn btn-icon" style={{ color: 'var(--text-secondary)' }} onClick={(e) => { e.stopPropagation(); setDeleteConfirmation(null); }}>
+                                                    <Icon name="X" size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button className="btn btn-icon" style={{ color: isSelected ? 'white' : 'var(--danger)', opacity: 0.7 }} onClick={(e) => { e.stopPropagation(); setDeleteConfirmation({ list: 'segments', item }); }}>
+                                                <Icon name="Trash" size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* RIGHT: Focus Items */}
+                    <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+                        <h4 style={{ marginTop: 0, marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                            {selectedSegment ? `Allowed Focus for "${selectedSegment}"` : 'Focus Items (Master List)'}
+                        </h4>
+
+                        {selectedSegment && (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', background: 'var(--bg-panel)', padding: '0.5rem', borderRadius: '4px' }}>
+                                Check items to restrict dropdown options. If <b>none</b> are checked, <b>all</b> items will be available.
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                id="new-focus-item"
+                                className="form-input"
+                                placeholder="New Focus..."
+                            />
+                            <button className="btn btn-primary" onClick={() => {
+                                const val = document.getElementById('new-focus-item').value.trim();
+                                if (val) {
+                                    onAddFocus(val);
+                                    document.getElementById('new-focus-item').value = '';
+                                }
+                            }}>Add</button>
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {focusItems.map(item => {
+                                const isLinked = selectedSegment ? isFocusAllowed(selectedSegment, item) && hasRestrictions(selectedSegment) : false;
+
+                                return (
+                                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-panel)', borderRadius: '4px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            {selectedSegment && (
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isLinked}
+                                                    onChange={() => toggleFocusLink(selectedSegment, item)}
+                                                />
+                                            )}
+                                            <span>{item}</span>
+                                        </div>
+                                        {deleteConfirmation?.list === 'focus' && deleteConfirmation?.item === item ? (
+                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                <button className="btn btn-icon" style={{ color: 'var(--success)' }} onClick={() => onDeleteFocus(item)}>
+                                                    <Icon name="Check" size={14} />
+                                                </button>
+                                                <button className="btn btn-icon" style={{ color: 'var(--text-secondary)' }} onClick={() => setDeleteConfirmation(null)}>
+                                                    <Icon name="X" size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button className="btn btn-icon" style={{ color: 'var(--danger)', opacity: 0.7 }} onClick={() => setDeleteConfirmation({ list: 'focus', item })}>
+                                                <Icon name="Trash" size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
             const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
@@ -48208,163 +48428,44 @@
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                                        {/* Segment Types Column */}
-                                        <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                            <h4 style={{ marginTop: 0, marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Segment Types</h4>
-
-                                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                                                <input
-                                                    id="new-segment-type"
-                                                    className="form-input"
-                                                    placeholder="New Segment Type..."
-                                                />
-                                                <button className="btn btn-primary" onClick={() => {
-                                                    const val = document.getElementById('new-segment-type').value.trim();
-                                                    if (val) {
-                                                        if (!practiceSegmentTypes.includes(val)) {
-                                                            setPracticeSegmentTypes([...practiceSegmentTypes, val]);
-                                                        }
-                                                        document.getElementById('new-segment-type').value = '';
-                                                    }
-                                                }}>Add</button>
-                                            </div>
-
-                                            <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                {practiceSegmentTypes.map(item => {
-                                                    const settings = practiceSegmentSettings[item] || { showHash: true, showDefense: true };
-                                                    return (
-                                                        <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-panel)', borderRadius: '4px' }}>
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                                <span style={{ fontWeight: '600' }}>{item}</span>
-                                                                <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} title="Show Hash Column">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={settings.showHash !== false}
-                                                                            onChange={(e) => {
-                                                                                setPracticeSegmentSettings({
-                                                                                    ...practiceSegmentSettings,
-                                                                                    [item]: { ...settings, showHash: e.target.checked }
-                                                                                });
-                                                                            }}
-                                                                        /> Hash
-                                                                    </label>
-                                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} title="Show Defense Column">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={settings.showDefense !== false}
-                                                                            onChange={(e) => {
-                                                                                setPracticeSegmentSettings({
-                                                                                    ...practiceSegmentSettings,
-                                                                                    [item]: { ...settings, showDefense: e.target.checked }
-                                                                                });
-                                                                            }}
-                                                                        /> Def
-                                                                    </label>
-                                                                </div>
-                                                            </div>
-                                                            {deleteConfirmation?.list === 'segments' && deleteConfirmation?.item === item ? (
-                                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                                    <button
-                                                                        className="btn btn-icon"
-                                                                        style={{ color: 'var(--success)' }}
-                                                                        onClick={() => {
-                                                                            setPracticeSegmentTypes(practiceSegmentTypes.filter(t => t !== item));
-                                                                            setDeleteConfirmation(null);
-                                                                        }}
-                                                                    >
-                                                                        <Icon name="Check" size={14} />
-                                                                    </button>
-                                                                    <button
-                                                                        className="btn btn-icon"
-                                                                        style={{ color: 'var(--text-secondary)' }}
-                                                                        onClick={() => setDeleteConfirmation(null)}
-                                                                    >
-                                                                        <Icon name="X" size={14} />
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <button
-                                                                    className="btn btn-icon"
-                                                                    style={{ color: 'var(--danger)', opacity: 0.7 }}
-                                                                    onClick={() => setDeleteConfirmation({ list: 'segments', item })}
-                                                                >
-                                                                    <Icon name="Trash" size={14} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Focus Items Column */}
-                                        <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                            <h4 style={{ marginTop: 0, marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Focus Items</h4>
-
-                                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                                                <input
-                                                    id="new-focus-item"
-                                                    className="form-input"
-                                                    placeholder="New Focus Item..."
-                                                />
-                                                <button className="btn btn-primary" onClick={() => {
-                                                    const val = document.getElementById('new-focus-item').value.trim();
-                                                    if (val) {
-                                                        if (!practiceFocusItems.includes(val)) {
-                                                            setPracticeFocusItems([...practiceFocusItems, val]);
-                                                        }
-                                                        document.getElementById('new-focus-item').value = '';
-                                                    }
-                                                }}>Add</button>
-                                            </div>
-
-                                            <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                {practiceFocusItems.map(item => (
-                                                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-panel)', borderRadius: '4px' }}>
-                                                        <span>{item}</span>
-                                                        {deleteConfirmation?.list === 'focus' && deleteConfirmation?.item === item ? (
-                                                            <div style={{ display: 'flex', gap: '4px' }}>
-                                                                <button
-                                                                    className="btn btn-icon"
-                                                                    style={{ color: 'var(--success)' }}
-                                                                    onClick={() => {
-                                                                        setPracticeFocusItems(practiceFocusItems.filter(t => t !== item));
-                                                                        setDeleteConfirmation(null);
-                                                                    }}
-                                                                >
-                                                                    <Icon name="Check" size={14} />
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-icon"
-                                                                    style={{ color: 'var(--text-secondary)' }}
-                                                                    onClick={() => setDeleteConfirmation(null)}
-                                                                >
-                                                                    <Icon name="X" size={14} />
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                className="btn btn-icon"
-                                                                style={{ color: 'var(--danger)', opacity: 0.7 }}
-                                                                onClick={() => setDeleteConfirmation({ list: 'focus', item })}
-                                                            >
-                                                                <Icon name="Trash" size={14} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
+                                        <HierarchyEditor
+                                            segmentTypes={practiceSegmentTypes}
+                                            focusItems={practiceFocusItems}
+                                            settings={practiceSegmentSettings}
+                                            onUpdateSettings={setPracticeSegmentSettings}
+                                            onAddSegment={(val) => {
+                                                if (!practiceSegmentTypes.includes(val)) {
+                                                    setPracticeSegmentTypes([...practiceSegmentTypes, val]);
+                                                }
+                                            }}
+                                            onAddFocus={(val) => {
+                                                if (!practiceFocusItems.includes(val)) {
+                                                    setPracticeFocusItems([...practiceFocusItems, val]);
+                                                }
+                                            }}
+                                            deleteConfirmation={deleteConfirmation}
+                                            setDeleteConfirmation={setDeleteConfirmation}
+                                            onDeleteSegment={(item) => {
+                                                setPracticeSegmentTypes(practiceSegmentTypes.filter(t => t !== item));
+                                                setDeleteConfirmation(null);
+                                            }}
+                                            onDeleteFocus={(item) => {
+                                                setPracticeFocusItems(practiceFocusItems.filter(t => t !== item));
+                                                setDeleteConfirmation(null);
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             )}
 
-                            {setupTab === 'script-presets' && (
-                                <ScriptPresetsManager />
-                            )}
-                        </div>
-                    </div>
+
+                            {
+                                setupTab === 'script-presets' && (
+                                    <ScriptPresetsManager />
+                                )
+                            }
+                        </div >
+                    </div >
                 );
             };
 
