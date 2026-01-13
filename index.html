@@ -25014,6 +25014,19 @@
                 setColumnMapping({});
             };
 
+            const COLORS = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'];
+            const PREVIEW_DEFS = (
+                <svg style={{ display: 'none' }}>
+                    <defs>
+                        {COLORS.map(c => (
+                            <marker key={c} id={`arrowhead-${c}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                                <polygon points="0 0, 6 2, 0 4" fill={c} />
+                            </marker>
+                        ))}
+                    </defs>
+                </svg>
+            );
+
             // Real-time search filtering
             const filteredPlays = plays.filter(p => {
                 if (!searchTerm) return true;
@@ -25032,6 +25045,7 @@
 
             return (
                 <>
+                    {PREVIEW_DEFS}
                     <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
@@ -25076,43 +25090,66 @@
                                     <p style={{ fontSize: '0.9rem' }}>Click "Batch Add Plays" to get started</p>
                                 </div>
                             )}
-                            <div style={{ display: 'grid', gap: '0.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
                                 {filteredPlays.map(play => (
-                                    <div key={play.id} className="card" style={{ padding: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                        <div style={{ width: '120px', height: '80px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
+                                    <div key={play.id} className="card" style={{ padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'var(--shadow-sm)' }}>
+                                        {/* Diagram Preview Area */}
+                                        <div style={{
+                                            width: '100%',
+                                            height: '220px',
+                                            background: '#ffffff',
+                                            borderBottom: '1px solid var(--border)',
+                                            position: 'relative'
+                                        }}>
                                             {renderPlayThumbnail(play, 'skill') || (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1' }}>
-                                                    <Icon name="Image" size={24} />
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.5rem', opacity: 0.3 }}>
+                                                    <Icon name="Image" size={32} />
+                                                    <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>No Diagram</span>
+                                                </div>
+                                            )}
+                                            {/* Priority Star Overlay */}
+                                            {play.priority && (
+                                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'white', borderRadius: '50%', padding: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                                    <Icon name="Star" size={16} style={{ fill: '#eab308', color: '#eab308' }} />
                                                 </div>
                                             )}
                                         </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{getPlayDisplayName(play)}</div>
-                                                {play.priority && <Icon name="Star" size={14} style={{ fill: '#eab308', color: '#eab308' }} />}
+
+                                        {/* Card Content */}
+                                        <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', lineHeight: '1.3' }}>{getPlayDisplayName(play)}</h3>
+                                                {play.type && (
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', marginLeft: '0.5rem', whiteSpace: 'nowrap' }}>
+                                                        {play.type}
+                                                    </span>
+                                                )}
                                             </div>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                                {play.formation && <span>{play.formation}</span>}
-                                                {play.type && <span style={{ marginLeft: '1rem' }}>Type: {play.type}</span>}
+
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                                {play.formation || <span style={{ opacity: 0.5 }}>No formation</span>}
                                             </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {week && (
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                                                    onClick={() => handleAddToInstall(play.id)}
-                                                >
-                                                    <Icon name="Plus" size={14} /> Add to Install
-                                                </button>
-                                            )}
-                                            <button
-                                                className="btn-ghost"
-                                                style={{ padding: '0.4rem', color: '#ef4444' }}
-                                                onClick={() => onDeletePlay && onDeletePlay(play.id)}
-                                            >
-                                                <Icon name="Trash2" size={16} />
-                                            </button>
+
+                                            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    {week && (
+                                                        <button
+                                                            className="btn btn-secondary"
+                                                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                                                            onClick={() => handleAddToInstall(play.id)}
+                                                        >
+                                                            <Icon name="Plus" size={14} /> Add to Install
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        className="btn-ghost"
+                                                        style={{ padding: '0.4rem', color: '#ef4444' }}
+                                                        onClick={() => onDeletePlay && onDeletePlay(play.id)}
+                                                    >
+                                                        <Icon name="Trash2" size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -48629,7 +48666,7 @@
                                 }}
                                 onClick={() => setSetupTab('categories')}
                             >
-                                <Icon name="Tag" size={16} /> Play Categories
+                                <Icon name="Tag" size={16} /> Play Buckets
                             </button>
                             <button
                                 className={`btn-ghost`}
@@ -48646,7 +48683,7 @@
                                 }}
                                 onClick={() => setSetupTab('buckets')}
                             >
-                                <Icon name="Grid" size={16} /> Play Buckets
+                                <Icon name="Grid" size={16} /> Concept Families
                             </button>
                             <button
                                 className={`btn-ghost`}
@@ -48690,19 +48727,19 @@
                             {setupTab === 'categories' && (
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                        <h3 style={{ margin: 0 }}>Play Categories</h3>
+                                        <h3 style={{ margin: 0 }}>Play Buckets</h3>
                                         <button className="btn btn-primary" onClick={() => {
                                             const label = prompt("New Category Label:");
                                             if (label) {
                                                 const id = label.toLowerCase().replace(/[^a-z0-9]/g, '');
                                                 if (playCategories.some(c => c.id === id)) {
-                                                    alert("Category ID already exists.");
+                                                    alert("Bucket ID already exists.");
                                                     return;
                                                 }
                                                 setPlayCategories([...playCategories, { id, label, color: 'gray' }]);
                                             }
                                         }}>
-                                            <Icon name="Plus" size={16} /> Add Category
+                                            <Icon name="Plus" size={16} /> Add Bucket
                                         </button>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
@@ -48715,7 +48752,7 @@
                                                         <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>({cat.id})</span>
                                                     </div>
                                                     <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => {
-                                                        if (confirm(`Delete category "${cat.label}"?`)) {
+                                                        if (confirm(`Delete bucket "${cat.label}"?`)) {
                                                             setPlayCategories(playCategories.filter(c => c.id !== cat.id));
                                                         }
                                                     }}>
@@ -48746,7 +48783,7 @@
                                         ))}
                                     </div>
                                     <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem', color: '#64748b' }}>
-                                        <p style={{ margin: 0 }}><strong>Note:</strong> These categories define the boxes in Priority Plays and Play Type options.</p>
+                                        <p style={{ margin: 0 }}><strong>Note:</strong> These buckets define the high-level organization (e.g. Run, Pass, RPO).</p>
                                     </div>
                                 </div>
                             )}
@@ -48756,7 +48793,7 @@
                                     <div style={{ display: 'flex', gap: '2rem' }}>
                                         {/* Filters / Sidebar */}
                                         <div style={{ width: '250px', flexShrink: 0 }}>
-                                            <h3 style={{ marginTop: 0 }}>Categories</h3>
+                                            <h3 style={{ marginTop: 0 }}>Buckets</h3>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                 {playCategories.map(cat => (
                                                     <button
@@ -48767,6 +48804,7 @@
                                                             background: selectedBucketCategory === cat.id ? 'var(--accent-light)' : 'transparent',
                                                             borderLeft: selectedBucketCategory === cat.id ? '3px solid var(--accent)' : '3px solid transparent',
                                                             fontWeight: selectedBucketCategory === cat.id ? 'bold' : 'normal',
+                                                            color: selectedBucketCategory === cat.id ? 'var(--accent)' : 'var(--text-secondary)',
                                                             padding: '0.75rem 1rem',
                                                             textAlign: 'left'
                                                         }}
@@ -48781,43 +48819,43 @@
                                         {/* Main Content */}
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                                <h3 style={{ margin: 0 }}>Buckets for "{playCategories.find(c => c.id === selectedBucketCategory)?.label || '...'}"</h3>
+                                                <h3 style={{ margin: 0 }}>Concept Families for "{playCategories.find(c => c.id === selectedBucketCategory)?.label || '...'}"</h3>
                                                 <button className="btn btn-primary" onClick={() => {
                                                     if (!selectedBucketCategory) {
-                                                        alert("Please select a category first.");
+                                                        alert("Please select a bucket first.");
                                                         return;
                                                     }
-                                                    const label = prompt("New Bucket Name (e.g. Smash, Drive):");
+                                                    const label = prompt("New Concept Family Name (e.g. Smash, Drive):");
                                                     if (label) {
                                                         const id = label.toLowerCase().replace(/[^a-z0-9]/g, '');
                                                         // Check for duplicates
                                                         if (playBuckets.some(b => b.id === id && b.categoryId === selectedBucketCategory)) {
-                                                            alert("Bucket already exists in this category.");
+                                                            alert("Concept family already exists in this bucket.");
                                                             return;
                                                         }
                                                         setPlayBuckets([...playBuckets, { id, label, categoryId: selectedBucketCategory }]);
                                                     }
                                                 }}>
-                                                    <Icon name="Plus" size={16} /> Add Bucket
+                                                    <Icon name="Plus" size={16} /> Add Family
                                                 </button>
                                             </div>
 
                                             {(!selectedBucketCategory) ? (
                                                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', border: '2px dashed var(--border)', borderRadius: '8px' }}>
-                                                    Select a category to manage its buckets.
+                                                    Select a bucket to manage its concept families.
                                                 </div>
                                             ) : (
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                                                     {playBuckets.filter(b => b.categoryId === selectedBucketCategory).length === 0 && (
                                                         <div style={{ gridColumn: '1/-1', padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                            No buckets defined yet.
+                                                            No concept families defined yet.
                                                         </div>
                                                     )}
                                                     {playBuckets.filter(b => b.categoryId === selectedBucketCategory).map(bucket => (
                                                         <div key={bucket.id} className="card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <span style={{ fontWeight: '500' }}>{bucket.label}</span>
                                                             <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => {
-                                                                if (confirm(`Delete bucket "${bucket.label}"?`)) {
+                                                                if (confirm(`Delete concept family "${bucket.label}"?`)) {
                                                                     setPlayBuckets(playBuckets.filter(b => b.id !== bucket.id && b.categoryId !== bucket.categoryId)); // Note: Filter logic needs to be precise if IDs aren't globally unique. Assuming buckets have unique IDs effectively for now, but adding cat check is safer.
                                                                     // Actually, let's just filter by object ref or unique ID.
                                                                     // Better:
@@ -51032,7 +51070,7 @@
                 <AuthProvider>
                     <App />
                 </AuthProvider>
-            </ErrorBoundary>,
+            </ErrorBoundary >,
             document.getElementById('root')
         );
     </script>
