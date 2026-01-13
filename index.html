@@ -24866,6 +24866,84 @@
 
         // Master Playbook View Component
         const MasterPlaybookView = ({ plays, onUpdatePlay, onDeletePlay, onQuickAddPlay, playSyntax = [], week, onUpdateWeek }) => {
+            const renderPlayThumbnail = (play, type = 'standard') => {
+                if (!play) return null;
+
+                let data = null;
+                if (type === 'skill' && (play.wizSkillData || play.rooskiSkillData)) {
+                    data = { elements: play.wizSkillData || play.rooskiSkillData };
+                } else if (type === 'oline' && (play.wizOlineData || play.rooskiOlineData)) {
+                    data = { elements: play.wizOlineData || play.rooskiOlineData };
+                } else if (play.diagramData) {
+                    data = play.diagramData;
+                }
+
+                if (!data || !data.elements || data.elements.length === 0) return null;
+
+                return (
+                    <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
+                        <g opacity="0.1">
+                            <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="4" />
+                            <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
+                        </g>
+                        {data.elements && data.elements.map(el => {
+                            if (el.type === 'player') {
+                                const { x, y } = el.points[0];
+                                const size = 30;
+                                const isRect = el.shape === 'square';
+                                return (
+                                    <g key={el.id}>
+                                        {isRect ? (
+                                            <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="2" />
+                                        ) : (
+                                            <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="2" />
+                                        )}
+                                        <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
+                                    </g>
+                                );
+                            }
+
+                            let d = '';
+                            if (el.style === 'zigzag') {
+                                d = getZigZagPath(el.points);
+                            } else if (el.type === 'free' || el.points.length > 1) {
+                                d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                            }
+
+                            let markerEnd = undefined;
+                            let tBlock = null;
+
+                            if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
+                                markerEnd = `url(#arrowhead-${el.color})`;
+                            } else if (el.endType === 't') {
+                                const points = el.points;
+                                const end = points[points.length - 1];
+                                const prev = points[points.length - 2] || points[0];
+                                const dx = end.x - prev.x;
+                                const dy = end.y - prev.y;
+                                const len = Math.hypot(dx, dy) || 1;
+                                const perpX = (-dy / len) * 15;
+                                const perpY = (dx / len) * 15;
+                                tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={el.color} strokeWidth="4" />;
+                            } else if (el.endType === 'dot') {
+                                const end = el.points[el.points.length - 1];
+                                tBlock = <circle cx={end.x} cy={end.y} r="6" fill={el.color} />;
+                            }
+
+                            return (
+                                <g key={el.id}>
+                                    <path d={d} stroke={el.color} strokeWidth="4" fill="none" strokeDasharray={el.style === 'dashed' ? "10,5" : "none"} markerEnd={markerEnd} />
+                                    {tBlock}
+                                </g>
+                            );
+                        })}
+                    </svg>
+                );
+            };
+
             const [searchTerm, setSearchTerm] = useState('');
             const [isBatchImportOpen, setIsBatchImportOpen] = useState(false);
             const [importData, setImportData] = useState('');
@@ -25000,7 +25078,14 @@
                             )}
                             <div style={{ display: 'grid', gap: '0.5rem' }}>
                                 {filteredPlays.map(play => (
-                                    <div key={play.id} className="card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div key={play.id} className="card" style={{ padding: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                        <div style={{ width: '120px', height: '80px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
+                                            {renderPlayThumbnail(play, 'skill') || (
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1' }}>
+                                                    <Icon name="Image" size={24} />
+                                                </div>
+                                            )}
+                                        </div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                                                 <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{getPlayDisplayName(play)}</div>
@@ -48673,10 +48758,20 @@
                                         <div style={{ width: '250px', flexShrink: 0 }}>
                                             <h3 style={{ marginTop: 0 }}>Categories</h3>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                                                                                                                                                                                 key={cat.id}
-                                                                                                                                                                                                                                                                                          justifyContent: 'flex-start',
-                                                                                           ketCategory === cat.id ? 'var(--accent-light)' : 'transparent',
-                                                                                                     y === cat.id ? '3px solid var(--accent)'                                                                                                                                                                                                                                                                                                                                                                                        --text-                                                                                                                                                                              tSe                                                                                      >
+                                                {playCategories.map(cat => (
+                                                    <button
+                                                        key={cat.id}
+                                                        className="btn-ghost"
+                                                        style={{
+                                                            justifyContent: 'flex-start',
+                                                            background: selectedBucketCategory === cat.id ? 'var(--accent-light)' : 'transparent',
+                                                            borderLeft: selectedBucketCategory === cat.id ? '3px solid var(--accent)' : '3px solid transparent',
+                                                            fontWeight: selectedBucketCategory === cat.id ? 'bold' : 'normal',
+                                                            padding: '0.75rem 1rem',
+                                                            textAlign: 'left'
+                                                        }}
+                                                        onClick={() => setSelectedBucketCategory(cat.id)}
+                                                    >
                                                         {cat.label}
                                                     </button>
                                                 ))}
@@ -50930,9 +51025,10 @@
             }
         }
 
-        ReactDOM.rr(
-     <ErrorBoundary>
-                <Autvid                 <App />
+        ReactDOM.render(
+            <ErrorBoundary>
+                <AuthProvider>
+                    <App />
                 </AuthProvider>
             </ErrorBoundary>,
             document.getElementById('root')
