@@ -8476,7 +8476,7 @@
                     gamePlanLayouts.CALL_SHEET.sections.forEach(section => {
                         if (section.boxes) {
                             section.boxes.forEach(box => {
-                                if (box.header) items.add(box.header);
+                                if (box.header) items.add(`GP: ${box.header}`);
                             });
                         }
                     });
@@ -8486,12 +8486,12 @@
                 if (gamePlan) {
                     if (gamePlan.miniScripts) {
                         Object.values(gamePlan.miniScripts).forEach(s => {
-                            if (s.name) items.add(s.name);
+                            if (s.name) items.add(`GP: ${s.name}`);
                         });
                     }
                     if (gamePlan?.sets) {
                         Object.values(gamePlan?.sets).forEach(s => {
-                            if (s.name) items.add(s.name);
+                            if (s.name) items.add(`GP: ${s.name}`);
                         });
                     }
                 }
@@ -10199,7 +10199,7 @@
                                                             onClick={e => e.stopPropagation()}
                                                             onChange={e => {
                                                                 const val = e.target.value;
-                                                                handleSegmentChange(seg.id, 'type', val);
+                                                                updateSegment(seg.id, 'type', val);
 
                                                                 // Auto-clear focus if not allowed in new type (optional, but cleaner)
                                                                 // For now, we trust the dropdown filter to guide next edit
@@ -30364,12 +30364,12 @@
         const PracticeCoachApp = ({ staff = [], roster = [], plans = [], plays = [], drills = [], weeks = [], currentWeek = {} }) => {
             const { isPremium } = useSchoolPlan(); // School Plan Hook
 
-            /*
+            // Bypass premium check for preview purposes or fix the condition
             if (!isPremium) {
                 return (
                     <div className="card" style={{ padding: '3rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🤖</div>
-                        <h2>AI Practice Coach Locked</h2>
+                        <h2>Practice Coach Locked</h2>
                         <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
                             Unlock specialized AI drills, practice script generation, and performance tracking with a Premium Plan.
                         </p>
@@ -30379,7 +30379,7 @@
                     </div>
                 );
             }
-            */
+
 
             // Convert plans object to array if needed to handle {Monday: {}, Tuesday: {}} structure
             const planList = Array.isArray(plans) ? plans : Object.values(plans);
@@ -35110,7 +35110,7 @@
                 return assignedSituations;
             };
 
-            const PlaySlot = ({ playId, onUpdate, isLocked, placeholder = "+", dropUp = false }) => {
+            const PlaySlot = ({ playId, onUpdate, isLocked, placeholder = "+", dropUp = false, renderWristbandInput }) => {
                 const play = plays.find(p => p.id === playId);
                 const [isHovered, setIsHovered] = useState(false);
                 const [searchTerm, setSearchTerm] = useState('');
@@ -35210,7 +35210,10 @@
                                 {(!play.formation || !play.name.toLowerCase().includes(play.formation.toLowerCase())) && (
                                     <span style={{ fontSize: '0.85em', color: '#334155', marginLeft: '6px' }}>{play.formation}</span>
                                 )}
-                                {play.wristbandSlot && <span style={{ fontSize: '0.8em', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '3px', marginLeft: '6px', fontWeight: 'bold' }}>{play.wristbandSlot}</span>} {play.staplesSlot && <span style={{ fontSize: '0.8em', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '3px', marginLeft: '4px', fontWeight: 'bold' }}>S:{play.staplesSlot}</span>}
+                                {renderWristbandInput ? renderWristbandInput(play.id) : (
+                                    play.wristbandSlot && <span style={{ fontSize: '0.8em', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '3px', marginLeft: '6px', fontWeight: 'bold' }}>{play.wristbandSlot}</span>
+                                )}
+                                {play.staplesSlot && <span style={{ fontSize: '0.8em', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '3px', marginLeft: '4px', fontWeight: 'bold' }}>S:{play.staplesSlot}</span>} {play.staplesSlot && <span style={{ fontSize: '0.8em', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '3px', marginLeft: '4px', fontWeight: 'bold' }}>S:{play.staplesSlot}</span>}
                                 {!isLocked && <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px', fontSize: '1.2em', lineHeight: '1' }} onClick={() => onUpdate(null)}>×</button>}
                             </div>
                         ) : (
@@ -35324,6 +35327,18 @@
             const renderInteriorConfig = (box, sectionIdx, boxIdx) => (
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '8px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ width: '100%' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Box Name</div>
+                        <input
+                            type="text"
+                            value={box.header || ''}
+                            onChange={(e) => {
+                                const newLayouts = { ...gamePlanLayouts };
+                                newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].header = e.target.value;
+                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                            }}
+                            placeholder="Enter box name (e.g. 3rd & Long)"
+                            style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', fontFamily: 'inherit', marginBottom: '8px' }}
+                        />
                         <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Box Notes / Situation Detail</div>
                         <textarea
                             value={box.notes || ''}
@@ -46257,10 +46272,21 @@
 
             const [practiceSegmentTypes, setPracticeSegmentTypes] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-segment-types');
-                if (saved) return JSON.parse(saved);
+                const defaultList = ['Competition', 'Take-Off', 'Fundi', '7-on-7', 'Inside Run', 'Team', 'Team Stationary', 'Circuit', 'Specials', 'Conditioning', 'Ghost Script', 'One-on-Ones', 'Goal Line', 'Short Yardage', 'O FUNDI', 'Team O'];
 
-                // Default List
-                return ['Competition', 'Take-Off', 'Fundi', '7-on-7', 'Inside Run', 'Team', 'Team Stationary', 'Circuit', 'Specials', 'Conditioning', 'Ghost Script', 'One-on-Ones', 'Goal Line', 'Short Yardage', 'O FUNDI', 'Team O'];
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        if (Array.isArray(parsed)) {
+                            // Migration: Return object with legacy array for all phases
+                            return { OFFENSE: parsed, DEFENSE: parsed, SPECIAL_TEAMS: parsed };
+                        }
+                        return parsed;
+                    } catch (e) { console.error("Error parsing segment types", e); }
+                }
+
+                // Default List (Phase Specific Defaults could be added here later, for now sharing global default)
+                return { OFFENSE: defaultList, DEFENSE: defaultList, SPECIAL_TEAMS: defaultList };
             });
 
             const [practiceSegmentSettings, setPracticeSegmentSettings] = useState(() => {
@@ -46279,10 +46305,13 @@
                 // Migrate legacy custom items if found and not yet saved to new list
                 let initialList = ['Base Downs', 'Convert Downs', 'Red Zone', 'Gold Zone', 'Fringe', 'Goalline/Short YDG', 'Play Action', 'Motion', 'Tackling', 'Turnover', 'Pursuit', 'Board drill', 'Joust', 'Kickoff', 'Kick Return', 'Punt', 'Punt Return', 'Field Goal', 'Onside', 'Hands Team'];
 
+                let legacyData = null;
                 if (saved) {
-                    return JSON.parse(saved);
+                    try {
+                        legacyData = JSON.parse(saved);
+                    } catch (e) { }
                 } else {
-                    // One-time migration
+                    // One-time migration for very old "custom-focus" key
                     const legacyCustom = localStorage.getItem('oc-dashboard-custom-focus');
                     if (legacyCustom) {
                         try {
@@ -46295,9 +46324,33 @@
                             }
                         } catch (e) { }
                     }
-                    return initialList;
+                    legacyData = initialList;
                 }
+
+                if (Array.isArray(legacyData)) {
+                    return { OFFENSE: legacyData, DEFENSE: legacyData, SPECIAL_TEAMS: legacyData };
+                }
+                return legacyData || { OFFENSE: initialList, DEFENSE: initialList, SPECIAL_TEAMS: initialList };
             });
+
+            // Helpers to get merged lists for dropdowns (maintaining backward compatibility for scripts)
+            const getAllSegments = () => {
+                const all = new Set([
+                    ...(practiceSegmentTypes.OFFENSE || []),
+                    ...(practiceSegmentTypes.DEFENSE || []),
+                    ...(practiceSegmentTypes.SPECIAL_TEAMS || [])
+                ]);
+                return Array.from(all).sort();
+            };
+
+            const getAllFocusItems = () => {
+                const all = new Set([
+                    ...(practiceFocusItems.OFFENSE || []),
+                    ...(practiceFocusItems.DEFENSE || []),
+                    ...(practiceFocusItems.SPECIAL_TEAMS || [])
+                ]);
+                return Array.from(all).sort();
+            };
 
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-segment-types', JSON.stringify(practiceSegmentTypes));
@@ -46309,8 +46362,11 @@
 
             // Kept for backward compat in signature but unused
             const addCustomFocusItem = (item) => {
-                if (item && !practiceFocusItems.includes(item)) {
-                    setPracticeFocusItems([...practiceFocusItems, item]);
+                const targetPhase = 'OFFENSE';
+                const allItems = getAllFocusItems();
+                if (item && !allItems.includes(item)) {
+                    const currentList = practiceFocusItems[targetPhase] || [];
+                    setPracticeFocusItems({ ...practiceFocusItems, [targetPhase]: [...currentList, item] });
                 }
             };
 
@@ -48429,28 +48485,32 @@
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                                         <HierarchyEditor
-                                            segmentTypes={practiceSegmentTypes}
-                                            focusItems={practiceFocusItems}
+                                            segmentTypes={practiceSegmentTypes[phase] || []}
+                                            focusItems={practiceFocusItems[phase] || []}
                                             settings={practiceSegmentSettings}
                                             onUpdateSettings={setPracticeSegmentSettings}
                                             onAddSegment={(val) => {
-                                                if (!practiceSegmentTypes.includes(val)) {
-                                                    setPracticeSegmentTypes([...practiceSegmentTypes, val]);
+                                                const currentList = practiceSegmentTypes[phase] || [];
+                                                if (!currentList.includes(val)) {
+                                                    setPracticeSegmentTypes({ ...practiceSegmentTypes, [phase]: [...currentList, val] });
                                                 }
                                             }}
                                             onAddFocus={(val) => {
-                                                if (!practiceFocusItems.includes(val)) {
-                                                    setPracticeFocusItems([...practiceFocusItems, val]);
+                                                const currentList = practiceFocusItems[phase] || [];
+                                                if (!currentList.includes(val)) {
+                                                    setPracticeFocusItems({ ...practiceFocusItems, [phase]: [...currentList, val] });
                                                 }
                                             }}
                                             deleteConfirmation={deleteConfirmation}
                                             setDeleteConfirmation={setDeleteConfirmation}
                                             onDeleteSegment={(item) => {
-                                                setPracticeSegmentTypes(practiceSegmentTypes.filter(t => t !== item));
+                                                const currentList = practiceSegmentTypes[phase] || [];
+                                                setPracticeSegmentTypes({ ...practiceSegmentTypes, [phase]: currentList.filter(t => t !== item) });
                                                 setDeleteConfirmation(null);
                                             }}
                                             onDeleteFocus={(item) => {
-                                                setPracticeFocusItems(practiceFocusItems.filter(t => t !== item));
+                                                const currentList = practiceFocusItems[phase] || [];
+                                                setPracticeFocusItems({ ...practiceFocusItems, [phase]: currentList.filter(t => t !== item) });
                                                 setDeleteConfirmation(null);
                                             }}
                                         />
@@ -49767,16 +49827,7 @@
                         {view === 'practice-report' && <PracticeReportView weeks={weeks} plays={plays} playSyntax={playSyntax} parsePlayName={parsePlayName} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} weeks={weeks} currentWeek={currentWeek} onUpdateLayouts={(newLayouts) => {
                             setGamePlanLayouts(newLayouts);
-                            // Auto-add focus items involved in the layout
-                            if (newLayouts?.CALL_SHEET?.sections) {
-                                newLayouts.CALL_SHEET.sections.forEach(section => {
-                                    if (section.boxes) {
-                                        section.boxes.forEach(box => {
-                                            if (box.header) addCustomFocusItem(box.header);
-                                        });
-                                    }
-                                });
-                            }
+
                         }} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} onUpdateWeek={handleUpdateWeek} />}
 
                         {
@@ -50027,8 +50078,8 @@
                                 user={currentUser}
                                 isLocked={currentWeek.isLocked}
                                 isSiteAdmin={false}
-                                segmentTypes={practiceSegmentTypes}
-                                focusItems={practiceFocusItems}
+                                segmentTypes={getAllSegments()}
+                                focusItems={getAllFocusItems()}
                                 segmentSettings={practiceSegmentSettings}
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
@@ -50065,8 +50116,8 @@
                                 user={currentUser}
                                 isLocked={currentWeek.isLocked}
                                 isSiteAdmin={false}
-                                segmentTypes={practiceSegmentTypes}
-                                focusItems={practiceFocusItems}
+                                segmentTypes={getAllSegments()}
+                                focusItems={getAllFocusItems()}
                                 segmentSettings={practiceSegmentSettings}
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
