@@ -2219,6 +2219,9 @@
                 case "Pencil": return <svg {...commonProps}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>;
                 case "Trash2": return <svg {...commonProps}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>;
                 case "Heart": return <svg {...commonProps}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>;
+                case "Code": return <svg {...commonProps}><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>;
+                case "Grid": return <svg {...commonProps}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>;
+                case "Tag": return <svg {...commonProps}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>;
 
                 default:
                     // Fallback to text (Emoji or just text)
@@ -2231,17 +2234,61 @@
         // -------------------------------------------------------------------------
 
         // Install Sortable Column
-        const InstallSortableColumn = ({ items, type, onListChange, onUpdatePlay, handleRemoveFromInstall, getGamePlanStatus, getScriptCount, handleTogglePriority, availableSlots = [], handleToggleNewPlay, newInstallIds = [], onOpenAssignmentModal, onDuplicatePlay }) => {
-            const [localItems, setLocalItems] = React.useState(items);
-
+        const InstallSortableColumn = ({
+            items,
+            type,
+            onListChange,
+            onUpdatePlay,
+            handleRemoveFromInstall,
+            getGamePlanStatus,
+            getScriptCount,
+            handleTogglePriority,
+            availableSlots = [],
+            handleToggleNewPlay,
+            newInstallIds = [],
+            onOpenAssignmentModal,
+            onDuplicatePlay,
+            playBuckets = []
+        }) => {
             const [editingWbId, setEditingWbId] = React.useState(null);
 
-            // Sync local state when props change (force update from external source)
-            const itemsSignature = items.map(p => `${p.id}-${p.priority}-${p.wristbandSlot}`).join(',');
+            // Group items by bucket
+            const groupItems = (rawItems) => {
+                const groups = { unassigned: [], buckets: {} };
+                rawItems.forEach(item => {
+                    if (item.bucketId && playBuckets.some(b => b.id === item.bucketId)) {
+                        if (!groups.buckets[item.bucketId]) groups.buckets[item.bucketId] = [];
+                        groups.buckets[item.bucketId].push(item);
+                    } else {
+                        groups.unassigned.push(item);
+                    }
+                });
+                return groups;
+            };
+
+            const [groupedItems, setGroupedItems] = React.useState(groupItems(items));
+
+            // Flatten groups back to array
+            const flattenGroups = (groups) => {
+                const sortedBucketIds = Object.keys(groups.buckets).sort((a, b) => {
+                    const nameA = playBuckets.find(xb => xb.id === a)?.name || '';
+                    const nameB = playBuckets.find(xb => xb.id === b)?.name || '';
+                    return nameA.localeCompare(nameB);
+                });
+                let list = [...groups.unassigned];
+                sortedBucketIds.forEach(bid => {
+                    list = list.concat(groups.buckets[bid]);
+                });
+                return list;
+            };
+
+            // Sync with external changes
+            const itemsSignature = items.map(p => `${p.id}-${p.priority}-${p.wristbandSlot}-${p.bucketId || ''}`).join(',');
             React.useEffect(() => {
-                const localSignature = localItems.map(p => `${p.id}-${p.priority}-${p.wristbandSlot}`).join(',');
+                const flatLocal = flattenGroups(groupedItems);
+                const localSignature = flatLocal.map(p => `${p.id}-${p.priority}-${p.wristbandSlot}-${p.bucketId || ''}`).join(',');
                 if (itemsSignature !== localSignature) {
-                    setLocalItems(items);
+                    setGroupedItems(groupItems(items));
                 }
             }, [itemsSignature]);
 
@@ -2254,202 +2301,251 @@
                 return () => window.removeEventListener('click', closeDropdown);
             }, [editingWbId]);
 
-            return (
-                <ReactSortable
-                    list={localItems}
-                    setList={(newList) => {
-                        setLocalItems(newList);
-                        onListChange(newList);
+            const handleSetList = (newList, bucketId) => {
+                setGroupedItems(prev => {
+                    const oldList = bucketId ? (prev.buckets[bucketId] || []) : prev.unassigned;
+                    const addedItem = newList.find(p => !oldList.some(old => old.id === p.id));
+
+                    if (addedItem) {
+                        const targetBucketId = bucketId || null;
+                        if (addedItem.bucketId !== targetBucketId) {
+                            onUpdatePlay(addedItem.id, { bucketId: targetBucketId });
+                            addedItem.bucketId = targetBucketId;
+                        }
+                    }
+
+                    const newGroups = { ...prev, buckets: { ...prev.buckets } };
+                    if (bucketId) {
+                        newGroups.buckets[bucketId] = newList;
+                    } else {
+                        newGroups.unassigned = newList;
+                    }
+
+                    const flat = flattenGroups(newGroups);
+                    onListChange(flat);
+
+                    return newGroups;
+                });
+            };
+
+            const sortedBucketIds = Object.keys(groupedItems.buckets).sort((a, b) => {
+                const nameA = playBuckets.find(xb => xb.id === a)?.name || '';
+                const nameB = playBuckets.find(xb => xb.id === b)?.name || '';
+                return nameA.localeCompare(nameB);
+            });
+
+            const ReactSortable = window.ReactSortable;
+
+            const renderPlayCard = (play) => (
+                <div
+                    key={play.id}
+                    className="card"
+                    style={{
+                        padding: '0.5rem',
+                        marginBottom: '0.5rem',
+                        borderLeft: `4px solid ${type === 'Run' ? '#10b981' : '#3b82f6'}`,
+                        cursor: 'grab',
+                        background: 'white',
+                        color: '#0f172a',
+                        userSelect: 'none',
+                        position: 'relative'
                     }}
-                    group="installColumns"
-                    animation={150}
-                    style={{ minHeight: '100px' }}
+                    onDoubleClick={(e) => {
+                        if (onOpenAssignmentModal) {
+                            e.stopPropagation();
+                            onOpenAssignmentModal(play.id, e.clientX, e.clientY);
+                        }
+                    }}
                 >
-                    {localItems.map(play => (
-                        <div
-                            key={play.id}
-                            className="card"
-                            style={{
-                                padding: '0.5rem',
-                                marginBottom: '0.5rem',
-                                borderLeft: `4px solid ${type === 'Run' ? '#10b981' : '#3b82f6'}`,
-                                cursor: 'grab',
-                                background: 'white',
-                                color: '#0f172a',
-                                userSelect: 'none',
-                                position: 'relative'
-                            }}
-                            onDoubleClick={(e) => {
-                                if (onOpenAssignmentModal) {
-                                    e.stopPropagation();
-                                    onOpenAssignmentModal(play.id, e.clientX, e.clientY);
-                                }
-                            }}
-                        >
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'start' }}>
-                                {/* Play Info */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                        {/* Priority Star */}
-                                        {play.priority && (
-                                            <Icon name="Star" size={14} style={{ fill: '#eab308', color: '#eab308', flexShrink: 0 }} />
-                                        )}
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'start' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                {play.priority && (
+                                    <Icon name="Star" size={14} style={{ fill: '#eab308', color: '#eab308', flexShrink: 0 }} />
+                                )}
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{getPlayDisplayName(play)}</span>
+                            </div>
 
-                                        {/* Play Name */}
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{getPlayDisplayName(play)}</span>
-                                    </div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.7rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!play.priority}
+                                        onChange={(e) => {
+                                            const newVal = !play.priority;
+                                            handleTogglePriority(play.id);
+                                        }}
+                                        onClick={e => e.stopPropagation()}
+                                        onMouseDown={e => e.stopPropagation()}
+                                        style={{ cursor: 'pointer', margin: 0 }}
+                                    />
+                                    <span style={{ color: '#64748b' }}>Priority</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={newInstallIds.includes(play.id)}
+                                        onChange={() => handleToggleNewPlay(play.id)}
+                                        onClick={e => e.stopPropagation()}
+                                        onMouseDown={e => e.stopPropagation()}
+                                        style={{ cursor: 'pointer', margin: 0 }}
+                                    />
+                                    <span style={{ color: '#64748b' }}>New?</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!(play.isWiz || play.isRooski)}
+                                        onChange={(e) => {
+                                            const newVal = e.target.checked;
+                                            onUpdatePlay(play.id, { isWiz: newVal });
+                                        }}
+                                        onClick={e => e.stopPropagation()}
+                                        onMouseDown={e => e.stopPropagation()}
+                                        style={{ cursor: 'pointer', margin: 0 }}
+                                    />
+                                    <span style={{ color: '#64748b' }}>Wiz</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!play.isMiniScript}
+                                        onChange={(e) => {
+                                            const newVal = e.target.checked;
+                                            onUpdatePlay(play.id, { isMiniScript: newVal });
+                                        }}
+                                        onClick={e => e.stopPropagation()}
+                                        onMouseDown={e => e.stopPropagation()}
+                                        style={{ cursor: 'pointer', margin: 0 }}
+                                    />
+                                    <span style={{ color: '#64748b' }}>Mini Script</span>
+                                </div>
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        className="btn-xs"
+                                        onMouseDown={e => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingWbId(editingWbId === play.id ? null : play.id);
+                                        }}
+                                        style={{
+                                            background: play.wristbandSlot ? '#eff6ff' : '#f1f5f9',
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '4px',
+                                            padding: '1px 4px',
+                                            fontSize: '0.7rem',
+                                            color: play.wristbandSlot ? '#1d4ed8' : '#64748b',
+                                            cursor: 'pointer',
+                                            minWidth: '40px',
+                                            textAlign: 'center'
+                                        }}
+                                    >
+                                        {play.wristbandSlot ? `#${play.wristbandSlot}` : '+ WB'}
+                                    </button>
 
-
-                                    {/* Flags: Rooski / Mini Script / New? */}
-                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.7rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={!!play.priority}
-                                                onChange={(e) => {
-                                                    const newVal = !play.priority;
-                                                    setLocalItems(prev => prev.map(p => p.id === play.id ? { ...p, priority: newVal } : p));
-                                                    handleTogglePriority(play.id);
-                                                }}
-                                                onClick={e => e.stopPropagation()}
-                                                onMouseDown={e => e.stopPropagation()}
-                                                style={{ cursor: 'pointer', margin: 0 }}
-                                            />
-                                            <span style={{ color: '#64748b' }}>Priority</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={newInstallIds.includes(play.id)}
-                                                onChange={() => handleToggleNewPlay(play.id)}
-                                                onClick={e => e.stopPropagation()}
-                                                onMouseDown={e => e.stopPropagation()}
-                                                style={{ cursor: 'pointer', margin: 0 }}
-                                            />
-                                            <span style={{ color: '#64748b' }}>New?</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={!!(play.isWiz || play.isRooski)}
-                                                onChange={(e) => {
-                                                    const newVal = e.target.checked;
-                                                    setLocalItems(prev => prev.map(p => p.id === play.id ? { ...p, isWiz: newVal } : p));
-                                                    onUpdatePlay(play.id, { isWiz: newVal });
-                                                }}
-                                                onClick={e => e.stopPropagation()}
-                                                onMouseDown={e => e.stopPropagation()}
-                                                style={{ cursor: 'pointer', margin: 0 }}
-                                            />
-                                            <span style={{ color: '#64748b' }}>Wiz</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={!!play.isMiniScript}
-                                                onChange={(e) => {
-                                                    const newVal = e.target.checked;
-                                                    setLocalItems(prev => prev.map(p => p.id === play.id ? { ...p, isMiniScript: newVal } : p));
-                                                    onUpdatePlay(play.id, { isMiniScript: newVal });
-                                                }}
-                                                onClick={e => e.stopPropagation()}
-                                                onMouseDown={e => e.stopPropagation()}
-                                                style={{ cursor: 'pointer', margin: 0 }}
-                                            />
-                                            <span style={{ color: '#64748b' }}>Mini Script</span>
-                                        </div>
-                                        {/* WB Slot UI */}
-                                        <div style={{ position: 'relative' }}>
-                                            <button
-                                                className="btn-xs"
-                                                onMouseDown={e => e.stopPropagation()}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setEditingWbId(editingWbId === play.id ? null : play.id);
-                                                }}
-                                                style={{
-                                                    background: play.wristbandSlot ? '#eff6ff' : '#f1f5f9',
-                                                    border: '1px solid #cbd5e1',
-                                                    borderRadius: '4px',
-                                                    padding: '1px 4px',
-                                                    fontSize: '0.7rem',
-                                                    color: play.wristbandSlot ? '#1d4ed8' : '#64748b',
-                                                    cursor: 'pointer',
-                                                    minWidth: '40px',
-                                                    textAlign: 'center'
-                                                }}
-                                            >
-                                                {play.wristbandSlot ? `#${play.wristbandSlot}` : '+ WB'}
-                                            </button>
-
-                                            {editingWbId === play.id && (
+                                    {editingWbId === play.id && (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                zIndex: 100,
+                                                background: 'white',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                                maxHeight: '200px',
+                                                width: '100px',
+                                                overflowY: 'auto'
+                                            }}
+                                            onMouseDown={e => e.stopPropagation()}
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            {play.wristbandSlot && (
                                                 <div
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '100%',
-                                                        left: 0,
-                                                        zIndex: 100,
-                                                        background: 'white',
-                                                        border: '1px solid #cbd5e1',
-                                                        borderRadius: '4px',
-                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                                        maxHeight: '200px',
-                                                        width: '100px',
-                                                        overflowY: 'auto'
+                                                    onClick={() => {
+                                                        onUpdatePlay(play.id, { wristbandSlot: null });
+                                                        setEditingWbId(null);
                                                     }}
-                                                    onMouseDown={e => e.stopPropagation()}
-                                                    onClick={e => e.stopPropagation()}
+                                                    style={{ padding: '4px 8px', cursor: 'pointer', color: '#ef4444', borderBottom: '1px solid #eee', fontSize: '0.75rem' }}
                                                 >
-                                                    {play.wristbandSlot && (
-                                                        <div
-                                                            onClick={() => {
-                                                                onUpdatePlay(play.id, { wristbandSlot: null });
-                                                                setEditingWbId(null);
-                                                            }}
-                                                            style={{ padding: '4px 8px', cursor: 'pointer', color: '#ef4444', borderBottom: '1px solid #eee', fontSize: '0.75rem' }}
-                                                        >
-                                                            Unassign
-                                                        </div>
-                                                    )}
-                                                    {availableSlots.length > 0 ? availableSlots.map(slot => (
-                                                        <div
-                                                            key={slot}
-                                                            onClick={() => {
-                                                                onUpdatePlay(play.id, { wristbandSlot: slot });
-                                                                setEditingWbId(null);
-                                                            }}
-                                                            style={{ padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem' }}
-                                                            onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                                                            onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                                                        >
-                                                            {slot}
-                                                        </div>
-                                                    )) : (
-                                                        <div style={{ padding: '4px 8px', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.75rem' }}>No slots</div>
-                                                    )}
+                                                    Unassign
                                                 </div>
                                             )}
+                                            {availableSlots.length > 0 ? availableSlots.map(slot => (
+                                                <div
+                                                    key={slot}
+                                                    onClick={() => {
+                                                        onUpdatePlay(play.id, { wristbandSlot: slot });
+                                                        setEditingWbId(null);
+                                                    }}
+                                                    style={{ padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                                                >
+                                                    {slot}
+                                                </div>
+                                            )) : (
+                                                <div style={{ padding: '4px 8px', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.75rem' }}>No slots</div>
+                                            )}
                                         </div>
-                                    </div>
-
-
+                                    )}
                                 </div>
-
-
-
-                                {/* Remove Button */}
-                                <button
-                                    className="btn-ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleRemoveFromInstall(play.id); }}
-                                    style={{ padding: '2px', color: '#ef4444', flexShrink: 0 }}
-                                    title="Remove from install"
-                                >
-                                    <Icon name="X" size={14} />
-                                </button>
                             </div>
                         </div>
-                    ))}
-                </ReactSortable>
+
+                        <button
+                            className="btn-ghost"
+                            onClick={(e) => { e.stopPropagation(); handleRemoveFromInstall(play.id); }}
+                            style={{ padding: '2px', color: '#ef4444', flexShrink: 0 }}
+                            title="Remove from install"
+                        >
+                            <Icon name="X" size={14} />
+                        </button>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {/* Unassigned Section */}
+                    <ReactSortable
+                        list={groupedItems.unassigned}
+                        setList={(l) => handleSetList(l, null)}
+                        group="installColumns"
+                        animation={150}
+                        style={{ minHeight: '50px' }}
+                    >
+                        {groupedItems.unassigned.map(play => renderPlayCard(play))}
+                    </ReactSortable>
+
+                    {/* Buckets */}
+                    {sortedBucketIds.map(bucketId => {
+                        const bucket = playBuckets.find(b => b.id === bucketId);
+                        return (
+                            <div key={bucketId} style={{ marginTop: '0.5rem' }}>
+                                <div style={{
+                                    fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b',
+                                    marginBottom: '0.25rem', padding: '0.25rem 0.5rem',
+                                    background: '#f1f5f9', borderRadius: '4px',
+                                    display: 'flex', justifyContent: 'space-between'
+                                }}>
+                                    <span>{bucket ? bucket.name : 'Unknown Bucket'}</span>
+                                    <span style={{ opacity: 0.5 }}>{groupedItems.buckets[bucketId].length}</span>
+                                </div>
+                                <ReactSortable
+                                    list={groupedItems.buckets[bucketId]}
+                                    setList={(l) => handleSetList(l, bucketId)}
+                                    group="installColumns"
+                                    animation={150}
+                                    style={{ minHeight: '40px' }}
+                                >
+                                    {groupedItems.buckets[bucketId].map(play => renderPlayCard(play))}
+                                </ReactSortable>
+                            </div>
+                        );
+                    })}
+                </div>
             );
         };
 
@@ -2491,7 +2587,6 @@
                         >
                             <div style={{ overflow: 'hidden' }}>
                                 <div style={{ fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getPlayDisplayName(play)}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{play.formation}</div>
                             </div>
                             {!isLocked && (
                                 <button
@@ -4542,12 +4637,13 @@
         };
 
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [] }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [], playBuckets = [], playCategories = [] }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
             const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'wiz-oline', 'wiz-skill', 'detailed'
             const [formData, setFormData] = useState({
                 playCategory: '', // Existing field
+                bucketId: '', // [NEW] Play Bucket ID
                 formation: '',
                 formationTag: '',
                 name: '',
@@ -5072,6 +5168,38 @@
                                             placeholder="e.g. TRIBE / Spider 2 Y Banana"
                                             required
                                         />
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                            <label className="form-label">Category</label>
+                                            <select
+                                                className="form-input"
+                                                value={formData.playCategory || ''}
+                                                onChange={e => setFormData({ ...formData, playCategory: e.target.value, bucketId: '' })}
+                                            >
+                                                <option value="">Select Category...</option>
+                                                {playCategories.map(cat => (
+                                                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                            <label className="form-label">Bucket</label>
+                                            <select
+                                                className="form-input"
+                                                value={formData.bucketId || ''}
+                                                onChange={e => setFormData({ ...formData, bucketId: e.target.value })}
+                                                disabled={!formData.playCategory}
+                                            >
+                                                <option value="">Select Bucket...</option>
+                                                {playBuckets
+                                                    .filter(b => b.categoryId === formData.playCategory)
+                                                    .map(bucket => (
+                                                        <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                                                    ))
+                                                }
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                                         <label className="form-label">Wiz / Short Name <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'normal' }}>(Optional)</span></label>
@@ -25028,8 +25156,21 @@
             gamePlanLayouts,
             defaultWbSettings,
             defaultDepthChart,
-            defaultZonePhilosophies
+            defaultZonePhilosophies,
+            playCategories = [],
+            playBuckets = []
         }) => {
+            // Helper to group categories for the 3 columns
+            const getCategoryGroup = (type) => {
+                if (!type) return 'NONE';
+                // Check if type matches a known category
+                const cat = playCategories.find(c => c.id === type || c.label === type) || { id: type, label: type };
+                const str = (cat.label || cat.id).toLowerCase();
+
+                if (str.includes('run') || str.includes('rpo')) return 'RUN';
+                if (str.includes('pass') || str.includes('quick') || str.includes('inter') || str.includes('shot') || str.includes('pap')) return 'PASS';
+                return 'OTHER';
+            };
             const { ReactSortable } = window; // Destructure Sortable
             const [searchTerm, setSearchTerm] = useState('');
             const [isQuickAddOpen, setIsQuickAddOpen] = useState(false); // Modal state for parser
@@ -25111,8 +25252,11 @@
 
                         const safeGamePlan = gamePlan || {};
                         const isScript = box.type === 'script';
-                        const collectionMap = isScript ? (safeGamePlan.miniScripts || {}) : (safeGamePlan.sets || {});
-                        const data = collectionMap[box.setId];
+                        // Fix: Handle as Arrays
+                        const collection = isScript ? (safeGamePlan.miniScripts || []) : (safeGamePlan.sets || []);
+
+                        const data = Array.isArray(collection) ? collection.find(item => item.id === box.setId)
+                            : null;
 
                         // Check if play is assigned
                         if (data?.assignedPlayIds?.includes(playId)) {
@@ -25751,7 +25895,6 @@
                                                         <div style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                             {getPlayDisplayName(play)}
                                                         </div>
-                                                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{play.formation}</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -25830,12 +25973,12 @@
                                 <div style={{ padding: '0.75rem', background: '#ecfdf5', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#047857', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>RUNS / RPOs</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#d1fae5', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => p.type === 'Run' || p.type === 'RPO').length}
+                                        {hydratedInstall.filter(p => getCategoryGroup(p.type) === 'RUN').length}
                                     </span>
                                 </div>
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                                     <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => p.type === 'Run' || p.type === 'RPO')}
+                                        items={hydratedInstall.filter(p => getCategoryGroup(p.type) === 'RUN')}
                                         type="Run"
                                         onListChange={(newItems) => handleListChange(newItems, 'Run')}
                                         onUpdatePlay={onUpdatePlay}
@@ -25848,6 +25991,7 @@
                                         newInstallIds={week.newInstallIds || []}
                                         onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
                                         onDuplicatePlay={handleDuplicatePlay}
+                                        playBuckets={playBuckets}
                                     />
                                 </div>
                             </div>
@@ -25857,12 +26001,12 @@
                                 <div style={{ padding: '0.75rem', background: '#eff6ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#1d4ed8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>PASSES</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#dbeafe', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => ['Pass', 'QUICK', 'INTER', 'SHOT', 'PAP'].includes(p.type)).length}
+                                        {hydratedInstall.filter(p => getCategoryGroup(p.type) === 'PASS').length}
                                     </span>
                                 </div>
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                                     <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => ['Pass', 'QUICK', 'INTER', 'SHOT', 'PAP'].includes(p.type))}
+                                        items={hydratedInstall.filter(p => getCategoryGroup(p.type) === 'PASS')}
                                         type="Pass"
                                         onListChange={(newItems) => handleListChange(newItems, 'Pass')}
                                         onUpdatePlay={onUpdatePlay}
@@ -25875,6 +26019,7 @@
                                         newInstallIds={week.newInstallIds || []}
                                         onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
                                         onDuplicatePlay={handleDuplicatePlay}
+                                        playBuckets={playBuckets}
                                     />
                                 </div>
                             </div>
@@ -25884,12 +26029,12 @@
                                 <div style={{ padding: '0.75rem', background: '#faf5ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#7e22ce', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>SCREENS & GADGETS</span>
                                     <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#f3e8ff', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => ['Screen', 'GADGET'].includes(p.type)).length}
+                                        {hydratedInstall.filter(p => getCategoryGroup(p.type) === 'OTHER').length}
                                     </span>
                                 </div>
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                                     <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => ['Screen', 'GADGET'].includes(p.type))}
+                                        items={hydratedInstall.filter(p => getCategoryGroup(p.type) === 'OTHER')}
                                         type="Screen"
                                         onListChange={(newItems) => handleListChange(newItems, 'Screen')}
                                         onUpdatePlay={onUpdatePlay}
@@ -25902,6 +26047,7 @@
                                         newInstallIds={week.newInstallIds || []}
                                         onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
                                         onDuplicatePlay={handleDuplicatePlay}
+                                        playBuckets={playBuckets}
                                     />
                                 </div>
                             </div>
@@ -25979,13 +26125,27 @@
                                         <div style={{ marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
                                             <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Play Type</div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                {['Run', 'RPO', 'Pass', 'QUICK', 'INTER', 'SHOT', 'PAP', 'Screen', 'GADGET'].map(type => {
-                                                    const isSelected = (!play.type && type === 'Run') || play.type === type;
+                                                {(playCategories.length > 0 ? playCategories : [
+                                                    { id: 'Run', label: 'Run' }, { id: 'RPO', label: 'RPO' },
+                                                    { id: 'Pass', label: 'Pass' }, { id: 'Screen', label: 'Screen' }
+                                                ]).map(cat => {
+                                                    const type = cat.label; // Use label for backward compat or cat.id? Existing code uses 'Run', 'RPO' labels as types often.
+                                                    // Actually, let's use the ID but fallback to label if needed.
+                                                    // Wait, Priority Plays mapped type -> ID. 
+                                                    // Here we set the type on the play. Ideally we set the ID.
+                                                    // But existing plays have 'Run', 'RPO'.
+                                                    // Let's use cat.label to be safe for display? No, we should transition to IDs?
+                                                    // If I set type=cat.id (e.g. 'run'), existing filters checks 'Run'.
+                                                    // My getCategoryGroup handles case insensitivity.
+                                                    // So I should set cat.id.
+
+                                                    const typeVal = cat.id;
+                                                    const isSelected = (!play.type && typeVal === 'run') || play.type === typeVal || play.type === cat.label;
                                                     return (
                                                         <button
-                                                            key={type}
+                                                            key={cat.id}
                                                             onClick={() => {
-                                                                if (onUpdatePlay) onUpdatePlay(playId, { type });
+                                                                if (onUpdatePlay) onUpdatePlay(playId, { type: typeVal });
                                                             }}
                                                             className="btn-xs"
                                                             style={{
@@ -26005,29 +26165,7 @@
                                             </div>
                                         </div>
 
-                                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '4px' }}>Assign Situations</div>
 
-                                        {/* Checkboxes */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isNew}
-                                                    onChange={handleToggleNew}
-                                                    style={{ cursor: 'pointer' }}
-                                                />
-                                                <span>Mark as New</span>
-                                            </label>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isPriority}
-                                                    onChange={handleTogglePriority}
-                                                    style={{ cursor: 'pointer' }}
-                                                />
-                                                <span>Mark as Priority</span>
-                                            </label>
-                                        </div>
                                     </div>
 
                                     {/* BODY - SCROLLABLE */}
@@ -33943,7 +34081,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {} }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [] }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
@@ -33997,6 +34135,56 @@
                 }
                 return set;
             }, [plays]);
+
+            // Auto-Assign Priority Plays to Categories based on Type
+            useEffect(() => {
+                if (isLocked || !gamePlan) return;
+
+                const priorityCategories = gamePlan.priorityCategories || {};
+                const categorizedIds = new Set(Object.values(priorityCategories).flat());
+
+                // Filter for unassigned priority plays with types
+                const unassigned = plays.filter(p => p.priority && p.type && !categorizedIds.has(p.id));
+
+                if (unassigned.length === 0) return;
+
+                // Dynamic Mapping from Play Type to Category ID
+                // We assume Play Type matches Category ID (normalized) or Label
+                const typeToCat = {};
+                (playCategories.length > 0 ? playCategories : DEFAULT_PLAY_CATEGORIES).forEach(cat => {
+                    typeToCat[cat.label] = cat.id;
+                    typeToCat[cat.id] = cat.id;
+                    typeToCat[cat.label.toUpperCase()] = cat.id; // Handle uppercase types
+                    typeToCat[cat.id.toUpperCase()] = cat.id;
+                });
+
+                // Fallback for known hardcoded types if they differ from category IDs
+                typeToCat['RPO'] = 'rpo';
+                typeToCat['QUICK'] = 'quick';
+                typeToCat['INTER'] = 'intermediate';
+                typeToCat['SHOT'] = 'deep';
+                typeToCat['Screen'] = 'screen';
+                typeToCat['GADGET'] = 'gadget';
+
+
+                let updates = null;
+
+                unassigned.forEach(p => {
+                    const catId = typeToCat[p.type] || typeToCat[p.type.toUpperCase()];
+                    // Verify the target category actually exists in our list (to avoid junk data)
+                    const targetExists = (playCategories.length > 0 ? playCategories : DEFAULT_PLAY_CATEGORIES).some(c => c.id === catId);
+
+                    if (catId && targetExists) {
+                        if (!updates) updates = { ...priorityCategories };
+                        updates[catId] = [...(updates[catId] || []), p.id];
+                    }
+                });
+
+                if (updates) {
+                    onUpdateGamePlan({ ...gamePlan, priorityCategories: updates });
+                }
+
+            }, [plays, gamePlan, isLocked, onUpdateGamePlan, playCategories]);
 
             // Import Handler
             const handleImportGamePlan = () => {
@@ -39023,15 +39211,7 @@
             };
 
             const renderPriorityPlays = () => {
-                const CATEGORIES = [
-                    { id: 'insideRun', label: 'Inside Run' },
-                    { id: 'perimeterRun', label: 'Perimeter Run' },
-                    { id: 'rpo', label: 'RPO' },
-                    { id: 'quick', label: 'Quick' },
-                    { id: 'intermediate', label: 'Intermediate' },
-                    { id: 'deep', label: 'Deep' },
-                    { id: 'screen', label: 'Screen' }
-                ];
+                const CATEGORIES = (playCategories && playCategories.length > 0) ? playCategories : DEFAULT_PLAY_CATEGORIES;
 
                 const priorityCategories = gamePlan?.priorityCategories || {};
 
@@ -45347,6 +45527,14 @@
             );
         };
 
+        const DEFAULT_PLAY_CATEGORIES = [
+            { id: 'run', label: 'Run', color: 'gray' },
+            { id: 'pass', label: 'Pass', color: 'blue' },
+            { id: 'rpo', label: 'RPO', color: 'indigo' },
+            { id: 'screen', label: 'Screen', color: 'purple' },
+            { id: 'gadget', label: 'Gadget', color: 'pink' }
+        ];
+
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
             const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
@@ -47061,10 +47249,20 @@
             const [defensePlaySyntax, setDefensePlaySyntax] = useLocalStorage('oc-dashboard-play-syntax-defense', []);
             const [stPlaySyntax, setStPlaySyntax] = useLocalStorage('oc-dashboard-play-syntax-st', []);
             const [termLibrary, setTermLibrary] = useLocalStorage('oc-dashboard-term-library', {});
+            const [playBuckets, setPlayBuckets] = useLocalStorage('oc-dashboard-play-buckets', []);
             const [defenseTermLibrary, setDefenseTermLibrary] = useLocalStorage('oc-dashboard-term-library-defense', {});
             const [stTermLibrary, setStTermLibrary] = useLocalStorage('oc-dashboard-term-library-st', {});
             const [setupTab, setSetupTab] = useState('positions');
             const [setupCategory, setSetupCategory] = useState(null);
+            const [selectedBucketCategory, setSelectedBucketCategory] = useState(null);
+            const [playCategories, setPlayCategories] = useLocalStorage('oc-dashboard-play-categories', DEFAULT_PLAY_CATEGORIES);
+
+            // Initialize selectedBucketCategory with first category
+            useEffect(() => {
+                if (!selectedBucketCategory && playCategories && playCategories.length > 0) {
+                    setSelectedBucketCategory(playCategories[0].id);
+                }
+            }, [playCategories]);
 
             // Script Presets (Dynamic Script Templates)
             const [scriptPresets, setScriptPresets] = useLocalStorage('oc-dashboard-script-presets', [
@@ -47498,6 +47696,8 @@
                         wizLibrary={wizLibrary}
                         setWizLibrary={setWizLibrary}
                         positionNames={positionNames}
+                        playBuckets={playBuckets}
+                        playCategories={playCategories}
                     />
                 )
             }
@@ -48285,7 +48485,10 @@
                                     borderBottom: setupTab === 'positions' ? '3px solid var(--accent)' : '3px solid transparent',
                                     fontWeight: setupTab === 'positions' ? 'bold' : 'normal',
                                     color: setupTab === 'positions' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                    background: 'transparent'
+                                    background: 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
                                 }}
                                 onClick={() => setSetupTab('positions')}
                             >
@@ -48299,7 +48502,10 @@
                                     borderBottom: setupTab === 'syntax' ? '3px solid var(--accent)' : '3px solid transparent',
                                     fontWeight: setupTab === 'syntax' ? 'bold' : 'normal',
                                     color: setupTab === 'syntax' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                    background: 'transparent'
+                                    background: 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
                                 }}
                                 onClick={() => setSetupTab('syntax')}
                             >
@@ -48313,7 +48519,10 @@
                                     borderBottom: setupTab === 'terms' ? '3px solid var(--accent)' : '3px solid transparent',
                                     fontWeight: setupTab === 'terms' ? 'bold' : 'normal',
                                     color: setupTab === 'terms' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                    background: 'transparent'
+                                    background: 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
                                 }}
                                 onClick={() => setSetupTab('terms')}
                             >
@@ -48324,10 +48533,47 @@
                                 style={{
                                     borderRadius: 0,
                                     padding: '1rem 1.5rem',
+                                    borderBottom: setupTab === 'categories' ? '3px solid var(--accent)' : '3px solid transparent',
+                                    fontWeight: setupTab === 'categories' ? 'bold' : 'normal',
+                                    color: setupTab === 'categories' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    background: 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}
+                                onClick={() => setSetupTab('categories')}
+                            >
+                                <Icon name="Tag" size={16} /> Play Categories
+                            </button>
+                            <button
+                                className={`btn-ghost`}
+                                style={{
+                                    borderRadius: 0,
+                                    padding: '1rem 1.5rem',
+                                    borderBottom: setupTab === 'buckets' ? '3px solid var(--accent)' : '3px solid transparent',
+                                    fontWeight: setupTab === 'buckets' ? 'bold' : 'normal',
+                                    color: setupTab === 'buckets' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    background: 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}
+                                onClick={() => setSetupTab('buckets')}
+                            >
+                                <Icon name="Grid" size={16} /> Play Buckets
+                            </button>
+                            <button
+                                className={`btn-ghost`}
+                                style={{
+                                    borderRadius: 0,
+                                    padding: '1rem 1.5rem',
                                     borderBottom: setupTab === 'practice-lists' ? '3px solid var(--accent)' : '3px solid transparent',
                                     fontWeight: setupTab === 'practice-lists' ? 'bold' : 'normal',
                                     color: setupTab === 'practice-lists' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                    background: 'transparent'
+                                    background: 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
                                 }}
                                 onClick={() => setSetupTab('practice-lists')}
                             >
@@ -48342,7 +48588,10 @@
                                         borderBottom: setupTab === 'script-presets' ? '3px solid var(--accent)' : '3px solid transparent',
                                         fontWeight: setupTab === 'script-presets' ? 'bold' : 'normal',
                                         color: setupTab === 'script-presets' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                        background: 'transparent'
+                                        background: 'transparent',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
                                     }}
                                     onClick={() => setSetupTab('script-presets')}
                                 >
@@ -48352,6 +48601,152 @@
                         </div>
 
                         <div style={{ padding: '1.5rem', flex: 1 }}>
+                            {setupTab === 'categories' && (
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h3 style={{ margin: 0 }}>Play Categories</h3>
+                                        <button className="btn btn-primary" onClick={() => {
+                                            const label = prompt("New Category Label:");
+                                            if (label) {
+                                                const id = label.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                                if (playCategories.some(c => c.id === id)) {
+                                                    alert("Category ID already exists.");
+                                                    return;
+                                                }
+                                                setPlayCategories([...playCategories, { id, label, color: 'gray' }]);
+                                            }
+                                        }}>
+                                            <Icon name="Plus" size={16} /> Add Category
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                                        {playCategories.map((cat, idx) => (
+                                            <div key={cat.id} className="card" style={{ padding: '1rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <div style={{ width: 16, height: 16, borderRadius: '50%', background: cat.color === 'gray' ? '#94a3b8' : cat.color }}></div>
+                                                        <span style={{ fontWeight: 'bold' }}>{cat.label}</span>
+                                                        <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>({cat.id})</span>
+                                                    </div>
+                                                    <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => {
+                                                        if (confirm(`Delete category "${cat.label}"?`)) {
+                                                            setPlayCategories(playCategories.filter(c => c.id !== cat.id));
+                                                        }
+                                                    }}>
+                                                        <Icon name="Trash" size={16} />
+                                                    </button>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', minWidth: '40px' }}>Color:</label>
+                                                    <input
+                                                        type="color"
+                                                        value={cat.color === 'gray' ? '#94a3b8' : cat.color}
+                                                        onChange={(e) => {
+                                                            const newCategories = [...playCategories];
+                                                            newCategories[idx] = { ...cat, color: e.target.value };
+                                                            setPlayCategories(newCategories);
+                                                        }}
+                                                        style={{
+                                                            width: '50px',
+                                                            height: '32px',
+                                                            border: '1px solid var(--border)',
+                                                            borderRadius: '4px',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    />
+                                                    <span style={{ fontSize: '0.8rem', opacity: 0.6, fontFamily: 'monospace' }}>{cat.color === 'gray' ? '#94a3b8' : cat.color}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem', color: '#64748b' }}>
+                                        <p style={{ margin: 0 }}><strong>Note:</strong> These categories define the boxes in Priority Plays and Play Type options.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {setupTab === 'buckets' && (
+                                <div style={{ padding: '2rem' }}>
+                                    <div style={{ display: 'flex', gap: '2rem' }}>
+                                        {/* Filters / Sidebar */}
+                                        <div style={{ width: '250px', flexShrink: 0 }}>
+                                            <h3 style={{ marginTop: 0 }}>Categories</h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                {playCategories.map(cat => (
+                                                    <button
+                                                        key={cat.id}
+                                                        className={`btn-ghost ${selectedBucketCategory === cat.id ? 'active' : ''}`}
+                                                        style={{
+                                                            justifyContent: 'flex-start',
+                                                            background: selectedBucketCategory === cat.id ? 'var(--accent-light)' : 'transparent',
+                                                            borderLeft: selectedBucketCategory === cat.id ? '3px solid var(--accent)' : '3px solid transparent',
+                                                            fontWeight: selectedBucketCategory === cat.id ? 'bold' : 'normal'
+                                                        }}
+                                                        onClick={() => setSelectedBucketCategory(cat.id)}
+                                                    >
+                                                        {cat.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Main Content */}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                                <h3 style={{ margin: 0 }}>Buckets for "{playCategories.find(c => c.id === selectedBucketCategory)?.label || '...'}"</h3>
+                                                <button className="btn btn-primary" onClick={() => {
+                                                    if (!selectedBucketCategory) {
+                                                        alert("Please select a category first.");
+                                                        return;
+                                                    }
+                                                    const label = prompt("New Bucket Name (e.g. Smash, Drive):");
+                                                    if (label) {
+                                                        const id = label.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                                        // Check for duplicates
+                                                        if (playBuckets.some(b => b.id === id && b.categoryId === selectedBucketCategory)) {
+                                                            alert("Bucket already exists in this category.");
+                                                            return;
+                                                        }
+                                                        setPlayBuckets([...playBuckets, { id, label, categoryId: selectedBucketCategory }]);
+                                                    }
+                                                }}>
+                                                    <Icon name="Plus" size={16} /> Add Bucket
+                                                </button>
+                                            </div>
+
+                                            {(!selectedBucketCategory) ? (
+                                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', border: '2px dashed var(--border)', borderRadius: '8px' }}>
+                                                    Select a category to manage its buckets.
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                                                    {playBuckets.filter(b => b.categoryId === selectedBucketCategory).length === 0 && (
+                                                        <div style={{ gridColumn: '1/-1', padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                            No buckets defined yet.
+                                                        </div>
+                                                    )}
+                                                    {playBuckets.filter(b => b.categoryId === selectedBucketCategory).map(bucket => (
+                                                        <div key={bucket.id} className="card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <span style={{ fontWeight: '500' }}>{bucket.label}</span>
+                                                            <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => {
+                                                                if (confirm(`Delete bucket "${bucket.label}"?`)) {
+                                                                    setPlayBuckets(playBuckets.filter(b => b.id !== bucket.id && b.categoryId !== bucket.categoryId)); // Note: Filter logic needs to be precise if IDs aren't globally unique. Assuming buckets have unique IDs effectively for now, but adding cat check is safer.
+                                                                    // Actually, let's just filter by object ref or unique ID.
+                                                                    // Better:
+                                                                    setPlayBuckets(playBuckets.filter(b => !(b.id === bucket.id && b.categoryId === bucket.categoryId)));
+                                                                }
+                                                            }}>
+                                                                <Icon name="Trash" size={14} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {setupTab === 'positions' && (
                                 <div>
                                     <h3 style={{ marginBottom: '1rem' }}>Position Names</h3>
@@ -50043,12 +50438,12 @@
                             )
                         }
 
-                        {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} defaultWbSettings={getGlobalWbSettings()} defaultDepthChart={getGlobalDepthCharts()} defaultZonePhilosophies={getGlobalZonePhilosophies()} />}
+                        {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} defaultWbSettings={getGlobalWbSettings()} defaultDepthChart={getGlobalDepthCharts()} defaultZonePhilosophies={getGlobalZonePhilosophies()} playCategories={playCategories} playBuckets={playBuckets} />}
                         {view === 'practice-report' && <PracticeReportView weeks={weeks} plays={plays} playSyntax={playSyntax} parsePlayName={parsePlayName} />}
                         {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} weeks={weeks} currentWeek={currentWeek} onUpdateLayouts={(newLayouts) => {
                             // Update WEEK specific layout
                             handleUpdateWeek(currentWeek.id, 'gamePlanLayouts', newLayouts);
-                        }} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} onUpdateWeek={handleUpdateWeek} />}
+                        }} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} onUpdateWeek={handleUpdateWeek} playCategories={playCategories} />}
 
                         {
                             view === 'playbook' && (
