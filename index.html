@@ -25521,28 +25521,64 @@
                                 <h1 style={{ margin: 0 }}>Week {week.weekNum} Install/Ready List</h1>
                                 <p style={{ margin: '0.5rem 0 0 0', opacity: 0.7 }}>Manage the active plays for Week {week.weekNum}: {week.opponent}</p>
                             </div>
-                            <button
-                                className="btn"
-                                onClick={handleClearWeek}
-                                title="Clear Week"
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginRight: '8px', background: 'white', border: '1px solid #cbd5e1', color: '#ef4444', padding: '0 8px' }}
-                            >
-                                <Icon name="Trash" size={16} />
-                            </button>
-                            <button
-                                className="btn"
-                                onClick={() => setShowImportModal(true)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px', background: 'white', border: '1px solid #cbd5e1', color: '#64748b' }}
-                            >
-                                <Icon name="Download" size={16} /> Import
-                            </button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => setIsQuickAddOpen(true)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                            >
-                                <Icon name="Plus" size={16} /> Quick Add / Parse Play
-                            </button>
+
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                <button
+                                    className="btn"
+                                    onClick={handleClearWeek}
+                                    title="Clear Week"
+                                    style={{
+                                        height: '38px',
+                                        padding: '0 16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        background: 'white',
+                                        border: '1px solid #cbd5e1',
+                                        color: '#ef4444',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    <Icon name="Trash" size={16} /> Clear Week
+                                </button>
+                                <button
+                                    className="btn"
+                                    onClick={() => setShowImportModal(true)}
+                                    style={{
+                                        height: '38px',
+                                        padding: '0 16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        background: 'white',
+                                        border: '1px solid #cbd5e1',
+                                        color: '#64748b',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    <Icon name="Download" size={16} /> Import
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => setIsQuickAddOpen(true)}
+                                    style={{
+                                        height: '38px',
+                                        padding: '0 16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    <Icon name="Plus" size={16} /> Quick Add / Parse Play
+                                </button>
+                            </div>
                         </div>
 
                         {showImportModal && (
@@ -46284,6 +46320,60 @@
 
             // --- Weeks & Season Management ---
 
+            // Helper to create default plans
+            const createDefaultPracticePlans = () => {
+                const defaults = {};
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].forEach(day => {
+                    defaults[day] = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9) + day,
+                        date: new Date().toISOString().split('T')[0],
+                        startTime: '15:40',
+                        segments: []
+                    };
+                });
+                return defaults;
+            };
+
+            // --- SCOPING MIGRATION HELPERS ---
+            // 1. Wristband Defaults
+            const getGlobalWbSettings = () => {
+                const defaultSettings = {
+                    card1: { type: 'standard', opp: '', iter: '1', rows: [] },
+                    card2: { type: 'standard', opp: '', iter: '1', rows: [] },
+                    card3: { type: 'rooski-skill', opp: '', iter: '1', rows: [] },
+                    staples: { type: 'staples', opp: '', iter: '1', rows: [] }
+                };
+                try {
+                    const saved = localStorage.getItem('hc_wb_settings_v3');
+                    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+                } catch (e) { return defaultSettings; }
+            };
+
+            // 2. Depth Chart Defaults
+            const getGlobalDepthCharts = () => {
+                try {
+                    const saved = localStorage.getItem('hc-depth-charts');
+                    return saved ? JSON.parse(saved) : {};
+                } catch (e) { return {}; }
+            };
+
+            // 3. Zone Philosophies Defaults
+            const getGlobalZonePhilosophies = () => {
+                const defaultPhilosophies = {
+                    backed_up: '',
+                    coming_out: '',
+                    open_field: '',
+                    fringe: 'Take one shot, be ready to convert on 4th',
+                    high_red: '',
+                    low_red: '',
+                    goal_line: ''
+                };
+                try {
+                    const saved = localStorage.getItem('oc-dashboard-zone-philosophies');
+                    return saved ? { ...defaultPhilosophies, ...JSON.parse(saved) } : defaultPhilosophies;
+                } catch (e) { return defaultPhilosophies; }
+            };
+
             const [weeks, setWeeks] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-weeks');
                 let existingWeeks = [];
@@ -46296,59 +46386,7 @@
                     }
                 }
 
-                // Helper to create default plans
-                const createDefaultPracticePlans = () => {
-                    const defaults = {};
-                    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].forEach(day => {
-                        defaults[day] = {
-                            id: Date.now().toString() + Math.random().toString(36).substr(2, 9) + day,
-                            date: new Date().toISOString().split('T')[0],
-                            startTime: '15:40',
-                            segments: []
-                        };
-                    });
-                    return defaults;
-                };
 
-                // --- SCOPING MIGRATION HELPERS ---
-                // 1. Wristband Defaults
-                const getGlobalWbSettings = () => {
-                    const defaultSettings = {
-                        card1: { type: 'standard', opp: '', iter: '1', rows: [] },
-                        card2: { type: 'standard', opp: '', iter: '1', rows: [] },
-                        card3: { type: 'rooski-skill', opp: '', iter: '1', rows: [] },
-                        staples: { type: 'staples', opp: '', iter: '1', rows: [] }
-                    };
-                    try {
-                        const saved = localStorage.getItem('hc_wb_settings_v3');
-                        return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
-                    } catch (e) { return defaultSettings; }
-                };
-
-                // 2. Depth Chart Defaults
-                const getGlobalDepthCharts = () => {
-                    try {
-                        const saved = localStorage.getItem('hc-depth-charts');
-                        return saved ? JSON.parse(saved) : {};
-                    } catch (e) { return {}; }
-                };
-
-                // 3. Zone Philosophies Defaults
-                const getGlobalZonePhilosophies = () => {
-                    const defaultPhilosophies = {
-                        backed_up: '',
-                        coming_out: '',
-                        open_field: '',
-                        fringe: 'Take one shot, be ready to convert on 4th',
-                        high_red: '',
-                        low_red: '',
-                        goal_line: ''
-                    };
-                    try {
-                        const saved = localStorage.getItem('oc-dashboard-zone-philosophies');
-                        return saved ? { ...defaultPhilosophies, ...JSON.parse(saved) } : defaultPhilosophies;
-                    } catch (e) { return defaultPhilosophies; }
-                };
 
                 const currentGlobalWb = getGlobalWbSettings();
                 const currentGlobalDepth = getGlobalDepthCharts();
