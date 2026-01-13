@@ -25022,14 +25022,19 @@
             practicePlans,
             wbSettings,
             drills = [],
-            onQuickAddPlay, // New Prop
-            playSyntax = [], // New Prop
-            onUpdatePlay, // New Prop for Sortable Type Switching
-            gamePlanLayouts // New Prop for Assignment Modal
+            onQuickAddPlay,
+            playSyntax = [],
+            onUpdatePlay,
+            gamePlanLayouts,
+            defaultWbSettings,
+            defaultDepthChart,
+            defaultZonePhilosophies
         }) => {
             const { ReactSortable } = window; // Destructure Sortable
             const [searchTerm, setSearchTerm] = useState('');
             const [isQuickAddOpen, setIsQuickAddOpen] = useState(false); // Modal state for parser
+            const [showImportModal, setShowImportModal] = useState(false);
+            const [importSourceWeekId, setImportSourceWeekId] = useState('');
 
             // Quick Parser State
             const [assignmentModalState, setAssignmentModalState] = useState(null); // { playId, x, y }
@@ -25264,6 +25269,45 @@
                 }
             };
 
+            // Import Handler
+            const handleImportInstalls = () => {
+                if (!importSourceWeekId) return;
+                const sourceWeek = weeks.find(w => w.id === importSourceWeekId);
+                if (!sourceWeek) return;
+
+                const confirm = window.confirm(`Importing week data from ${sourceWeek.name} will OVERWRITE the current week's Installs, Wristbands, Depth Chart, and Zone Philosophies. This cannot be undone. Continue?`);
+                if (!confirm) return;
+
+                // 1. Installs
+                if (sourceWeek.installList) onUpdateWeek(week.id, 'installList', [...sourceWeek.installList]);
+                if (sourceWeek.newInstallIds) onUpdateWeek(week.id, 'newInstallIds', [...sourceWeek.newInstallIds]);
+
+                // 2. Wristbands
+                const newWristbands = sourceWeek.wristbands ? JSON.parse(JSON.stringify(sourceWeek.wristbands)) : JSON.parse(JSON.stringify(defaultWbSettings));
+                onUpdateWeek(week.id, 'wristbands', newWristbands);
+
+                // 3. Depth Chart
+                const newDepthChart = sourceWeek.depthChart ? JSON.parse(JSON.stringify(sourceWeek.depthChart)) : JSON.parse(JSON.stringify(defaultDepthChart));
+                onUpdateWeek(week.id, 'depthChart', newDepthChart);
+
+                // 4. Zone Philosophies
+                const newZonePhi = sourceWeek.zonePhilosophies ? JSON.parse(JSON.stringify(sourceWeek.zonePhilosophies)) : JSON.parse(JSON.stringify(defaultZonePhilosophies));
+                onUpdateWeek(week.id, 'zonePhilosophies', newZonePhi);
+
+                setShowImportModal(false);
+            };
+
+            const handleClearWeek = () => {
+                const confirm = window.prompt(`Are you sure you want to CLEAR ALL DATA for this week (Installs, Wristbands, Depth Chart, Zone Phi)? This cannot be undone.\n\nType "delete" to confirm.`);
+                if (confirm !== 'delete') return;
+
+                onUpdateWeek(week.id, 'installList', []);
+                onUpdateWeek(week.id, 'newInstallIds', []);
+                onUpdateWeek(week.id, 'wristbands', JSON.parse(JSON.stringify(defaultWbSettings)));
+                onUpdateWeek(week.id, 'depthChart', JSON.parse(JSON.stringify(defaultDepthChart)));
+                onUpdateWeek(week.id, 'zonePhilosophies', JSON.parse(JSON.stringify(defaultZonePhilosophies)));
+            };
+
             // Analytics Helpers
             const getGamePlanStatus = (playId) => {
                 if (!gamePlan) return false;
@@ -25478,6 +25522,21 @@
                                 <p style={{ margin: '0.5rem 0 0 0', opacity: 0.7 }}>Manage the active plays for Week {week.weekNum}: {week.opponent}</p>
                             </div>
                             <button
+                                className="btn"
+                                onClick={handleClearWeek}
+                                title="Clear Week"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginRight: '8px', background: 'white', border: '1px solid #cbd5e1', color: '#ef4444', padding: '0 8px' }}
+                            >
+                                <Icon name="Trash" size={16} />
+                            </button>
+                            <button
+                                className="btn"
+                                onClick={() => setShowImportModal(true)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px', background: 'white', border: '1px solid #cbd5e1', color: '#64748b' }}
+                            >
+                                <Icon name="Download" size={16} /> Import
+                            </button>
+                            <button
                                 className="btn btn-primary"
                                 onClick={() => setIsQuickAddOpen(true)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -25485,6 +25544,30 @@
                                 <Icon name="Plus" size={16} /> Quick Add / Parse Play
                             </button>
                         </div>
+
+                        {showImportModal && (
+                            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+                                <div className="card" style={{ width: '400px', padding: '1.5rem', background: 'white' }}>
+                                    <h3>Import Installs</h3>
+                                    <p>Select a week to copy installs from. <strong>This will overwrite current data.</strong></p>
+                                    <select
+                                        className="form-select"
+                                        value={importSourceWeekId}
+                                        onChange={e => setImportSourceWeekId(e.target.value)}
+                                        style={{ marginBottom: '1rem', width: '100%' }}
+                                    >
+                                        <option value="">Select Week...</option>
+                                        {weeks.filter(w => w.id !== week.id).map(w => (
+                                            <option key={w.id} value={w.id}>{w.name}</option>
+                                        ))}
+                                    </select>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                        <button className="btn" onClick={() => setShowImportModal(false)}>Cancel</button>
+                                        <button className="btn btn-primary" onClick={handleImportInstalls} disabled={!importSourceWeekId}>Import</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {isQuickAddOpen && (
                             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
@@ -33829,6 +33912,8 @@
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
             const [assignmentModalState, setAssignmentModalState] = useState(null); // { playId, x, y }
+            const [showImportModal, setShowImportModal] = useState(false);
+            const [importSourceWeekId, setImportSourceWeekId] = useState('');
 
             const [viewMode, setViewMode] = useState('sheet'); // 'sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
@@ -33876,6 +33961,63 @@
                 }
                 return set;
             }, [plays]);
+
+            // Import Handler
+            const handleImportGamePlan = () => {
+                if (!importSourceWeekId) return;
+                const sourceWeek = weeks.find(w => w.id === importSourceWeekId);
+                if (sourceWeek) {
+                    if (confirm(`Import Game Plan from ${sourceWeek.name}? This will REPLACE current Game Plan and Call Sheet data.`)) {
+                        // Deep copy ensures we don't link by reference
+                        const newGamePlan = sourceWeek.offensiveGamePlan ? JSON.parse(JSON.stringify(sourceWeek.offensiveGamePlan)) : { sets: [] };
+                        const newDumbData = sourceWeek.dumbCallSheetData ? JSON.parse(JSON.stringify(sourceWeek.dumbCallSheetData)) : {};
+                        const newLayouts = sourceWeek.gamePlanLayouts ? JSON.parse(JSON.stringify(sourceWeek.gamePlanLayouts)) : null;
+
+                        if (onUpdateWeek) {
+                            onUpdateWeek(currentWeek.id, 'offensiveGamePlan', newGamePlan);
+                            onUpdateWeek(currentWeek.id, 'dumbCallSheetData', newDumbData);
+                            if (newLayouts) onUpdateWeek(currentWeek.id, 'gamePlanLayouts', newLayouts);
+                        }
+                        setShowImportModal(false);
+                    }
+                }
+            };
+
+            const handleClearGamePlan = () => {
+                const confirm = window.prompt(`Are you sure you want to CLEAR the entire Game Plan and Call Sheet for this week? This cannot be undone.\n\nType "delete" to confirm.`);
+                if (confirm && confirm.trim().toLowerCase() !== 'delete') return;
+
+                // 1. Clear Week Data (Sets, Dumb Data)
+                if (onUpdateWeek) {
+                    onUpdateWeek(currentWeek.id, 'offensiveGamePlan', { sets: [], miniScripts: [] });
+                    onUpdateWeek(currentWeek.id, 'dumbCallSheetData', {});
+                }
+
+                // 2. Clear Layout Content (Scripts & Grids stored in Layouts)
+                if (onUpdateLayouts && gamePlanLayouts) {
+                    const newLayouts = JSON.parse(JSON.stringify(gamePlanLayouts));
+                    if (newLayouts.CALL_SHEET && newLayouts.CALL_SHEET.sections) {
+                        newLayouts.CALL_SHEET.sections.forEach(section => {
+                            if (section.boxes) {
+                                section.boxes.forEach(box => {
+                                    // Clear Script Rows
+                                    if (box.rows) {
+                                        box.rows.forEach(row => {
+                                            row.content = '';
+                                            if (row.contentRight) row.contentRight = '';
+                                        });
+                                    }
+                                    // Clear Grid Assignments
+                                    if (box.assignedPlayIds) {
+                                        box.assignedPlayIds = [];
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    onUpdateLayouts(newLayouts);
+                }
+            };
 
             // For Matrix/Grid Cell Editing
             const [activeCellSetId, setActiveCellSetId] = useState(null); // The setId currently being edited via modal
@@ -39158,6 +39300,23 @@
                     {/* Toolbar */}
                     <div className="app-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <button
+                                className="btn"
+                                onClick={handleClearGamePlan}
+                                title="Clear Game Plan"
+                                style={{ height: '52px', width: '52px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', background: 'white', border: '1px solid #cbd5e1', color: '#ef4444' }}
+                            >
+                                <Icon name="Trash" size={16} />
+                                <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>CLR</span>
+                            </button>
+                            <button
+                                className="btn"
+                                onClick={() => setShowImportModal(true)}
+                                style={{ height: '52px', width: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', background: 'white', border: '1px solid #cbd5e1', color: '#64748b' }}
+                            >
+                                <Icon name="Download" size={16} />
+                                <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>IMPORT</span>
+                            </button>
                             <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                                 STRIKE 'EM OUT
                             </button>
@@ -39280,6 +39439,32 @@
                     {renderSectionConfigurationModal()}
                     {renderBoxEditorModal()}
                     {renderSituationAssignmentModal()}
+
+                    {/* Import Modal */}
+                    {showImportModal && (
+                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+                            <div className="card" style={{ width: '400px', padding: '1.5rem', background: 'white' }}>
+                                <h3>Import Game Plan</h3>
+                                <p>Select a week to copy Game Plan & Call Sheet from. <strong>This will overwrite current data.</strong></p>
+                                <select
+                                    className="form-select"
+                                    value={importSourceWeekId}
+                                    onChange={e => setImportSourceWeekId(e.target.value)}
+                                    style={{ marginBottom: '1rem', width: '100%' }}
+                                >
+                                    <option value="">Select Week...</option>
+                                    {weeks.filter(w => w.id !== currentWeek.id).map(w => (
+                                        <option key={w.id} value={w.id}>{w.name}</option>
+                                    ))}
+                                </select>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                    <button className="btn" onClick={() => setShowImportModal(false)}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={handleImportGamePlan} disabled={!importSourceWeekId}>Import</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Print Preview Modal */}
                     {showPrintPreview && ReactDOM.createPortal(
                         <div className="print-preview-modal-wrapper print-only-portal" style={{
@@ -46180,48 +46365,43 @@
                             ...existing,
                             wristbands: existing.wristbands || JSON.parse(JSON.stringify(currentGlobalWb)),
                             depthChart: existing.depthChart || JSON.parse(JSON.stringify(currentGlobalDepth)),
-                            zonePhilosophies: existing.zonePhilosophies || JSON.parse(JSON.stringify(currentGlobalZone))
+                            zonePhilosophies: existing.zonePhilosophies || JSON.parse(JSON.stringify(currentGlobalZone)),
+                            gamePlanLayouts: existing.gamePlanLayouts || JSON.parse(JSON.stringify(GAME_PLAN_LAYOUTS))
                         };
                     }
 
-                    if (phase === "Week 1") {
-                        const legacyWeek = existingWeeks.find(w => w.id === 'week-1');
-                        if (legacyWeek) return {
-                            ...legacyWeek,
-                            name: phase,
-                            wristbands: legacyWeek.wristbands || JSON.parse(JSON.stringify(currentGlobalWb)),
-                            depthChart: legacyWeek.depthChart || JSON.parse(JSON.stringify(currentGlobalDepth)),
-                            zonePhilosophies: legacyWeek.zonePhilosophies || JSON.parse(JSON.stringify(currentGlobalZone))
-                        };
-                    }
-
+                    // New Week (Default) if not found
                     return {
-                        id: `phase-${index}`,
+                        id: phase,
                         name: phase,
+                        date: '',
                         opponent: '',
-                        scoutingReport: '',
                         isLocked: false,
                         practicePlans: createDefaultPracticePlans(),
-                        offensiveGamePlan: { sets: [] },
+                        offensiveGamePlan: { sets: [], miniScripts: [] },
                         dumbCallSheetData: {},
-                        pregamePlan: { kickoffTime: '19:00', segments: [] },
-                        gameLog: [],
-                        // Scoped Data Initialization
+                        pregamePlan: {
+                            // Default pregame plan
+                        },
                         wristbands: JSON.parse(JSON.stringify(currentGlobalWb)),
                         depthChart: JSON.parse(JSON.stringify(currentGlobalDepth)),
-                        zonePhilosophies: JSON.parse(JSON.stringify(currentGlobalZone))
+                        zonePhilosophies: JSON.parse(JSON.stringify(currentGlobalZone)),
+                        gamePlanLayouts: JSON.parse(JSON.stringify(GAME_PLAN_LAYOUTS))
                     };
                 });
 
-                const customWeeks = existingWeeks.filter(w => !OPS_CALENDAR.includes(w.name) && w.id !== 'week-1').map(w => ({
+                // Also migrate custom weeks (those not in OPS_CALENDAR)
+                const phaseSet = new Set(OPS_CALENDAR);
+                const customWeeks = existingWeeks.filter(w => !phaseSet.has(w.name));
+                const migratedCustomWeeks = customWeeks.map(w => ({
                     ...w,
-                    // Backfill custom weeks too
                     wristbands: w.wristbands || JSON.parse(JSON.stringify(currentGlobalWb)),
                     depthChart: w.depthChart || JSON.parse(JSON.stringify(currentGlobalDepth)),
-                    zonePhilosophies: w.zonePhilosophies || JSON.parse(JSON.stringify(currentGlobalZone))
+                    zonePhilosophies: w.zonePhilosophies || JSON.parse(JSON.stringify(currentGlobalZone)),
+                    gamePlanLayouts: w.gamePlanLayouts || JSON.parse(JSON.stringify(GAME_PLAN_LAYOUTS))
                 }));
 
-                return [...mergedWeeks, ...customWeeks];
+                return [...mergedWeeks, ...migratedCustomWeeks];
             });
 
             const [currentWeekId, setCurrentWeekId] = useState(() => {
@@ -46460,16 +46640,18 @@
                     opponent: '',
                     scoutingReport: '',
                     isLocked: false,
-                    // Copy practice plans structure
-                    practicePlans: JSON.parse(JSON.stringify(prevWeek.practicePlans)),
-                    pregamePlan: JSON.parse(JSON.stringify(prevWeek.pregamePlan)),
-                    offensiveGamePlan: prevWeek.offensiveGamePlan ? JSON.parse(JSON.stringify(prevWeek.offensiveGamePlan)) : { sets: [] },
-                    dumbCallSheetData: prevWeek.dumbCallSheetData ? JSON.parse(JSON.stringify(prevWeek.dumbCallSheetData)) : {},
+                    // Independent Week Initialization (Blank Slate)
+                    practicePlans: createDefaultPracticePlans(),
+                    pregamePlan: { script: [] },
+                    offensiveGamePlan: { sets: [] },
+                    dumbCallSheetData: {},
+                    newInstallIds: [], // Start with no installs
 
-                    // Scoped Data Carryover (Clone)
-                    wristbands: prevWeek.wristbands ? JSON.parse(JSON.stringify(prevWeek.wristbands)) : JSON.parse(JSON.stringify(getGlobalWbSettings())),
-                    depthChart: prevWeek.depthChart ? JSON.parse(JSON.stringify(prevWeek.depthChart)) : JSON.parse(JSON.stringify(getGlobalDepthCharts())),
-                    zonePhilosophies: prevWeek.zonePhilosophies ? JSON.parse(JSON.stringify(prevWeek.zonePhilosophies)) : JSON.parse(JSON.stringify(getGlobalZonePhilosophies())),
+                    // Scoped Data Defaults (Global Fallbacks)
+                    wristbands: JSON.parse(JSON.stringify(getGlobalWbSettings())),
+                    depthChart: JSON.parse(JSON.stringify(getGlobalDepthCharts())),
+                    zonePhilosophies: JSON.parse(JSON.stringify(getGlobalZonePhilosophies())),
+                    gamePlanLayouts: JSON.parse(JSON.stringify(GAME_PLAN_LAYOUTS)),
 
                     gameLog: []
                 };
@@ -49457,7 +49639,7 @@
                             setMasterTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
                         }} />}
                         {view === 'reports' && <ReportsView roster={roster} attendance={attendance} setAttendance={setAttendance} permissions={currentPermissions.dashboard} />}
-                        {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} gamePlans={currentWeek.offensiveGamePlan} depthChart={depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={wbSettings} setWbSettings={setWbSettings} plays={plays} drills={drills} />}
+                        {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} drills={drills} />}
                         {view === 'drill-library-offense' && <DrillLibraryView phase="OFFENSE" drills={drills} onAddDrill={handleAddDrill} />}
                         {view === 'drill-library-defense' && <DrillLibraryView phase="DEFENSE" drills={drills} onAddDrill={handleAddDrill} />}
                         {view === 'drill-library-st' && <DrillLibraryView phase="SPECIAL_TEAMS" drills={drills} onAddDrill={handleAddDrill} />}
@@ -49823,12 +50005,12 @@
                             )
                         }
 
-                        {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} />}
+                        {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} defaultWbSettings={getGlobalWbSettings()} defaultDepthChart={getGlobalDepthCharts()} defaultZonePhilosophies={getGlobalZonePhilosophies()} />}
                         {view === 'practice-report' && <PracticeReportView weeks={weeks} plays={plays} playSyntax={playSyntax} parsePlayName={parsePlayName} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={gamePlanLayouts} weeks={weeks} currentWeek={currentWeek} onUpdateLayouts={(newLayouts) => {
-                            setGamePlanLayouts(newLayouts);
-
-                        }} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} onUpdateWeek={handleUpdateWeek} />}
+                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} weeks={weeks} currentWeek={currentWeek} onUpdateLayouts={(newLayouts) => {
+                            // Update WEEK specific layout
+                            handleUpdateWeek(currentWeek.id, 'gamePlanLayouts', newLayouts);
+                        }} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} onUpdateWeek={handleUpdateWeek} />}
 
                         {
                             view === 'playbook' && (
