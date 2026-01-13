@@ -7944,7 +7944,7 @@
                                                     <span>{getPlayDisplayName(play)}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                    {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>}
+                                                    {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}{activeCard?.type === 'standard' ? 'T' : ''}</span>}
                                                     {play.staplesSlot && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '4px' }}>[{play.staplesSlot}]</span>}
                                                 </div>
                                             </div>
@@ -8217,7 +8217,8 @@
                                         renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
                                     )}
                                 </div>
-                            ) : null}\n                        </div>
+                            ) : null}
+                        </div>
                     </div>
 
                     {/* Print Layout (hidden on screen, shown when printing) */}
@@ -39533,25 +39534,25 @@
                                 <Icon name="Download" size={16} />
                                 <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>IMPORT</span>
                             </button>
-                            <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'matrix' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('matrix')} style={{ height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 STRIKE 'EM OUT
                             </button>
-                            <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'sheet' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('sheet')} style={{ height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 SITUATIONS & SCRIPTS
                             </button>
-                            <button className={`btn ${viewMode === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('fzdnd')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('fzdnd')} style={{ height: '52px', width: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 FZDnD
                             </button>
-                            <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'priority' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('priority')} style={{ height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 PRIORITY PLAYS
                             </button>
-                            <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'staples' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('staples')} style={{ height: '52px', width: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 STAPLES
                             </button>
-                            <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')} style={{ height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')} style={{ height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 PLAYER TOUCHES
                             </button>
-                            <button className={`btn ${showPrintPreview ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowPrintPreview(!showPrintPreview)} style={{ border: '2px solid var(--accent)', height: '52px', width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }}>
+                            <button className={`btn ${showPrintPreview ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowPrintPreview(!showPrintPreview)} style={{ border: '2px solid var(--accent)', height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 {showPrintPreview ? 'CLOSE PREVIEW' : 'PRINT PREVIEW'}
                             </button>
                             {/* Stats Ticker */}
@@ -39605,28 +39606,28 @@
                                 });
 
                                 return (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft: '1rem' }}>
-                                        <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>THIS WEEK</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft: '0.5rem' }}>
+                                        <div style={{ fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>THIS WEEK</div>
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
                                             background: '#e0e7ff',
-                                            borderRadius: '24px',
-                                            padding: '0.25rem 1rem',
+                                            borderRadius: '20px',
+                                            padding: '0.2rem 0.6rem',
                                             border: '1px solid #c7d2fe',
-                                            height: '38px' // Match button height
+                                            height: '36px'
                                         }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', marginRight: '1rem', paddingRight: '1rem', borderRight: '1px solid #a5b4fc' }}>
-                                                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white', marginRight: '0.25rem', textShadow: '0px 1px 2px rgba(0,0,0,0.1)' }}>{uniquePlaysCount}</span>
-                                                <span style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 'bold' }}>Unique Calls</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', marginRight: '0.5rem', paddingRight: '0.5rem', borderRight: '1px solid #a5b4fc' }}>
+                                                <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white', marginRight: '0.2rem', textShadow: '0px 1px 2px rgba(0,0,0,0.1)' }}>{uniquePlaysCount}</span>
+                                                <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>Unique</span>
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', marginRight: '1rem', paddingRight: '1rem', borderRight: '1px solid #a5b4fc' }}>
-                                                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#059669', marginRight: '0.25rem' }}>{newPlaysCount}</span>
-                                                <span style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 'bold' }}>New Calls</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', marginRight: '0.5rem', paddingRight: '0.5rem', borderRight: '1px solid #a5b4fc' }}>
+                                                <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#059669', marginRight: '0.2rem' }}>{newPlaysCount}</span>
+                                                <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>New</span>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#6366f1', marginRight: '0.25rem' }}>{totalScriptSlots}</span>
-                                                <span style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 'bold' }}>Practice Script Slots</span>
+                                                <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#6366f1', marginRight: '0.2rem' }}>{totalScriptSlots}</span>
+                                                <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>Scripts</span>
                                             </div>
                                         </div>
                                     </div>
@@ -48672,18 +48673,10 @@
                                         <div style={{ width: '250px', flexShrink: 0 }}>
                                             <h3 style={{ marginTop: 0 }}>Categories</h3>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                {playCategories.map(cat => (
-                                                    <button
-                                                        key={cat.id}
-                                                        className={`btn-ghost ${selectedBucketCategory === cat.id ? 'active' : ''}`}
-                                                        style={{
-                                                            justifyContent: 'flex-start',
-                                                            background: selectedBucketCategory === cat.id ? 'var(--accent-light)' : 'transparent',
-                                                            borderLeft: selectedBucketCategory === cat.id ? '3px solid var(--accent)' : '3px solid transparent',
-                                                            fontWeight: selectedBucketCategory === cat.id ? 'bold' : 'normal'
-                                                        }}
-                                                        onClick={() => setSelectedBucketCategory(cat.id)}
-                                                    >
+                                                                                                                                                                                                                 key={cat.id}
+                                                                                                                                                                                                                                                                                          justifyContent: 'flex-start',
+                                                                                           ketCategory === cat.id ? 'var(--accent-light)' : 'transparent',
+                                                                                                     y === cat.id ? '3px solid var(--accent)'                                                                                                                                                                                                                                                                                                                                                                                        --text-                                                                                                                                                                              tSe                                                                                      >
                                                         {cat.label}
                                                     </button>
                                                 ))}
@@ -50937,10 +50930,9 @@
             }
         }
 
-        ReactDOM.render(
-            <ErrorBoundary>
-                <AuthProvider>
-                    <App />
+        ReactDOM.rr(
+     <ErrorBoundary>
+                <Autvid                 <App />
                 </AuthProvider>
             </ErrorBoundary>,
             document.getElementById('root')
