@@ -49158,20 +49158,54 @@
                                         if (!weeklyDraggedTask) return;
 
                                         const { type: sourceCol, index: sourceIndex, item } = weeklyDraggedTask;
+                                        console.log('DROP:', { sourceCol, targetCol, sourceIndex, targetIndex, item });
+                                        console.log('SourceList Before:', weeklyLists[sourceCol]);
+                                        console.log('TargetList Before:', weeklyLists[targetCol]);
 
-                                        // Remove from source
-                                        const sourceList = weeklyLists[sourceCol];
-                                        const newSourceList = sourceList.filter((_, i) => i !== sourceIndex);
-                                        weeklySetters[sourceCol](newSourceList);
+                                        // Same Column Reordering
+                                        if (sourceCol === targetCol) {
+                                            if (sourceIndex === targetIndex) {
+                                                setWeeklyDraggedTask(null);
+                                                return;
+                                            }
 
-                                        // Add to target
-                                        const targetList = weeklyLists[targetCol];
-                                        if (targetIndex !== null) {
-                                            const newTargetList = [...targetList];
-                                            newTargetList.splice(targetIndex, 0, item);
-                                            weeklySetters[targetCol](newTargetList);
-                                        } else {
-                                            weeklySetters[targetCol]([...targetList, item]);
+                                            const newList = [...weeklyLists[sourceCol]];
+                                            // Remove from source index
+                                            const [removedItem] = newList.splice(sourceIndex, 1);
+
+                                            // Insert at target index
+                                            // Note: If we drag from top (0) to bottom (5), the target index is based on the list BEFORE removal.
+                                            // But since we remove first, indices shift. 
+                                            // Simple Approach: If dropped on a specific item, insert at that index.
+                                            // If dropped on empty space (targetIndex null), push to end.
+
+                                            if (targetIndex !== null) {
+                                                // Optional: Adjust target index if dragging down?
+                                                // For simplicity in this specific UI, direct splice is usually sufficient and intuitive enough.
+                                                // If precise 'insert after' behavior is needed, logic would be: if (sourceIndex < targetIndex) finalIndex = targetIndex - 1;
+                                                // But let's stick to standard splice insertion for now as it's safe.
+                                                newList.splice(targetIndex, 0, removedItem);
+                                            } else {
+                                                newList.push(removedItem);
+                                            }
+
+                                            weeklySetters[sourceCol](newList);
+                                        }
+                                        // Different Column Move
+                                        else {
+                                            // Remove from source (safely using functional update)
+                                            weeklySetters[sourceCol](prevList => prevList.filter((_, i) => i !== sourceIndex));
+
+                                            // Add to target (safely using functional update)
+                                            weeklySetters[targetCol](prevList => {
+                                                const newList = [...prevList];
+                                                if (targetIndex !== null) {
+                                                    newList.splice(targetIndex, 0, item);
+                                                } else {
+                                                    newList.push(item);
+                                                }
+                                                return newList;
+                                            });
                                         }
 
                                         setWeeklyDraggedTask(null);
