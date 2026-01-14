@@ -36787,13 +36787,16 @@
                         {play ? (
                             <div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', display: 'flex', alignItems: 'center' }}>
                                 <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{getPlayDisplayName(play)}</span>
-                                {(!play.formation || !play.name.toLowerCase().includes(play.formation.toLowerCase())) && (
-                                    <span style={{ fontSize: '0.85em', color: '#334155', marginLeft: '6px' }}>{play.formation}</span>
+                                {play.staplesSlot && <span style={{ fontSize: '0.8em', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '3px', marginLeft: '4px', fontWeight: 'bold' }}>S:{play.staplesSlot}</span>}
+
+                                {renderWristbandInput && renderWristbandInput(play.id)}
+
+                                {!renderWristbandInput && play.wristbandSlot && (
+                                    <span style={{ fontSize: '0.8em', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '3px', marginLeft: '6px', fontWeight: 'bold' }}>
+                                        {typeof getWristbandLabel === 'function' ? getWristbandLabel(play) : play.wristbandSlot + (play.isMiniScript || play.isWiz || play.isRooski ? '' : 'T')}
+                                    </span>
                                 )}
-                                {renderWristbandInput ? renderWristbandInput(play.id) : (
-                                    play.wristbandSlot && <span style={{ fontSize: '0.8em', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '3px', marginLeft: '6px', fontWeight: 'bold' }}>{play.wristbandSlot}</span>
-                                )}
-                                {play.staplesSlot && <span style={{ fontSize: '0.8em', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '3px', marginLeft: '4px', fontWeight: 'bold' }}>S:{play.staplesSlot}</span>} {play.staplesSlot && <span style={{ fontSize: '0.8em', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '3px', marginLeft: '4px', fontWeight: 'bold' }}>S:{play.staplesSlot}</span>}
+
                                 {!isLocked && <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px', fontSize: '1.2em', lineHeight: '1' }} onClick={() => onUpdate(null)}>×</button>}
                             </div>
                         ) : (
@@ -37418,6 +37421,7 @@
                                                 <PlaySlot
                                                     playId={row.content}
                                                     isLocked={isLocked}
+                                                    renderWristbandInput={renderWristbandInput}
                                                     onUpdate={(pid) => {
                                                         const newLayouts = { ...gamePlanLayouts };
                                                         const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
@@ -37453,7 +37457,6 @@
                                                     }}
                                                 />
                                             </div>
-                                            {renderWristbandInput(row.content)}
                                         </div>
 
                                         {/* Right Play Slot */}
@@ -37462,6 +37465,7 @@
                                                 <PlaySlot
                                                     playId={row.contentRight}
                                                     isLocked={isLocked}
+                                                    renderWristbandInput={renderWristbandInput}
                                                     onUpdate={(pid) => {
                                                         const newLayouts = { ...gamePlanLayouts };
                                                         const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
@@ -37495,7 +37499,6 @@
                                                     }}
                                                 />
                                             </div>
-                                            {renderWristbandInput(row.contentRight)}
                                         </div>
                                     </div>
 
@@ -46295,10 +46298,7 @@
             else if (play.isRooski && play.wristbandSlot) {
                 suffix = 'R';
             }
-            // Check for traditional wristband
-            else if (play.wristbandSlot && !play.isWiz && !play.isRooski && !play.isMiniScript) {
-                suffix = 'T';
-            }
+            // Traditional wristband - NO SUFFIX ON NAME
 
             return play.name + suffix;
         };
@@ -46308,29 +46308,14 @@
             let suffix = 'T'; // Default Traditional
             if (play.isWiz || play.isRooski) suffix = 'W';
             else if (play.isMiniScript) {
-                // If slot already has letter (e.g. A101), maybe don't append? 
-                // User example: 101A. 
-                // If slot is "101", append "A" or "B"? 
-                // We don't know which A or B unless it's in the slot string or we check something.
-                // Looking at getPlayDisplayName logic: "Extract letter from wristband slot... const letter = play.wristbandSlot.charAt(0)".
-                // If the slot is "A101", letter is A. 
-                // If the slot is just numbers "101", we might default to A? 
-                // Let's mimic getPlayDisplayName logic: if first char is A or B, use that.
+                // Logic for MiniScript suffix if needed, or rely on slot content
                 const first = play.wristbandSlot.charAt(0).toUpperCase();
-                if (first === 'A' || first === 'B') suffix = ''; // Already has it? Or is it a prefix? 
-                // User request example: "101A".
-                // Existing logic: const letter = play.wristbandSlot.charAt(0); if (letter === 'A' || letter === 'B') suffix = letter;
-                // If the slot is stored as "A101", then showing "A101A" is wrong.
-                // If slot is stored as "101", showing "101A" is right.
-                // Let's assume standard behavior: append T/W. For MiniScript, if it looks like a standard number, append 'A' (primary) or maybe just leave it if ambiguous?
-                // Safer: Check if the slot ENDS with a letter.
-                // If play.wristbandSlot is "101", and isMiniScript -> "101A" (or B? We lack context).
-                // User prompt: "mini scripts would have an A or B behind it".
-                // Let's default to 'A' if no letter found, but respecting existing letters.
-                suffix = 'A';
-                if (/[a-zA-Z]/.test(play.wristbandSlot)) suffix = ''; // Already has a letter
+                if (first === 'A' || first === 'B') suffix = '';
+                else suffix = 'A'; // Default to A if ambiguous
+                if (/[a-zA-Z]/.test(play.wristbandSlot)) suffix = '';
             }
-            // Check if slot already ends with the intended suffix to avoid double suffix
+
+            // Allow override: if user explicitly sets "101T", don't add another T
             if (play.wristbandSlot.trim().toUpperCase().endsWith(suffix)) return play.wristbandSlot;
 
             return play.wristbandSlot + suffix;
