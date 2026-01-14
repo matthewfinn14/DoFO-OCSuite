@@ -34637,7 +34637,7 @@
                         // 1. Try Game Plan Data (Primary)
                         const setInSets = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null);
                         const setInMini = gamePlan?.miniScripts?.[sectionId] || (Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts.find(s => s.id === sectionId) : null);
-ts || setInMini;
+                        const setData = setInSets || setInMini;
 
                         if (setData && (setData.assignedPlayIds || setData.playIds)) {
                             rawIds = setData.assignedPlayIds || setData.playIds || [];
@@ -34645,17 +34645,29 @@ ts || setInMini;
 
                         // 2. Fallback to Layouts (Parallel Process - Fail-safe)
                         if ((!rawIds || rawIds.length === 0) && gamePlanLayouts?.CALL_SHEET?.sections) {
-                            for (const sec of ga                            ions) {
-                                if (!sec.boxes) c                                        const box = sec.bo                                Id);
+                            for (const sec of gamePlanLayouts.CALL_SHEET.sections) {
+                                if (!sec.boxes) continue;
+                                const box = sec.boxes.find(b => b.setId === sectionId);
                                 if (box) {
-                                        r Grids
-                                       box.assignedP                                    > 0) {
-                                        rawIds = box.a                                                   }
-                                                                                           f (box.rows) {
-                                       const scriptIds =                                            box.rows.forEach(r                                                 if (r.content) s                                                                     if (r.contentRigh                                                                          });
-                                                          t(sc                                              }
-                                                                                                       }
-                                                                s.map(id => {
+                                    // For Grids
+                                    if (box.assignedPlayIds && box.assignedPlayIds.length > 0) {
+                                        rawIds = box.assignedPlayIds;
+                                    }
+                                    // For Scripts
+                                    else if (box.rows) {
+                                        const scriptIds = [];
+                                        box.rows.forEach(r => {
+                                            if (r.content) scriptIds.push(r.content);
+                                            if (r.contentRight) scriptIds.push(r.contentRight);
+                                        });
+                                        rawIds = [...new Set(scriptIds)];
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+
+                        playList = rawIds.map(id => {
                             const pid = typeof id === 'object' ? id.id : id;
                             if (pid === 'GAP') return null;
                             return plays.find(p => p.id === pid);
@@ -52329,33 +52341,33 @@ ts || setInMini;
             static getDerivedStateFromError(error) {
                 return { hasError: true };
                 componentatc, errorInfo) {
-                this.setState({ error, errorInfo });
-                console.error("Caught error:", error, errorInfo);
-            }
-
-
-            render() {
-                if (this.state.hasError) {
-                    return (
-                        <div style={{ padding: '2rem', color: '#ef4444', background: '#1e293b', height: '100vh' }}>
-                            <h1>Something went wrong.</h1>
-                            <details style={{ whiteSpace: 'pre-wrap' }}>
-                                {this.state.error && this.state.error.toString()}
-                                <br />
-                                {this.state.errorInfo && this.state.errorInfo.componentStack}
-                            </details>
-                        </div>
-                    );
+                    this.setState({ error, errorInfo });
+                    console.error("Caught error:", error, errorInfo);
                 }
-                return this.props.children;
+
+
+                render() {
+                    if (this.state.hasError) {
+                        return (
+                            <div style={{ padding: '2rem', color: '#ef4444', background: '#1e293b', height: '100vh' }}>
+                                <h1>Something went wrong.</h1>
+                                <details style={{ whiteSpace: 'pre-wrap' }}>
+                                    {this.state.error && this.state.error.toString()}
+                                    <br />
+                                    {this.state.errorInfo && this.state.errorInfo.componentStack}
+                                </details>
+                            </div>
+                        );
+                    }
+                    return this.props.children;
+                }
             }
-        }
 
         ReactDOM.render(
             <ErrorBoundary>
-                <AuthProvider>
-                    <App />
-                </AuthProvider>
+            <AuthProvider>
+                <App />
+            </AuthProvider>
             </ErrorBoundary >,
             document.getElementById('root')
         );
