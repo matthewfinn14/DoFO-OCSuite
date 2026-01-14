@@ -8689,7 +8689,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [] }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -8706,6 +8706,17 @@
             const [globalTemplates, setGlobalTemplates] = useState([]);
             const [notesModalSegmentId, setNotesModalSegmentId] = useState(null); // Track which segment's notes modal is open
             const [gameplanDropdownOpen, setGameplanDropdownOpen] = useState(false);
+
+            // Side Menu State
+            const [showSideMenu, setShowSideMenu] = useState(false);
+
+            // Effect to collapse global sidebar when local side menu is open
+            useEffect(() => {
+                if (setAppSidebarCollapsed) {
+                    setAppSidebarCollapsed(showSideMenu);
+                }
+            }, [showSideMenu, setAppSidebarCollapsed]);
+
             console.log('PracticeScriptBuilder render. notesModalSegmentId:', notesModalSegmentId);
 
             // Fetch global practice templates from Firestore
@@ -8782,6 +8793,60 @@
 
 
             const priorityPlays = React.useMemo(() => plays.filter(p => p.priority), [plays]);
+
+            // Replicated weekStats logic for Side Menu
+            const weekStats = React.useMemo(() => {
+                // Calculate unique plays in game plan
+                const allGamePlanPlayIds = new Set();
+                Object.values(gamePlan?.sets || {}).forEach(set => {
+                    (set.playIds || []).forEach(item => {
+                        const id = typeof item === 'object' ? item.id : item;
+                        if (id) allGamePlanPlayIds.add(id);
+                    });
+                });
+                Object.values(gamePlan?.miniScripts || {}).forEach(script => {
+                    (script.playIds || []).forEach(item => {
+                        const id = typeof item === 'object' ? item.id : item;
+                        if (id) allGamePlanPlayIds.add(id);
+                    });
+                });
+                const uniquePlaysCount = allGamePlanPlayIds.size;
+
+                // Calculate new plays (plays added this week that weren't in previous weeks)
+                const previousWeekPlayIds = new Set();
+                weeks.forEach(w => {
+                    if (w.weekNumber < currentWeek.weekNumber) {
+                        const prevGamePlan = w.gamePlan || {};
+                        Object.values(prevGamePlan.sets || {}).forEach(set => {
+                            (set.playIds || []).forEach(item => {
+                                const id = typeof item === 'object' ? item.id : item;
+                                if (id) previousWeekPlayIds.add(id);
+                            });
+                        });
+                        Object.values(prevGamePlan.miniScripts || {}).forEach(script => {
+                            (script.playIds || []).forEach(item => {
+                                const id = typeof item === 'object' ? item.id : item;
+                                if (id) previousWeekPlayIds.add(id);
+                            });
+                        });
+                    }
+                });
+                const newPlaysCount = Array.from(allGamePlanPlayIds).filter(id => !previousWeekPlayIds.has(id)).length;
+
+                // Calculate total practice script slots for the week
+                let totalScriptSlots = 0;
+                const plansList = Array.isArray(plans) ? plans : Object.values(plans || {});
+
+                plansList.forEach(p => {
+                    (p.segments || []).forEach(seg => {
+                        if (seg.hasScript && seg.script) {
+                            totalScriptSlots += seg.script.length;
+                        }
+                    });
+                });
+
+                return { uniquePlaysCount, newPlaysCount, totalScriptSlots };
+            }, [gamePlan, weeks, currentWeek, plans]);
 
             // Helper functions for phase-based filtering
             const getSegmentTypesForPhase = (phase) => {
@@ -10888,6 +10953,7 @@
                                 />
                             </div>
                         </div> {/* Close Right Column */}
+
                     </div> {/* Close Practice Flex Container */}
 
                     {/* Print Only: Scripts View (Page 2) */}
@@ -10987,569 +11053,367 @@
                                 </div>
 
                                 {/* Modal Content */}
-                                <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-                                    {(() => {
-                                        const activeSegment = plan.segments.find(s => s.id === selectedSegmentId);
-                                        if (!activeSegment) return <div>Segment not found</div>;
+                                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
+                                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+                                        {(() => {
+                                            const activeSegment = plan.segments.find(s => s.id === selectedSegmentId);
+                                            if (!activeSegment) return <div>Segment not found</div>;
 
-                                        const preset = findPreset(activeSegment.type, activeSegment.situation);
-                                        const showYardLine = preset ? preset.useYardLine : activeSegment.type === 'Take-Off';
+                                            const preset = findPreset(activeSegment.type, activeSegment.situation);
+                                            const showYardLine = preset ? preset.useYardLine : activeSegment.type === 'Take-Off';
 
-                                        const updateScript = (newScript) => {
-                                            updateSegment(selectedSegmentId, 'script', newScript);
-                                        };
+                                            const updateScript = (newScript) => {
+                                                updateSegment(selectedSegmentId, 'script', newScript);
+                                            };
 
-                                        const handleAddSection = (sectionId) => {
-                                            let itemsToAdd = [];
+                                            const handleAddSection = (sectionId) => {
+                                                let itemsToAdd = [];
 
-                                            // 1. Check Matrix Formation
-                                            const matrixFormation = gamePlanLayouts?.MATRIX?.formations?.find(f => f.id === sectionId);
-                                            if (matrixFormation) {
-                                                const playIds = new Set();
-                                                const layout = gamePlanLayouts.MATRIX;
-                                                layout.playTypes.forEach(pt => {
-                                                    layout.cols.forEach(col => {
-                                                        const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
-                                                        const cellData = gamePlan?.sets?.[setId];
-                                                        if (cellData && cellData.assignedPlayIds) {
-                                                            cellData.assignedPlayIds.forEach(id => playIds.add(id));
-                                                        } else if (cellData && cellData.playIds) {
-                                                            cellData.playIds.forEach(id => playIds.add(id));
-                                                        }
+                                                // 1. Check Matrix Formation
+                                                const matrixFormation = gamePlanLayouts?.MATRIX?.formations?.find(f => f.id === sectionId);
+                                                if (matrixFormation) {
+                                                    const playIds = new Set();
+                                                    const layout = gamePlanLayouts.MATRIX;
+                                                    layout.playTypes.forEach(pt => {
+                                                        layout.cols.forEach(col => {
+                                                            const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
+                                                            const cellData = gamePlan?.sets?.[setId];
+                                                            if (cellData && cellData.assignedPlayIds) {
+                                                                cellData.assignedPlayIds.forEach(id => playIds.add(id));
+                                                            } else if (cellData && cellData.playIds) {
+                                                                cellData.playIds.forEach(id => playIds.add(id));
+                                                            }
+                                                        });
                                                     });
-                                                });
-                                                itemsToAdd = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
-                                            } else {
-                                                // 2. Standard Set/Script Lookup
-                                                const setData = gamePlan?.sets?.[sectionId] || gamePlan?.miniScripts?.[sectionId];
-                                                if (setData && (setData.assignedPlayIds || setData.playIds)) {
-                                                    const ids = setData.assignedPlayIds || setData.playIds || [];
-                                                    itemsToAdd = ids.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                                                    itemsToAdd = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
+                                                } else {
+                                                    // 2. Standard Set/Script Lookup
+                                                    const setData = gamePlan?.sets?.[sectionId] || gamePlan?.miniScripts?.[sectionId];
+                                                    if (setData && (setData.assignedPlayIds || setData.playIds)) {
+                                                        const ids = setData.assignedPlayIds || setData.playIds || [];
+                                                        itemsToAdd = ids.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                                                    }
                                                 }
-                                            }
 
-                                            if (itemsToAdd.length === 0) return;
+                                                if (itemsToAdd.length === 0) return;
 
-                                            const currentScript = [...(activeSegment.script || [])];
+                                                const currentScript = [...(activeSegment.script || [])];
 
-                                            itemsToAdd.forEach(playDef => {
-                                                const name = playDef ? playDef.name : 'Unknown Play';
+                                                itemsToAdd.forEach(playDef => {
+                                                    const name = playDef ? playDef.name : 'Unknown Play';
+                                                    const emptyIndex = currentScript.findIndex(row => !row.playName && !row.playId);
+
+                                                    if (emptyIndex !== -1) {
+                                                        // Fill empty slot
+                                                        currentScript[emptyIndex] = {
+                                                            ...currentScript[emptyIndex],
+                                                            playName: name,
+                                                            playId: playDef ? playDef.id : ''
+                                                        };
+                                                    } else {
+                                                        // Append new row
+                                                        const newItem = {
+                                                            hash: 'M',
+                                                            playName: name,
+                                                            playId: playDef ? playDef.id : ''
+                                                        };
+                                                        if (showYardLine) {
+                                                            newItem.yardLine = '';
+                                                            newItem.downDistance = '';
+                                                        } else {
+                                                            newItem.situation = '';
+                                                        }
+                                                        currentScript.push(newItem);
+                                                    }
+                                                });
+
+                                                updateScript(currentScript);
+                                            };
+
+                                            // Side Panel Helper Lists
+                                            // gpPlays and priorityPlays are now computed at component level to avoid Hook errors.
+                                            const handleAddFromSidePanel = (item, type) => {
+                                                const currentScript = [...(activeSegment.script || [])];
+
+                                                // Find the first empty slot
                                                 const emptyIndex = currentScript.findIndex(row => !row.playName && !row.playId);
 
                                                 if (emptyIndex !== -1) {
-                                                    // Fill empty slot
-                                                    currentScript[emptyIndex] = {
-                                                        ...currentScript[emptyIndex],
-                                                        playName: name,
-                                                        playId: playDef ? playDef.id : ''
-                                                    };
+                                                    // Fill existing slot
+                                                    if (type === 'situation') {
+                                                        currentScript[emptyIndex] = { ...currentScript[emptyIndex], situation: item };
+                                                    } else if (type === 'play') {
+                                                        currentScript[emptyIndex] = {
+                                                            ...currentScript[emptyIndex],
+                                                            playName: item.name,
+                                                            playId: item.id
+                                                        };
+                                                    }
                                                 } else {
                                                     // Append new row
-                                                    const newItem = {
-                                                        hash: 'M',
-                                                        playName: name,
-                                                        playId: playDef ? playDef.id : ''
-                                                    };
+                                                    const newItem = { hash: 'M', playName: '', playId: '' };
                                                     if (showYardLine) {
                                                         newItem.yardLine = '';
                                                         newItem.downDistance = '';
                                                     } else {
                                                         newItem.situation = '';
                                                     }
+
+                                                    if (type === 'situation') {
+                                                        newItem.situation = item;
+                                                    } else if (type === 'play') {
+                                                        newItem.playName = item.name;
+                                                        newItem.playId = item.id;
+                                                    }
                                                     currentScript.push(newItem);
                                                 }
-                                            });
 
-                                            updateScript(currentScript);
-                                        };
+                                                updateScript(currentScript);
+                                            };
 
-                                        // Side Panel Helper Lists
-                                        // gpPlays and priorityPlays are now computed at component level to avoid Hook errors.
-                                        const handleAddFromSidePanel = (item, type) => {
-                                            const currentScript = [...(activeSegment.script || [])];
-
-                                            // Find the first empty slot
-                                            const emptyIndex = currentScript.findIndex(row => !row.playName && !row.playId);
-
-                                            if (emptyIndex !== -1) {
-                                                // Fill existing slot
-                                                if (type === 'situation') {
-                                                    currentScript[emptyIndex] = { ...currentScript[emptyIndex], situation: item };
-                                                } else if (type === 'play') {
-                                                    currentScript[emptyIndex] = {
-                                                        ...currentScript[emptyIndex],
-                                                        playName: item.name,
-                                                        playId: item.id
-                                                    };
-                                                }
-                                            } else {
-                                                // Append new row
-                                                const newItem = { hash: 'M', playName: '', playId: '' };
-                                                if (showYardLine) {
-                                                    newItem.yardLine = '';
-                                                    newItem.downDistance = '';
-                                                } else {
-                                                    newItem.situation = '';
-                                                }
-
-                                                if (type === 'situation') {
-                                                    newItem.situation = item;
-                                                } else if (type === 'play') {
-                                                    newItem.playName = item.name;
-                                                    newItem.playId = item.id;
-                                                }
-                                                currentScript.push(newItem);
-                                            }
-
-                                            updateScript(currentScript);
-                                        };
-
-                                        // Helper to filter plays for the side panel
-                                        const getSidePanelItems = () => {
-                                            let items = [];
-                                            if (scriptTab === 'gameplan') {
-                                                if (!selectedGamePlanSection) {
-                                                    // Return list of Sections from LAYOUTS
-                                                    // Items removed as requested
-                                                    return [];
-                                                } else {
-                                                    // Return plays in selected section
-                                                    // Check if it's a Matrix Formation
-                                                    const matrixFormation = gamePlanLayouts?.MATRIX?.formations?.find(f => f.id === selectedGamePlanSection);
-
-                                                    if (matrixFormation) {
-                                                        // Aggregate plays from all cells in this formation row
-                                                        const playIds = new Set();
-                                                        const layout = gamePlanLayouts.MATRIX;
-
-                                                        layout.playTypes.forEach(pt => {
-                                                            layout.cols.forEach(col => {
-                                                                const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
-                                                                const cellData = gamePlan?.sets?.[setId];
-                                                                if (cellData && cellData.assignedPlayIds) {
-                                                                    cellData.assignedPlayIds.forEach(id => playIds.add(id));
-                                                                } else if (cellData && cellData.playIds) {
-                                                                    cellData.playIds.forEach(id => playIds.add(id));
-                                                                }
-                                                            });
-                                                        });
-
-                                                        items = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
-
+                                            // Helper to filter plays for the side panel
+                                            const getSidePanelItems = () => {
+                                                let items = [];
+                                                if (scriptTab === 'gameplan') {
+                                                    if (!selectedGamePlanSection) {
+                                                        // Return list of Sections from LAYOUTS
+                                                        // Items removed as requested
+                                                        return [];
                                                     } else {
-                                                        // Standard Set/Script Lookup
-                                                        // Standard Set/Script Lookup
-                                                        let setData = null;
-                                                        // Handle sets as Array (primary) or Object (fallback)
-                                                        if (gamePlan?.sets) {
-                                                            if (Array.isArray(gamePlan.sets)) {
-                                                                setData = gamePlan.sets.find(s => s.id === selectedGamePlanSection);
-                                                            } else {
-                                                                setData = gamePlan.sets[selectedGamePlanSection];
-                                                            }
-                                                        }
-                                                        // Fallback to miniScripts
-                                                        if (!setData && gamePlan?.miniScripts) {
-                                                            if (Array.isArray(gamePlan.miniScripts)) {
-                                                                setData = gamePlan.miniScripts.find(s => s.id === selectedGamePlanSection);
-                                                            } else {
-                                                                setData = gamePlan.miniScripts[selectedGamePlanSection];
-                                                            }
-                                                        }
+                                                        // Return plays in selected section
+                                                        // Check if it's a Matrix Formation
+                                                        const matrixFormation = gamePlanLayouts?.MATRIX?.formations?.find(f => f.id === selectedGamePlanSection);
 
-                                                        if (setData && (setData.assignedPlayIds || setData.playIds)) {
-                                                            const ids = setData.assignedPlayIds || setData.playIds || [];
-                                                            items = ids.map(item => {
-                                                                // Handle both string IDs and object IDs (e.g. { id: '...', tempo: '...' })
-                                                                const playId = (typeof item === 'object' && item !== null && item.id) ? item.id : item;
-                                                                return plays.find(p => p.id === playId);
-                                                            }).filter(Boolean);
+                                                        if (matrixFormation) {
+                                                            // Aggregate plays from all cells in this formation row
+                                                            const playIds = new Set();
+                                                            const layout = gamePlanLayouts.MATRIX;
+
+                                                            layout.playTypes.forEach(pt => {
+                                                                layout.cols.forEach(col => {
+                                                                    const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
+                                                                    const cellData = gamePlan?.sets?.[setId];
+                                                                    if (cellData && cellData.assignedPlayIds) {
+                                                                        cellData.assignedPlayIds.forEach(id => playIds.add(id));
+                                                                    } else if (cellData && cellData.playIds) {
+                                                                        cellData.playIds.forEach(id => playIds.add(id));
+                                                                    }
+                                                                });
+                                                            });
+
+                                                            items = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
+
+                                                        } else {
+                                                            // Standard Set/Script Lookup
+                                                            // Standard Set/Script Lookup
+                                                            let setData = null;
+                                                            // Handle sets as Array (primary) or Object (fallback)
+                                                            if (gamePlan?.sets) {
+                                                                if (Array.isArray(gamePlan.sets)) {
+                                                                    setData = gamePlan.sets.find(s => s.id === selectedGamePlanSection);
+                                                                } else {
+                                                                    setData = gamePlan.sets[selectedGamePlanSection];
+                                                                }
+                                                            }
+                                                            // Fallback to miniScripts
+                                                            if (!setData && gamePlan?.miniScripts) {
+                                                                if (Array.isArray(gamePlan.miniScripts)) {
+                                                                    setData = gamePlan.miniScripts.find(s => s.id === selectedGamePlanSection);
+                                                                } else {
+                                                                    setData = gamePlan.miniScripts[selectedGamePlanSection];
+                                                                }
+                                                            }
+
+                                                            if (setData && (setData.assignedPlayIds || setData.playIds)) {
+                                                                const ids = setData.assignedPlayIds || setData.playIds || [];
+                                                                items = ids.map(item => {
+                                                                    // Handle both string IDs and object IDs (e.g. { id: '...', tempo: '...' })
+                                                                    const playId = (typeof item === 'object' && item !== null && item.id) ? item.id : item;
+                                                                    return plays.find(p => p.id === playId);
+                                                                }).filter(Boolean);
+                                                            }
                                                         }
                                                     }
+                                                } else if (scriptTab === 'bank') {
+                                                    items = plays;
+                                                } else if (scriptTab === 'situations') {
+                                                    // Return situations based on presets
+                                                    // Filter based on search
+                                                    let presets = scriptPresets.map(p => ({
+                                                        id: p.name,
+                                                        name: p.name,
+                                                        type: 'situation',
+                                                        details: p
+                                                    }));
+                                                    if (scriptPlaySearch) {
+                                                        const q = scriptPlaySearch.toLowerCase();
+                                                        presets = presets.filter(p => p.name.toLowerCase().includes(q));
+                                                    }
+                                                    return presets;
                                                 }
-                                            } else if (scriptTab === 'bank') {
-                                                items = plays;
-                                            } else if (scriptTab === 'situations') {
-                                                // Return situations based on presets
-                                                // Filter based on search
-                                                let presets = scriptPresets.map(p => ({
-                                                    id: p.name,
-                                                    name: p.name,
-                                                    type: 'situation',
-                                                    details: p
-                                                }));
+
                                                 if (scriptPlaySearch) {
                                                     const q = scriptPlaySearch.toLowerCase();
-                                                    presets = presets.filter(p => p.name.toLowerCase().includes(q));
+                                                    items = items.filter(p =>
+                                                        p.name.toLowerCase().includes(q) ||
+                                                        (p.tags && p.tags.some(t => t.toLowerCase().includes(q)))
+                                                    );
                                                 }
-                                                return presets;
-                                            }
+                                                return items.sort((a, b) => a.name.localeCompare(b.name));
+                                            };
 
-                                            if (scriptPlaySearch) {
-                                                const q = scriptPlaySearch.toLowerCase();
-                                                items = items.filter(p =>
-                                                    p.name.toLowerCase().includes(q) ||
-                                                    (p.tags && p.tags.some(t => t.toLowerCase().includes(q)))
-                                                );
-                                            }
-                                            return items.sort((a, b) => a.name.localeCompare(b.name));
-                                        };
-
-                                        return (
-                                            <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-                                                {/* Left: Script Table */}
-                                                <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
-                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                                        <thead style={{ background: 'var(--bg-panel)' }}>
-                                                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                                                <th style={{ padding: '0.5rem', textAlign: 'left', width: '40px' }}>#</th>
-                                                                <th style={{ padding: '0.5rem', textAlign: 'left', width: '60px' }}>Hash</th>
-                                                                {showYardLine ? (
-                                                                    <>
-                                                                        <th style={{ padding: '0.5rem', textAlign: 'left', width: '80px' }}>YL</th>
-                                                                        <th style={{ padding: '0.5rem', textAlign: 'left', width: '100px' }}>Dn/Dist</th>
-                                                                    </>
-                                                                ) : (
-                                                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Situation</th>
-                                                                )}
-                                                                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Play Call</th>
-                                                                <th style={{ padding: '0.5rem', width: '40px' }}></th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {(activeSegment.script || []).map((slot, idx) => (
-                                                                <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                                    <td style={{ padding: '0.5rem', color: 'var(--text-secondary)' }}>{idx + 1}</td>
-                                                                    <td style={{ padding: '0.5rem' }}>
-                                                                        <input
-                                                                            className="form-input"
-                                                                            style={{ padding: '0.25rem', textAlign: 'center', fontWeight: 'bold' }}
-                                                                            value={slot.hash || ''}
-                                                                            onChange={e => {
-                                                                                const newScript = [...activeSegment.script];
-                                                                                newScript[idx] = { ...newScript[idx], hash: e.target.value.toUpperCase() };
-                                                                                updateScript(newScript);
-                                                                            }}
-                                                                            maxLength={2}
-                                                                        />
-                                                                    </td>
+                                            return (
+                                                <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+                                                    {/* Left: Script Table */}
+                                                    <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                                            <thead style={{ background: 'var(--bg-panel)' }}>
+                                                                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                                                    <th style={{ padding: '0.5rem', textAlign: 'left', width: '40px' }}>#</th>
+                                                                    <th style={{ padding: '0.5rem', textAlign: 'left', width: '60px' }}>Hash</th>
                                                                     {showYardLine ? (
                                                                         <>
-                                                                            <td style={{ padding: '0.5rem' }}>
-                                                                                <input
-                                                                                    className="form-input"
-                                                                                    style={{ padding: '0.25rem' }}
-                                                                                    value={slot.yardLine || ''}
-                                                                                    onChange={e => {
-                                                                                        const newScript = [...activeSegment.script];
-                                                                                        newScript[idx] = { ...newScript[idx], yardLine: e.target.value };
-                                                                                        updateScript(newScript);
-                                                                                    }}
-                                                                                />
-                                                                            </td>
-                                                                            <td style={{ padding: '0.5rem' }}>
-                                                                                <input
-                                                                                    className="form-input"
-                                                                                    style={{ padding: '0.25rem' }}
-                                                                                    value={slot.downDistance || ''}
-                                                                                    onChange={e => {
-                                                                                        const newScript = [...activeSegment.script];
-                                                                                        newScript[idx] = { ...newScript[idx], downDistance: e.target.value };
-                                                                                        updateScript(newScript);
-                                                                                    }}
-                                                                                />
-                                                                            </td>
+                                                                            <th style={{ padding: '0.5rem', textAlign: 'left', width: '80px' }}>YL</th>
+                                                                            <th style={{ padding: '0.5rem', textAlign: 'left', width: '100px' }}>Dn/Dist</th>
                                                                         </>
                                                                     ) : (
+                                                                        <th style={{ padding: '0.5rem', textAlign: 'left' }}>Situation</th>
+                                                                    )}
+                                                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Play Call</th>
+                                                                    <th style={{ padding: '0.5rem', width: '40px' }}></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {(activeSegment.script || []).map((slot, idx) => (
+                                                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                                        <td style={{ padding: '0.5rem', color: 'var(--text-secondary)' }}>{idx + 1}</td>
                                                                         <td style={{ padding: '0.5rem' }}>
                                                                             <input
                                                                                 className="form-input"
-                                                                                style={{ padding: '0.25rem', width: '100%' }}
-                                                                                value={slot.situation || ''}
+                                                                                style={{ padding: '0.25rem', textAlign: 'center', fontWeight: 'bold' }}
+                                                                                value={slot.hash || ''}
                                                                                 onChange={e => {
                                                                                     const newScript = [...activeSegment.script];
-                                                                                    newScript[idx] = { ...newScript[idx], situation: e.target.value };
+                                                                                    newScript[idx] = { ...newScript[idx], hash: e.target.value.toUpperCase() };
                                                                                     updateScript(newScript);
                                                                                 }}
+                                                                                maxLength={2}
                                                                             />
                                                                         </td>
-                                                                    )}
-                                                                    <td style={{ padding: '0.5rem' }}>
-                                                                        <input
-                                                                            className="form-input"
-                                                                            style={{ padding: '0.25rem', width: '100%', fontWeight: slot.playId ? 'bold' : 'normal', color: slot.playId ? 'var(--accent)' : 'inherit' }}
-                                                                            value={slot.playName || ''}
-                                                                            onChange={e => {
-                                                                                const newScript = [...activeSegment.script];
-                                                                                newScript[idx] = { ...newScript[idx], playName: e.target.value, playId: '' }; // Clear ID on manual edit
-                                                                                updateScript(newScript);
-                                                                            }}
-                                                                            placeholder="Select or type play..."
-                                                                        />
-                                                                    </td>
-                                                                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                                                                        {showYardLine ? (
+                                                                            <>
+                                                                                <td style={{ padding: '0.5rem' }}>
+                                                                                    <input
+                                                                                        className="form-input"
+                                                                                        style={{ padding: '0.25rem' }}
+                                                                                        value={slot.yardLine || ''}
+                                                                                        onChange={e => {
+                                                                                            const newScript = [...activeSegment.script];
+                                                                                            newScript[idx] = { ...newScript[idx], yardLine: e.target.value };
+                                                                                            updateScript(newScript);
+                                                                                        }}
+                                                                                    />
+                                                                                </td>
+                                                                                <td style={{ padding: '0.5rem' }}>
+                                                                                    <input
+                                                                                        className="form-input"
+                                                                                        style={{ padding: '0.25rem' }}
+                                                                                        value={slot.downDistance || ''}
+                                                                                        onChange={e => {
+                                                                                            const newScript = [...activeSegment.script];
+                                                                                            newScript[idx] = { ...newScript[idx], downDistance: e.target.value };
+                                                                                            updateScript(newScript);
+                                                                                        }}
+                                                                                    />
+                                                                                </td>
+                                                                            </>
+                                                                        ) : (
+                                                                            <td style={{ padding: '0.5rem' }}>
+                                                                                <input
+                                                                                    className="form-input"
+                                                                                    style={{ padding: '0.25rem', width: '100%' }}
+                                                                                    value={slot.situation || ''}
+                                                                                    onChange={e => {
+                                                                                        const newScript = [...activeSegment.script];
+                                                                                        newScript[idx] = { ...newScript[idx], situation: e.target.value };
+                                                                                        updateScript(newScript);
+                                                                                    }}
+                                                                                />
+                                                                            </td>
+                                                                        )}
+                                                                        <td style={{ padding: '0.5rem' }}>
+                                                                            <input
+                                                                                className="form-input"
+                                                                                style={{ padding: '0.25rem', width: '100%', fontWeight: slot.playId ? 'bold' : 'normal', color: slot.playId ? 'var(--accent)' : 'inherit' }}
+                                                                                value={slot.playName || ''}
+                                                                                onChange={e => {
+                                                                                    const newScript = [...activeSegment.script];
+                                                                                    newScript[idx] = { ...newScript[idx], playName: e.target.value, playId: '' }; // Clear ID on manual edit
+                                                                                    updateScript(newScript);
+                                                                                }}
+                                                                                placeholder="Select or type play..."
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                                                                            <button
+                                                                                className="btn"
+                                                                                style={{ color: '#ef4444', padding: '0.25rem' }}
+                                                                                onClick={() => {
+                                                                                    const newScript = activeSegment.script.filter((_, i) => i !== idx);
+                                                                                    updateScript(newScript);
+                                                                                }}
+                                                                                tabIndex={-1}
+                                                                            >
+                                                                                ×
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                                <tr>
+                                                                    <td colSpan={10} style={{ padding: '1rem', textAlign: 'center' }}>
                                                                         <button
-                                                                            className="btn"
-                                                                            style={{ color: '#ef4444', padding: '0.25rem' }}
-                                                                            onClick={() => {
-                                                                                const newScript = activeSegment.script.filter((_, i) => i !== idx);
-                                                                                updateScript(newScript);
-                                                                            }}
-                                                                            tabIndex={-1}
+                                                                            className="btn btn-secondary"
+                                                                            onClick={() => handleAddFromSidePanel({ name: '', id: '' }, 'manual')}
                                                                         >
-                                                                            ×
+                                                                            + Add Row
                                                                         </button>
                                                                     </td>
                                                                 </tr>
-                                                            ))}
-                                                            <tr>
-                                                                <td colSpan={10} style={{ padding: '1rem', textAlign: 'center' }}>
-                                                                    <button
-                                                                        className="btn btn-secondary"
-                                                                        onClick={() => handleAddFromSidePanel({ name: '', id: '' }, 'manual')}
-                                                                    >
-                                                                        + Add Row
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-
-                                                {/* Right: Side Panel (Library) */}
-                                                <div style={{ width: '350px', borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-sub)' }}>
-                                                    <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                                                        {scriptTab === 'gameplan' && selectedGamePlanSection ? (
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                                <button
-                                                                    className="btn btn-secondary"
-                                                                    style={{ alignSelf: 'flex-start', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
-                                                                    onClick={() => setSelectedGamePlanSection(null)}
-                                                                >
-                                                                    ← Back
-                                                                </button>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                    <span style={{ fontWeight: 'bold' }}>
-                                                                        {Object.values(gamePlan || {}).find(s => s.id === selectedGamePlanSection)?.header || 'Section'}
-                                                                    </span>
-                                                                    <button
-                                                                        className="btn btn-primary"
-                                                                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                                                                        onClick={() => handleAddSection(selectedGamePlanSection)}
-                                                                    >
-                                                                        Add All
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <>
-                                                                <input
-                                                                    type="text"
-                                                                    className="form-input"
-                                                                    placeholder="Search..."
-                                                                    style={{ width: '100%', marginBottom: '0.5rem' }}
-                                                                    value={scriptPlaySearch}
-                                                                    onChange={e => setScriptPlaySearch(e.target.value)}
-                                                                />
-                                                                <div style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
-                                                                    {/* Gameplan Dropdown */}
-                                                                    <div style={{ flex: 1, position: 'relative' }}>
-                                                                        <button
-                                                                            className={`btn ${scriptTab === 'gameplan' ? 'btn-primary' : 'btn-secondary'}`}
-                                                                            style={{ width: '100%', fontSize: '0.8rem', padding: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                                                                            onClick={() => {
-                                                                                setScriptTab('gameplan');
-                                                                                setSelectedGamePlanSection(null);
-                                                                            }}
-                                                                        >
-                                                                            Gameplan
-                                                                        </button>
-
-                                                                    </div>
-
-                                                                    {['bank', 'situations'].map(tab => (
-                                                                        <button
-                                                                            key={tab}
-                                                                            className={`btn ${scriptTab === tab ? 'btn-primary' : 'btn-secondary'}`}
-                                                                            style={{ flex: 1, fontSize: '0.8rem', padding: '0.25rem' }}
-                                                                            onClick={() => {
-                                                                                setScriptTab(tab);
-                                                                                setSelectedGamePlanSection(null);
-                                                                                setGameplanDropdownOpen(false);
-                                                                            }}
-                                                                        >
-                                                                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            </>
-                                                        )}
+                                                            </tbody>
+                                                        </table>
                                                     </div>
-                                                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                                                        {scriptTab === 'gameplan' && !selectedGamePlanSection ? (
-                                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                                {/* Scripts & Situations */}
-                                                                <div style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-sub)' }}>
-                                                                    SCRIPTS & SITUATIONS
-                                                                </div>
-                                                                {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => (
-                                                                    <div key={section.id || sIdx}>
-                                                                        <div style={{ padding: '0.25rem 0.5rem', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text-main)' }}>
-                                                                            {section.title || `Section ${sIdx + 1}`}
-                                                                        </div>
-                                                                        {(section.boxes || []).map((box, bIdx) => (
-                                                                            <div
-                                                                                key={box.setId || bIdx}
-                                                                                onClick={() => {
-                                                                                    setScriptTab('gameplan');
-                                                                                    setSelectedGamePlanSection(box.setId);
-                                                                                }}
-                                                                                style={{ padding: '0.25rem 0.5rem 0.25rem 1.5rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
-                                                                                className="hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                                            >
-                                                                                {box.header || `Box ${bIdx + 1}`}
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                ))}
 
-                                                                {/* Strike 'Em Out (Matrix) */}
-                                                                <div style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-sub)', marginTop: '0.5rem' }}>
-                                                                    STRIKE 'EM OUT
-                                                                </div>
 
-                                                                {/* Formations */}
-                                                                <div style={{ padding: '0.25rem 0.5rem', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text-main)' }}>Formations</div>
-                                                                {(gamePlanLayouts?.MATRIX?.formations || []).map((row, rIdx) => (
-                                                                    <div
-                                                                        key={row.id || rIdx}
-                                                                        onClick={() => {
-                                                                            setScriptTab('gameplan');
-                                                                            setSelectedGamePlanSection(row.id);
-                                                                        }}
-                                                                        style={{ padding: '0.25rem 0.5rem 0.25rem 1.5rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
-                                                                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                                    >
-                                                                        {row.label}
-                                                                    </div>
-                                                                ))}
-
-                                                                {/* Play Types */}
-                                                                {gamePlanLayouts?.MATRIX?.playTypes?.length > 0 && (
-                                                                    <>
-                                                                        <div style={{ padding: '0.25rem 0.5rem', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text-main)' }}>Play Types</div>
-                                                                        {gamePlanLayouts.MATRIX.playTypes.map((pt, ptIdx) => (
-                                                                            <div
-                                                                                key={pt.id || ptIdx}
-                                                                                style={{ padding: '0.25rem 0.5rem 0.25rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
-                                                                            >
-                                                                                {pt.label || pt.name || pt.id}
-                                                                            </div>
-                                                                        ))}
-                                                                    </>
-                                                                )}
-
-                                                                {/* Columns */}
-                                                                {gamePlanLayouts?.MATRIX?.cols?.length > 0 && (
-                                                                    <>
-                                                                        <div style={{ padding: '0.25rem 0.5rem', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text-main)' }}>Columns</div>
-                                                                        {gamePlanLayouts.MATRIX.cols.map((col, cIdx) => (
-                                                                            <div
-                                                                                key={col.id || cIdx}
-                                                                                style={{ padding: '0.25rem 0.5rem 0.25rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
-                                                                            >
-                                                                                {col.label || col.header || col.id}
-                                                                            </div>
-                                                                        ))}
-                                                                    </>
-                                                                )}
-
-                                                                {/* FZDnD */}
-                                                                <div style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-sub)', marginTop: '0.5rem' }}>
-                                                                    FZDnD
-                                                                </div>
-                                                                {FZDND_ZONES.map(zone => (
-                                                                    <div
-                                                                        key={zone.id}
-                                                                        onClick={() => {
-                                                                            setScriptTab('gameplan');
-                                                                            setSelectedGamePlanSection(`fzdnd_${zone.id}`);
-                                                                        }}
-                                                                        style={{ padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
-                                                                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                                    >
-                                                                        {zone.title}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem' }}>
-                                                                {getSidePanelItems().map((item, idx) => (
-                                                                    <div
-                                                                        key={idx}
-                                                                        style={{
-                                                                            padding: '0.5rem',
-                                                                            backgroundColor: 'var(--bg-panel)',
-                                                                            border: '1px solid var(--border)',
-                                                                            borderRadius: 'var(--radius)',
-                                                                            cursor: 'pointer',
-                                                                            display: 'flex',
-                                                                            justifyContent: 'space-between',
-                                                                            alignItems: 'center'
-                                                                        }}
-                                                                        onClick={() => {
-                                                                            if (item.type === 'section_group') {
-                                                                                setSelectedGamePlanSection(item.id);
-                                                                            } else {
-                                                                                handleAddFromSidePanel(item, scriptTab === 'situations' ? 'situation' : 'play');
-                                                                            }
-                                                                        }}
-                                                                        className="hover-card"
-                                                                    >
-                                                                        <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                            {item.priority && <Icon name="Star" size={12} fill="gold" color="gold" />}
-                                                                            {item.name}
-                                                                        </span>
-                                                                        {item.type === 'section_group' && (
-                                                                            <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--bg-main)', padding: '2px 6px', borderRadius: '10px' }}>
-                                                                                {item.itemCount}
-                                                                            </span>
-                                                                        )}
-                                                                        {scriptTab !== 'situations' && item.type !== 'section_group' && (
-                                                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
-                                                                                {item.type}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                ))}
-                                                                {getSidePanelItems().length === 0 && (
-                                                                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '2rem' }}>
-                                                                        No items found.
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })()}
+                                            );
+                                        })()}
+                                    </div>
+                                    <GamePlannerSideMenu
+                                        plays={plays}
+                                        practicePlans={plans}
+                                        onQuickAddPlay={onQuickAddPlay}
+                                        isOpen={showSideMenu}
+                                        onToggle={setShowSideMenu}
+                                        weekStats={weekStats}
+                                    />
                                 </div>
                             </div>
                         </div>
+
                     )}
 
-                    {/* Notes Modal */}
-                    {notesModalSegmentId && (
-                        <NotesModal
-                            segmentId={notesModalSegmentId}
-                            plan={plan}
-                            staff={staff}
-                            onClose={() => setNotesModalSegmentId(null)}
-                            onUpdateNotes={(segmentId, coachId, note) => updateSegmentNotes(segmentId, coachId, note)}
-                        />
-                    )}
-                </div>
+                    {/* Modals */}
+                    {notesModalSegmentId && renderNotesModal()}
+                    {/* Inline script view logic is above, removed duplicate renderScriptModal() if needed, but keeping existing structure safe */}
+
+
+
+                    {/* Modals */}
+                    {notesModalSegmentId && renderNotesModal()}
+
+
+                    {/* Global Template Save Modal? (If needed) */}
+                </div >
             );
         };
 
@@ -51884,6 +51748,11 @@
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
                                 gamePlanLayouts={GAME_PLAN_LAYOUTS}
+                                playBuckets={playBuckets}
+                                weeks={weeks}
+                                currentWeek={currentWeek}
+                                onQuickAddPlay={handleQuickAddPlay}
+                                setAppSidebarCollapsed={setSidebarCollapsed}
                             />
                         )}
                         {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} weeks={weeks} currentWeek={currentWeek} />}
