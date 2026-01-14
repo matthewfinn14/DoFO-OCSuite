@@ -8578,7 +8578,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {} }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [] }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -8669,7 +8669,60 @@
                 return plays.filter(p => ids.has(p.id));
             }, [gamePlan, plays]);
 
+
             const priorityPlays = React.useMemo(() => plays.filter(p => p.priority), [plays]);
+
+            // Helper functions for phase-based filtering
+            const getSegmentTypesForPhase = (phase) => {
+                if (!phase || phase === 'ALL' || phase === 'C') {
+                    // Return all types combined
+                    const all = new Set([
+                        ...(segmentTypesMap.OFFENSE || []),
+                        ...(segmentTypesMap.DEFENSE || []),
+                        ...(segmentTypesMap.SPECIAL_TEAMS || [])
+                    ]);
+                    // Add defaults if custom types are empty/missing, or use availableSegmentTypes as fallback
+                    if (all.size === 0) return availableSegmentTypes;
+                    return Array.from(all).sort();
+                }
+
+                let types = [];
+                if (phase === 'O') types = segmentTypesMap.OFFENSE || [];
+                else if (phase === 'D') types = segmentTypesMap.DEFENSE || [];
+                else if (phase === 'K') types = segmentTypesMap.SPECIAL_TEAMS || [];
+
+                return types.length > 0 ? types : availableSegmentTypes;
+            };
+
+            const getFocusItemsForPhase = (phase) => {
+                let items = [];
+                if (!phase || phase === 'ALL' || phase === 'C') {
+                    // Return all items combined
+                    const all = new Set([
+                        ...(focusItemsMap.OFFENSE || []),
+                        ...(focusItemsMap.DEFENSE || []),
+                        ...(focusItemsMap.SPECIAL_TEAMS || []),
+                        // Add All Play Buckets to ALL view
+                        ...(playBuckets.map(b => b.label) || [])
+                    ]);
+                    items = Array.from(all);
+                } else {
+                    if (phase === 'O') {
+                        items = focusItemsMap.OFFENSE || [];
+                        // Add Play Buckets only to Offense phase
+                        const bucketLabels = playBuckets.map(b => b.label);
+                        items = [...items, ...bucketLabels];
+                    }
+                    else if (phase === 'D') items = focusItemsMap.DEFENSE || [];
+                    else if (phase === 'K') items = focusItemsMap.SPECIAL_TEAMS || [];
+                }
+
+                // Always add Game Plan items
+                const combined = new Set([...items, ...gamePlanFocusItems]);
+                if (combined.size === 0) return availableFocusItems;
+
+                return Array.from(combined).sort();
+            };
 
 
 
@@ -9981,7 +10034,7 @@
                                                         style={{ width: '100%', fontSize: '0.85rem' }}
                                                     >
                                                         <option value="">-- Offense --</option>
-                                                        {availableFocusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                        {getFocusItemsForPhase('O').map(item => <option key={item} value={item}>{item}</option>)}
                                                     </select>
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
@@ -9993,7 +10046,7 @@
                                                         style={{ width: '100%', fontSize: '0.85rem' }}
                                                     >
                                                         <option value="">-- Defense --</option>
-                                                        {availableFocusItems.map(item => <option key={item} value={item}>{item}</option>)}
+                                                        {getFocusItemsForPhase('D').map(item => <option key={item} value={item}>{item}</option>)}
                                                     </select>
                                                 </td>
                                             </>
@@ -10035,7 +10088,7 @@
                                                         onClick={e => e.stopPropagation()}
                                                     >
                                                         <option value="">-- Select Focus --</option>
-                                                        {availableFocusItems.map(f => (
+                                                        {getFocusItemsForPhase(plan.warmupPhase || 'ALL').map(f => (
                                                             <option key={f} value={f}>{f}</option>
                                                         ))}
                                                         <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
@@ -10364,7 +10417,7 @@
                                                             }}
                                                         >
                                                             <option value="">-- Select Type --</option>
-                                                            {availableSegmentTypes.map(t => (
+                                                            {getSegmentTypesForPhase(seg.phase).map(t => (
                                                                 <option key={t} value={t}>{t}</option>
                                                             ))}
                                                         </select>
@@ -10383,10 +10436,10 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
                                                                     <option value="">-- Offense --</option>
-                                                                    {/* Filtered Focus Items */}
+                                                                    {/* Filtered Focus Items - for Two Platoon we explicitly separate O vs D lists */}
                                                                     {(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
-                                                                        ? segmentSettings[seg.type].allowedFocusItems.filter(f => availableFocusItems.includes(f))
-                                                                        : availableFocusItems).map(item => <option key={item} value={item}>{item}</option>)}
+                                                                        ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase('O').includes(f))
+                                                                        : getFocusItemsForPhase('O')).map(item => <option key={item} value={item}>{item}</option>)}
                                                                 </select>
                                                             )}
                                                         </td>
@@ -10401,10 +10454,10 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
                                                                     <option value="">-- Defense --</option>
-                                                                    {/* Filtered Focus Items */}
+                                                                    {/* Filtered Focus Items - for Two Platoon we explicitly separate O vs D lists */}
                                                                     {(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
-                                                                        ? segmentSettings[seg.type].allowedFocusItems.filter(f => availableFocusItems.includes(f))
-                                                                        : availableFocusItems).map(item => <option key={item} value={item}>{item}</option>)}
+                                                                        ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase('D').includes(f))
+                                                                        : getFocusItemsForPhase('D')).map(item => <option key={item} value={item}>{item}</option>)}
                                                                 </select>
                                                             )}
                                                         </td>
@@ -10449,9 +10502,10 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
                                                                     <option value="">-- Focus --</option>
-                                                                    {availableFocusItems.map(item => (
-                                                                        <option key={item} value={item}>{item}</option>
-                                                                    ))}
+                                                                    {/* Filtered Focus Items */}
+                                                                    {(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
+                                                                        ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase(seg.phase).includes(f))
+                                                                        : getFocusItemsForPhase(seg.phase)).map(item => <option key={item} value={item}>{item}</option>)}
                                                                     <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
                                                                 </select>
                                                             )
@@ -51243,10 +51297,13 @@
                                 isSiteAdmin={false}
                                 segmentTypes={getAllSegments()}
                                 focusItems={getAllFocusItems()}
+                                segmentTypesMap={practiceSegmentTypes}
+                                focusItemsMap={practiceFocusItems}
                                 segmentSettings={practiceSegmentSettings}
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
                                 gamePlanLayouts={GAME_PLAN_LAYOUTS}
+                                playBuckets={playBuckets}
                             />
                         )}
                         {view === 'pregame' && (
