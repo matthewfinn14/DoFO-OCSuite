@@ -34506,13 +34506,23 @@
                 });
 
                 if (practicePlans) {
+                    const dayMapping = {
+                        'MONDAY': 'M',
+                        'TUESDAY': 'T',
+                        'WEDNESDAY': 'W',
+                        'THURSDAY': 'TH',
+                        'FRIDAY': 'F'
+                    };
+
                     Object.entries(practicePlans).forEach(([day, plan]) => {
-                        const dayKey = day.toUpperCase(); // Ensure M, T, W...
-                        if (!map[Object.keys(map)[0]]?.days.hasOwnProperty(dayKey) && !['M', 'T', 'W', 'TH', 'F'].includes(dayKey)) return;
+                        const keyUpper = day.toUpperCase();
+                        const dayKey = dayMapping[keyUpper] || keyUpper;
+
+                        if (!['M', 'T', 'W', 'TH', 'F'].includes(dayKey)) return;
 
                         (plan.segments || []).forEach(seg => {
                             (seg.script || []).forEach(item => {
-                                const pid = typeof item === 'object' ? item.id : item; // Handle direct ID or object
+                                const pid = (typeof item === 'object') ? (item.playId || item.id) : item; // Handle object with playId/id or string
                                 if (pid && map[pid]) {
                                     map[pid].total++;
                                     if (map[pid].days[dayKey] !== undefined) {
