@@ -8578,6 +8578,117 @@
             );
         };
 
+        const MultiSelectDropdown = ({ options = [], value = [], onChange, placeholder = "Select...", className = "" }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const [searchTerm, setSearchTerm] = useState("");
+            const wrapperRef = useRef(null);
+
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                        setIsOpen(false);
+                    }
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, []);
+
+            const toggleOption = (option) => {
+                const newValue = value.includes(option)
+                    ? value.filter(v => v !== option)
+                    : [...value, option];
+                onChange(newValue);
+            };
+
+            return (
+                <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }} className={className}>
+                    <div
+                        onClick={() => {
+                            if (isOpen) setSearchTerm("");
+                            setIsOpen(!isOpen);
+                        }}
+                        style={{
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '0.375rem',
+                            padding: '0.5rem',
+                            fontSize: '0.875rem',
+                            cursor: 'pointer',
+                            background: 'white',
+                            minHeight: '38px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: value.length === 0 ? '#9ca3af' : '#1f2937',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        {value.length > 0 ? value.join(', ') : placeholder}
+                    </div>
+                    {isOpen && (
+                        <div style={{
+                            position: 'absolute',
+                            zIndex: 50,
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: '0.25rem',
+                            background: 'white',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '0.375rem',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            maxHeight: '200px',
+                            overflowY: 'auto'
+                        }}>
+                            <div style={{ position: 'sticky', top: 0, background: 'white', zIndex: 10, borderBottom: '1px solid #e2e8f0' }}>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    placeholder="Search..."
+                                    value={searchTerm}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.5rem',
+                                        fontSize: '0.875rem',
+                                        border: 'none',
+                                        outline: 'none',
+                                        color: '#1f2937'
+                                    }}
+                                />
+                            </div>
+                            {options.filter(opt => opt === '__ADD_CUSTOM__' || opt.toLowerCase().includes(searchTerm.toLowerCase())).map(opt => (
+                                <div
+                                    key={opt}
+                                    onClick={() => toggleOption(opt)}
+                                    style={{
+                                        padding: '0.5rem',
+                                        cursor: 'pointer',
+                                        fontSize: '0.875rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        color: '#1f2937',
+                                        background: value.includes(opt) ? '#f3f4f6' : 'transparent',
+                                        borderBottom: '1px solid #f3f4f6'
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={value.includes(opt)}
+                                        readOnly
+                                        style={{ margin: 0 }}
+                                    />
+                                    {opt === '__ADD_CUSTOM__' ? 'Add Custom...' : opt}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [] }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
@@ -8828,7 +8939,8 @@
             const findPreset = (type, situation) => {
                 const normalize = (str) => (str || '').trim().toLowerCase().replace(/s$/, ''); // Remove trailing s
                 const t = (type || '').trim().toLowerCase();
-                const s = normalize(situation);
+                const sitVal = Array.isArray(situation) ? (situation[0] || '') : situation;
+                const s = normalize(sitVal);
 
                 // 0. Explicit Type + Focus Match
                 const exactExplicit = scriptPresets.find(p =>
@@ -8841,7 +8953,9 @@
                 if (t && s) {
                     const match = scriptPresets.find(p => {
                         const n = p.name.trim().toLowerCase();
-                        return n === `${t} - ${situation.toLowerCase()}` || n.includes(s);
+                        // Use sitVal (first item) for matching, avoid calling toLowerCase on array
+                        const val = typeof sitVal === 'string' ? sitVal.toLowerCase() : '';
+                        return n === `${t} - ${val}` || n.includes(s);
                     });
                     if (match) return match;
                 }
@@ -10026,28 +10140,20 @@
                                         {plan.isTwoPlatoon ? (
                                             <>
                                                 <td style={{ padding: '0.5rem' }}>
-                                                    <select
-                                                        className="form-select"
-                                                        value={plan.warmupOffenseFocus || plan.warmupFocus || ''}
-                                                        onChange={e => handleFocusChange('WARMUP', 'warmupOffenseFocus', e.target.value)}
-                                                        onClick={e => e.stopPropagation()}
-                                                        style={{ width: '100%', fontSize: '0.85rem' }}
-                                                    >
-                                                        <option value="">-- Offense --</option>
-                                                        {getFocusItemsForPhase('O').map(item => <option key={item} value={item}>{item}</option>)}
-                                                    </select>
+                                                    <MultiSelectDropdown
+                                                        options={getFocusItemsForPhase('O')}
+                                                        value={Array.isArray(plan.warmupOffenseFocus) ? plan.warmupOffenseFocus : (plan.warmupOffenseFocus ? [plan.warmupOffenseFocus] : [])}
+                                                        onChange={vals => handleFocusChange('WARMUP', 'warmupOffenseFocus', vals)}
+                                                        placeholder="-- Offense --"
+                                                    />
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
-                                                    <select
-                                                        className="form-select"
-                                                        value={plan.warmupDefenseFocus || ''}
-                                                        onChange={e => handleFocusChange('WARMUP', 'warmupDefenseFocus', e.target.value)}
-                                                        onClick={e => e.stopPropagation()}
-                                                        style={{ width: '100%', fontSize: '0.85rem' }}
-                                                    >
-                                                        <option value="">-- Defense --</option>
-                                                        {getFocusItemsForPhase('D').map(item => <option key={item} value={item}>{item}</option>)}
-                                                    </select>
+                                                    <MultiSelectDropdown
+                                                        options={getFocusItemsForPhase('D')}
+                                                        value={Array.isArray(plan.warmupDefenseFocus) ? plan.warmupDefenseFocus : (plan.warmupDefenseFocus ? [plan.warmupDefenseFocus] : [])}
+                                                        onChange={vals => handleFocusChange('WARMUP', 'warmupDefenseFocus', vals)}
+                                                        placeholder="-- Defense --"
+                                                    />
                                                 </td>
                                             </>
                                         ) : (
@@ -10074,25 +10180,18 @@
                                                         onClick={e => e.stopPropagation()}
                                                     />
                                                 ) : (
-                                                    <select
-                                                        className="form-select"
-                                                        style={{ padding: '0.25rem' }}
-                                                        value={plan.warmupSituation || ''}
-                                                        onChange={e => {
-                                                            if (e.target.value === '__ADD_CUSTOM__') {
+                                                    <MultiSelectDropdown
+                                                        options={[...getFocusItemsForPhase(plan.warmupPhase || 'ALL'), '__ADD_CUSTOM__']}
+                                                        value={Array.isArray(plan.warmupSituation) ? plan.warmupSituation : (plan.warmupSituation ? [plan.warmupSituation] : [])}
+                                                        onChange={(vals) => {
+                                                            if (vals.includes('__ADD_CUSTOM__')) {
                                                                 setCustomInputState({ id: 'WARMUP' });
                                                             } else {
-                                                                updateCurrentPlan({ ...plan, warmupSituation: e.target.value });
+                                                                updateCurrentPlan({ ...plan, warmupSituation: vals });
                                                             }
                                                         }}
-                                                        onClick={e => e.stopPropagation()}
-                                                    >
-                                                        <option value="">-- Select Focus --</option>
-                                                        {getFocusItemsForPhase(plan.warmupPhase || 'ALL').map(f => (
-                                                            <option key={f} value={f}>{f}</option>
-                                                        ))}
-                                                        <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
-                                                    </select>
+                                                        placeholder="-- Select Focus --"
+                                                    />
                                                 )}
                                             </td>
                                         )}
@@ -10426,45 +10525,37 @@
                                                 {plan.isTwoPlatoon ? (
                                                     <>
                                                         <td style={{ padding: '0.5rem' }}>
-                                                            <span className="print-only-text">{seg.offenseFocus || seg.situation}</span>
+                                                            <span className="print-only-text">{Array.isArray(seg.offenseFocus || seg.situation) ? (seg.offenseFocus || seg.situation).join(', ') : (seg.offenseFocus || seg.situation)}</span>
                                                             {!isLocked && (
-                                                                <select
-                                                                    className="form-select no-print"
-                                                                    style={{ padding: '0.25rem' }}
-                                                                    value={seg.offenseFocus || seg.situation || ''}
-                                                                    onChange={e => handleFocusChange(seg.id, 'offenseFocus', e.target.value)}
-                                                                    onClick={e => e.stopPropagation()}
-                                                                >
-                                                                    <option value="">-- Offense --</option>
-                                                                    {/* Filtered Focus Items - for Two Platoon we explicitly separate O vs D lists */}
-                                                                    {(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
+                                                                <MultiSelectDropdown
+                                                                    className="no-print"
+                                                                    options={segmentSettings[seg.type]?.allowedFocusItems?.length > 0
                                                                         ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase('O').includes(f))
-                                                                        : getFocusItemsForPhase('O')).map(item => <option key={item} value={item}>{item}</option>)}
-                                                                </select>
+                                                                        : getFocusItemsForPhase('O')}
+                                                                    value={Array.isArray(seg.offenseFocus || seg.situation) ? (seg.offenseFocus || seg.situation) : (seg.offenseFocus || seg.situation ? [seg.offenseFocus || seg.situation] : [])}
+                                                                    onChange={vals => handleFocusChange(seg.id, 'offenseFocus', vals)}
+                                                                    placeholder="-- Offense --"
+                                                                />
                                                             )}
                                                         </td>
                                                         <td style={{ padding: '0.5rem' }}>
-                                                            <span className="print-only-text">{seg.defenseFocus}</span>
+                                                            <span className="print-only-text">{Array.isArray(seg.defenseFocus) ? seg.defenseFocus.join(', ') : seg.defenseFocus}</span>
                                                             {!isLocked && (
-                                                                <select
-                                                                    className="form-select no-print"
-                                                                    style={{ padding: '0.25rem' }}
-                                                                    value={seg.defenseFocus || ''}
-                                                                    onChange={e => handleFocusChange(seg.id, 'defenseFocus', e.target.value)}
-                                                                    onClick={e => e.stopPropagation()}
-                                                                >
-                                                                    <option value="">-- Defense --</option>
-                                                                    {/* Filtered Focus Items - for Two Platoon we explicitly separate O vs D lists */}
-                                                                    {(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
+                                                                <MultiSelectDropdown
+                                                                    className="no-print"
+                                                                    options={segmentSettings[seg.type]?.allowedFocusItems?.length > 0
                                                                         ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase('D').includes(f))
-                                                                        : getFocusItemsForPhase('D')).map(item => <option key={item} value={item}>{item}</option>)}
-                                                                </select>
+                                                                        : getFocusItemsForPhase('D')}
+                                                                    value={Array.isArray(seg.defenseFocus) ? seg.defenseFocus : (seg.defenseFocus ? [seg.defenseFocus] : [])}
+                                                                    onChange={vals => handleFocusChange(seg.id, 'defenseFocus', vals)}
+                                                                    placeholder="-- Defense --"
+                                                                />
                                                             )}
                                                         </td>
                                                     </>
                                                 ) : (
                                                     <td style={{ padding: '0.5rem' }}>
-                                                        <span className="print-only-text">{seg.situation}</span>
+                                                        <span className="print-only-text">{Array.isArray(seg.situation) ? seg.situation.join(', ') : seg.situation}</span>
                                                         {!isLocked && (
                                                             customInputState?.id === seg.id ? (
                                                                 <input
@@ -10488,26 +10579,24 @@
                                                                     onClick={e => e.stopPropagation()}
                                                                 />
                                                             ) : (
-                                                                <select
-                                                                    className="form-select no-print"
-                                                                    style={{ padding: '0.25rem' }}
-                                                                    value={seg.situation || ''}
-                                                                    onChange={e => {
-                                                                        if (e.target.value === '__ADD_CUSTOM__') {
+                                                                <MultiSelectDropdown
+                                                                    className="no-print"
+                                                                    options={[
+                                                                        ...(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
+                                                                            ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase(seg.phase).includes(f))
+                                                                            : getFocusItemsForPhase(seg.phase)),
+                                                                        '__ADD_CUSTOM__'
+                                                                    ]}
+                                                                    value={Array.isArray(seg.situation) ? seg.situation : (seg.situation ? [seg.situation] : [])}
+                                                                    onChange={vals => {
+                                                                        if (vals.includes('__ADD_CUSTOM__')) {
                                                                             setCustomInputState({ id: seg.id });
                                                                         } else {
-                                                                            handleFocusChange(seg.id, 'situation', e.target.value);
+                                                                            handleFocusChange(seg.id, 'situation', vals);
                                                                         }
                                                                     }}
-                                                                    onClick={e => e.stopPropagation()}
-                                                                >
-                                                                    <option value="">-- Focus --</option>
-                                                                    {/* Filtered Focus Items */}
-                                                                    {(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
-                                                                        ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase(seg.phase).includes(f))
-                                                                        : getFocusItemsForPhase(seg.phase)).map(item => <option key={item} value={item}>{item}</option>)}
-                                                                    <option value="__ADD_CUSTOM__" style={{ fontStyle: 'italic', color: 'var(--accent)' }}>+ Add Custom...</option>
-                                                                </select>
+                                                                    placeholder="-- Focus --"
+                                                                />
                                                             )
                                                         )}
                                                     </td>
