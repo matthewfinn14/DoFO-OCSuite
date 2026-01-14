@@ -9309,7 +9309,7 @@
                     itemsToAdd = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
                 } else {
                     // 2. Standard Set/Script Lookup
-                    let setData = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null) || gamePlan?.miniScripts?.[sectionId];
+                    let setData = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null) || gamePlan?.miniScripts?.[sectionId] || (Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts.find(s => s.id === sectionId) : null);
 
                     // 3. Play Buckets Lookup
                     if (!setData) {
@@ -34567,7 +34567,7 @@
                 rest.sort((a, b) => a.name.localeCompare(b.name));
 
                 return { used, priority, rest };
-            }, [plays, playUsage, searchTerm]);
+            }, [plays, playUsage, searchTerm, gamePlan]);
 
             const handleDragStart = (e, play) => {
                 e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id, name: play.name })); // Pass name too just in case
@@ -34589,11 +34589,9 @@
                             <div style={{ fontWeight: '500', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {play.name}
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                {play.formation} {play.priority && <span style={{ color: '#ca8a04' }}>★</span>}
-                            </div>
+                            {play.priority && <div style={{ fontSize: '0.7rem', color: '#ca8a04' }}>★</div>}
                         </div>
-                        <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
+                        <div style={{ display: 'flex', gap: '2px', marginLeft: '8px', flexShrink: 0 }}>
                             {['M', 'T', 'W', 'TH', 'F'].map(day => (
                                 <div key={day} style={{
                                     width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -34619,39 +34617,86 @@
                         // Matrix logic
                         const matrixFormation = extraData.formation;
                         const playIds = new Set();
-                        const layout = gamePlanLayouts.MATRIX;
-                        layout.playTypes.forEach(pt => {
-                            layout.cols.forEach(col => {
-                                const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
-                                const cellData = gamePlan?.sets?.[setId];
-                                if (cellData && cellData.assignedPlayIds) cellData.assignedPlayIds.forEach(id => playIds.add(id));
-                                else if (cellData && cellData.playIds) cellData.playIds.forEach(id => playIds.add(id));
+                        const layout = gamePlanLayouts?.MATRIX;
+                        if (layout) {
+                            layout.playTypes.forEach(pt => {
+                                layout.cols.forEach(col => {
+                                    const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
+                                    const cellData = gamePlan?.sets?.[setId];
+                                    if (cellData && cellData.assignedPlayIds) cellData.assignedPlayIds.forEach(id => playIds.add(id));
+                                    else if (cellData && cellData.playIds) cellData.playIds.forEach(id => playIds.add(id));
+                                });
                             });
-                        });
+                        }
                         playList = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
                     } else {
+
                         // Standard set logic
-                        const setData = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null) || gamePlan?.miniScripts?.[sectionId];
+                        let rawIds = [];
+
+                        // 1. Try Game Plan Data (Primary)
+                        const setInSets = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null);
+                        const setInMini = gamePlan?.miniScripts?.[sectionId] || (Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts.find(s => s.id === sectionId) : null);
+
+                        const setData = setInSets || setInMini;
+
                         if (setData && (setData.assignedPlayIds || setData.playIds)) {
-                            const ids = setData.assignedPlayIds || setData.playIds || [];
-                            playList = ids.map(id => {
-                                const pid = typeof id === 'object' ? id.id : id;
-                                return plays.find(p => p.id === pid);
-                            }).filter(Boolean);
+                            rawIds = setData.assignedPlayIds || setData.playIds || [];
                         }
+
+                        // 2. Fallback to Layouts (Parallel Process - Fail-safe)
+                        if ((!rawIds || rawIds.length === 0) && gamePlanLayouts?.CALL_SHEET?.sections) {
+                            for (const sec of gamePlanLayouts.CALL_SHEET.sections) {
+                                if (!sec.boxes) continue;
+                                const box = sec.boxes.find(b => b.setId === sectionId);
+                                if (box) {
+                                    // For Grids
+                                    if (box.assignedPlayIds && box.assignedPlayIds.length > 0) {
+                                        rawIds = box.assignedPlayIds;
+                                    }
+                                    // For Scripts
+                                    else if (box.rows) {
+                                        const scriptIds = [];
+                                        box.rows.forEach(r => {
+                                            if (r.content) scriptIds.push(r.content);
+                                            if (r.contentRight) scriptIds.push(r.contentRight);
+                                        });
+                                        rawIds = [...new Set(scriptIds)];
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+
+                        playList = rawIds.map(id => {
+                            const pid = typeof id === 'object' ? id.id : id;
+                            if (pid === 'GAP') return null;
+                            return plays.find(p => p.id === pid);
+                        }).filter(Boolean);
                     }
                     return playList;
                 };
 
                 return (
                     <div style={{ padding: '0 0.75rem 0.75rem', overflowY: 'auto', flex: 1 }}>
+                        {/* Header Row */}
+                        <div style={{ display: 'flex', alignItems: 'center', paddingBottom: '4px', marginRight: '10px', marginTop: '8px' }}>
+                            <div style={{ flex: 1 }}></div>
+                            <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
+                                {['M', 'T', 'W', 'TH', 'F'].map(day => (
+                                    <div key={day} style={{ width: '18px', textAlign: 'center', fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b' }}>
+                                        {day}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         {/* Call Sheet Sections */}
                         {(gamePlanLayouts?.CALL_SHEET?.sections || []).map(section => (
                             <div key={section.id}>
                                 <div style={{ padding: '8px 0', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>{section.title}</div>
                                 {section.boxes.map(box => {
                                     const items = getPlaysForSection('box', box.setId);
-                                    if (items.length === 0) return null;
+                                    // if (items.length === 0) return null; // Always show
                                     const isExpanded = expandedSections[box.setId];
 
                                     return (
@@ -34660,7 +34705,7 @@
                                                 onClick={() => toggleSection(box.setId)}
                                                 style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                                             >
-                                                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{box.header}</span>
+                                                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>{box.header}</span>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
                                                     <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="#64748b" />
@@ -34668,14 +34713,20 @@
                                             </div>
                                             {isExpanded && (
                                                 <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); onAddSection(box.setId); }}
-                                                        className="btn btn-secondary"
-                                                        style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
-                                                    >
-                                                        + Add All
-                                                    </button>
-                                                    {items.map(renderRow)}
+                                                    {items.length > 0 ? (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onAddSection(box.setId); }}
+                                                                className="btn btn-secondary"
+                                                                style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                                            >
+                                                                + Add All
+                                                            </button>
+                                                            {items.map(renderRow)}
+                                                        </>
+                                                    ) : (
+                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px' }}>No plays found.</div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -34688,7 +34739,7 @@
                         <div style={{ padding: '8px 0', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginTop: '1rem' }}>Formations (Matrix)</div>
                         {(gamePlanLayouts?.MATRIX?.formations || []).map(formation => {
                             const items = getPlaysForSection('matrix_formation', formation.id, { formation });
-                            if (items.length === 0) return null;
+                            // if (items.length === 0) return null; // Always show
                             const isExpanded = expandedSections[formation.id];
 
                             return (
@@ -34697,7 +34748,7 @@
                                         onClick={() => toggleSection(formation.id)}
                                         style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                                     >
-                                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{formation.label}</span>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>{formation.label}</span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
                                             <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="#64748b" />
@@ -34705,14 +34756,20 @@
                                     </div>
                                     {isExpanded && (
                                         <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); onAddSection(formation.id); }}
-                                                className="btn btn-secondary"
-                                                style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
-                                            >
-                                                + Add All
-                                            </button>
-                                            {items.map(renderRow)}
+                                            {items.length > 0 ? (
+                                                <>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onAddSection(formation.id); }}
+                                                        className="btn btn-secondary"
+                                                        style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                                    >
+                                                        + Add All
+                                                    </button>
+                                                    {items.map(renderRow)}
+                                                </>
+                                            ) : (
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px' }}>No plays found.</div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -34727,9 +34784,20 @@
 
                 return (
                     <div style={{ padding: '0 0.75rem 0.75rem', overflowY: 'auto', flex: 1 }}>
+                        {/* Header Row */}
+                        <div style={{ display: 'flex', alignItems: 'center', paddingBottom: '4px', marginRight: '10px', marginTop: '8px' }}>
+                            <div style={{ flex: 1 }}></div>
+                            <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
+                                {['M', 'T', 'W', 'TH', 'F'].map(day => (
+                                    <div key={day} style={{ width: '18px', textAlign: 'center', fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b' }}>
+                                        {day}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         {(playBuckets || []).map(bucket => {
                             const items = (bucket.plays || []).map(pid => plays.find(p => p.id === pid)).filter(Boolean);
-                            if (items.length === 0) return null;
+                            // if (items.length === 0) return null; // Always show
                             const isExpanded = expandedSections[bucket.id];
 
                             return (
@@ -34738,7 +34806,7 @@
                                         onClick={() => toggleSection(bucket.id)}
                                         style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                                     >
-                                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{bucket.name}</span>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>{bucket.name}</span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
                                             <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="#64748b" />
@@ -34746,18 +34814,23 @@
                                     </div>
                                     {isExpanded && (
                                         <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                            {/* No "Add All" requested for Buckets specifically, but could add if needed. User asked for "add all from a section of Gameplan or Buckets/Concepts" - YES */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onAddSection(bucket.id);
-                                                }}
-                                                className="btn btn-secondary"
-                                                style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
-                                            >
-                                                + Add All
-                                            </button>
-                                            {items.map(renderRow)}
+                                            {items.length > 0 ? (
+                                                <>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onAddSection(bucket.id);
+                                                        }}
+                                                        className="btn btn-secondary"
+                                                        style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                                    >
+                                                        + Add All
+                                                    </button>
+                                                    {items.map(renderRow)}
+                                                </>
+                                            ) : (
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px' }}>No plays in bucket.</div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -34769,7 +34842,7 @@
 
             return (
                 <div style={{
-                    width: isOpen ? '320px' : '0px',
+                    width: isOpen ? '360px' : '0px',
                     transition: 'width 0.3s ease-in-out',
                     borderLeft: isOpen ? '1px solid var(--border)' : 'none',
                     background: 'white',
@@ -34779,13 +34852,7 @@
                     flexShrink: 0,
                     position: 'relative' // For absolute handle
                 }}>
-                    {/* Toggle Handle - Always Visible? No, if width is 0, we need it outside? 
-                        The handle needs to be on the LEFT of the border. 
-                        If width is 0, this div is 0. 
-                        So the handle must be `left: -20px` and `overflow: visible` on THIS div?
-                        Yes, if we set overflow: visible, content might spill if not careful.
-                        Better: Separate content wrapper with overflow hidden.
-                    */}
+
                     <div
                         onClick={() => onToggle(!isOpen)}
                         title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
@@ -34812,7 +34879,7 @@
                         <Icon name={isOpen ? "ChevronRight" : "ChevronLeft"} size={16} color="#64748b" />
                     </div>
 
-                    <div style={{ width: '320px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                    <div style={{ width: '360px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
                         {/* THIS WEEK Counter */}
                         {weekStats && (
                             <div style={{
@@ -34962,9 +35029,7 @@
                         <div style={{ fontWeight: '600', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {getPlayDisplayName(play)}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            {play.formation} {play.priority ? <span style={{ color: '#ca8a04', fontWeight: 'bold' }}>★</span> : ''}
-                        </div>
+                        {play.priority ? <div style={{ fontSize: '0.75rem', color: '#ca8a04', fontWeight: 'bold' }}>★</div> : null}
                     </div>
                     <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
                         {days.map(d => (
@@ -37340,6 +37405,31 @@
                                                         if (!targetSection.rows[rowIdx]) targetSection.rows[rowIdx] = { id: Date.now(), label: (rowIdx + 1).toString(), content: '' };
                                                         targetSection.rows[rowIdx].content = pid;
                                                         if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+
+                                                        // Sync to Data Model (miniScripts/sets)
+                                                        if (box.setId && onUpdateGamePlan && gamePlan) {
+                                                            const updatedRows = targetSection.rows;
+                                                            const allIds = [];
+                                                            updatedRows.forEach(r => {
+                                                                if (r.content) allIds.push(r.content);
+                                                                if (r.contentRight) allIds.push(r.contentRight);
+                                                            });
+
+                                                            const collectionKey = box.type === 'script' ? 'miniScripts' : 'sets';
+                                                            let collection = Array.isArray(gamePlan[collectionKey]) ? [...gamePlan[collectionKey]] : [];
+
+                                                            const uniqueIds = Array.from(new Set(allIds));
+
+                                                            const existingIndex = collection.findIndex(item => item.id === box.setId);
+                                                            if (existingIndex >= 0) {
+                                                                collection[existingIndex] = { ...collection[existingIndex], playIds: allIds, assignedPlayIds: uniqueIds };
+                                                            } else {
+                                                                collection.push({ id: box.setId, playIds: allIds, assignedPlayIds: uniqueIds });
+                                                            }
+
+                                                            const updatedGamePlan = { ...gamePlan, [collectionKey]: collection };
+                                                            onUpdateGamePlan(updatedGamePlan);
+                                                        }
                                                     }}
                                                 />
                                             </div>
@@ -37354,8 +37444,34 @@
                                                     isLocked={isLocked}
                                                     onUpdate={(pid) => {
                                                         const newLayouts = { ...gamePlanLayouts };
-                                                        newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx].rows[rowIdx].contentRight = pid;
+                                                        const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                        targetSection.rows[rowIdx].contentRight = pid;
                                                         if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+
+                                                        // Sync to Data Model (miniScripts/sets)
+                                                        if (box.setId && onUpdateGamePlan && gamePlan) {
+                                                            const updatedRows = targetSection.rows;
+                                                            const allIds = [];
+                                                            updatedRows.forEach(r => {
+                                                                if (r.content) allIds.push(r.content);
+                                                                if (r.contentRight) allIds.push(r.contentRight);
+                                                            });
+
+                                                            const collectionKey = box.type === 'script' ? 'miniScripts' : 'sets';
+                                                            let collection = Array.isArray(gamePlan[collectionKey]) ? [...gamePlan[collectionKey]] : [];
+
+                                                            const uniqueIds = Array.from(new Set(allIds));
+
+                                                            const existingIndex = collection.findIndex(item => item.id === box.setId);
+                                                            if (existingIndex >= 0) {
+                                                                collection[existingIndex] = { ...collection[existingIndex], playIds: allIds, assignedPlayIds: uniqueIds };
+                                                            } else {
+                                                                collection.push({ id: box.setId, playIds: allIds, assignedPlayIds: uniqueIds });
+                                                            }
+
+                                                            const updatedGamePlan = { ...gamePlan, [collectionKey]: collection };
+                                                            onUpdateGamePlan(updatedGamePlan);
+                                                        }
                                                     }}
                                                 />
                                             </div>
@@ -40731,6 +40847,10 @@
                             isOpen={showSideMenu}
                             onToggle={setShowSideMenu}
                             weekStats={weekStats}
+                            gamePlan={gamePlan}
+                            gamePlanLayouts={gamePlanLayouts}
+                            playBuckets={playBuckets}
+                            onAddSection={(newLayouts) => onUpdateLayouts(newLayouts)}
                         />
                     </div>
 
@@ -51980,7 +52100,7 @@
                                 segmentSettings={practiceSegmentSettings}
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
-                                gamePlanLayouts={GAME_PLAN_LAYOUTS}
+                                gamePlanLayouts={currentWeek.gamePlanLayouts || GAME_PLAN_LAYOUTS}
                                 playBuckets={playBuckets}
                             />
                         )}
@@ -52019,7 +52139,7 @@
                                 segmentSettings={practiceSegmentSettings}
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
-                                gamePlanLayouts={GAME_PLAN_LAYOUTS}
+                                gamePlanLayouts={currentWeek.gamePlanLayouts || GAME_PLAN_LAYOUTS}
                                 playBuckets={playBuckets}
                                 weeks={weeks}
                                 currentWeek={currentWeek}
@@ -52215,8 +52335,8 @@
                             <h1>Something went wrong.</h1>
                             <details style={{ whiteSpace: 'pre-wrap' }}>
                                 {this.state.error && this.state.error.toString()}
-                                />
-                                {this.state.errorInfo && this.state.errorInfo.componentS}
+                                <br />
+                                {this.state.errorInfo && this.state.errorInfo.componentStack}
                             </details>
                         </div>
                     );
