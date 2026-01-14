@@ -9284,6 +9284,89 @@
                 });
             };
 
+            const handleAddSection = (sectionId) => {
+                const activeSegment = plan?.segments?.find(s => s.id === selectedSegmentId);
+                if (!activeSegment) return;
+
+                let itemsToAdd = [];
+
+                // 1. Check Matrix Formation
+                const matrixFormation = gamePlanLayouts?.MATRIX?.formations?.find(f => f.id === sectionId);
+                if (matrixFormation) {
+                    const playIds = new Set();
+                    const layout = gamePlanLayouts.MATRIX;
+                    layout.playTypes.forEach(pt => {
+                        layout.cols.forEach(col => {
+                            const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
+                            const cellData = gamePlan?.sets?.[setId];
+                            if (cellData && cellData.assignedPlayIds) {
+                                cellData.assignedPlayIds.forEach(id => playIds.add(id));
+                            } else if (cellData && cellData.playIds) {
+                                cellData.playIds.forEach(id => playIds.add(id));
+                            }
+                        });
+                    });
+                    itemsToAdd = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
+                } else {
+                    // 2. Standard Set/Script Lookup
+                    let setData = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null) || gamePlan?.miniScripts?.[sectionId];
+
+                    // 3. Play Buckets Lookup
+                    if (!setData) {
+                        const bucket = playBuckets?.find(b => b.id === sectionId);
+                        if (bucket) {
+                            setData = { playIds: bucket.plays };
+                        }
+                    }
+
+                    if (setData && (setData.assignedPlayIds || setData.playIds)) {
+                        const ids = setData.assignedPlayIds || setData.playIds || [];
+                        itemsToAdd = ids.map(id => {
+                            const pid = typeof id === 'object' ? id.id : id;
+                            return plays.find(p => p.id === pid);
+                        }).filter(Boolean);
+                    }
+                }
+
+                if (itemsToAdd.length === 0) return;
+
+                const currentScript = [...(activeSegment.script || [])];
+
+                itemsToAdd.forEach(playDef => {
+                    const name = playDef ? playDef.name : 'Unknown Play';
+                    const emptyIndex = currentScript.findIndex(row => !row.playName && !row.playId);
+
+                    const preset = findPreset(activeSegment.type, activeSegment.situation);
+                    const showYardLine = preset ? preset.useYardLine : activeSegment.type === 'Take-Off';
+
+                    if (emptyIndex !== -1) {
+                        // Fill empty slot
+                        currentScript[emptyIndex] = {
+                            ...currentScript[emptyIndex],
+                            playName: name,
+                            playId: playDef ? playDef.id : ''
+                        };
+                    } else {
+                        // Append new row
+                        const newItem = {
+                            hash: 'M',
+                            playName: name,
+                            playId: playDef ? playDef.id : ''
+                        };
+
+                        if (showYardLine) {
+                            newItem.yardLine = '';
+                            newItem.downDistance = '';
+                        } else {
+                            newItem.situation = '';
+                        }
+                        currentScript.push(newItem);
+                    }
+                });
+
+                updateSegment(selectedSegmentId, 'script', currentScript);
+            };
+
             const handleFocusChange = (segmentId, field, value) => {
                 let updatedPlan = { ...plan };
 
@@ -10572,13 +10655,7 @@
                                                                 }
                                                             }}
                                                             onClick={e => e.stopPropagation()}
-                                                            onChange={e => {
-                                                                const val = e.target.value;
-                                                                updateSegment(seg.id, 'type', val);
-
-                                                                // Auto-clear focus if not allowed in new type (optional, but cleaner)
-                                                                // For now, we trust the dropdown filter to guide next edit
-                                                            }}
+                                                        // The onChange handler was duplicated, removed the second one.
                                                         >
                                                             <option value="">-- Select Type --</option>
                                                             {getSegmentTypesForPhase(seg.phase).map(t => (
@@ -11066,69 +11143,7 @@
                                                 updateSegment(selectedSegmentId, 'script', newScript);
                                             };
 
-                                            const handleAddSection = (sectionId) => {
-                                                let itemsToAdd = [];
 
-                                                // 1. Check Matrix Formation
-                                                const matrixFormation = gamePlanLayouts?.MATRIX?.formations?.find(f => f.id === sectionId);
-                                                if (matrixFormation) {
-                                                    const playIds = new Set();
-                                                    const layout = gamePlanLayouts.MATRIX;
-                                                    layout.playTypes.forEach(pt => {
-                                                        layout.cols.forEach(col => {
-                                                            const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
-                                                            const cellData = gamePlan?.sets?.[setId];
-                                                            if (cellData && cellData.assignedPlayIds) {
-                                                                cellData.assignedPlayIds.forEach(id => playIds.add(id));
-                                                            } else if (cellData && cellData.playIds) {
-                                                                cellData.playIds.forEach(id => playIds.add(id));
-                                                            }
-                                                        });
-                                                    });
-                                                    itemsToAdd = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
-                                                } else {
-                                                    // 2. Standard Set/Script Lookup
-                                                    const setData = gamePlan?.sets?.[sectionId] || gamePlan?.miniScripts?.[sectionId];
-                                                    if (setData && (setData.assignedPlayIds || setData.playIds)) {
-                                                        const ids = setData.assignedPlayIds || setData.playIds || [];
-                                                        itemsToAdd = ids.map(id => plays.find(p => p.id === id)).filter(Boolean);
-                                                    }
-                                                }
-
-                                                if (itemsToAdd.length === 0) return;
-
-                                                const currentScript = [...(activeSegment.script || [])];
-
-                                                itemsToAdd.forEach(playDef => {
-                                                    const name = playDef ? playDef.name : 'Unknown Play';
-                                                    const emptyIndex = currentScript.findIndex(row => !row.playName && !row.playId);
-
-                                                    if (emptyIndex !== -1) {
-                                                        // Fill empty slot
-                                                        currentScript[emptyIndex] = {
-                                                            ...currentScript[emptyIndex],
-                                                            playName: name,
-                                                            playId: playDef ? playDef.id : ''
-                                                        };
-                                                    } else {
-                                                        // Append new row
-                                                        const newItem = {
-                                                            hash: 'M',
-                                                            playName: name,
-                                                            playId: playDef ? playDef.id : ''
-                                                        };
-                                                        if (showYardLine) {
-                                                            newItem.yardLine = '';
-                                                            newItem.downDistance = '';
-                                                        } else {
-                                                            newItem.situation = '';
-                                                        }
-                                                        currentScript.push(newItem);
-                                                    }
-                                                });
-
-                                                updateScript(currentScript);
-                                            };
 
                                             // Side Panel Helper Lists
                                             // gpPlays and priorityPlays are now computed at component level to avoid Hook errors.
@@ -11169,6 +11184,26 @@
                                                 }
 
                                                 updateScript(currentScript);
+                                            };
+
+                                            const handleScriptDrop = (e, idx) => {
+                                                e.preventDefault();
+                                                try {
+                                                    const data = JSON.parse(e.dataTransfer.getData('application/react-dnd'));
+                                                    if (data && (data.playId || data.name)) {
+                                                        const newScript = [...activeSegment.script];
+                                                        if (idx >= 0 && idx < newScript.length) {
+                                                            newScript[idx] = {
+                                                                ...newScript[idx],
+                                                                playName: data.name || newScript[idx].playName,
+                                                                playId: data.playId || ''
+                                                            };
+                                                            updateScript(newScript);
+                                                        }
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Drop failed", err);
+                                                }
                                             };
 
                                             // Helper to filter plays for the side panel
@@ -11285,7 +11320,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 {(activeSegment.script || []).map((slot, idx) => (
-                                                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                                    <tr
+                                                                        key={idx}
+                                                                        style={{ borderBottom: '1px solid var(--border)' }}
+                                                                        onDragOver={(e) => e.preventDefault()}
+                                                                        onDrop={(e) => handleScriptDrop(e, idx)}
+                                                                    >
                                                                         <td style={{ padding: '0.5rem', color: 'var(--text-secondary)' }}>{idx + 1}</td>
                                                                         <td style={{ padding: '0.5rem' }}>
                                                                             <input
@@ -11395,6 +11435,10 @@
                                         isOpen={showSideMenu}
                                         onToggle={setShowSideMenu}
                                         weekStats={weekStats}
+                                        gamePlan={gamePlan}
+                                        gamePlanLayouts={gamePlanLayouts}
+                                        playBuckets={playBuckets}
+                                        onAddSection={handleAddSection}
                                     />
                                 </div>
                             </div>
@@ -34441,62 +34485,62 @@
             );
         };
 
-        const GamePlannerSideMenu = ({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats }) => {
+        const GamePlannerSideMenu = ({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, onAddSection }) => {
             const [searchTerm, setSearchTerm] = useState('');
             const [quickAddValue, setQuickAddValue] = useState('');
+            const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, buckets
+            const [expandedSections, setExpandedSections] = useState({});
+
+            const toggleSection = (id) => {
+                setExpandedSections(prev => ({
+                    ...prev,
+                    [id]: !prev[id]
+                }));
+            };
 
             // Calculate Usage
             const playUsage = useMemo(() => {
-                const usage = {}; // { playId: { total: 0, M: 0, T: 0, W: 0, TH: 0, F: 0 } }
-                const plans = Array.isArray(practicePlans) ? practicePlans : Object.values(practicePlans || {});
+                const map = {};
+                (plays || []).forEach(p => {
+                    map[p.id] = { total: 0, days: { M: 0, T: 0, W: 0, TH: 0, F: 0 } };
+                });
 
-                plans.forEach(plan => {
-                    if (!plan.date) return;
-                    // Simple day extraction (assuming YYYY-MM-DD)
-                    const [y, m, d] = plan.date.split('-');
-                    const dateObj = new Date(y, m - 1, d);
-                    const day = dateObj.getDay();
+                if (practicePlans) {
+                    Object.entries(practicePlans).forEach(([day, plan]) => {
+                        const dayKey = day.toUpperCase(); // Ensure M, T, W...
+                        if (!map[Object.keys(map)[0]]?.days.hasOwnProperty(dayKey) && !['M', 'T', 'W', 'TH', 'F'].includes(dayKey)) return;
 
-                    let dayKey = null;
-                    if (day === 1) dayKey = 'M';
-                    if (day === 2) dayKey = 'T';
-                    if (day === 3) dayKey = 'W';
-                    if (day === 4) dayKey = 'TH';
-                    if (day === 5) dayKey = 'F';
-
-                    if (!dayKey) return;
-
-                    (plan.segments || []).forEach(seg => {
-                        if (seg.hasScript && seg.script) {
-                            seg.script.forEach(item => {
-                                if (item.playId) {
-                                    if (!usage[item.playId]) usage[item.playId] = { total: 0, M: 0, T: 0, W: 0, TH: 0, F: 0 };
-                                    usage[item.playId][dayKey]++;
-                                    usage[item.playId].total++;
+                        (plan.segments || []).forEach(seg => {
+                            (seg.script || []).forEach(item => {
+                                const pid = typeof item === 'object' ? item.id : item; // Handle direct ID or object
+                                if (pid && map[pid]) {
+                                    map[pid].total++;
+                                    if (map[pid].days[dayKey] !== undefined) {
+                                        map[pid].days[dayKey]++;
+                                    }
                                 }
                             });
-                        }
+                        });
                     });
-                });
-                return usage;
-            }, [practicePlans]);
+                }
+                return map;
+            }, [plays, practicePlans]);
 
-            // Filter and Sort
+            // Filter and Sort for "Usage" Tab
             const sortedPlays = useMemo(() => {
-                let filtered = plays;
+                let filtered = (plays || []).filter(p => !p.archived);
                 if (searchTerm) {
                     const lower = searchTerm.toLowerCase();
-                    filtered = plays.filter(p => p.name.toLowerCase().includes(lower));
+                    filtered = filtered.filter(p => p.name.toLowerCase().includes(lower) || p.formation?.toLowerCase().includes(lower) || p.concept?.toLowerCase().includes(lower));
                 }
 
-                // Categorize
                 const used = [];
                 const priority = [];
                 const rest = [];
 
                 filtered.forEach(p => {
-                    const u = playUsage[p.id];
-                    if (u && u.total > 0) {
+                    const u = playUsage[p.id] || { total: 0 };
+                    if (u.total > 0) {
                         used.push(p);
                     } else if (p.priority) {
                         priority.push(p);
@@ -34515,25 +34559,200 @@
                 return { used, priority, rest };
             }, [plays, playUsage, searchTerm]);
 
+            const handleDragStart = (e, play) => {
+                e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id, name: play.name })); // Pass name too just in case
+                e.dataTransfer.effectAllowed = 'copy';
+            };
+
             const renderRow = (play) => {
-                const u = playUsage[play.id] || { M: 0, T: 0, W: 0, TH: 0, F: 0 };
+                const u = playUsage[play.id] || { days: { M: 0, T: 0, W: 0, TH: 0, F: 0 } };
                 return (
-                    <div key={play.id} style={{ display: 'flex', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.8rem' }}>
-                        <div style={{ flex: 1, fontWeight: '500', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {play.name}
+                    <div
+                        key={play.id}
+                        style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.8rem' }}
+                    >
+                        <div
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, play)}
+                            style={{ flex: 1, minWidth: 0, cursor: 'grab' }}
+                        >
+                            <div style={{ fontWeight: '500', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {play.name}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                {play.formation} {play.priority && <span style={{ color: '#ca8a04' }}>★</span>}
+                            </div>
                         </div>
                         <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
                             {['M', 'T', 'W', 'TH', 'F'].map(day => (
                                 <div key={day} style={{
                                     width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: u[day] > 0 ? '#1e293b' : '#f1f5f9', // Dark background for active
-                                    color: u[day] > 0 ? 'white' : '#94a3b8', // White text for active, gray for inactive
-                                    fontWeight: '900', fontSize: '0.7rem', borderRadius: '2px', border: 'none'
+                                    background: u.days[day] > 0 ? '#1e293b' : '#f1f5f9',
+                                    color: u.days[day] > 0 ? 'white' : '#94a3b8',
+                                    fontWeight: '900', fontSize: '0.6rem', borderRadius: '2px'
                                 }}>
-                                    {u[day] > 0 ? u[day] : ''}
+                                    {u.days[day] > 0 ? u.days[day] : ''}
                                 </div>
                             ))}
                         </div>
+                    </div>
+                );
+            };
+
+            const renderGamePlanContent = () => {
+                if (!gamePlanLayouts) return <div style={{ padding: '1rem', color: '#64748b' }}>No Game Plan Layouts found.</div>;
+
+                // Helper to get plays for a section
+                const getPlaysForSection = (type, sectionId, extraData = {}) => {
+                    let playList = [];
+                    if (type === 'matrix_formation') {
+                        // Matrix logic
+                        const matrixFormation = extraData.formation;
+                        const playIds = new Set();
+                        const layout = gamePlanLayouts.MATRIX;
+                        layout.playTypes.forEach(pt => {
+                            layout.cols.forEach(col => {
+                                const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
+                                const cellData = gamePlan?.sets?.[setId];
+                                if (cellData && cellData.assignedPlayIds) cellData.assignedPlayIds.forEach(id => playIds.add(id));
+                                else if (cellData && cellData.playIds) cellData.playIds.forEach(id => playIds.add(id));
+                            });
+                        });
+                        playList = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
+                    } else {
+                        // Standard set logic
+                        const setData = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null) || gamePlan?.miniScripts?.[sectionId];
+                        if (setData && (setData.assignedPlayIds || setData.playIds)) {
+                            const ids = setData.assignedPlayIds || setData.playIds || [];
+                            playList = ids.map(id => {
+                                const pid = typeof id === 'object' ? id.id : id;
+                                return plays.find(p => p.id === pid);
+                            }).filter(Boolean);
+                        }
+                    }
+                    return playList;
+                };
+
+                return (
+                    <div style={{ padding: '0 0.75rem 0.75rem', overflowY: 'auto', flex: 1 }}>
+                        {/* Call Sheet Sections */}
+                        {(gamePlanLayouts?.CALL_SHEET?.sections || []).map(section => (
+                            <div key={section.id}>
+                                <div style={{ padding: '8px 0', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>{section.title}</div>
+                                {section.boxes.map(box => {
+                                    const items = getPlaysForSection('box', box.setId);
+                                    if (items.length === 0) return null;
+                                    const isExpanded = expandedSections[box.setId];
+
+                                    return (
+                                        <div key={box.setId} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div
+                                                onClick={() => toggleSection(box.setId)}
+                                                style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                            >
+                                                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{box.header}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
+                                                    <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="#64748b" />
+                                                </div>
+                                            </div>
+                                            {isExpanded && (
+                                                <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onAddSection(box.setId); }}
+                                                        className="btn btn-secondary"
+                                                        style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                                    >
+                                                        + Add All
+                                                    </button>
+                                                    {items.map(renderRow)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ))}
+
+                        {/* Matrix Formations */}
+                        <div style={{ padding: '8px 0', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginTop: '1rem' }}>Formations (Matrix)</div>
+                        {(gamePlanLayouts?.MATRIX?.formations || []).map(formation => {
+                            const items = getPlaysForSection('matrix_formation', formation.id, { formation });
+                            if (items.length === 0) return null;
+                            const isExpanded = expandedSections[formation.id];
+
+                            return (
+                                <div key={formation.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div
+                                        onClick={() => toggleSection(formation.id)}
+                                        style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                    >
+                                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{formation.label}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
+                                            <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="#64748b" />
+                                        </div>
+                                    </div>
+                                    {isExpanded && (
+                                        <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onAddSection(formation.id); }}
+                                                className="btn btn-secondary"
+                                                style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                            >
+                                                + Add All
+                                            </button>
+                                            {items.map(renderRow)}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            };
+
+            const renderBucketsContent = () => {
+                if (!playBuckets) return <div style={{ padding: '1rem', color: '#64748b' }}>No Buckets found.</div>;
+
+                return (
+                    <div style={{ padding: '0 0.75rem 0.75rem', overflowY: 'auto', flex: 1 }}>
+                        {(playBuckets || []).map(bucket => {
+                            const items = (bucket.plays || []).map(pid => plays.find(p => p.id === pid)).filter(Boolean);
+                            if (items.length === 0) return null;
+                            const isExpanded = expandedSections[bucket.id];
+
+                            return (
+                                <div key={bucket.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div
+                                        onClick={() => toggleSection(bucket.id)}
+                                        style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                    >
+                                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{bucket.name}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
+                                            <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="#64748b" />
+                                        </div>
+                                    </div>
+                                    {isExpanded && (
+                                        <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                                            {/* No "Add All" requested for Buckets specifically, but could add if needed. User asked for "add all from a section of Gameplan or Buckets/Concepts" - YES */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onAddSection(bucket.id);
+                                                }}
+                                                className="btn btn-secondary"
+                                                style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                            >
+                                                + Add All
+                                            </button>
+                                            {items.map(renderRow)}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 );
             };
@@ -34621,51 +34840,94 @@
                             </div>
                         )}
 
-                        <div style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f8fafc' }}>
-                            <div style={{ fontWeight: 'bold', color: '#0f172a' }}>Play Usage</div>
+                        {/* Tabs */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
+                            {['Play Usage', 'Game Plan', 'Buckets'].map(tab => {
+                                const key = tab === 'Play Usage' ? 'usage' : tab === 'Game Plan' ? 'gameplan' : 'buckets';
+                                const isActive = activeTab === key;
+                                return (
+                                    <div
+                                        key={key}
+                                        onClick={() => setActiveTab(key)}
+                                        style={{
+                                            flex: 1,
+                                            textAlign: 'center',
+                                            padding: '8px 4px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '600',
+                                            color: isActive ? '#0f172a' : '#64748b',
+                                            borderBottom: isActive ? '2px solid #0f172a' : '2px solid transparent',
+                                            cursor: 'pointer',
+                                            background: isActive ? 'white' : '#f8fafc'
+                                        }}
+                                    >
+                                        {tab}
+                                    </div>
+                                );
+                            })}
                         </div>
 
-                        <div style={{ padding: '0.5rem' }}>
-                            <input
-                                placeholder="Add / Search..."
-                                value={quickAddValue}
-                                onChange={e => {
-                                    setQuickAddValue(e.target.value);
-                                    setSearchTerm(e.target.value);
-                                }}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter' && quickAddValue) {
-                                        onQuickAddPlay(quickAddValue);
-                                        setQuickAddValue('');
-                                        setSearchTerm('');
-                                    }
-                                }}
-                                style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                            />
-                        </div>
-
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0.75rem 0.75rem' }}>
-                            {sortedPlays.used.length > 0 && (
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Used This Week</div>
-                                    {sortedPlays.used.map(renderRow)}
+                        {/* Content */}
+                        {activeTab === 'usage' && (
+                            <>
+                                <div style={{ padding: '0.5rem' }}>
+                                    <input
+                                        placeholder="Add / Search..."
+                                        value={quickAddValue}
+                                        onChange={e => {
+                                            setQuickAddValue(e.target.value);
+                                            setSearchTerm(e.target.value);
+                                        }}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter' && quickAddValue) {
+                                                onQuickAddPlay(quickAddValue);
+                                                setQuickAddValue('');
+                                                setSearchTerm('');
+                                            }
+                                        }}
+                                        style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                                    />
                                 </div>
-                            )}
 
-                            {sortedPlays.priority.length > 0 && (
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Priority (Unused)</div>
-                                    {sortedPlays.priority.map(renderRow)}
+                                {/* Header Row */}
+                                <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.75rem 4px 0.75rem' }}>
+                                    <div style={{ flex: 1 }}></div>
+                                    <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
+                                        {['M', 'T', 'W', 'TH', 'F'].map(day => (
+                                            <div key={day} style={{ width: '18px', textAlign: 'center', fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b' }}>
+                                                {day}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            )}
 
-                            {sortedPlays.rest.length > 0 && (
-                                <div>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Master Playbook</div>
-                                    {sortedPlays.rest.map(renderRow)}
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '0 0.75rem 0.75rem' }}>
+                                    {sortedPlays.used.length > 0 && (
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Used This Week</div>
+                                            {sortedPlays.used.map(renderRow)}
+                                        </div>
+                                    )}
+                                    {sortedPlays.priority.length > 0 && (
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Priority (Unused)</div>
+                                            {sortedPlays.priority.map(renderRow)}
+                                        </div>
+                                    )}
+                                    {sortedPlays.rest.length > 0 && (
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Master Playbook</div>
+                                            {sortedPlays.rest.map(renderRow)}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+                            </>
+                        )}
+
+                        {activeTab === 'gameplan' && renderGamePlanContent()}
+
+                        {activeTab === 'buckets' && renderBucketsContent()}
+
                     </div>
                 </div>
             );
