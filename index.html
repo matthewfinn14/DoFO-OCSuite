@@ -5593,11 +5593,22 @@
             );
         };
 
-        const PlayCard = ({ play, onEdit, isSelected, onToggleSelect = () => { } }) => {
+        const PlayCard = ({ play, onEdit, isSelected, onToggleSelect = () => { }, onQuickEdit }) => {
             return (
                 <div
                     className={`play-card ${isSelected ? 'selected' : ''}`}
-                    onClick={() => onEdit(play)}
+                    onClick={(e) => {
+                        // If quick edit exists, use it. Otherwise fallback to edit.
+                        if (onQuickEdit) {
+                            onQuickEdit(play, e.clientX, e.clientY);
+                        } else {
+                            onEdit(play);
+                        }
+                    }}
+                    onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(play);
+                    }}
                     style={{ cursor: 'pointer', position: 'relative', border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)' }}
                 >
                     <div
@@ -5617,6 +5628,21 @@
                             onChange={() => { }} // Handled by div click
                             style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
+                    </div>
+                    {/* Explicit Edit Pencil */}
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(play);
+                        }}
+                        style={{
+                            position: 'absolute', right: '35px', top: '5px', zIndex: 10,
+                            width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(255,255,255,0.8)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)'
+                        }}
+                        title="Edit Play Details"
+                    >
+                        <Icon name="Edit2" size={14} />
                     </div>
 
                     {play.image ? (
@@ -24860,6 +24886,207 @@
                             {Comp}
                         </div>
                     ))}
+                </div>
+            );
+        };
+
+
+        const PlayAssignmentModal = ({
+            play,
+            plays,
+            gamePlanLayouts,
+            gamePlan,
+            week,
+            onUpdatePlay,
+            onUpdateWeek,
+            onClose,
+            position,
+            playCategories = []
+        }) => {
+            if (!play) return null;
+
+            const getPlaySituations = (playId) => {
+                const layouts = gamePlanLayouts;
+                if (!playId || !layouts?.CALL_SHEET?.sections) return [];
+
+                const assignedSituations = [];
+
+                layouts.CALL_SHEET.sections.forEach(section => {
+                    if (!section.boxes) return;
+                    section.boxes.forEach(box => {
+                        if (!box.setId) return;
+
+                        const safeGamePlan = gamePlan || {};
+                        const isScript = box.type === 'script';
+                        const collection = isScript ? (safeGamePlan.miniScripts || []) : (safeGamePlan.sets || []);
+
+                        const data = Array.isArray(collection) ? collection.find(item => item.id === box.setId)
+                            : null;
+
+                        if (data?.assignedPlayIds?.includes(playId)) {
+                            assignedSituations.push({
+                                id: box.setId,
+                                header: box.header,
+                                color: box.color,
+                                type: box.type
+                            });
+                        }
+                    });
+                });
+                return assignedSituations;
+            };
+
+            const handleAssignPlayToSituation = (playId, box) => {
+                if (!playId || !box || !box.setId) return;
+
+                const safeGamePlan = gamePlan || {};
+                const isScript = box.type === 'script';
+                const collectionKey = isScript ? 'miniScripts' : 'sets';
+                const targetId = box.setId;
+
+                const updatedGamePlan = { ...safeGamePlan };
+
+                if (!Array.isArray(updatedGamePlan[collectionKey])) {
+                    updatedGamePlan[collectionKey] = [];
+                }
+
+                const existingItem = updatedGamePlan[collectionKey].find(item => item.id === targetId);
+                const currentData = existingItem || { playIds: [], assignedPlayIds: [] };
+                let currentAssigned = currentData.assignedPlayIds || currentData.playIds || [];
+
+                const isAssigned = currentAssigned.includes(playId);
+                let newAssignedIds;
+
+                if (isAssigned) {
+                    newAssignedIds = currentAssigned.filter(id => id !== playId);
+                } else {
+                    newAssignedIds = [...currentAssigned, playId];
+                }
+
+                if (existingItem) {
+                    updatedGamePlan[collectionKey] = updatedGamePlan[collectionKey].map(item =>
+                        item.id === targetId ? { ...item, assignedPlayIds: newAssignedIds } : item
+                    );
+                } else {
+                    updatedGamePlan[collectionKey] = [
+                        ...updatedGamePlan[collectionKey],
+                        { id: targetId, name: targetId, assignedPlayIds: newAssignedIds, playIds: [] }
+                    ];
+                }
+
+                if (onUpdateWeek && week) {
+                    onUpdateWeek(week.id, 'offensiveGamePlan', updatedGamePlan);
+                }
+            };
+
+            const assignedSits = getPlaySituations(play.id);
+            const assignedIds = new Set(assignedSits.map(s => s.id));
+
+            const popoverHeight = 400;
+            const popoverWidth = 300;
+            let top = position.y;
+            let left = position.x;
+
+            if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 20;
+            if (left + popoverWidth > window.innerWidth) left = window.innerWidth - popoverWidth - 20;
+            if (top < 10) top = 10;
+            if (left < 10) left = 10;
+
+            return (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'transparent', zIndex: 9999,
+                }} onClick={onClose}>
+                    <div style={{
+                        position: 'absolute',
+                        top: top, left: left,
+                        background: 'white', width: `${popoverWidth}px`, maxHeight: `${popoverHeight}px`,
+                        borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+                        display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                    }} onClick={e => e.stopPropagation()}>
+
+                        <div style={{ padding: '12px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getPlayDisplayName(play)}</div>
+                                <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}>×</button>
+                            </div>
+
+                            <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Play Type</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {(playCategories.length > 0 ? playCategories : [
+                                        { id: 'Run', label: 'Run' }, { id: 'RPO', label: 'RPO' },
+                                        { id: 'Pass', label: 'Pass' }, { id: 'Screen', label: 'Screen' }
+                                    ]).map(cat => {
+                                        const typeVal = cat.id;
+                                        const isSelected = (!play.type && typeVal === 'run') || play.type === typeVal || play.type === cat.label;
+                                        return (
+                                            <button
+                                                key={cat.id}
+                                                onClick={() => onUpdatePlay(play.id, { type: typeVal })}
+                                                className="btn-xs"
+                                                style={{
+                                                    background: isSelected ? '#3b82f6' : 'white',
+                                                    color: isSelected ? 'white' : '#64748b',
+                                                    border: isSelected ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                                                    fontSize: '0.7rem', padding: '2px 6px', cursor: 'pointer', borderRadius: '4px'
+                                                }}
+                                            >
+                                                {cat.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ padding: '12px', overflowY: 'auto', flex: 1 }}>
+                            {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
+                                const relevantBoxes = (section.boxes || []).filter(b => b.header && !b.hidden);
+                                if (relevantBoxes.length === 0) return null;
+
+                                return (
+                                    <div key={sIdx} style={{ marginBottom: '12px' }}>
+                                        <div style={{
+                                            fontSize: '0.65rem', fontWeight: 'bold', color: '#94a3b8',
+                                            marginBottom: '4px', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px'
+                                        }}>
+                                            {section.title || `Section ${sIdx + 1}`}
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            {relevantBoxes.map((box, bIdx) => {
+                                                const isCheck = assignedIds.has(box.setId);
+                                                return (
+                                                    <div
+                                                        key={bIdx}
+                                                        onClick={() => handleAssignPlayToSituation(play.id, box)}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                                            padding: '6px', borderRadius: '4px', cursor: 'pointer',
+                                                            background: isCheck ? '#eff6ff' : 'transparent',
+                                                            border: isCheck ? '1px solid #bfdbfe' : '1px solid transparent'
+                                                        }}
+                                                        onMouseEnter={e => !isCheck && (e.currentTarget.style.background = '#f8fafc')}
+                                                        onMouseLeave={e => !isCheck && (e.currentTarget.style.background = 'transparent')}
+                                                    >
+                                                        <div style={{
+                                                            width: '16px', height: '16px', borderRadius: '4px', border: isCheck ? '1px solid #3b82f6' : '1px solid #cbd5e1',
+                                                            background: isCheck ? '#3b82f6' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                                        }}>
+                                                            {isCheck && <Icon name="Check" size={10} color="white" />}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.8rem', color: isCheck ? '#1d4ed8' : '#334155' }}>
+                                                            {box.header}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             );
         };
@@ -45689,6 +45916,7 @@
             const [showManageWeekModal, setShowManageWeekModal] = useState(false);
             const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage('hc-sidebar-collapsed', false);
             const [editingPlay, setEditingPlay] = useState(null);
+            const [quickEditModalState, setQuickEditModalState] = useState(null);
 
             // -- SCHOOL INITIALIZATION CHECK --
             const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
@@ -47859,7 +48087,8 @@
             // Filter Logic for Playbook View
             const [playbookFilters, setPlaybookFilters] = useState({
                 formation: '',
-                concept: '',
+                playCategory: '', // Bucket
+                bucketId: '', // Family
                 tag: '',
                 situation: ''
             });
@@ -48035,7 +48264,8 @@
                 }
                 return plays.filter(play => {
                     const matchFormation = !playbookFilters.formation || play.formation === playbookFilters.formation;
-                    const matchConcept = !playbookFilters.concept || (play.concept && play.concept === playbookFilters.concept);
+                    const matchPlayCategory = !playbookFilters.playCategory || play.playCategory === playbookFilters.playCategory;
+                    const matchBucketId = !playbookFilters.bucketId || play.bucketId === playbookFilters.bucketId;
                     const matchTag = !playbookFilters.tag || play.tags.includes(playbookFilters.tag) || play.tag1 === playbookFilters.tag || play.tag2 === playbookFilters.tag;
 
                     // Situation filter checks against specific categories
@@ -48044,7 +48274,7 @@
                         (TAG_CATEGORIES["Field Position"] && TAG_CATEGORIES["Field Position"].includes(playbookFilters.situation) && play.tags.includes(playbookFilters.situation)) ||
                         (TAG_CATEGORIES["Down & Distance"] && TAG_CATEGORIES["Down & Distance"].includes(playbookFilters.situation) && play.tags.includes(playbookFilters.situation));
 
-                    return matchFormation && matchConcept && matchTag && matchSituation;
+                    return matchFormation && matchPlayCategory && matchBucketId && matchTag && matchSituation;
                 });
             };
 
@@ -48340,7 +48570,7 @@
                                                 style={{ width: '100%' }}
                                             >
                                                 <option value="">- Generic / None -</option>
-                                                {practiceSegmentTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                                {Object.values(practiceSegmentTypes).flat().map(t => <option key={t} value={t}>{t}</option>)}
                                             </select>
                                         </div>
                                         <div>
@@ -50585,7 +50815,7 @@
                                                 </button>
                                             )}
                                             <button className="btn" style={{ backgroundColor: '#10b981', color: 'white' }} onClick={() => setIsBatchImportOpen(true)}>
-                                                <Icon name="Upload" /> Batch Add Plays
+                                                <Icon name="FileText" /> Batch Add Plays
                                             </button>
                                             <button className="btn btn-primary" onClick={() => { setEditingPlay(null); setView('new-play'); }}>
                                                 <Icon name="PlusCircle" /> New Play
@@ -50647,9 +50877,9 @@
                                                         background: 'rgba(var(--accent-rgb), 0.1)',
                                                         border: '1px solid rgba(var(--accent-rgb), 0.2)'
                                                     }}
-                                                    onClick={() => setPlaybookFilters({ formation: '', concept: '', situation: '', tag: '' })}
+                                                    onClick={() => setPlaybookFilters({ formation: '', playCategory: '', bucketId: '', situation: '', tag: '' })}
                                                 >
-                                                    <Icon name="XCircle" size={14} style={{ marginRight: '4px' }} />
+                                                    <Icon name="FilterX" size={14} style={{ marginRight: '4px' }} />
                                                     Clear Filters
                                                 </button>
                                             </div>
@@ -50685,16 +50915,32 @@
                                             </div>
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Concept</label>
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Play Bucket</label>
                                                 <select
                                                     className="form-input"
-                                                    value={playbookFilters.concept}
-                                                    onChange={e => setPlaybookFilters({ ...playbookFilters, concept: e.target.value })}
+                                                    value={playbookFilters.playCategory}
+                                                    onChange={e => setPlaybookFilters({ ...playbookFilters, playCategory: e.target.value })}
                                                 >
-                                                    <option value="">All Concepts</option>
-                                                    {Array.from(new Set(plays.map(p => p.concept).filter(Boolean))).sort().map(c => (
-                                                        <option key={c} value={c}>{c}</option>
+                                                    <option value="">All Buckets</option>
+                                                    {playCategories.map(cat => (
+                                                        <option key={cat.id} value={cat.id}>{cat.label}</option>
                                                     ))}
+                                                </select>
+                                            </div>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Play Family</label>
+                                                <select
+                                                    className="form-input"
+                                                    value={playbookFilters.bucketId}
+                                                    onChange={e => setPlaybookFilters({ ...playbookFilters, bucketId: e.target.value })}
+                                                >
+                                                    <option value="">All Families</option>
+                                                    {playBuckets
+                                                        .filter(bucket => !playbookFilters.playCategory || bucket.categoryId === playbookFilters.playCategory)
+                                                        .map(bucket => (
+                                                            <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                                                        ))}
                                                 </select>
                                             </div>
 
@@ -50740,9 +50986,28 @@
                                                 isSelected={selectedPlays.includes(play.id)}
                                                 onToggleSelect={() => handleToggleSelect(play.id)}
                                                 onEdit={() => { setEditingPlay(play); setView('new-play'); }}
+                                                onQuickEdit={(play, x, y) => setQuickEditModalState({ playId: play.id, x, y })}
                                             />
                                         ))}
                                     </div>
+                                    {quickEditModalState && (() => {
+                                        const { playId, x, y } = quickEditModalState;
+                                        const play = filteredPlaybook.find(p => p.id === playId);
+                                        return (
+                                            <PlayAssignmentModal
+                                                play={play}
+                                                plays={plays}
+                                                gamePlanLayouts={gamePlanLayouts}
+                                                gamePlan={currentWeek?.offensiveGamePlan}
+                                                week={currentWeek}
+                                                onUpdatePlay={handleUpdatePlay}
+                                                onUpdateWeek={handleUpdateWeek}
+                                                onClose={() => setQuickEditModalState(null)}
+                                                position={{ x, y }}
+                                                playCategories={playCategories}
+                                            />
+                                        );
+                                    })()}
 
                                 </div>
                             )
