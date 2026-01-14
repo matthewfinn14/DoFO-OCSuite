@@ -34577,18 +34577,462 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [] }) => {
+        const GamePlannerSideMenu = ({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats }) => {
+            const [searchTerm, setSearchTerm] = useState('');
+            const [quickAddValue, setQuickAddValue] = useState('');
+
+            // Calculate Usage
+            const playUsage = useMemo(() => {
+                const usage = {}; // { playId: { total: 0, M: 0, T: 0, W: 0, TH: 0, F: 0 } }
+                const plans = Array.isArray(practicePlans) ? practicePlans : Object.values(practicePlans || {});
+
+                plans.forEach(plan => {
+                    if (!plan.date) return;
+                    // Simple day extraction (assuming YYYY-MM-DD)
+                    const [y, m, d] = plan.date.split('-');
+                    const dateObj = new Date(y, m - 1, d);
+                    const day = dateObj.getDay();
+
+                    let dayKey = null;
+                    if (day === 1) dayKey = 'M';
+                    if (day === 2) dayKey = 'T';
+                    if (day === 3) dayKey = 'W';
+                    if (day === 4) dayKey = 'TH';
+                    if (day === 5) dayKey = 'F';
+
+                    if (!dayKey) return;
+
+                    (plan.segments || []).forEach(seg => {
+                        if (seg.hasScript && seg.script) {
+                            seg.script.forEach(item => {
+                                if (item.playId) {
+                                    if (!usage[item.playId]) usage[item.playId] = { total: 0, M: 0, T: 0, W: 0, TH: 0, F: 0 };
+                                    usage[item.playId][dayKey]++;
+                                    usage[item.playId].total++;
+                                }
+                            });
+                        }
+                    });
+                });
+                return usage;
+            }, [practicePlans]);
+
+            // Filter and Sort
+            const sortedPlays = useMemo(() => {
+                let filtered = plays;
+                if (searchTerm) {
+                    const lower = searchTerm.toLowerCase();
+                    filtered = plays.filter(p => p.name.toLowerCase().includes(lower));
+                }
+
+                // Categorize
+                const used = [];
+                const priority = [];
+                const rest = [];
+
+                filtered.forEach(p => {
+                    const u = playUsage[p.id];
+                    if (u && u.total > 0) {
+                        used.push(p);
+                    } else if (p.priority) {
+                        priority.push(p);
+                    } else {
+                        rest.push(p);
+                    }
+                });
+
+                // Sort Used: Total Desc
+                used.sort((a, b) => playUsage[b.id].total - playUsage[a.id].total);
+
+                // Sort Priority & Rest: Alpha
+                priority.sort((a, b) => a.name.localeCompare(b.name));
+                rest.sort((a, b) => a.name.localeCompare(b.name));
+
+                return { used, priority, rest };
+            }, [plays, playUsage, searchTerm]);
+
+            const renderRow = (play) => {
+                const u = playUsage[play.id] || { M: 0, T: 0, W: 0, TH: 0, F: 0 };
+                return (
+                    <div key={play.id} style={{ display: 'flex', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.8rem' }}>
+                        <div style={{ flex: 1, fontWeight: '500', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {play.name}
+                        </div>
+                        <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
+                            {['M', 'T', 'W', 'TH', 'F'].map(day => (
+                                <div key={day} style={{
+                                    width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: u[day] > 0 ? '#1e293b' : '#f1f5f9', // Dark background for active
+                                    color: u[day] > 0 ? 'white' : '#94a3b8', // White text for active, gray for inactive
+                                    fontWeight: '900', fontSize: '0.7rem', borderRadius: '2px', border: 'none'
+                                }}>
+                                    {u[day] > 0 ? u[day] : ''}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div style={{
+                    width: isOpen ? '320px' : '0px',
+                    transition: 'width 0.3s ease-in-out',
+                    borderLeft: isOpen ? '1px solid var(--border)' : 'none',
+                    background: 'white',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    flexShrink: 0,
+                    position: 'relative' // For absolute handle
+                }}>
+                    {/* Toggle Handle - Always Visible? No, if width is 0, we need it outside? 
+                        The handle needs to be on the LEFT of the border. 
+                        If width is 0, this div is 0. 
+                        So the handle must be `left: -20px` and `overflow: visible` on THIS div?
+                        Yes, if we set overflow: visible, content might spill if not careful.
+                        Better: Separate content wrapper with overflow hidden.
+                    */}
+                    <div
+                        onClick={() => onToggle(!isOpen)}
+                        title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+                        style={{
+                            position: 'absolute',
+                            left: '-24px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            width: '24px',
+                            height: '48px',
+                            background: 'white',
+                            border: '1px solid var(--border)',
+                            borderRight: 'none',
+                            borderTopLeftRadius: '8px',
+                            borderBottomLeftRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 10,
+                            boxShadow: '-2px 0 5px rgba(0,0,0,0.05)'
+                        }}
+                    >
+                        <Icon name={isOpen ? "ChevronRight" : "ChevronLeft"} size={16} color="#64748b" />
+                    </div>
+
+                    <div style={{ width: '320px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                        {/* THIS WEEK Counter */}
+                        {weekStats && (
+                            <div style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid var(--border)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                background: '#f8fafc',
+                                gap: '6px'
+                            }}>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>THIS WEEK</div>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    background: '#e0e7ff',
+                                    borderRadius: '20px',
+                                    padding: '0.2rem 0.6rem',
+                                    border: '1px solid #c7d2fe',
+                                    height: '36px'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', marginRight: '0.5rem', paddingRight: '0.5rem', borderRight: '1px solid #a5b4fc' }}>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white', marginRight: '0.2rem', textShadow: '0px 1px 2px rgba(0,0,0,0.1)' }}>{weekStats.uniquePlaysCount}</span>
+                                        <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>Unique</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', marginRight: '0.5rem', paddingRight: '0.5rem', borderRight: '1px solid #a5b4fc' }}>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#059669', marginRight: '0.2rem' }}>{weekStats.newPlaysCount}</span>
+                                        <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>New</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#6366f1', marginRight: '0.2rem' }}>{weekStats.totalScriptSlots}</span>
+                                        <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>Scripts</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f8fafc' }}>
+                            <div style={{ fontWeight: 'bold', color: '#0f172a' }}>Play Usage</div>
+                        </div>
+
+                        <div style={{ padding: '0.5rem' }}>
+                            <input
+                                placeholder="Add / Search..."
+                                value={quickAddValue}
+                                onChange={e => {
+                                    setQuickAddValue(e.target.value);
+                                    setSearchTerm(e.target.value);
+                                }}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && quickAddValue) {
+                                        onQuickAddPlay(quickAddValue);
+                                        setQuickAddValue('');
+                                        setSearchTerm('');
+                                    }
+                                }}
+                                style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0.75rem 0.75rem' }}>
+                            {sortedPlays.used.length > 0 && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Used This Week</div>
+                                    {sortedPlays.used.map(renderRow)}
+                                </div>
+                            )}
+
+                            {sortedPlays.priority.length > 0 && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Priority (Unused)</div>
+                                    {sortedPlays.priority.map(renderRow)}
+                                </div>
+                            )}
+
+                            {sortedPlays.rest.length > 0 && (
+                                <div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Master Playbook</div>
+                                    {sortedPlays.rest.map(renderRow)}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const PlayUsageRow = ({ play, usage, onDragStart, getPlayDisplayName }) => {
+            const days = ['M', 'T', 'W', 'TH', 'F'];
+            return (
+                <div
+                    draggable
+                    onDragStart={(e) => onDragStart(e, play)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '8px',
+                        borderBottom: '1px solid #e2e8f0',
+                        background: 'white',
+                        cursor: 'grab'
+                    }}
+                >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: '600', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {getPlayDisplayName(play)}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            {play.formation} {play.priority ? <span style={{ color: '#ca8a04', fontWeight: 'bold' }}>★</span> : ''}
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
+                        {days.map(d => (
+                            <div key={d} style={{
+                                width: '20px',
+                                height: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: usage.days[d] > 0 ? '#dbeafe' : '#f1f5f9',
+                                color: usage.days[d] > 0 ? '#1e40af' : '#94a3b8',
+                                fontSize: '0.65rem',
+                                fontWeight: 'bold',
+                                borderRadius: '2px'
+                            }}>
+                                {usage.days[d] > 0 ? usage.days[d] : '-'}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const GamePlanSideMenu = ({ isOpen, onClose, plays, practicePlans, onQuickAddPlay }) => {
+            const [searchTerm, setSearchTerm] = useState('');
+
+            // Calculate Usage
+            const usageMap = useMemo(() => {
+                const map = {};
+                plays.forEach(p => {
+                    map[p.id] = { total: 0, days: { M: 0, T: 0, W: 0, TH: 0, F: 0 } };
+                });
+
+                // Iterate Practice Plans
+                Object.entries(practicePlans).forEach(([day, plan]) => {
+                    if (!map[Object.keys(map)[0]]?.days.hasOwnProperty(day)) return; // Skip non-M-F if any
+
+                    (plan.segments || []).forEach(seg => {
+                        (seg.script || []).forEach(item => {
+                            const pid = typeof item === 'object' ? item.id : item;
+                            if (map[pid]) {
+                                map[pid].total++;
+                                if (map[pid].days[day] !== undefined) {
+                                    map[pid].days[day]++;
+                                }
+                            }
+                        });
+                    });
+                });
+                return map;
+            }, [plays, practicePlans]);
+
+            // Filter and Sort
+            const { practiced, priority, others } = useMemo(() => {
+                let filtered = plays.filter(p => !p.archived);
+                if (searchTerm) {
+                    const lower = searchTerm.toLowerCase();
+                    filtered = filtered.filter(p => p.name.toLowerCase().includes(lower) || p.formation?.toLowerCase().includes(lower) || p.concept?.toLowerCase().includes(lower));
+                }
+
+                const practicedList = [];
+                const priorityList = [];
+                const othersList = [];
+
+                filtered.forEach(p => {
+                    const u = usageMap[p.id] || { total: 0 };
+                    if (u.total > 0) {
+                        practicedList.push(p);
+                    } else if (p.priority) {
+                        priorityList.push(p);
+                    } else {
+                        othersList.push(p);
+                    }
+                });
+
+                // Sort
+                practicedList.sort((a, b) => usageMap[b.id].total - usageMap[a.id].total);
+                priorityList.sort((a, b) => a.name.localeCompare(b.name));
+                othersList.sort((a, b) => a.name.localeCompare(b.name));
+
+                return { practiced: practicedList, priority: priorityList, others: othersList };
+            }, [plays, usageMap, searchTerm]);
+
+            const handleDragStart = (e, play) => {
+                e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id }));
+                e.dataTransfer.effectAllowed = 'copy';
+            };
+
+            const handleQuickAdd = (e) => {
+                if (e.key === 'Enter' && searchTerm) {
+                    if (onQuickAddPlay) {
+                        onQuickAddPlay(searchTerm);
+                        setSearchTerm('');
+                    }
+                }
+            };
+
+            // Helper for display name
+            const getPlayDisplayName = (play) => {
+                return play.name;
+            };
+
+            return (
+                <div style={{
+                    width: isOpen ? '350px' : '0px',
+                    transition: 'width 0.3s ease-in-out',
+                    background: 'white',
+                    borderLeft: isOpen ? '1px solid #cbd5e1' : 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    height: '100%',
+                    position: 'relative' // Ensure it stacks correctly
+                }}>
+                    <div style={{ padding: '12px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>Practice Usage</span>
+                        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>✕</button>
+                    </div>
+
+                    <div style={{ padding: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type="text"
+                                placeholder="Search or Quick Add..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyDown={handleQuickAdd}
+                                style={{ width: '100%', padding: '8px 24px 8px 8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                            />
+                            <div style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>+</div>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>Press Enter to create new play</div>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        {/* Section 1: Practiced */}
+                        {practiced.length > 0 && (
+                            <div>
+                                <div style={{ padding: '8px 12px', background: '#eff6ff', color: '#1e40af', fontWeight: 'bold', fontSize: '0.8rem', borderBottom: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>THIS WEEK ({practiced.length})</span>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>Sort: Usage</span>
+                                </div>
+                                {practiced.map(p => (
+                                    <PlayUsageRow key={p.id} play={p} usage={usageMap[p.id]} onDragStart={handleDragStart} getPlayDisplayName={p => p.name} />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Section 2: Priority */}
+                        {priority.length > 0 && (
+                            <div>
+                                <div style={{ padding: '8px 12px', background: '#fefce8', color: '#854d0e', fontWeight: 'bold', fontSize: '0.8rem', borderBottom: '1px solid #fef9c3', borderTop: '1px solid #e2e8f0' }}>
+                                    PRIORITY (UNUSED)
+                                </div>
+                                {priority.map(p => (
+                                    <PlayUsageRow key={p.id} play={p} usage={usageMap[p.id]} onDragStart={handleDragStart} getPlayDisplayName={p => p.name} />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Section 3: Others */}
+                        {others.length > 0 && (
+                            <div>
+                                <div style={{ padding: '8px 12px', background: '#f8fafc', color: '#475569', fontWeight: 'bold', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', borderTop: '1px solid #e2e8f0' }}>
+                                    MASTER PLAYBOOK
+                                </div>
+                                {others.slice(0, 100).map(p => (
+                                    <PlayUsageRow key={p.id} play={p} usage={usageMap[p.id]} onDragStart={handleDragStart} getPlayDisplayName={p => p.name} />
+                                ))}
+                                {others.length > 100 && (
+                                    <div style={{ padding: '8px', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
+                                        ... {others.length - 100} more plays ...
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
             const [assignmentModalState, setAssignmentModalState] = useState(null); // { playId, x, y }
             const [showImportModal, setShowImportModal] = useState(false);
             const [importSourceWeekId, setImportSourceWeekId] = useState('');
+            // const [isSideMenuOpen, setIsSideMenuOpen] = useState(false); // Removed in favor of showSideMenu
 
             const [viewMode, setViewMode] = useState('sheet'); // 'sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
             const [showPlaySelector, setShowPlaySelector] = useState(false);
             const [playSelectorFilters, setPlaySelectorFilters] = useState({ formation: '', concept: '', tag: '', situation: '' });
+
+            // Side Menu State
+            const [showSideMenu, setShowSideMenu] = useState(false);
+
+            // Effect to collapse global sidebar when local side menu is open
+            useEffect(() => {
+                if (showSideMenu && setAppSidebarCollapsed) {
+                    setAppSidebarCollapsed(true);
+                }
+            }, [showSideMenu, setAppSidebarCollapsed]);
 
             // For Wristband Autocomplete
             const [showWristband, setShowWristband] = useState(true);
@@ -34631,6 +35075,59 @@
                 }
                 return set;
             }, [plays]);
+
+            // Calculate week stats for sidebar
+            const weekStats = useMemo(() => {
+                // Calculate unique plays in game plan
+                const allGamePlanPlayIds = new Set();
+                Object.values(gamePlan?.sets || {}).forEach(set => {
+                    (set.playIds || []).forEach(item => {
+                        const id = typeof item === 'object' ? item.id : item;
+                        if (id) allGamePlanPlayIds.add(id);
+                    });
+                });
+                Object.values(gamePlan?.miniScripts || {}).forEach(script => {
+                    (script.playIds || []).forEach(item => {
+                        const id = typeof item === 'object' ? item.id : item;
+                        if (id) allGamePlanPlayIds.add(id);
+                    });
+                });
+                const uniquePlaysCount = allGamePlanPlayIds.size;
+
+                // Calculate new plays (plays added this week that weren't in previous weeks)
+                const previousWeekPlayIds = new Set();
+                weeks.forEach(w => {
+                    if (w.weekNumber < currentWeek.weekNumber) {
+                        const prevGamePlan = w.gamePlan || {};
+                        Object.values(prevGamePlan.sets || {}).forEach(set => {
+                            (set.playIds || []).forEach(item => {
+                                const id = typeof item === 'object' ? item.id : item;
+                                if (id) previousWeekPlayIds.add(id);
+                            });
+                        });
+                        Object.values(prevGamePlan.miniScripts || {}).forEach(script => {
+                            (script.playIds || []).forEach(item => {
+                                const id = typeof item === 'object' ? item.id : item;
+                                if (id) previousWeekPlayIds.add(id);
+                            });
+                        });
+                    }
+                });
+                const newPlaysCount = Array.from(allGamePlanPlayIds).filter(id => !previousWeekPlayIds.has(id)).length;
+
+                // Calculate total practice script slots for the week
+                let totalScriptSlots = 0;
+                const plansList = Array.isArray(practicePlans) ? practicePlans : Object.values(practicePlans || {});
+                plansList.forEach(plan => {
+                    plan.segments.forEach(seg => {
+                        if (seg.hasScript && seg.script && seg.script.length > 0) {
+                            totalScriptSlots += seg.script.length;
+                        }
+                    });
+                });
+
+                return { uniquePlaysCount, newPlaysCount, totalScriptSlots };
+            }, [gamePlan, weeks, currentWeek, practicePlans]);
 
             // Auto-Assign Priority Plays to Categories based on Type
             useEffect(() => {
@@ -38029,7 +38526,7 @@
 
                 return (
                     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-                        <PlaybookSidebar plays={plays} weekInstallIds={newInstallIds} />
+                        {!showSideMenu && <PlaybookSidebar plays={plays} weekInstallIds={newInstallIds} />}
                         <div style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
                             {FZDND_ZONES.map((zone) => {
                                 const definedCols = zone.columns || ['Philosophy', '1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
@@ -40074,84 +40571,6 @@
                             <button className={`btn ${showPrintPreview ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowPrintPreview(!showPrintPreview)} style={{ border: '2px solid var(--accent)', height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 {showPrintPreview ? 'CLOSE PREVIEW' : 'PRINT PREVIEW'}
                             </button>
-                            {/* Stats Ticker */}
-                            {(() => {
-                                // Calculate unique plays in game plan
-                                const allGamePlanPlayIds = new Set();
-                                Object.values(gamePlan?.sets || {}).forEach(set => {
-                                    (set.playIds || []).forEach(item => {
-                                        const id = typeof item === 'object' ? item.id : item;
-                                        if (id) allGamePlanPlayIds.add(id);
-                                    });
-                                });
-                                Object.values(gamePlan?.miniScripts || {}).forEach(script => {
-                                    (script.playIds || []).forEach(item => {
-                                        const id = typeof item === 'object' ? item.id : item;
-                                        if (id) allGamePlanPlayIds.add(id);
-                                    });
-                                });
-                                const uniquePlaysCount = allGamePlanPlayIds.size;
-
-                                // Calculate new plays (plays added this week that weren't in previous weeks)
-                                const previousWeekPlayIds = new Set();
-                                weeks.forEach(w => {
-                                    if (w.weekNumber < currentWeek.weekNumber) {
-                                        const prevGamePlan = w.gamePlan || {};
-                                        Object.values(prevGamePlan.sets || {}).forEach(set => {
-                                            (set.playIds || []).forEach(item => {
-                                                const id = typeof item === 'object' ? item.id : item;
-                                                if (id) previousWeekPlayIds.add(id);
-                                            });
-                                        });
-                                        Object.values(prevGamePlan.miniScripts || {}).forEach(script => {
-                                            (script.playIds || []).forEach(item => {
-                                                const id = typeof item === 'object' ? item.id : item;
-                                                if (id) previousWeekPlayIds.add(id);
-                                            });
-                                        });
-                                    }
-                                });
-                                const newPlaysCount = Array.from(allGamePlanPlayIds).filter(id => !previousWeekPlayIds.has(id)).length;
-
-                                // Calculate total practice script slots for the week
-                                let totalScriptSlots = 0;
-                                const plansList = Array.isArray(practicePlans) ? practicePlans : Object.values(practicePlans || {});
-                                plansList.forEach(plan => {
-                                    plan.segments.forEach(seg => {
-                                        if (seg.hasScript && seg.script && seg.script.length > 0) {
-                                            totalScriptSlots += seg.script.length;
-                                        }
-                                    });
-                                });
-
-                                return (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft: '0.5rem' }}>
-                                        <div style={{ fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>THIS WEEK</div>
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            background: '#e0e7ff',
-                                            borderRadius: '20px',
-                                            padding: '0.2rem 0.6rem',
-                                            border: '1px solid #c7d2fe',
-                                            height: '36px'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', marginRight: '0.5rem', paddingRight: '0.5rem', borderRight: '1px solid #a5b4fc' }}>
-                                                <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white', marginRight: '0.2rem', textShadow: '0px 1px 2px rgba(0,0,0,0.1)' }}>{uniquePlaysCount}</span>
-                                                <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>Unique</span>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', marginRight: '0.5rem', paddingRight: '0.5rem', borderRight: '1px solid #a5b4fc' }}>
-                                                <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#059669', marginRight: '0.2rem' }}>{newPlaysCount}</span>
-                                                <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>New</span>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#6366f1', marginRight: '0.2rem' }}>{totalScriptSlots}</span>
-                                                <span style={{ fontSize: '0.65rem', color: '#6366f1', fontWeight: 'bold' }}>Scripts</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
                         </div>
 
                         {/* Game Plan Statistics Ticker */}
@@ -40159,14 +40578,24 @@
                     </div>
 
                     {/* View Content */}
-                    <div className="game-plan-content" style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px' }}>
-                        {viewMode === 'call-sheet' && renderCallSheet()}
-                        {viewMode === 'sheet' && renderSheetView()}
-                        {viewMode === 'fzdnd' && renderFZDnDView()}
-                        {viewMode === 'matrix' && renderMatrix()}
-                        {viewMode === 'player-touches' && renderPlayerTouches()}
-                        {viewMode === 'priority' && renderPriorityPlays()}
-                        {viewMode === 'staples' && renderStaples()}
+                    <div style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '1rem' }}>
+                        <div className="game-plan-content" style={{ flex: 1, overflow: 'hidden', background: ['priority', 'staples'].includes(viewMode) ? 'transparent' : 'white', padding: ['priority', 'staples'].includes(viewMode) ? '0' : '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
+                            {viewMode === 'call-sheet' && renderCallSheet()}
+                            {viewMode === 'sheet' && renderSheetView()}
+                            {viewMode === 'fzdnd' && renderFZDnDView()}
+                            {viewMode === 'matrix' && renderMatrix()}
+                            {viewMode === 'player-touches' && renderPlayerTouches()}
+                            {viewMode === 'priority' && renderPriorityPlays()}
+                            {viewMode === 'staples' && renderStaples()}
+                        </div>
+                        <GamePlannerSideMenu
+                            plays={plays}
+                            practicePlans={practicePlans}
+                            onQuickAddPlay={onQuickAddPlay}
+                            isOpen={showSideMenu}
+                            onToggle={setShowSideMenu}
+                            weekStats={weekStats}
+                        />
                     </div>
 
                     {/* Play Selector Modal */}
@@ -51096,10 +51525,34 @@
 
                         {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} defaultWbSettings={getGlobalWbSettings()} defaultDepthChart={getGlobalDepthCharts()} defaultZonePhilosophies={getGlobalZonePhilosophies()} playCategories={playCategories} playBuckets={playBuckets} />}
                         {view === 'practice-report' && <PracticeReportView weeks={weeks} plays={plays} playSyntax={playSyntax} parsePlayName={parsePlayName} />}
-                        {view === 'game-plan' && <OffensiveGamePlan plays={plays} weekDate={currentWeek.date} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)} onQuickAddPlay={handleQuickAddPlay} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} weeks={weeks} currentWeek={currentWeek} onUpdateLayouts={(newLayouts) => {
-                            // Update WEEK specific layout
-                            handleUpdateWeek(currentWeek.id, 'gamePlanLayouts', newLayouts);
-                        }} isLocked={currentWeek.isLocked} layoutVersions={layoutVersions} onSaveLayoutVersion={saveLayoutVersion} onDeleteLayoutVersion={deleteLayoutVersion} onLoadLayoutVersion={loadLayoutVersion} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} newInstallIds={currentWeek.newInstallIds} onUpdateWeek={handleUpdateWeek} playCategories={playCategories} playBuckets={playBuckets} />}
+                        {view === 'game-plan' && <OffensiveGamePlan
+                            plays={plays}
+                            weekDate={currentWeek.date}
+                            gamePlan={currentWeek.offensiveGamePlan}
+                            practicePlans={currentWeek.practicePlans}
+                            onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)}
+                            onQuickAddPlay={handleQuickAddPlay}
+                            onUpdatePlay={handlePatchPlay}
+                            gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts}
+                            weeks={weeks}
+                            currentWeek={currentWeek}
+                            onUpdateLayouts={(newLayouts) => {
+                                // Update WEEK specific layout
+                                handleUpdateWeek(currentWeek.id, 'gamePlanLayouts', newLayouts);
+                            }}
+                            isLocked={currentWeek.isLocked}
+                            layoutVersions={layoutVersions}
+                            onSaveLayoutVersion={saveLayoutVersion}
+                            onDeleteLayoutVersion={deleteLayoutVersion}
+                            onLoadLayoutVersion={loadLayoutVersion}
+                            wbSettings={currentWeek.wristbands || wbSettings}
+                            drills={drills}
+                            newInstallIds={currentWeek.newInstallIds}
+                            onUpdateWeek={handleUpdateWeek}
+                            playCategories={playCategories}
+                            playBuckets={playBuckets}
+                            setAppSidebarCollapsed={setSidebarCollapsed}
+                        />}
 
                         {
                             view === 'playbook' && (
