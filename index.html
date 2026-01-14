@@ -52340,34 +52340,36 @@
 
             static getDerivedStateFromError(error) {
                 return { hasError: true };
-                componentatc, errorInfo) {
-                    this.setState({ error, errorInfo });
-                    console.error("Caught error:", error, errorInfo);
-                }
-
-
-                render() {
-                    if (this.state.hasError) {
-                        return (
-                            <div style={{ padding: '2rem', color: '#ef4444', background: '#1e293b', height: '100vh' }}>
-                                <h1>Something went wrong.</h1>
-                                <details style={{ whiteSpace: 'pre-wrap' }}>
-                                    {this.state.error && this.state.error.toString()}
-                                    <br />
-                                    {this.state.errorInfo && this.state.errorInfo.componentStack}
-                                </details>
-                            </div>
-                        );
-                    }
-                    return this.props.children;
-                }
             }
+
+            componentDidCatch(error, errorInfo) {
+                this.setState({ error, errorInfo });
+                console.error("Caught error:", error, errorInfo);
+            }
+
+
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div style={{ padding: '2rem', color: '#ef4444', background: '#1e293b', height: '100vh' }}>
+                            <h1>Something went wrong.</h1>
+                            <details style={{ whiteSpace: 'pre-wrap' }}>
+                                {this.state.error && this.state.error.toString()}
+                                <br />
+                                {this.state.errorInfo && this.state.errorInfo.componentStack}
+                            </details>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
 
         ReactDOM.render(
             <ErrorBoundary>
-            <AuthProvider>
-                <App />
-            </AuthProvider>
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
             </ErrorBoundary >,
             document.getElementById('root')
         );
