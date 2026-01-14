@@ -9308,24 +9308,48 @@
                     });
                     itemsToAdd = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
                 } else {
+                    let rawIds = [];
+
                     // 2. Standard Set/Script Lookup
                     let setData = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null) || gamePlan?.miniScripts?.[sectionId] || (Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts.find(s => s.id === sectionId) : null);
 
-                    // 3. Play Buckets Lookup
-                    if (!setData) {
-                        const bucket = playBuckets?.find(b => b.id === sectionId);
-                        if (bucket) {
-                            setData = { playIds: bucket.plays };
+                    if (setData) {
+                        rawIds = setData.assignedPlayIds || setData.playIds || [];
+                    }
+
+                    // 3. Fallback: Call Sheet Layouts
+                    if (rawIds.length === 0 && gamePlanLayouts?.CALL_SHEET?.sections) {
+                        for (const sec of gamePlanLayouts.CALL_SHEET.sections) {
+                            if (!sec.boxes) continue;
+                            const box = sec.boxes.find(b => b.setId === sectionId);
+                            if (box) {
+                                if (box.assignedPlayIds && box.assignedPlayIds.length > 0) {
+                                    rawIds = box.assignedPlayIds;
+                                } else if (box.rows) {
+                                    const scriptIds = [];
+                                    box.rows.forEach(r => {
+                                        if (r.content) scriptIds.push(r.content);
+                                        if (r.contentRight) scriptIds.push(r.contentRight);
+                                    });
+                                    rawIds = [...new Set(scriptIds)];
+                                }
+                                break;
+                            }
                         }
                     }
 
-                    if (setData && (setData.assignedPlayIds || setData.playIds)) {
-                        const ids = setData.assignedPlayIds || setData.playIds || [];
-                        itemsToAdd = ids.map(id => {
-                            const pid = typeof id === 'object' ? id.id : id;
-                            return plays.find(p => p.id === pid);
-                        }).filter(Boolean);
+                    // 4. Play Buckets Lookup
+                    if (rawIds.length === 0) {
+                        const bucket = playBuckets?.find(b => b.id === sectionId);
+                        if (bucket && bucket.plays) {
+                            rawIds = bucket.plays;
+                        }
                     }
+
+                    itemsToAdd = rawIds.map(id => {
+                        const pid = typeof id === 'object' ? id.id : id;
+                        return plays.find(p => p.id === pid);
+                    }).filter(Boolean);
                 }
 
                 if (itemsToAdd.length === 0) return;
@@ -9349,6 +9373,7 @@
                     } else {
                         // Append new row
                         const newItem = {
+                            id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                             hash: 'M',
                             playName: name,
                             playId: playDef ? playDef.id : ''
@@ -34716,8 +34741,18 @@
                                                         <>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); onAddSection(box.setId); }}
-                                                                className="btn btn-secondary"
-                                                                style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    marginBottom: '8px',
+                                                                    fontSize: '0.75rem',
+                                                                    padding: '6px',
+                                                                    background: '#f1f5f9',
+                                                                    color: '#000000',
+                                                                    border: '1px solid #cbd5e1',
+                                                                    borderRadius: '4px',
+                                                                    fontWeight: '700',
+                                                                    cursor: 'pointer'
+                                                                }}
                                                             >
                                                                 + Add All
                                                             </button>
@@ -34759,8 +34794,18 @@
                                                 <>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); onAddSection(formation.id); }}
-                                                        className="btn btn-secondary"
-                                                        style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                                        style={{
+                                                            width: '100%',
+                                                            marginBottom: '8px',
+                                                            fontSize: '0.75rem',
+                                                            padding: '6px',
+                                                            background: '#f1f5f9',
+                                                            color: '#000000',
+                                                            border: '1px solid #cbd5e1',
+                                                            borderRadius: '4px',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer'
+                                                        }}
                                                     >
                                                         + Add All
                                                     </button>
@@ -34820,8 +34865,18 @@
                                                             e.stopPropagation();
                                                             onAddSection(bucket.id);
                                                         }}
-                                                        className="btn btn-secondary"
-                                                        style={{ width: '100%', marginBottom: '8px', fontSize: '0.75rem', padding: '4px' }}
+                                                        style={{
+                                                            width: '100%',
+                                                            marginBottom: '8px',
+                                                            fontSize: '0.75rem',
+                                                            padding: '6px',
+                                                            background: '#f1f5f9',
+                                                            color: '#000000',
+                                                            border: '1px solid #cbd5e1',
+                                                            borderRadius: '4px',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer'
+                                                        }}
                                                     >
                                                         + Add All
                                                     </button>
@@ -34883,20 +34938,38 @@
                         {/* Header with Close Button */}
                         <div style={{
                             padding: '1rem',
-                            borderBottom: '1px solid var(--border)',
+                            borderBottom: '1px solid #334155',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            background: 'white'
+                            background: '#1e293b',
+                            color: 'white'
                         }}>
-                            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Playbook</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Icon name="BookOpen" size={20} color="#cbd5e1" />
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', letterSpacing: '0.025em' }}>Playbook</h3>
+                            </div>
                             <button
-                                className="btn btn-secondary"
                                 onClick={() => onToggle(false)}
                                 title="Close Sidebar"
-                                style={{ padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{
+                                    padding: '6px 12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '6px',
+                                    color: '#f8fafc',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.2)'}
+                                onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
                             >
-                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>×</span> Close
+                                <span style={{ fontSize: '1.2rem', lineHeight: 0.8 }}>×</span> Close
                             </button>
                         </div>
 
