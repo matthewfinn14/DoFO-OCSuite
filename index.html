@@ -34637,8 +34637,7 @@
                         // 1. Try Game Plan Data (Primary)
                         const setInSets = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null);
                         const setInMini = gamePlan?.miniScripts?.[sectionId] || (Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts.find(s => s.id === sectionId) : null);
-
-                        const setData = setInSets || setInMini;
+ const setData = setInSets || setInMini;
 
                         if (setData && (setData.assignedPlayIds || setData.playIds)) {
                             rawIds = setData.assignedPlayIds || setData.playIds || [];
@@ -34646,29 +34645,13 @@
 
                         // 2. Fallback to Layouts (Parallel Process - Fail-safe)
                         if ((!rawIds || rawIds.length === 0) && gamePlanLayouts?.CALL_SHEET?.sections) {
-                            for (const sec of gamePlanLayouts.CALL_SHEET.sections) {
-                                if (!sec.boxes) continue;
-                                const box = sec.boxes.find(b => b.setId === sectionId);
-                                if (box) {
-                                    // For Grids
-                                    if (box.assignedPlayIds && box.assignedPlayIds.length > 0) {
-                                        rawIds = box.assignedPlayIds;
-                                    }
-                                    // For Scripts
-                                    else if (box.rows) {
-                                        const scriptIds = [];
-                                        box.rows.forEach(r => {
-                                            if (r.content) scriptIds.push(r.content);
-                                            if (r.contentRight) scriptIds.push(r.contentRight);
-                                        });
-                                        rawIds = [...new Set(scriptIds)];
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-
-                        playList = rawIds.map(id => {
+                                                    nLayouts.CALL_SHEET.sections) {
+                                                                                                                   b => b.setId === sectionId);
+                                                                                                                                                           .assignedPlayIds.length > 0) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                nt);
+                                                                                 ontentRight);
+                                                                                                                                                        }
+                                      ak                                                                                                                 playList = rawIds.map(id => {
                             const pid = typeof id === 'object' ? id.id : id;
                             if (pid === 'GAP') return null;
                             return plays.find(p => p.id === pid);
@@ -34879,7 +34862,28 @@
                         <Icon name={isOpen ? "ChevronRight" : "ChevronLeft"} size={16} color="#64748b" />
                     </div>
 
+
                     <div style={{ width: '360px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                        {/* Header with Close Button */}
+                        <div style={{
+                            padding: '1rem',
+                            borderBottom: '1px solid var(--border)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: 'white'
+                        }}>
+                            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Playbook</h3>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => onToggle(false)}
+                                title="Close Sidebar"
+                                style={{ padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>×</span> Close
+                            </button>
+                        </div>
+
                         {/* THIS WEEK Counter */}
                         {weekStats && (
                             <div style={{
@@ -52100,7 +52104,7 @@
                                 segmentSettings={practiceSegmentSettings}
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
-                                gamePlanLayouts={currentWeek.gamePlanLayouts || GAME_PLAN_LAYOUTS}
+                                gamePlanLayouts={(currentWeek.gamePlanLayouts && currentWeek.gamePlanLayouts.CALL_SHEET) ? currentWeek.gamePlanLayouts : GAME_PLAN_LAYOUTS}
                                 playBuckets={playBuckets}
                             />
                         )}
@@ -52139,7 +52143,7 @@
                                 segmentSettings={practiceSegmentSettings}
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
-                                gamePlanLayouts={currentWeek.gamePlanLayouts || GAME_PLAN_LAYOUTS}
+                                gamePlanLayouts={(currentWeek.gamePlanLayouts && currentWeek.gamePlanLayouts.CALL_SHEET) ? currentWeek.gamePlanLayouts : GAME_PLAN_LAYOUTS}
                                 playBuckets={playBuckets}
                                 weeks={weeks}
                                 currentWeek={currentWeek}
@@ -52320,9 +52324,7 @@
 
             static getDerivedStateFromError(error) {
                 return { hasError: true };
-            }
-
-            componentDidCatch(error, errorInfo) {
+                componentDidCatch(error, errorInfo) {
                 this.setState({ error, errorInfo });
                 console.error("Caught error:", error, errorInfo);
             }
