@@ -34637,7 +34637,7 @@
                         // 1. Try Game Plan Data (Primary)
                         const setInSets = gamePlan?.sets?.[sectionId] || (Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === sectionId) : null);
                         const setInMini = gamePlan?.miniScripts?.[sectionId] || (Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts.find(s => s.id === sectionId) : null);
- const setData = setInSets || setInMini;
+ts || setInMini;
 
                         if (setData && (setData.assignedPlayIds || setData.playIds)) {
                             rawIds = setData.assignedPlayIds || setData.playIds || [];
@@ -34645,13 +34645,17 @@
 
                         // 2. Fallback to Layouts (Parallel Process - Fail-safe)
                         if ((!rawIds || rawIds.length === 0) && gamePlanLayouts?.CALL_SHEET?.sections) {
-                                                    nLayouts.CALL_SHEET.sections) {
-                                                                                                                   b => b.setId === sectionId);
-                                                                                                                                                           .assignedPlayIds.length > 0) {
-                                                                                                                                                                                                                                                                                                                                                                                                                                nt);
-                                                                                 ontentRight);
-                                                                                                                                                        }
-                                      ak                                                                                                                 playList = rawIds.map(id => {
+                            for (const sec of ga                            ions) {
+                                if (!sec.boxes) c                                        const box = sec.bo                                Id);
+                                if (box) {
+                                        r Grids
+                                       box.assignedP                                    > 0) {
+                                        rawIds = box.a                                                   }
+                                                                                           f (box.rows) {
+                                       const scriptIds =                                            box.rows.forEach(r                                                 if (r.content) s                                                                     if (r.contentRigh                                                                          });
+                                                          t(sc                                              }
+                                                                                                       }
+                                                                s.map(id => {
                             const pid = typeof id === 'object' ? id.id : id;
                             if (pid === 'GAP') return null;
                             return plays.find(p => p.id === pid);
@@ -52324,7 +52328,7 @@
 
             static getDerivedStateFromError(error) {
                 return { hasError: true };
-                componentDidCatch(error, errorInfo) {
+                componentatc, errorInfo) {
                 this.setState({ error, errorInfo });
                 console.error("Caught error:", error, errorInfo);
             }
