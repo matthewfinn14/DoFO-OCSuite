@@ -2164,6 +2164,11 @@
                 case "ChevronDown": return <svg {...commonProps}><path d="m6 9 6 6 6-6" /></svg>;
                 case "ChevronRight": return <svg {...commonProps}><path d="m9 18 6-6-6-6" /></svg>;
                 case "ChevronUp": return <svg {...commonProps}><path d="m18 15-6-6-6 6" /></svg>;
+                case "Chevron": // Fallback for shortened name?
+                case "ChevronLeft": return <svg {...commonProps}><path d="m15 18-6-6 6-6" /></svg>;
+                case "ChevronsRight": return <svg {...commonProps}><path d="m7 7 5 5-5 5" /><path d="m13 7 5 5-5 5" /></svg>;
+                case "ChevronsLeft": return <svg {...commonProps}><path d="m11 17-5-5 5-5" /><path d="m18 17-5-5 5-5" /></svg>;
+
                 case "Check": return <svg {...commonProps}><polyline points="20 6 9 17 4 12" /></svg>;
                 case "Plus": return <svg {...commonProps}><path d="M5 12h14" /><path d="M12 5v14" /></svg>;
                 case "Minus": return <svg {...commonProps}><path d="M5 12h14" /></svg>;
@@ -2228,7 +2233,7 @@
 
                 default:
                     // Fallback to text (Emoji or just text)
-                    return <span style={{ fontSize: '0.8rem', marginRight: '0.2rem', display: 'inline-block', width: 'auto', textAlign: 'center', opacity: 0.8, ...style, color: color }}>{name}</span>;
+                    return <span style={{ fontSize: '0.8rem', marginRight: '0.2rem', display: 'inline-block', width: 'auto', textAlign: 'center', opacity: 0.8, ...style, color: 'red' }}>MISSING: {name}</span>;
             }
         };
 
@@ -2274,8 +2279,8 @@
             // Flatten groups back to array
             const flattenGroups = (groups) => {
                 const sortedBucketIds = Object.keys(groups.buckets).sort((a, b) => {
-                    const nameA = playBuckets.find(xb => xb.id === a)?.name || '';
-                    const nameB = playBuckets.find(xb => xb.id === b)?.name || '';
+                    const nameA = playBuckets.find(xb => xb.id === a)?.label || '';
+                    const nameB = playBuckets.find(xb => xb.id === b)?.label || '';
                     return nameA.localeCompare(nameB);
                 });
                 let list = [...groups.unassigned];
@@ -2332,8 +2337,8 @@
             };
 
             const sortedBucketIds = Object.keys(groupedItems.buckets).sort((a, b) => {
-                const nameA = playBuckets.find(xb => xb.id === a)?.name || '';
-                const nameB = playBuckets.find(xb => xb.id === b)?.name || '';
+                const nameA = playBuckets.find(xb => xb.id === a)?.label || '';
+                const nameB = playBuckets.find(xb => xb.id === b)?.label || '';
                 return nameA.localeCompare(nameB);
             });
 
@@ -2528,12 +2533,12 @@
                         return (
                             <div key={bucketId} style={{ marginTop: '0.5rem' }}>
                                 <div style={{
-                                    fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b',
+                                    fontSize: '0.75rem', fontWeight: 'bold', color: '#475569',
                                     marginBottom: '0.25rem', padding: '0.25rem 0.5rem',
                                     background: '#f1f5f9', borderRadius: '4px',
                                     display: 'flex', justifyContent: 'space-between'
                                 }}>
-                                    <span>{bucket ? bucket.name : 'Unknown Bucket'}</span>
+                                    <span>{bucket ? bucket.label : 'Unknown Bucket'}</span>
                                     <span style={{ opacity: 0.5 }}>{groupedItems.buckets[bucketId].length}</span>
                                 </div>
                                 <ReactSortable
@@ -8689,7 +8694,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed }) => {
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [selectedSegmentId, setSelectedSegmentId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -26595,6 +26600,24 @@
                                             </div>
                                         </div>
 
+                                        <div style={{ marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Concept Family</div>
+                                            <select
+                                                value={play.bucketId || ''}
+                                                onChange={(e) => {
+                                                    if (onUpdatePlay) onUpdatePlay(playId, { bucketId: e.target.value });
+                                                }}
+                                                style={{ width: '100%', padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                            >
+                                                <option value="">-- No Concept Assigned --</option>
+                                                {(playBuckets || [])
+                                                    .filter(b => !play.type || b.categoryId === play.type)
+                                                    .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
+                                                    .map(b => (
+                                                        <option key={b.id} value={b.id}>{b.label}</option>
+                                                    ))}
+                                            </select>
+                                        </div>
 
                                     </div>
 
@@ -52284,6 +52307,7 @@
                                 gamePlan={currentWeek.offensiveGamePlan}
                                 gamePlanLayouts={(currentWeek.gamePlanLayouts && currentWeek.gamePlanLayouts.CALL_SHEET) ? currentWeek.gamePlanLayouts : GAME_PLAN_LAYOUTS}
                                 playBuckets={playBuckets}
+                                playCategories={playCategories}
                             />
                         )}
                         {view === 'pregame' && (
@@ -52323,6 +52347,7 @@
                                 gamePlan={currentWeek.offensiveGamePlan}
                                 gamePlanLayouts={(currentWeek.gamePlanLayouts && currentWeek.gamePlanLayouts.CALL_SHEET) ? currentWeek.gamePlanLayouts : GAME_PLAN_LAYOUTS}
                                 playBuckets={playBuckets}
+                                playCategories={playCategories}
                                 weeks={weeks}
                                 currentWeek={currentWeek}
                                 onQuickAddPlay={handleQuickAddPlay}
