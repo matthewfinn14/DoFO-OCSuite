@@ -5187,14 +5187,14 @@
                                             </select>
                                         </div>
                                         <div className="form-group" style={{ marginBottom: 0 }}>
-                                            <label className="form-label">Bucket</label>
+                                            <label className="form-label">Play Family</label>
                                             <select
                                                 className="form-input"
                                                 value={formData.bucketId || ''}
                                                 onChange={e => setFormData({ ...formData, bucketId: e.target.value })}
                                                 disabled={!formData.playCategory}
                                             >
-                                                <option value="">Select Bucket...</option>
+                                                <option value="">Select Play Family...</option>
                                                 {playBuckets
                                                     .filter(b => b.categoryId === formData.playCategory)
                                                     .map(bucket => (
@@ -11463,6 +11463,7 @@
                                         gamePlan={gamePlan}
                                         gamePlanLayouts={gamePlanLayouts}
                                         playBuckets={playBuckets}
+                                        playCategories={playCategories}
                                         onAddSection={handleAddSection}
                                     />
                                 </div>
@@ -34510,7 +34511,7 @@
             );
         };
 
-        const GamePlannerSideMenu = ({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, onAddSection }) => {
+        const GamePlannerSideMenu = ({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection }) => {
             const [searchTerm, setSearchTerm] = useState('');
             const [quickAddValue, setQuickAddValue] = useState('');
             const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, buckets
@@ -34824,7 +34825,7 @@
             };
 
             const renderBucketsContent = () => {
-                if (!playBuckets) return <div style={{ padding: '1rem', color: '#64748b' }}>No Buckets found.</div>;
+                if (!playCategories || !playBuckets) return <div style={{ padding: '1rem', color: '#64748b' }}>No Categories or Play Families found.</div>;
 
                 return (
                     <div style={{ padding: '0 0.75rem 0.75rem', overflowY: 'auto', flex: 1 }}>
@@ -34839,51 +34840,100 @@
                                 ))}
                             </div>
                         </div>
-                        {(playBuckets || []).map(bucket => {
-                            const items = (bucket.plays || []).map(pid => plays.find(p => p.id === pid)).filter(Boolean);
-                            // if (items.length === 0) return null; // Always show
-                            const isExpanded = expandedSections[bucket.id];
+
+                        {/* Render Categories as Headers with Play Families nested */}
+                        {(playCategories || []).map(category => {
+                            // Get all play families for this category
+                            const familiesInCategory = (playBuckets || []).filter(bucket => bucket.categoryId === category.id);
+
+                            // Calculate total plays in this category
+                            const totalPlaysInCategory = familiesInCategory.reduce((sum, family) => {
+                                return sum + (family.plays || []).length;
+                            }, 0);
+
+                            const isCategoryExpanded = expandedSections[`category-${category.id}`];
 
                             return (
-                                <div key={bucket.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                <div key={category.id} style={{ marginBottom: '8px' }}>
+                                    {/* Category Header */}
                                     <div
-                                        onClick={() => toggleSection(bucket.id)}
-                                        style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                        onClick={() => toggleSection(`category-${category.id}`)}
+                                        style={{
+                                            padding: '10px',
+                                            background: category.color || '#3b82f6',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            borderRadius: '4px',
+                                            marginBottom: '4px'
+                                        }}
                                     >
-                                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>{bucket.name}</span>
+                                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'white', textTransform: 'uppercase' }}>
+                                            {category.label}
+                                        </span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
-                                            <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="#64748b" />
+                                            <span style={{ fontSize: '0.7rem', color: 'white' }}>{totalPlaysInCategory} plays</span>
+                                            <Icon name={isCategoryExpanded ? "ChevronDown" : "ChevronRight"} size={16} color="white" />
                                         </div>
                                     </div>
-                                    {isExpanded && (
-                                        <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                            {items.length > 0 ? (
-                                                <>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onAddSection(bucket.id);
-                                                        }}
-                                                        style={{
-                                                            width: '100%',
-                                                            marginBottom: '8px',
-                                                            fontSize: '0.75rem',
-                                                            padding: '6px',
-                                                            background: '#f1f5f9',
-                                                            color: '#000000',
-                                                            border: '1px solid #cbd5e1',
-                                                            borderRadius: '4px',
-                                                            fontWeight: '700',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        + Add All
-                                                    </button>
-                                                    {items.map(renderRow)}
-                                                </>
+
+                                    {/* Play Families within this Category */}
+                                    {isCategoryExpanded && (
+                                        <div style={{ marginLeft: '12px', borderLeft: `3px solid ${category.color || '#3b82f6'}`, paddingLeft: '8px' }}>
+                                            {familiesInCategory.length > 0 ? (
+                                                familiesInCategory.map(bucket => {
+                                                    const items = (bucket.plays || []).map(pid => plays.find(p => p.id === pid)).filter(Boolean);
+                                                    const isFamilyExpanded = expandedSections[bucket.id];
+
+                                                    return (
+                                                        <div key={bucket.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                                            <div
+                                                                onClick={() => toggleSection(bucket.id)}
+                                                                style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                                            >
+                                                                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1e293b' }}>{bucket.label || bucket.name}</span>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
+                                                                    <Icon name={isFamilyExpanded ? "ChevronDown" : "ChevronRight"} size={12} color="#64748b" />
+                                                                </div>
+                                                            </div>
+                                                            {isFamilyExpanded && (
+                                                                <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                                                                    {items.length > 0 ? (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    onAddSection(bucket.id);
+                                                                                }}
+                                                                                style={{
+                                                                                    width: '100%',
+                                                                                    marginBottom: '8px',
+                                                                                    fontSize: '0.75rem',
+                                                                                    padding: '6px',
+                                                                                    background: '#f1f5f9',
+                                                                                    color: '#000000',
+                                                                                    border: '1px solid #cbd5e1',
+                                                                                    borderRadius: '4px',
+                                                                                    fontWeight: '700',
+                                                                                    cursor: 'pointer'
+                                                                                }}
+                                                                            >
+                                                                                + Add All
+                                                                            </button>
+                                                                            {items.map(renderRow)}
+                                                                        </>
+                                                                    ) : (
+                                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px' }}>No plays in family.</div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })
                                             ) : (
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px' }}>No plays in bucket.</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '8px' }}>No play families in this category.</div>
                                             )}
                                         </div>
                                     )}
@@ -40946,6 +40996,7 @@
                             gamePlan={gamePlan}
                             gamePlanLayouts={gamePlanLayouts}
                             playBuckets={playBuckets}
+                            playCategories={playCategories}
                             onAddSection={(newLayouts) => onUpdateLayouts(newLayouts)}
                         />
                     </div>
@@ -48619,6 +48670,29 @@
             const [selectedBucketCategory, setSelectedBucketCategory] = useState(null);
             const [playCategories, setPlayCategories] = useLocalStorage('oc-dashboard-play-categories', DEFAULT_PLAY_CATEGORIES);
 
+            // AUTO-MIGRATION: Fix corrupted data where buckets (families) were stored in categories
+            useEffect(() => {
+                if (playCategories && playCategories.length > 0) {
+                    const corruptedBuckets = playCategories.filter(c => c.categoryId);
+                    if (corruptedBuckets.length > 0) {
+                        console.log('Found corrupted buckets in categories, migrating...', corruptedBuckets);
+
+                        // 1. Remove them from categories
+                        const cleanCategories = playCategories.filter(c => !c.categoryId);
+                        setPlayCategories(cleanCategories);
+
+                        // 2. Add them to buckets (preserving any existing buckets)
+                        // Use a Set to avoid duplicates based on ID
+                        const existingIds = new Set(playBuckets.map(b => b.id));
+                        const newBuckets = corruptedBuckets.filter(b => !existingIds.has(b.id));
+
+                        if (newBuckets.length > 0) {
+                            setPlayBuckets([...playBuckets, ...newBuckets]);
+                        }
+                    }
+                }
+            }, [playCategories, playBuckets]);
+
             // Initialize selectedBucketCategory with first category
             useEffect(() => {
                 if (!selectedBucketCategory && playCategories && playCategories.length > 0) {
@@ -49030,6 +49104,36 @@
                     // Only update gamePlan if changes occured
                     if (JSON.stringify(newMiniScripts) !== JSON.stringify(currentGamePlan.miniScripts)) {
                         setGamePlan({ ...currentGamePlan, miniScripts: newMiniScripts });
+                    }
+                }
+
+                // Sync Bucket Assignment (Play Family)
+                if (savedPlayData.bucketId !== undefined) {
+                    const oldBucketId = editingPlay?.bucketId;
+                    const newBucketId = savedPlayData.bucketId;
+
+                    // Only update if bucket assignment changed
+                    if (oldBucketId !== newBucketId) {
+                        const updatedBuckets = playBuckets.map(bucket => {
+                            const currentPlays = bucket.plays || [];
+
+                            // Remove from old bucket
+                            if (bucket.id === oldBucketId && currentPlays.includes(savedPlayData.id)) {
+                                return { ...bucket, plays: currentPlays.filter(id => id !== savedPlayData.id) };
+                            }
+
+                            // Add to new bucket
+                            if (bucket.id === newBucketId && !currentPlays.includes(savedPlayData.id)) {
+                                return { ...bucket, plays: [...currentPlays, savedPlayData.id] };
+                            }
+
+                            return bucket;
+                        });
+
+                        // Only update if changes occurred
+                        if (JSON.stringify(updatedBuckets) !== JSON.stringify(playBuckets)) {
+                            setPlayBuckets(updatedBuckets);
+                        }
                     }
                 }
 
