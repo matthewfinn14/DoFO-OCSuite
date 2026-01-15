@@ -8404,6 +8404,14 @@
             return segment;
         };
 
+        const migrateScriptRowNotes = (row) => {
+            if (!row.notes) return { ...row, notes: {} };
+            if (typeof row.notes === 'string') {
+                return { ...row, notes: { 'ALL_COACHES': row.notes } };
+            }
+            return row;
+        };
+
         // --- NOTES MODAL COMPONENT (Re-implemented as top-level) ---
         const NotesModal = ({ plan, updateCurrentPlan, staff, segmentId, onClose, segment: providedSegment, onUpdateNotes }) => {
             if (!segmentId && !providedSegment) return null;
@@ -8583,6 +8591,104 @@
             );
         };
 
+
+
+        const ScriptRowNotesModal = ({ plan, updateSegment, staff, segmentId, rowId, onClose }) => {
+            const segment = plan?.segments?.find(s => s.id === segmentId);
+            if (!segment) return null;
+
+            const scriptRow = segment.script?.find(r => r.id === rowId);
+            if (!scriptRow) return null;
+
+            const migratedRow = migrateScriptRowNotes(scriptRow);
+
+            const handleUpdateNotes = (staffId, value) => {
+                const newNotes = { ...migratedRow.notes, [staffId]: value };
+                // Filter out empty notes
+                if (!value || value.trim() === '') {
+                    delete newNotes[staffId];
+                }
+
+                const newScript = segment.script.map(r =>
+                    r.id === rowId ? { ...r, notes: newNotes } : r
+                );
+                updateSegment(segmentId, 'script', newScript);
+            };
+
+            const allStaff = staff || [];
+            const coaches = allStaff.filter(s => {
+                const r = (s.role || '').toLowerCase();
+                return r.includes('coach') || s.type === 'Coach' || (!s.role && !s.type);
+            });
+
+            return (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(2px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 10001, padding: '2rem'
+                    }}
+                    onClick={onClose}
+                >
+                    <div
+                        style={{
+                            backgroundColor: 'var(--bg-panel)',
+                            borderRadius: 'var(--radius)',
+                            border: '1px solid var(--border)',
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                            width: '100%', maxWidth: '600px', maxHeight: '85vh',
+                            display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div style={{
+                            padding: '1rem 1.5rem',
+                            borderBottom: '1px solid var(--border)',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: 'var(--bg-main)'
+                        }}>
+                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
+                                Notes for Play Row
+                            </h3>
+                            <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                                <Icon name="X" size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>All Coaches</label>
+                                <textarea
+                                    className="form-input"
+                                    style={{ width: '100%', minHeight: '80px' }}
+                                    value={migratedRow.notes['ALL_COACHES'] || ''}
+                                    onChange={e => handleUpdateNotes('ALL_COACHES', e.target.value)}
+                                    placeholder="Shared notes..."
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                {coaches.map(coach => (
+                                    <div key={coach.id}>
+                                        <label style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{coach.name}</label>
+                                        <textarea
+                                            className="form-input"
+                                            style={{ width: '100%', minHeight: '50px', fontSize: '0.85rem' }}
+                                            value={migratedRow.notes[coach.id] || ''}
+                                            onChange={e => handleUpdateNotes(coach.id, e.target.value)}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', textAlign: 'right' }}>
+                            <button className="btn btn-primary" onClick={onClose}>Done</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const MultiSelectDropdown = ({ options = [], value = [], onChange, placeholder = "Select...", className = "" }) => {
             const [isOpen, setIsOpen] = useState(false);
             const [searchTerm, setSearchTerm] = useState("");
@@ -8701,6 +8807,9 @@
             const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
             const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
             const [showScriptView, setShowScriptView] = useState(false);
+            const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+            const [editingScriptRow, setEditingScriptRow] = useState(null);
+
             const [isFullScreen, setIsFullScreen] = useState(false);
             const [scoutCardUrls, setScoutCardUrls] = useState({}); // Session-only storage for blob URLs { [segmentId]: string }
             const [scriptTab, setScriptTab] = useState('gameplan');
@@ -8712,15 +8821,12 @@
             const [notesModalSegmentId, setNotesModalSegmentId] = useState(null); // Track which segment's notes modal is open
             const [gameplanDropdownOpen, setGameplanDropdownOpen] = useState(false);
 
-            // Side Menu State
-            const [showSideMenu, setShowSideMenu] = useState(false);
-
             // Effect to collapse global sidebar when local side menu is open
             useEffect(() => {
                 if (setAppSidebarCollapsed) {
-                    setAppSidebarCollapsed(showSideMenu);
+                    setAppSidebarCollapsed(isSideMenuOpen);
                 }
-            }, [showSideMenu, setAppSidebarCollapsed]);
+            }, [isSideMenuOpen, setAppSidebarCollapsed]);
 
             console.log('PracticeScriptBuilder render. notesModalSegmentId:', notesModalSegmentId);
 
@@ -9565,132 +9671,180 @@
                                     </button>
                                 ))}
                             </div>
-                            <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Scripts</button>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+
+                                <button
+                                    className={`btn ${isSideMenuOpen ? 'btn-primary' : 'btn-secondary'}`}
+                                    onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
+                                >
+                                    {isSideMenuOpen ? 'Hide Plays' : 'Play Menu'}
+                                </button>
+                                <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Scripts</button>
+                            </div>
                         </div>
 
-                        <div className="script-grid-container" style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'grid', gridTemplateColumns: '1fr', gap: '2rem', alignContent: 'start' }}>
-                            {scriptedSegments.length === 0 && (
-                                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-                                    No scripted segments for this day. Go to the "Plans" tab to enable scripting for segments.
-                                </div>
-                            )}
-                            {scriptedSegments.map(seg => {
-                                const settings = segmentSettings[seg.type] || { showHash: true, showDefense: true };
-                                return (
-                                    <div key={seg.id} style={{ border: '1px solid var(--border)', borderRadius: '8px', breakInside: 'avoid', pageBreakInside: 'avoid', backgroundColor: 'var(--bg-panel)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                                        <div style={{
-                                            backgroundColor: 'var(--bg-body)',
-                                            padding: '0.75rem',
-                                            borderBottom: '1px solid var(--border)',
-                                            fontWeight: 'bold',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            borderRadius: '8px 8px 0 0'
-                                        }}>
-                                            <div>
-                                                <span style={{ marginRight: '1rem', color: 'var(--accent)' }}>{seg.startTime || ''}</span>
-                                                <span style={{ textTransform: 'uppercase' }}>{seg.type}</span>
+                        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                            <div className="script-grid-container" style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'grid', gridTemplateColumns: '1fr', gap: '2rem', alignContent: 'start' }}>
+                                {scriptedSegments.length === 0 && (
+                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                        No scripted segments for this day. Go to the "Plans" tab to enable scripting for segments.
+                                    </div>
+                                )}
+                                {scriptedSegments.map(seg => {
+                                    const settings = segmentSettings[seg.type] || { showHash: true, showDefense: true };
+                                    const visibleCols = seg.visibleColumns || {
+                                        hash: true,
+                                        situation: true,
+                                        tempo: true,
+                                        defense: true,
+                                        notes: true,
+                                        actions: true
+                                    };
+                                    return (
+                                        <div key={seg.id} style={{ border: '1px solid var(--border)', borderRadius: '8px', breakInside: 'avoid', pageBreakInside: 'avoid', backgroundColor: 'var(--bg-panel)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                                            <div style={{
+                                                backgroundColor: 'var(--bg-surface)', // Slightly lighter than body for contrast? Check vars. keeping generic if unsure, maybe transparent or specific color.
+                                                padding: '0.5rem 0.75rem', // Reduced vertical padding
+                                                borderBottom: '1px solid var(--border)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                borderRadius: '8px 8px 0 0',
+                                                minHeight: '40px'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{seg.startTime || ''}</span>
+                                                    <span style={{ textTransform: 'uppercase', fontWeight: '600', fontSize: '0.95rem' }}>{seg.type}</span>
+                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>({seg.duration} min)</span>
+                                                    {seg.situation && (
+                                                        <span style={{ backgroundColor: 'var(--bg-body)', border: '1px solid var(--border)', padding: '1px 6px', borderRadius: '4px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                            {seg.situation}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div>
-                                                {/* Display "SIT." based on focus item if present, else just duration */}
-                                                {seg.situation && <span style={{ marginRight: '1rem', fontStyle: 'italic', fontSize: '0.9em' }}>{seg.situation}</span>}
-                                                <span style={{ fontSize: '0.9em', backgroundColor: 'var(--bg-panel)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)' }}>{seg.duration} MIN</span>
-                                            </div>
-                                        </div>
 
-                                        <div style={{ padding: '0.5rem' }}>
-                                            <datalist id={`play-options-${seg.id}`}>
-                                                {plays.map(p => (
-                                                    <option key={p.id} value={p.name}>{p.formation}</option>
-                                                ))}
-                                            </datalist>
+                                            <div style={{ padding: '0.5rem' }}>
+                                                <datalist id={`play-options-${seg.id}`}>
+                                                    {plays.map(p => (
+                                                        <option key={p.id} value={p.name}>{p.formation}</option>
+                                                    ))}
+                                                </datalist>
 
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                                <thead>
-                                                    <tr style={{ borderBottom: '2px solid var(--border)', backgroundColor: 'var(--bg-body)' }}>
-                                                        <th style={{ textAlign: 'center', padding: '8px 4px', width: '30px', color: 'var(--text-secondary)' }}>#</th>
-                                                        {settings.showHash !== false && (
-                                                            <th style={{ textAlign: 'left', padding: '8px 4px', width: '50px' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    Hash
-                                                                    {!isLocked && (
-                                                                        <select
-                                                                            style={{ fontSize: '0.8rem', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                                                                            onChange={(e) => {
-                                                                                if (e.target.value) {
-                                                                                    applyHashPreset(seg.id, e.target.value);
-                                                                                    e.target.value = ""; // Reset
-                                                                                }
-                                                                            }}
-                                                                            title="Auto-fill Hash Pattern"
-                                                                        >
-                                                                            <option value="">⚡</option>
-                                                                            <option value="SERPENTINE_LR">Serpentine (L→R)</option>
-                                                                            <option value="SERPENTINE_RL">Serpentine (R→L)</option>
-                                                                            <option value="ZONES_LR">Zones (Left 3rd)</option>
-                                                                            <option value="ZONES_RL">Zones (Right 3rd)</option>
-                                                                            <option value="RANDOM">Random</option>
-                                                                        </select>
-                                                                    )}
-                                                                </div>
-                                                            </th>
-                                                        )}
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', tableLayout: 'fixed' }}>
+                                                    <colgroup>
+                                                        <col style={{ width: '30px' }} />
+                                                        {visibleCols.hash && settings.showHash !== false && <col style={{ width: '55px' }} />}
+                                                        {visibleCols.situation && <col style={{ width: '45px' }} />} {/* Down */}
+                                                        {visibleCols.situation && <col style={{ width: '45px' }} />} {/* Distance */}
                                                         {(() => {
+                                                            if (!visibleCols.situation) return null;
                                                             const preset = findPreset(seg.type, seg.situation);
                                                             const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
-                                                            if (showYardLine) {
-                                                                return (
-                                                                    <>
-                                                                        <th style={{ textAlign: 'left', padding: '8px 4px', width: '80px' }}>Yard</th>
-                                                                        <th style={{ textAlign: 'left', padding: '8px 4px', width: '100px' }}>Dn/Dist</th>
-                                                                    </>
-                                                                );
-                                                            }
-                                                            return <th style={{ textAlign: 'left', padding: '8px 4px', width: '150px' }}>Situation</th>;
+                                                            if (showYardLine) return <col style={{ width: '60px' }} />;
+                                                            return <col style={{ width: '120px' }} />;
                                                         })()}
-                                                        <th style={{ textAlign: 'left', padding: '8px 4px', width: '100px' }}>Tempo</th>
-                                                        <th style={{ textAlign: 'left', padding: '8px 4px' }}>Play Call</th>
-                                                        {settings.showDefense !== false && <th style={{ textAlign: 'left', padding: '8px 4px' }}>Defense</th>}
-                                                        <th style={{ textAlign: 'left', padding: '8px 4px' }}>Notes</th>
-                                                        {!isLocked && <th style={{ textAlign: 'center', padding: '8px 4px', width: '60px' }}>Actions</th>}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {/* Ensure slots are populated even if just enabled but not opened in modal yet */}
-                                                    {ensureScriptSlots(seg.script, parseInt(seg.duration || 0), seg.type, seg.situation).map((slot, idx) => (
-                                                        <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                            <td style={{ textAlign: 'center', padding: '4px', fontWeight: 'bold', color: 'var(--text-secondary)', width: '30px' }}>{idx + 1}</td>
-                                                            {settings.showHash !== false && (
-                                                                <td style={{ padding: '4px', width: '50px' }}>
-                                                                    {isLocked ? slot.hash : (
-                                                                        <select
-                                                                            className="form-input"
-                                                                            style={{ padding: '4px', width: '100%' }}
-                                                                            value={slot.hash}
-                                                                            onChange={e => {
-                                                                                const newScript = seg.script.map(s => s.id === slot.id ? { ...s, hash: e.target.value } : s);
-                                                                                updateSegment(seg.id, 'script', newScript);
-                                                                            }}
-                                                                        >
-                                                                            <option value=""></option>
-                                                                            <option value="L">L</option>
-                                                                            <option value="M">M</option>
-                                                                            <option value="R">R</option>
-                                                                        </select>
-                                                                    )}
-                                                                </td>
-                                                            )}
 
+                                                        <col style={{ width: 'auto' }} />
+                                                        {visibleCols.defense && settings.showDefense !== false && <col style={{ width: '150px' }} />}
+                                                        {visibleCols.notes && <col style={{ width: '120px' }} />}
+                                                        {visibleCols.actions && !isLocked && <col style={{ width: '60px' }} />}
+                                                    </colgroup>
+                                                    <thead>
+                                                        <tr style={{ borderBottom: '2px solid var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                                                            <th style={{ textAlign: 'center', padding: '8px 4px', color: 'var(--text-secondary)' }}>#</th>
+                                                            {visibleCols.hash && settings.showHash !== false && (
+                                                                <th style={{ textAlign: 'center', padding: '8px 4px' }}>Hash</th>
+                                                            )}
+                                                            {visibleCols.situation && <th style={{ textAlign: 'center', padding: '8px 4px' }}>Dn</th>}
+                                                            {visibleCols.situation && <th style={{ textAlign: 'center', padding: '8px 4px' }}>Dist</th>}
                                                             {(() => {
-                                                                // Determine columns based on preset
+                                                                if (!visibleCols.situation) return null;
                                                                 const preset = findPreset(seg.type, seg.situation);
                                                                 const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
-
                                                                 if (showYardLine) {
-                                                                    return (
-                                                                        <>
-                                                                            <td style={{ padding: '4px', width: '80px' }}>
+                                                                    return <th style={{ textAlign: 'left', padding: '8px 4px' }}>Yd</th>;
+                                                                }
+                                                                return <th style={{ textAlign: 'left', padding: '8px 4px' }}>Situation</th>;
+                                                            })()}
+
+                                                            <th style={{ textAlign: 'left', padding: '8px 4px' }}>Play Call</th>
+                                                            {visibleCols.defense && settings.showDefense !== false && <th style={{ textAlign: 'left', padding: '8px 4px' }}>Defense</th>}
+                                                            {visibleCols.notes && <th style={{ textAlign: 'left', padding: '8px 4px' }}>Notes</th>}
+                                                            {visibleCols.actions && !isLocked && <th style={{ textAlign: 'center', padding: '8px 4px' }}>Act</th>}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {/* Ensure slots are populated even if just enabled but not opened in modal yet */}
+                                                        {ensureScriptSlots(seg.script, parseInt(seg.duration || 0), seg.type, seg.situation).map((slot, idx) => (
+                                                            <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                                <td style={{ textAlign: 'center', padding: '4px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{idx + 1}</td>
+                                                                {visibleCols.hash && settings.showHash !== false && (
+                                                                    <td style={{ padding: '2px' }}>
+                                                                        {isLocked ? slot.hash : (
+                                                                            <select
+                                                                                className="form-input"
+                                                                                style={{ padding: '2px', width: '100%', fontSize: '0.8rem', textAlign: 'center' }}
+                                                                                value={slot.hash}
+                                                                                onChange={e => {
+                                                                                    const newScript = seg.script.map(s => s.id === slot.id ? { ...s, hash: e.target.value } : s);
+                                                                                    updateSegment(seg.id, 'script', newScript);
+                                                                                }}
+                                                                            >
+                                                                                <option value=""></option>
+                                                                                <option value="L">L</option>
+                                                                                <option value="M">M</option>
+                                                                                <option value="R">R</option>
+                                                                            </select>
+                                                                        )}
+                                                                    </td>
+                                                                )}
+
+                                                                {visibleCols.situation && (
+                                                                    <td style={{ padding: '4px' }}>
+                                                                        <select
+                                                                            className="form-input"
+                                                                            style={{ padding: '4px', width: '100%', textAlign: 'center', fontSize: '0.9rem' }}
+                                                                            value={slot.down || ''}
+                                                                            onChange={e => {
+                                                                                const newScript = seg.script.map(s => s.id === slot.id ? { ...s, down: e.target.value } : s);
+                                                                                updateSegment(seg.id, 'script', newScript);
+                                                                            }}
+                                                                            disabled={isLocked}
+                                                                        >
+                                                                            <option value=""></option>
+                                                                            <option value="1">1</option>
+                                                                            <option value="2">2</option>
+                                                                            <option value="3">3</option>
+                                                                            <option value="4">4</option>
+                                                                        </select>
+                                                                    </td>
+                                                                )}
+                                                                {visibleCols.situation && (
+                                                                    <td style={{ padding: '4px' }}>
+                                                                        <input
+                                                                            className="form-input"
+                                                                            style={{ padding: '4px', width: '100%', textAlign: 'center' }}
+                                                                            value={slot.distance || ''}
+                                                                            onChange={e => {
+                                                                                const newScript = seg.script.map(s => s.id === slot.id ? { ...s, distance: e.target.value } : s);
+                                                                                updateSegment(seg.id, 'script', newScript);
+                                                                            }}
+                                                                            placeholder=""
+                                                                            disabled={isLocked}
+                                                                        />
+                                                                    </td>
+                                                                )}
+
+                                                                {(() => {
+                                                                    if (!visibleCols.situation) return null;
+                                                                    // Determine columns based on preset
+                                                                    const preset = findPreset(seg.type, seg.situation);
+                                                                    const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
+
+                                                                    if (showYardLine) {
+                                                                        return (
+                                                                            <td style={{ padding: '4px' }}>
                                                                                 <input
                                                                                     className="form-input"
                                                                                     style={{ padding: '4px', width: '100%', backgroundColor: 'var(--bg-body)' }}
@@ -9703,31 +9857,35 @@
                                                                                     disabled={isLocked}
                                                                                 />
                                                                             </td>
-                                                                            <td style={{ padding: '4px', width: '100px' }}>
-                                                                                <input
-                                                                                    className="form-input"
-                                                                                    style={{ padding: '4px', width: '100%' }}
-                                                                                    value={slot.downDistance || ''}
-                                                                                    onChange={e => {
-                                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, downDistance: e.target.value } : s);
-                                                                                        updateSegment(seg.id, 'script', newScript);
-                                                                                    }}
-                                                                                    placeholder="Dn/Dst"
-                                                                                    disabled={isLocked}
-                                                                                />
-                                                                            </td>
-                                                                        </>
-                                                                    );
-                                                                } else {
-                                                                    return (
-                                                                        <td style={{ padding: '4px' }}>
-                                                                            {(() => {
-                                                                                const segmentFocus = seg.situation || '';
-                                                                                if (isLocked) return slot.situation;
+                                                                        );
+                                                                    } else {
+                                                                        return (
+                                                                            <td style={{ padding: '4px' }}>
+                                                                                {(() => {
+                                                                                    const segmentFocus = seg.situation || '';
+                                                                                    if (isLocked) return slot.situation;
 
-                                                                                if (segmentFocus.toLowerCase().includes('3rd')) {
+                                                                                    if (segmentFocus.toLowerCase().includes('3rd')) {
+                                                                                        return (
+                                                                                            <select
+                                                                                                className="form-input"
+                                                                                                style={{ padding: '4px', width: '100%' }}
+                                                                                                value={slot.situation}
+                                                                                                onChange={e => {
+                                                                                                    const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
+                                                                                                    updateSegment(seg.id, 'script', newScript);
+                                                                                                }}
+                                                                                            >
+                                                                                                <option value="">--</option>
+                                                                                                <option value="S">S (Short)</option>
+                                                                                                <option value="M">M (Medium)</option>
+                                                                                                <option value="L">L (Long)</option>
+                                                                                                <option value="XL">XL (Extra Long)</option>
+                                                                                            </select>
+                                                                                        );
+                                                                                    }
                                                                                     return (
-                                                                                        <select
+                                                                                        <input
                                                                                             className="form-input"
                                                                                             style={{ padding: '4px', width: '100%' }}
                                                                                             value={slot.situation}
@@ -9735,121 +9893,151 @@
                                                                                                 const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
                                                                                                 updateSegment(seg.id, 'script', newScript);
                                                                                             }}
-                                                                                        >
-                                                                                            <option value="">--</option>
-                                                                                            <option value="S">S (Short)</option>
-                                                                                            <option value="M">M (Medium)</option>
-                                                                                            <option value="L">L (Long)</option>
-                                                                                            <option value="XL">XL (Extra Long)</option>
-                                                                                        </select>
+                                                                                            placeholder="Situation"
+                                                                                        />
                                                                                     );
-                                                                                }
-                                                                                return (
-                                                                                    <input
-                                                                                        className="form-input"
-                                                                                        style={{ padding: '4px', width: '100%' }}
-                                                                                        value={slot.situation}
-                                                                                        onChange={e => {
-                                                                                            const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
-                                                                                            updateSegment(seg.id, 'script', newScript);
-                                                                                        }}
-                                                                                        placeholder="Situation"
-                                                                                    />
-                                                                                );
-                                                                            })()}
-                                                                        </td>
-                                                                    );
-                                                                }
-                                                            })()}
+                                                                                })()}
+                                                                            </td>
+                                                                        );
+                                                                    }
+                                                                })()}
 
-                                                            <td style={{ padding: '4px', width: '100px' }}>
-                                                                {isLocked ? (
-                                                                    <span style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
-                                                                        {slot.tempo === 'NOHUDDLE' && <span style={{ color: '#d97706' }}>NH</span>}
-                                                                        {slot.tempo === 'BLUR' && <span style={{ color: '#dc2626' }}>BLUR</span>}
-                                                                        {slot.tempo === 'SUGAR' && <span style={{ color: '#7c3aed' }}>SUGAR</span>}
-                                                                        {slot.tempo === 'REGULAR' && <span style={{ color: '#64748b' }}>H</span>}
-                                                                        {slot.tempo === 'SCRAMBLE' && <span style={{ color: '#2563eb' }}>SCR</span>}
-                                                                        {slot.tempo === '4MIN' && <span style={{ color: '#059669' }}>4M</span>}
-                                                                        {!['NOHUDDLE', 'BLUR', 'SUGAR', 'REGULAR', 'SCRAMBLE', '4MIN'].includes(slot.tempo) && slot.tempo}
-                                                                    </span>
-                                                                ) : (
-                                                                    <select
-                                                                        className="form-input"
-                                                                        style={{ padding: '4px', width: '100%', fontSize: '0.8rem' }}
-                                                                        value={slot.tempo || ''}
-                                                                        onChange={e => {
-                                                                            const newScript = seg.script.map(s => s.id === slot.id ? { ...s, tempo: e.target.value } : s);
-                                                                            updateSegment(seg.id, 'script', newScript);
-                                                                        }}
-                                                                    >
-                                                                        <option value="">-</option>
-                                                                        <option value="REGULAR">Huddle</option>
-                                                                        <option value="NOHUDDLE">No-Huddle</option>
-                                                                        <option value="BLUR">Blur Tempo</option>
-                                                                        <option value="SUGAR">Sugar Huddle</option>
-                                                                        <option value="SCRAMBLE">Scramble</option>
-                                                                        <option value="4MIN">4-Min Huddle</option>
-                                                                    </select>
-                                                                )}
-                                                            </td>
 
-                                                            <td style={{ padding: '4px' }}>
-                                                                {isLocked ? slot.playName : (
-                                                                    <input
-                                                                        className="form-input"
-                                                                        list={`play-options-${seg.id}`}
-                                                                        style={{ padding: '4px', width: '100%', fontWeight: 'bold' }}
-                                                                        value={slot.playName || ''}
-                                                                        onChange={e => {
-                                                                            const val = e.target.value;
-                                                                            const foundPlay = plays.find(p => p.name === val);
-                                                                            const newScript = seg.script.map(s => s.id === slot.id ? { ...s, playName: val, playId: foundPlay ? foundPlay.id : '' } : s);
-                                                                            updateSegment(seg.id, 'script', newScript);
-                                                                        }}
-                                                                        placeholder="Play Call..."
-                                                                    />
-                                                                )}
-                                                            </td>
 
-                                                            {settings.showDefense !== false && (
                                                                 <td style={{ padding: '4px' }}>
-                                                                    {isLocked ? slot.defense : (
+                                                                    {isLocked ? slot.playName : (
                                                                         <input
                                                                             className="form-input"
-                                                                            style={{ padding: '4px', width: '100%' }}
-                                                                            value={slot.defense || ''}
+                                                                            list={`play-options-${seg.id}`}
+                                                                            style={{ padding: '4px', width: '100%', fontWeight: 'bold' }}
+                                                                            value={slot.playName || ''}
                                                                             onChange={e => {
-                                                                                const newScript = seg.script.map(s => s.id === slot.id ? { ...s, defense: e.target.value } : s);
+                                                                                const val = e.target.value;
+                                                                                const foundPlay = plays.find(p => p.name === val);
+                                                                                const newScript = seg.script.map(s => s.id === slot.id ? { ...s, playName: val, playId: foundPlay ? foundPlay.id : '' } : s);
                                                                                 updateSegment(seg.id, 'script', newScript);
                                                                             }}
-                                                                            placeholder="Defense"
+                                                                            placeholder="Play Call..."
                                                                         />
                                                                     )}
                                                                 </td>
-                                                            )}
 
-                                                            <td style={{ padding: '4px' }}>
-                                                                {isLocked ? slot.notes : (
-                                                                    <input
-                                                                        className="form-input"
-                                                                        style={{ padding: '4px', width: '100%' }}
-                                                                        value={slot.notes || ''}
-                                                                        onChange={e => {
-                                                                            const newScript = seg.script.map(s => s.id === slot.id ? { ...s, notes: e.target.value } : s);
-                                                                            updateSegment(seg.id, 'script', newScript);
-                                                                        }}
-                                                                        placeholder="Notes"
-                                                                    />
+                                                                {visibleCols.defense && settings.showDefense !== false && (
+                                                                    <td style={{ padding: '4px' }}>
+                                                                        {isLocked ? slot.defense : (
+                                                                            <input
+                                                                                className="form-input"
+                                                                                style={{ padding: '4px', width: '100%' }}
+                                                                                value={slot.defense || ''}
+                                                                                onChange={e => {
+                                                                                    const newScript = seg.script.map(s => s.id === slot.id ? { ...s, defense: e.target.value } : s);
+                                                                                    updateSegment(seg.id, 'script', newScript);
+                                                                                }}
+                                                                                placeholder="Defense"
+                                                                            />
+                                                                        )}
+                                                                    </td>
                                                                 )}
-                                                            </td>
 
-                                                            {!isLocked && (
-                                                                <td style={{ padding: '4px', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                                                                {visibleCols.notes && (
+                                                                    <td style={{ padding: '4px' }}>
+                                                                        <button
+                                                                            className="btn btn-secondary"
+                                                                            style={{
+                                                                                width: '100%',
+                                                                                padding: '4px',
+                                                                                textAlign: 'left',
+                                                                                fontSize: '0.8rem',
+                                                                                color: (migrateScriptRowNotes(slot).notes && Object.keys(migrateScriptRowNotes(slot).notes).length > 0) ? 'var(--primary)' : 'var(--text-secondary)',
+                                                                                borderColor: (migrateScriptRowNotes(slot).notes && Object.keys(migrateScriptRowNotes(slot).notes).length > 0) ? 'var(--primary)' : 'var(--border)'
+                                                                            }}
+                                                                            onClick={() => setEditingScriptRow({ segmentId: seg.id, rowId: slot.id })}
+                                                                            disabled={isLocked}
+                                                                        >
+                                                                            {(migrateScriptRowNotes(slot).notes && Object.keys(migrateScriptRowNotes(slot).notes).length > 0) ? '📝 Notes' : 'Add Note...'}
+                                                                        </button>
+                                                                    </td>
+                                                                )}
+
+                                                                {visibleCols.actions && !isLocked && (
+                                                                    <td style={{ padding: '4px', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                                                                        <button
+                                                                            className="btn btn-secondary"
+                                                                            style={{ padding: '2px 6px', marginRight: '4px', fontSize: '0.8rem', color: 'var(--accent)' }}
+                                                                            title="Insert row below"
+                                                                            onClick={() => {
+                                                                                const PATTERN_A = ['L', 'LM', 'M', 'RM', 'R', 'RM', 'M', 'LM'];
+                                                                                const PATTERN_B = ['R', 'RM', 'M', 'LM', 'L', 'LM', 'M', 'RM'];
+                                                                                let pattern = PATTERN_A;
+                                                                                if (seg.script.length > 0 && seg.script[0].hash === 'R') pattern = PATTERN_B;
+
+                                                                                const preset = findPreset(seg.type, seg.situation);
+
+                                                                                let scriptItem = {
+                                                                                    id: Date.now().toString() + Math.random(),
+                                                                                    playId: '',
+                                                                                    playName: '',
+                                                                                    hash: pattern[idx % 8]
+                                                                                };
+
+                                                                                if (preset && preset.items && preset.items.length > 0) {
+                                                                                    const pItem = preset.items[idx % preset.items.length] || {};
+                                                                                    if (preset.useYardLine) {
+                                                                                        scriptItem.yardLine = pItem.yardLine || '';
+                                                                                        scriptItem.downDistance = pItem.down || '';
+                                                                                        if (pItem.hash) scriptItem.hash = pItem.hash;
+                                                                                    } else {
+                                                                                        scriptItem.situation = pItem.situation || '';
+                                                                                        if (pItem.hash) scriptItem.hash = pItem.hash;
+                                                                                    }
+                                                                                } else if (seg.type === 'Take-Off') {
+                                                                                    const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
+                                                                                    scriptItem.yardLine = yardlines[idx % 8] || '';
+                                                                                    scriptItem.downDistance = '';
+                                                                                } else {
+                                                                                    scriptItem.situation = '';
+                                                                                }
+                                                                                const newScript = [...seg.script];
+                                                                                newScript.splice(idx + 1, 0, scriptItem); // Insert AFTER
+                                                                                updateSegment(seg.id, 'script', newScript);
+                                                                            }}
+                                                                        >
+                                                                            +
+                                                                        </button>
+                                                                        <button
+                                                                            className="btn btn-secondary"
+                                                                            style={{ padding: '2px 6px', fontSize: '0.8rem', color: '#ef4444' }}
+                                                                            title="Delete row"
+                                                                            onClick={() => {
+                                                                                if (confirm('Delete this play?')) {
+                                                                                    const newScript = seg.script.filter(s => s.id !== slot.id);
+                                                                                    updateSegment(seg.id, 'script', newScript);
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    </td>
+                                                                )}
+                                                            </tr>
+                                                        ))}
+
+                                                        {/* Add Row at End Button (if not locked) */}
+                                                        {!isLocked && (
+                                                            <tr>
+                                                                <td colSpan={(() => {
+                                                                    let span = 4; // #, Tempo, Play, Notes
+                                                                    if (!isLocked) span += 1;
+                                                                    if (settings.showHash !== false) span += 1;
+                                                                    if (settings.showDefense !== false) span += 1;
+                                                                    const preset = findPreset(seg.type, seg.situation);
+                                                                    const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
+                                                                    if (showYardLine) span += 2; else span += 1;
+                                                                    return span;
+                                                                })()} style={{ padding: '8px', textAlign: 'center', backgroundColor: 'var(--bg-body)' }}>
                                                                     <button
                                                                         className="btn btn-secondary"
-                                                                        style={{ padding: '2px 6px', marginRight: '4px', fontSize: '0.8rem', color: 'var(--accent)' }}
-                                                                        title="Insert row below"
+                                                                        style={{ width: '100%', borderStyle: 'dashed' }}
                                                                         onClick={() => {
                                                                             const PATTERN_A = ['L', 'LM', 'M', 'RM', 'R', 'RM', 'M', 'LM'];
                                                                             const PATTERN_B = ['R', 'RM', 'M', 'LM', 'L', 'LM', 'M', 'RM'];
@@ -9862,11 +10050,11 @@
                                                                                 id: Date.now().toString() + Math.random(),
                                                                                 playId: '',
                                                                                 playName: '',
-                                                                                hash: pattern[idx % 8]
+                                                                                hash: pattern[seg.script.length % 8]
                                                                             };
 
                                                                             if (preset && preset.items && preset.items.length > 0) {
-                                                                                const pItem = preset.items[idx % preset.items.length] || {};
+                                                                                const pItem = preset.items[seg.script.length % preset.items.length] || {};
                                                                                 if (preset.useYardLine) {
                                                                                     scriptItem.yardLine = pItem.yardLine || '';
                                                                                     scriptItem.downDistance = pItem.down || '';
@@ -9877,102 +10065,81 @@
                                                                                 }
                                                                             } else if (seg.type === 'Take-Off') {
                                                                                 const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
-                                                                                scriptItem.yardLine = yardlines[idx % 8] || '';
+                                                                                scriptItem.yardLine = yardlines[seg.script.length % 8] || '';
                                                                                 scriptItem.downDistance = '';
                                                                             } else {
                                                                                 scriptItem.situation = '';
                                                                             }
-                                                                            const newScript = [...seg.script];
-                                                                            newScript.splice(idx + 1, 0, scriptItem); // Insert AFTER
-                                                                            updateSegment(seg.id, 'script', newScript);
+                                                                            updateSegment(seg.id, 'script', [...seg.script, scriptItem]);
                                                                         }}
                                                                     >
-                                                                        +
-                                                                    </button>
-                                                                    <button
-                                                                        className="btn btn-secondary"
-                                                                        style={{ padding: '2px 6px', fontSize: '0.8rem', color: '#ef4444' }}
-                                                                        title="Delete row"
-                                                                        onClick={() => {
-                                                                            if (confirm('Delete this play?')) {
-                                                                                const newScript = seg.script.filter(s => s.id !== slot.id);
-                                                                                updateSegment(seg.id, 'script', newScript);
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        ×
+                                                                        + Add Play Row
                                                                     </button>
                                                                 </td>
-                                                            )}
-                                                        </tr>
-                                                    ))}
-
-                                                    {/* Add Row at End Button (if not locked) */}
-                                                    {!isLocked && (
-                                                        <tr>
-                                                            <td colSpan={(() => {
-                                                                let span = 4; // #, Tempo, Play, Notes
-                                                                if (!isLocked) span += 1;
-                                                                if (settings.showHash !== false) span += 1;
-                                                                if (settings.showDefense !== false) span += 1;
-                                                                const preset = findPreset(seg.type, seg.situation);
-                                                                const showYardLine = preset ? preset.useYardLine : seg.type === 'Take-Off';
-                                                                if (showYardLine) span += 2; else span += 1;
-                                                                return span;
-                                                            })()} style={{ padding: '8px', textAlign: 'center', backgroundColor: 'var(--bg-body)' }}>
-                                                                <button
-                                                                    className="btn btn-secondary"
-                                                                    style={{ width: '100%', borderStyle: 'dashed' }}
-                                                                    onClick={() => {
-                                                                        const PATTERN_A = ['L', 'LM', 'M', 'RM', 'R', 'RM', 'M', 'LM'];
-                                                                        const PATTERN_B = ['R', 'RM', 'M', 'LM', 'L', 'LM', 'M', 'RM'];
-                                                                        let pattern = PATTERN_A;
-                                                                        if (seg.script.length > 0 && seg.script[0].hash === 'R') pattern = PATTERN_B;
-
-                                                                        const preset = findPreset(seg.type, seg.situation);
-
-                                                                        let scriptItem = {
-                                                                            id: Date.now().toString() + Math.random(),
-                                                                            playId: '',
-                                                                            playName: '',
-                                                                            hash: pattern[seg.script.length % 8]
-                                                                        };
-
-                                                                        if (preset && preset.items && preset.items.length > 0) {
-                                                                            const pItem = preset.items[seg.script.length % preset.items.length] || {};
-                                                                            if (preset.useYardLine) {
-                                                                                scriptItem.yardLine = pItem.yardLine || '';
-                                                                                scriptItem.downDistance = pItem.down || '';
-                                                                                if (pItem.hash) scriptItem.hash = pItem.hash;
-                                                                            } else {
-                                                                                scriptItem.situation = pItem.situation || '';
-                                                                                if (pItem.hash) scriptItem.hash = pItem.hash;
-                                                                            }
-                                                                        } else if (seg.type === 'Take-Off') {
-                                                                            const yardlines = ['-30', '-40', '50', '40', '30', '20', '10', '5'];
-                                                                            scriptItem.yardLine = yardlines[seg.script.length % 8] || '';
-                                                                            scriptItem.downDistance = '';
-                                                                        } else {
-                                                                            scriptItem.situation = '';
-                                                                        }
-                                                                        updateSegment(seg.id, 'script', [...seg.script, scriptItem]);
-                                                                    }}
-                                                                >
-                                                                    + Add Play Row
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
+                            {editingScriptRow && (
+                                <ScriptRowNotesModal
+                                    plan={plan}
+                                    segmentId={editingScriptRow.segmentId}
+                                    rowId={editingScriptRow.rowId}
+                                    staff={staff}
+                                    onClose={() => setEditingScriptRow(null)}
+                                    updateSegment={updateSegment}
+                                />
+                            )}
+                            {isSideMenuOpen && (
+                                <GamePlannerSideMenu
+                                    plays={plays}
+                                    practicePlans={plans}
+                                    isOpen={isSideMenuOpen}
+                                    onToggle={() => setIsSideMenuOpen(!isSideMenuOpen)}
+                                    weekStats={typeof weeks !== 'undefined' && currentWeek ? weeks.find(w => w.id === currentWeek.id) : null}
+                                    gamePlan={gamePlan}
+                                    gamePlanLayouts={gamePlanLayouts}
+                                    playBuckets={typeof playBuckets !== 'undefined' ? playBuckets : []}
+                                    playCategories={typeof playCategories !== 'undefined' ? playCategories : []}
+                                    onQuickAddPlay={(play) => {
+                                        // Quick add logic for script mode (might need to infer segment?)
+                                        // In script mode, all segments are visible.
+                                        // But typically user selects a segment to edit?
+                                        // Script view here seems to just LIST segments.
+                                        // If there is no 'selectedSegmentId' in this mode, Quick Add might not work directly unless we select a segment.
+                                        // However, the props are required.
+                                        if (selectedSegmentId && selectedSegmentId !== 'WARMUP') {
+                                            const seg = plan.segments.find(s => s.id === selectedSegmentId);
+                                            if (seg) {
+                                                const newItem = {
+                                                    id: Date.now().toString(),
+                                                    playId: play.id,
+                                                    playName: play.name,
+                                                    concept: play.conceptFamily || '',
+                                                    situation: seg.situation || '',
+                                                    hash: '',
+                                                    notes: ''
+                                                };
+                                                const currentScript = Array.isArray(seg.script) ? seg.script : [];
+                                                const newScript = [...currentScript, newItem];
+                                                updateSegment(seg.id, 'script', newScript);
+                                            }
+                                        }
+                                    }}
+                                />
+                            )}
                         </div>
                     </div>
                 );
             }
+
+            // State for Side Menu
+
 
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
@@ -9996,6 +10163,14 @@
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                                 <h2>{selectedDay} Schedule</h2>
                                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    {/* Side Menu Toggle */}
+                                    <button
+                                        className={`btn ${isSideMenuOpen ? 'btn-primary' : 'btn-secondary'}`}
+                                        onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
+                                    >
+                                        {isSideMenuOpen ? 'Hide Plays' : 'Play Menu'}
+                                    </button>
+
                                     {/* Template & Global Admin */}
                                     {!isLocked && (
                                         <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -11096,6 +11271,7 @@
                                                     return <th style={{ textAlign: 'left', padding: '2px' }}>Situation</th>;
                                                 })()}
                                                 <th style={{ textAlign: 'left', padding: '2px' }}>Play</th>
+                                                <th style={{ textAlign: 'left', padding: '2px', width: '150px' }}>Notes</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -11116,6 +11292,16 @@
                                                         return <td style={{ padding: '2px' }}>{slot.situation}</td>;
                                                     })()}
                                                     <td style={{ padding: '2px', fontWeight: 'bold' }}>{slot.playName}</td>
+                                                    <td style={{ padding: '2px', fontSize: '0.75rem', fontStyle: 'italic', color: '#555' }}>
+                                                        {(() => {
+                                                            const notes = migrateScriptRowNotes(slot).notes;
+                                                            if (!notes || Object.keys(notes).length === 0) return '';
+                                                            return Object.entries(notes).map(([k, v]) => {
+                                                                const label = k === 'ALL_COACHES' ? '' : ((staff && staff.find(s => s.id === k)?.name) || k) + ': ';
+                                                                return label + v;
+                                                            }).join(' | ');
+                                                        })()}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -11123,6 +11309,37 @@
                                 </div>
                             ))}
                         </div>
+                        {/* Right: Scripts Sidebar */}
+                        <GamePlannerSideMenu
+                            plays={plays}
+                            practicePlans={plans}
+                            isOpen={isSideMenuOpen}
+                            onToggle={() => setIsSideMenuOpen(!isSideMenuOpen)}
+                            weekStats={typeof weeks !== 'undefined' && currentWeek ? weeks.find(w => w.id === currentWeek.id) : null}
+                            gamePlan={gamePlan}
+                            gamePlanLayouts={gamePlanLayouts}
+                            playBuckets={typeof playBuckets !== 'undefined' ? playBuckets : []}
+                            playCategories={typeof playCategories !== 'undefined' ? playCategories : []}
+                            onQuickAddPlay={(play) => {
+                                if (selectedSegmentId && selectedSegmentId !== 'WARMUP') {
+                                    const seg = plan.segments.find(s => s.id === selectedSegmentId);
+                                    if (seg) {
+                                        const newItem = {
+                                            id: Date.now().toString(),
+                                            playId: play.id,
+                                            playName: play.name,
+                                            concept: play.conceptFamily || '',
+                                            situation: seg.situation || '',
+                                            hash: '',
+                                            notes: ''
+                                        };
+                                        const currentScript = Array.isArray(seg.script) ? seg.script : [];
+                                        const newScript = [...currentScript, newItem];
+                                        updateSegment(seg.id, 'script', newScript);
+                                    }
+                                }
+                            }}
+                        />
                     </div>
 
                     {/* Script View Modal */}
@@ -11939,7 +12156,6 @@
                             </table>
                         </div>
                     </div>
-
 
                 </div>
             );
@@ -34534,7 +34750,7 @@
             );
         };
 
-        const GamePlannerSideMenu = ({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection }) => {
+        function GamePlannerSideMenu({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection }) {
             const [searchTerm, setSearchTerm] = useState('');
             const [quickAddValue, setQuickAddValue] = useState('');
             const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, buckets
@@ -52308,6 +52524,7 @@
                                 gamePlanLayouts={(currentWeek.gamePlanLayouts && currentWeek.gamePlanLayouts.CALL_SHEET) ? currentWeek.gamePlanLayouts : GAME_PLAN_LAYOUTS}
                                 playBuckets={playBuckets}
                                 playCategories={playCategories}
+                                setAppSidebarCollapsed={setSidebarCollapsed}
                             />
                         )}
                         {view === 'pregame' && (
@@ -52496,35 +52713,36 @@
                                             className="btn btn-secondary"
                                             style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
                                             onClick={() => {
-                                                if (confirm("Are you sure? This will ignore the existing team and create a new school instead.")) {
+                                                if (confirm("Are you sure you want to ignore the existing team and create a new school instead?")) {
                                                     setInviteData(null);
                                                     setSchoolSetupData({ showWizard: true, schoolId: `SCH_${Date.now()}` });
                                                 }
                                             }}
                                         >
-                                            No, Create New Sl I                                        </button>
+                                            No, Create New School
+                                        </button>
                                     </div>
-                                </div >
+                                </div>
                             )
                         }
                     </main >
                     {/* Global Modals */}
-                    < ManageWeekModal
+                    <ManageWeekModal
                         isOpen={showManageWeekModal}
                         onClose={() => setShowManageWeekModal(false)}
                         currentWeek={currentWeek}
                         weeks={weeks}
                         onUpdateWeek={handleUpdateWeek}
                     />
-                </div >
+                </div>
             );
         };
 
         class ErrorBoundary extends React.Component {
             constructor(props) {
-                super(props); this.state = { hasError: false, error: null, errorInfo: null };
+                super(props);
+                this.state = { hasError: false, error: null, errorInfo: null };
             }
-
             static getDerivedStateFromError(error) {
                 return { hasError: true };
             }
