@@ -26611,7 +26611,7 @@
                                             >
                                                 <option value="">-- No Concept Assigned --</option>
                                                 {(playBuckets || [])
-                                                    .filter(b => !play.type || b.categoryId === play.type)
+                                                    .filter(b => !play.type || getCategoryGroup(b.categoryId) === getCategoryGroup(play.type) || b.id === play.bucketId)
                                                     .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
                                                     .map(b => (
                                                         <option key={b.id} value={b.id}>{b.label}</option>
