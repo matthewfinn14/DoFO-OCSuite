@@ -8851,6 +8851,43 @@
                 fetchGlobalTemplates();
             }, []);
 
+            // Helper to handle keyboard navigation in script inputs
+            const handleScriptInputKeyDown = (e, segmentId, rowId, fieldName, rows, onUpdate) => {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    // Find index of current row
+                    const currentIndex = rows.findIndex(r => r.id === rowId);
+                    if (currentIndex > 0) {
+                        const prevRow = rows[currentIndex - 1];
+                        const inputId = `input-${segmentId}-${prevRow.id}-${fieldName}`;
+                        const el = document.getElementById(inputId);
+                        if (el) el.focus();
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const currentIndex = rows.findIndex(r => r.id === rowId);
+                    if (currentIndex < rows.length - 1) {
+                        const nextRow = rows[currentIndex + 1];
+                        const inputId = `input-${segmentId}-${nextRow.id}-${fieldName}`;
+                        const el = document.getElementById(inputId);
+                        if (el) el.focus();
+                    }
+                } else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+                    e.preventDefault(); // Prevent bookmark shortcut
+                    const currentIndex = rows.findIndex(r => r.id === rowId);
+                    if (currentIndex > 0) {
+                        const prevRow = rows[currentIndex - 1];
+                        // Copy value from previous row
+                        const valueToCopy = prevRow[fieldName];
+                        if (valueToCopy !== undefined) {
+                            // Determine new script
+                            const newScript = rows.map(r => r.id === rowId ? { ...r, [fieldName]: valueToCopy } : r);
+                            if (onUpdate) onUpdate(newScript);
+                        }
+                    }
+                }
+            };
+
             // Merge hardcoded and global templates
             const allTemplates = [
                 ...CALENDAR_CONSTANTS.PRACTICE_TEMPLATES,
@@ -9782,27 +9819,26 @@
                                                                 {visibleCols.hash && settings.showHash !== false && (
                                                                     <td style={{ padding: '2px' }}>
                                                                         {isLocked ? slot.hash : (
-                                                                            <select
+                                                                            <input
+                                                                                id={`input-${seg.id}-${slot.id}-hash`}
                                                                                 className="form-input"
                                                                                 style={{ padding: '2px', width: '100%', fontSize: '0.8rem', textAlign: 'center' }}
                                                                                 value={slot.hash}
                                                                                 onChange={e => {
-                                                                                    const newScript = seg.script.map(s => s.id === slot.id ? { ...s, hash: e.target.value } : s);
+                                                                                    const newScript = seg.script.map(s => s.id === slot.id ? { ...s, hash: e.target.value.toUpperCase() } : s);
                                                                                     updateSegment(seg.id, 'script', newScript);
                                                                                 }}
-                                                                            >
-                                                                                <option value=""></option>
-                                                                                <option value="L">L</option>
-                                                                                <option value="M">M</option>
-                                                                                <option value="R">R</option>
-                                                                            </select>
+                                                                                onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'hash', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
+                                                                                placeholder=""
+                                                                                maxLength="2"
+                                                                            />
                                                                         )}
                                                                     </td>
                                                                 )}
-
                                                                 {visibleCols.situation && (
                                                                     <td style={{ padding: '4px' }}>
                                                                         <select
+                                                                            id={`input-${seg.id}-${slot.id}-down`}
                                                                             className="form-input"
                                                                             style={{ padding: '4px', width: '100%', textAlign: 'center', fontSize: '0.9rem' }}
                                                                             value={slot.down || ''}
@@ -9810,6 +9846,7 @@
                                                                                 const newScript = seg.script.map(s => s.id === slot.id ? { ...s, down: e.target.value } : s);
                                                                                 updateSegment(seg.id, 'script', newScript);
                                                                             }}
+                                                                            onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'down', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                             disabled={isLocked}
                                                                         >
                                                                             <option value=""></option>
@@ -9823,6 +9860,7 @@
                                                                 {visibleCols.situation && (
                                                                     <td style={{ padding: '4px' }}>
                                                                         <input
+                                                                            id={`input-${seg.id}-${slot.id}-distance`}
                                                                             className="form-input"
                                                                             style={{ padding: '4px', width: '100%', textAlign: 'center' }}
                                                                             value={slot.distance || ''}
@@ -9830,6 +9868,7 @@
                                                                                 const newScript = seg.script.map(s => s.id === slot.id ? { ...s, distance: e.target.value } : s);
                                                                                 updateSegment(seg.id, 'script', newScript);
                                                                             }}
+                                                                            onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'distance', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                             placeholder=""
                                                                             disabled={isLocked}
                                                                         />
@@ -9846,6 +9885,7 @@
                                                                         return (
                                                                             <td style={{ padding: '4px' }}>
                                                                                 <input
+                                                                                    id={`input-${seg.id}-${slot.id}-yardLine`}
                                                                                     className="form-input"
                                                                                     style={{ padding: '4px', width: '100%', backgroundColor: 'var(--bg-body)' }}
                                                                                     value={slot.yardLine || ''}
@@ -9853,6 +9893,7 @@
                                                                                         const newScript = seg.script.map(s => s.id === slot.id ? { ...s, yardLine: e.target.value } : s);
                                                                                         updateSegment(seg.id, 'script', newScript);
                                                                                     }}
+                                                                                    onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'yardLine', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                                     placeholder="-30"
                                                                                     disabled={isLocked}
                                                                                 />
@@ -9868,6 +9909,7 @@
                                                                                     if (segmentFocus.toLowerCase().includes('3rd')) {
                                                                                         return (
                                                                                             <select
+                                                                                                id={`input-${seg.id}-${slot.id}-situation`}
                                                                                                 className="form-input"
                                                                                                 style={{ padding: '4px', width: '100%' }}
                                                                                                 value={slot.situation}
@@ -9875,6 +9917,7 @@
                                                                                                     const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
                                                                                                     updateSegment(seg.id, 'script', newScript);
                                                                                                 }}
+                                                                                                onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'situation', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                                             >
                                                                                                 <option value="">--</option>
                                                                                                 <option value="S">S (Short)</option>
@@ -9886,6 +9929,7 @@
                                                                                     }
                                                                                     return (
                                                                                         <input
+                                                                                            id={`input-${seg.id}-${slot.id}-situation`}
                                                                                             className="form-input"
                                                                                             style={{ padding: '4px', width: '100%' }}
                                                                                             value={slot.situation}
@@ -9893,6 +9937,7 @@
                                                                                                 const newScript = seg.script.map(s => s.id === slot.id ? { ...s, situation: e.target.value } : s);
                                                                                                 updateSegment(seg.id, 'script', newScript);
                                                                                             }}
+                                                                                            onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'situation', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                                             placeholder="Situation"
                                                                                         />
                                                                                     );
@@ -9907,6 +9952,7 @@
                                                                 <td style={{ padding: '4px' }}>
                                                                     {isLocked ? slot.playName : (
                                                                         <input
+                                                                            id={`input-${seg.id}-${slot.id}-playName`}
                                                                             className="form-input"
                                                                             list={`play-options-${seg.id}`}
                                                                             style={{ padding: '4px', width: '100%', fontWeight: 'bold' }}
@@ -9917,6 +9963,7 @@
                                                                                 const newScript = seg.script.map(s => s.id === slot.id ? { ...s, playName: val, playId: foundPlay ? foundPlay.id : '' } : s);
                                                                                 updateSegment(seg.id, 'script', newScript);
                                                                             }}
+                                                                            onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'playName', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                             placeholder="Play Call..."
                                                                         />
                                                                     )}
@@ -9926,6 +9973,7 @@
                                                                     <td style={{ padding: '4px' }}>
                                                                         {isLocked ? slot.defense : (
                                                                             <input
+                                                                                id={`input-${seg.id}-${slot.id}-defense`}
                                                                                 className="form-input"
                                                                                 style={{ padding: '4px', width: '100%' }}
                                                                                 value={slot.defense || ''}
@@ -9933,6 +9981,7 @@
                                                                                     const newScript = seg.script.map(s => s.id === slot.id ? { ...s, defense: e.target.value } : s);
                                                                                     updateSegment(seg.id, 'script', newScript);
                                                                                 }}
+                                                                                onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'defense', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                                 placeholder="Defense"
                                                                             />
                                                                         )}
