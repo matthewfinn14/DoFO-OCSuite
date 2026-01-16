@@ -8888,6 +8888,20 @@
                 }
             };
 
+            const handlePlayDrop = (e, segmentId, rowId, rows, onUpdate) => {
+                e.preventDefault();
+                try {
+                    const data = e.dataTransfer.getData('application/react-dnd');
+                    if (data) {
+                        const { playId, name } = JSON.parse(data);
+                        const newScript = rows.map(r => r.id === rowId ? { ...r, playName: name, playId: playId } : r);
+                        if (onUpdate) onUpdate(newScript);
+                    }
+                } catch (err) {
+                    console.error('Failed to parse dropped play data:', err);
+                }
+            };
+
             // Merge hardcoded and global templates
             const allTemplates = [
                 ...CALENDAR_CONSTANTS.PRACTICE_TEMPLATES,
@@ -9964,6 +9978,8 @@
                                                                                 updateSegment(seg.id, 'script', newScript);
                                                                             }}
                                                                             onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'playName', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
+                                                                            onDragOver={(e) => e.preventDefault()}
+                                                                            onDrop={(e) => handlePlayDrop(e, seg.id, slot.id, seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                             placeholder="Play Call..."
                                                                         />
                                                                     )}
