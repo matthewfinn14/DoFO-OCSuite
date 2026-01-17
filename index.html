@@ -5984,8 +5984,158 @@
             );
         };
 
-        const WristbandBuilder = ({ plays, weeks, gamePlan, onUpdatePlay, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent }) => {
+        const AssignSituationsModal = ({
+            playId,
+            plays,
+            weekDate, // Can be null if not applicable
+            newInstallIds = [],
+            gamePlanLayouts = GAME_PLAN_LAYOUTS,
+            assignedIds = new Set(), // Set of situation IDs this play is assigned to
+            onClose,
+            onUpdateWeek, // Optional: function(date, field, val)
+            onUpdatePlay, // Required: function(id, updates)
+            onAssignSituation, // Optional: function(playId, box) -> adds to script/situation
+            position = { x: 0, y: 0 }
+        }) => {
+            const play = plays.find(p => p.id === playId);
+            if (!play) return null;
+
+            const isNew = (newInstallIds || []).includes(playId);
+            const isPriority = play.priority || false;
+
+            // Toggle handlers
+            const handleToggleNew = () => {
+                if (!onUpdateWeek || !weekDate) return;
+                const currentNewIds = newInstallIds || [];
+                let newIds;
+                if (currentNewIds.includes(playId)) {
+                    newIds = currentNewIds.filter(id => id !== playId);
+                } else {
+                    newIds = [...currentNewIds, playId];
+                }
+                onUpdateWeek(weekDate, 'newInstallIds', newIds);
+            };
+
+            const handleTogglePriority = () => {
+                if (!onUpdatePlay) return;
+                onUpdatePlay(playId, { priority: !isPriority });
+            };
+
+            const popoverHeight = 350;
+            const popoverWidth = 280;
+
+            // Simple collision detection
+            let top = position.y;
+            let left = position.x;
+            if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 10;
+            if (left + popoverWidth > window.innerWidth) left = window.innerWidth - popoverWidth - 10;
+
+            return (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'transparent', zIndex: 9999,
+                }} onClick={onClose}>
+                    <div style={{
+                        position: 'absolute',
+                        top: top, left: left,
+                        background: 'white', width: `${popoverWidth}px`, maxHeight: `${popoverHeight}px`,
+                        borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+                        display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                    }} onClick={e => e.stopPropagation()}>
+
+                        {/* HEADER */}
+                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Assign Situations</div>
+                                <button
+                                    onClick={onClose}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            {/* Checkboxes */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isNew}
+                                        onChange={handleToggleNew}
+                                        disabled={!onUpdateWeek}
+                                        style={{ cursor: 'pointer' }}
+                                    />
+                                    <span>Mark as New</span>
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: '#475569' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isPriority}
+                                        onChange={handleTogglePriority}
+                                        style={{ cursor: 'pointer' }}
+                                    />
+                                    <span>Mark as Priority</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* BODY - SCROLLABLE */}
+                        <div style={{ padding: '8px', overflowY: 'auto', flex: 1 }}>
+                            {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
+                                const relevantBoxes = (section.boxes || []).filter(b => b.header && !b.hidden);
+                                if (relevantBoxes.length === 0) return null;
+
+                                return (
+                                    <div key={sIdx} style={{ marginBottom: '12px' }}>
+                                        <div style={{
+                                            fontSize: '0.65rem', fontWeight: 'bold', color: '#94a3b8',
+                                            marginBottom: '4px', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px'
+                                        }}>
+                                            {section.title || `Section ${sIdx + 1}`}
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            {relevantBoxes.map((box, bIdx) => {
+                                                const isCheck = assignedIds.has(box.setId);
+                                                return (
+                                                    <div
+                                                        key={bIdx}
+                                                        onClick={() => onAssignSituation && onAssignSituation(playId, box)}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                                            padding: '6px', borderRadius: '4px', cursor: 'pointer',
+                                                            background: isCheck ? '#eff6ff' : 'transparent',
+                                                            color: isCheck ? '#1e3a8a' : '#334155'
+                                                        }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = isCheck ? '#eff6ff' : '#f8fafc'}
+                                                        onMouseLeave={e => e.currentTarget.style.background = isCheck ? '#eff6ff' : 'transparent'}
+                                                    >
+                                                        <div style={{
+                                                            width: '14px', height: '14px', borderRadius: '3px',
+                                                            border: `1px solid ${isCheck ? (box.color || '#3b82f6') : '#cbd5e1'}`,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            background: isCheck ? (box.color || '#3b82f6') : 'white'
+                                                        }}>
+                                                            {isCheck && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
+                                                        </div>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: isCheck ? '600' : '400' }}>
+                                                            {box.header}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent }) => {
             const { currentUser } = useAuth();
+            const [assignmentModalState, setAssignmentModalState] = useState(null);
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
             const [selectedPlayId, setSelectedPlayId] = useState(null);
@@ -5998,6 +6148,51 @@
             const [staplesInputs, setStaplesInputs] = useState({}); // Track input values for Staples slots
             const [editingSlot, setEditingSlot] = useState(null); // Slot currently being edited (for Rooski name)
             const [tempWizName, setTempWizName] = useState(''); // Temp value for Wiz name edit
+            const [showLayoutConfirm, setShowLayoutConfirm] = useState(false);
+            const [pendingLayout, setPendingLayout] = useState(null);
+
+
+
+            const handleSidebarDoubleClick = (play, e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setAssignmentModalState({
+                    playId: play.id,
+                    x: e.clientX,
+                    y: e.clientY
+                });
+            };
+
+            const handleAssignSituation = (playId, box) => {
+                const setId = box.setId;
+                if (!onUpdateWeek || !currentWeek || !currentWeek.id) return;
+
+                // Clone current gamePlan (offensiveGamePlan)
+                const currentGamePlan = currentWeek.offensiveGamePlan || {};
+
+                let updatedGamePlan;
+
+                if (setId.startsWith('ms_')) {
+                    // Handle Mini Script Update
+                    const newMiniScripts = (currentGamePlan.miniScripts || []).map(s =>
+                        s.id === setId ? { ...s, playIds: [...(s.playIds || []), playId] } : s
+                    );
+                    updatedGamePlan = { ...currentGamePlan, miniScripts: newMiniScripts };
+                } else {
+                    // Handle Standard Set Update
+                    const existingSet = currentGamePlan.sets?.find(s => s.id === setId);
+                    let newSets;
+                    if (existingSet) {
+                        newSets = (currentGamePlan.sets || []).map(s => s.id === setId ? { ...s, playIds: [...(s.playIds || []), playId] } : s);
+                    } else {
+                        // Implicit creation
+                        newSets = [...(currentGamePlan.sets || []), { id: setId, name: setId, playIds: [playId] }];
+                    }
+                    updatedGamePlan = { ...currentGamePlan, sets: newSets };
+                }
+
+                // Update Week
+                onUpdateWeek(currentWeek.id, 'offensiveGamePlan', updatedGamePlan);
+            };
 
             // Layout constants
             const rowHeight = 11;
@@ -6361,6 +6556,80 @@
                 updateCard(cardId, { rows: newRows });
             };
 
+            const handleAssignPriorityPlays = () => {
+                const card = wbSettings[selectedCardId];
+                if (!card) return;
+
+                // 1. Identify Unassigned Priority Plays
+                const unassignedPriority = plays.filter(p => p.priority && !p.wristbandSlot);
+
+                if (unassignedPriority.length === 0) {
+                    alert("No unassigned priority plays found.");
+                    return;
+                }
+
+                // 2. Check Wiz Constraint
+                const wizPlays = unassignedPriority.filter(p => p.isRooski);
+                const standardPlays = unassignedPriority.filter(p => !p.isRooski);
+
+                // Check if we have ANY Wiz card configured
+                const hasWizCard = Object.values(wbSettings).some(c => c && (c.type === 'wiz' || c.type === 'rooski'));
+
+                if (wizPlays.length > 0 && !hasWizCard) {
+                    alert(`You have ${wizPlays.length} priority plays that require a WIZ layout, but no WIZ cards are configured. Please change a card layout to 'Wiz' to assign these.`);
+                    return;
+                }
+
+                // 3. Target Active Card & Select Compatible Plays
+                const availableSlots = getSlotsForCard(selectedCardId).filter(slot => {
+                    // Check if slot is occupied
+                    // For now, simple check against play.wristbandSlot matching logic is reverse (play has slot).
+                    // So we must check if any play has this slot assigned.
+                    return !plays.some(p => p.wristbandSlot === String(slot) || p.wristbandSlot === slot);
+                });
+
+                if (availableSlots.length === 0) {
+                    alert("No available slots on the selected card.");
+                    return;
+                }
+
+                let playsToAssign = [];
+                const isWizCard = card.type === 'wiz' || card.type === 'rooski';
+
+                if (isWizCard) {
+                    // Prioritize Wiz plays, then fill with Standard
+                    playsToAssign = [...wizPlays, ...standardPlays];
+                } else {
+                    // Standard Card: ONLY Standard plays
+                    if (wizPlays.length > 0) {
+                        // Optional: Warn user that Wiz plays are being skipped?
+                        console.log("Skipping Wiz plays for Standard card assignment.");
+                    }
+                    playsToAssign = standardPlays;
+                }
+
+                if (playsToAssign.length === 0) {
+                    alert("No compatible priority plays found for this card layout.");
+                    return;
+                }
+
+                // 4. Assign
+                const updates = [];
+                const limit = Math.min(availableSlots.length, playsToAssign.length);
+
+                for (let i = 0; i < limit; i++) {
+                    updates.push({
+                        ...playsToAssign[i],
+                        wristbandSlot: String(availableSlots[i]) // assignments are strings
+                    });
+                }
+
+                if (updates.length > 0) {
+                    onUpdatePlay(updates);
+                    alert(`Successfully assigned ${updates.length} priority plays.`);
+                }
+            };
+
             const handleAddPlayRow = (cardId, play) => {
                 const card = wbSettings[cardId];
                 const newRow = {
@@ -6420,81 +6689,43 @@
                 updateCard(cardId, { rows: [...card.rows, newHeader, newPlayRow] });
             };
 
-            const handleLayoutChange = (newType) => {
-                let startSlot = 0;
-                if (selectedCardId === 'card1') startSlot = 101;
-                else if (selectedCardId === 'card2') startSlot = 201;
-                else if (selectedCardId === 'card3') startSlot = 301;
-                else if (selectedCardId === 'card4') startSlot = 401;
-                else if (selectedCardId === 'card5') startSlot = 501;
-                else if (selectedCardId === 'card6') startSlot = 601;
-
-                const updates = [];
-
-                if (newType === 'rooski') {
-                    // If switching TO Rooski (16 slots), clear plays assigned to slots > 16
-                    if (startSlot > 0) {
-                        const maxRooski = startSlot + 15;
-                        const maxStandard = startSlot + 47;
-
-                        plays.forEach(p => {
-                            const slot = parseInt(p.wristbandSlot || 0);
-                            if (slot > maxRooski && slot <= maxStandard) {
-                                updates.push({ ...p, wristbandSlot: '' });
-                            }
-                        });
-                    }
-                } else if (newType === 'mini-scripts') {
-                    // If switching TO Mini-Scripts, clear ALMOST ALL Standard assignments (101-148)
-                    // because Mini-Scripts uses A/B slots.
-                    // However, we should be careful. If I switch Standard -> Mini-Scripts, maybe I WANT to keep them?
-                    // But the user specifically said "traditional wristband coordinates should have been cleared".
-                    // So we will clear the traditional numeric slots range for this card.
-                    if (startSlot > 0) {
-                        const minStandard = startSlot;
-                        const maxStandard = startSlot + 99; // Cover a wide range just in case
-
-                        plays.forEach(p => {
-                            // Check if it's a pure number (Traditional)
-                            // We don't want to wipe "101A" if we are already in Mini-Scripts and just re-selecting logic?
-                            // But usually we switch FROM something else.
-                            // If p.wristbandSlot is "101", parseInt is 101.
-                            // If p.wristbandSlot is "101A", parseInt is 101.
-                            // We should differentiate.
-                            // Traditional slots are strictly numeric strings?
-                            // Actually, let's just use parseInt check, but verify the string is just numbers?
-                            // Or, if we entered Mini-Scripts, maybe we assume the user is starting fresh or using the Builder rows.
-                            // The user said "traditional wristband coordinates should have been cleared".
-                            // So let's clear anything that acts like a traditional coordinate in that range.
-
-                            if (!p.wristbandSlot) return;
-
-                            const slotStr = p.wristbandSlot.toString();
-                            const slotNum = parseInt(slotStr, 10);
-
-                            // Check if it's in the card's 100s range
-                            if (slotNum >= minStandard && slotNum <= maxStandard) {
-                                // Only clear if it looks like a traditional slot (no letters)
-                                // Standard slots are "101", "102". Mini-scripts are "101A", "101B".
-                                // If I have "101A", user might want to keep it?
-                                // BUT, if I am initiating the switch TO mini-scripts, implies I wasn't using it before?
-                                // Or maybe I swtiched away and back?
-                                // Safest: Clear pure numeric slots.
-                                const isNumeric = /^\d+$/.test(slotStr);
-                                if (isNumeric) {
-                                    updates.push({ ...p, wristbandSlot: '' });
-                                }
-                            }
-                        });
-                    }
-                }
-
-                if (updates.length > 0) {
-                    onUpdatePlay(updates);
-                }
-
-                updateCard(selectedCardId, { type: newType });
+            const getStartSlotForCard = (cardId) => {
+                if (cardId === 'staples') return null; // Special case
+                const map = { 'card1': 100, 'card2': 200, 'card3': 300, 'card4': 400, 'card5': 500, 'card6': 600 };
+                return map[cardId] || 100;
             };
+
+            const confirmLayoutChange = () => {
+                if (pendingLayout === 'wiz' || pendingLayout === 'mini-scripts') {
+                    // Calculate start slot for current card (e.g. 201)
+                    const cardStartSlot = getStartSlotForCard(selectedCardId);
+                    if (cardStartSlot) {
+                        // Wiz/Mini ends at start + 15 (16 slots total) -> e.g., 201..216
+                        // Clear anything > 216 up to the end of the 100s block (e.g., 299)
+
+                        // Find plays with wristbandSlot in range [cardStartSlot + 16, cardStartSlot + 99]
+                        const playsToClear = plays.filter(p => {
+                            if (!p.wristbandSlot) return false;
+                            const s = parseInt(p.wristbandSlot);
+                            return s >= cardStartSlot + 16 && s < cardStartSlot + 100;
+                        });
+
+                        playsToClear.forEach(p => {
+                            onUpdatePlay(p.id, { wristbandSlot: null });
+                        });
+                    }
+                }
+
+                updateCard(selectedCardId, { type: pendingLayout });
+                setShowLayoutConfirm(false);
+                setPendingLayout(null);
+            };
+
+            const handleLayoutChange = (newType) => {
+                setPendingLayout(newType);
+                setShowLayoutConfirm(true);
+            };
+
 
 
             const handleClearCard = (cardId) => {
@@ -6558,14 +6789,30 @@
                         });
                     } else {
                         // Standard Clear (works for Standard, Rooski, Mini-Scripts if they use slots)
-                        const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
-                        const end = start + 99; // Allow for wider range (e.g. up to 199) to catch A/B slots if parsed as int
+                        // UPDATE: Need to be robust for all types.
+                        // Standard: 101-199
+                        // Rooski (Wiz): 101-116 (but mapped to 1-16 visually, stored as 101?)
+                        // Wait, Wiz slots are stored as?
+                        // If I used getStartSlotForCard, I can see base is 100, 200 etc.
+                        // Standard uses 101..199.
+                        // Rooski uses 101..116? Or maybe just 1..16 if global?
+                        // Let's check how Rooski (Wiz) slots are generated.
+                        // In WristbandBuilder, Wiz just uses the grid.
+                        // The slots in grid are generated: 201, 202... for 200s card?
+                        // Yes, line 6428: map[cardId] || 100.
+                        // So for card2, slots are 201...216.
+                        // For Mini-Scripts: 201A, 201B...
+
+                        const start = cardId === 'card1' ? 100 : (cardId === 'card2' ? 200 : (cardId === 'card3' ? 300 : (cardId === 'card4' ? 400 : (cardId === 'card5' ? 500 : 600))));
+                        // range is start+1 to start+99 inclusive.
 
                         plays.forEach(play => {
                             if (play.wristbandSlot) {
-                                const slot = parseInt(play.wristbandSlot, 10);
-                                // Check if slot matches the card range (e.g. 101-199)
-                                if (!isNaN(slot) && slot >= start && slot < start + 100) {
+                                const slotStr = play.wristbandSlot.toString();
+                                const slotNum = parseInt(slotStr, 10);
+
+                                // Check if numeric part falls in range
+                                if (!isNaN(slotNum) && slotNum > start && slotNum < start + 100) {
                                     updates.push({ ...play, wristbandSlot: '' });
                                 }
                             }
@@ -7940,10 +8187,19 @@
                                     onChange={e => setSearchTerm(e.target.value)}
                                     style={{ marginBottom: '1rem' }}
                                 />
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleAssignPriorityPlays}
+                                    style={{ marginBottom: '1rem', width: '100%' }}
+                                    title="Assign all unassigned priority plays to the current card (respects Wiz constraint)"
+                                >
+                                    Assign All Priority Plays
+                                </button>
                                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                     {filteredPlays.map(play => (
                                         <div
                                             key={play.id}
+                                            onDoubleClick={(e) => handleSidebarDoubleClick(play, e)}
                                             draggable={true}
                                             onDragStart={(e) => {
                                                 e.dataTransfer.setData('text/plain', play.name);
@@ -7998,7 +8254,7 @@
                                                     <span>{getPlayDisplayName(play)}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                    {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}{activeCard?.type === 'standard' ? 'T' : ''}</span>}
+                                                    {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}{activeCard?.type === 'standard' ? 'T' : (activeCard?.type === 'wiz' ? 'W' : '')}</span>}
                                                     {play.staplesSlot && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '4px' }}>[{play.staplesSlot}]</span>}
                                                 </div>
                                             </div>
@@ -8128,7 +8384,7 @@
                                         placeholder="1"
                                     />
                                 </div>
-                                {(activeCard.type === 'standard' || activeCard.type === 'audible') && (
+                                {(!['mini-scripts', 'wiz', 'rooski'].includes(activeCard.type)) && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Color:</label>
                                         <select
@@ -8263,6 +8519,99 @@
 
                     {/* Print Layout temporarily removed for debugging */}
                     {null}
+
+                    {/* Layout Confirmation Modal */}
+                    {showLayoutConfirm && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+                        }}>
+                            <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: '8px', maxWidth: '400px', border: '1px solid var(--border)' }}>
+                                <h3 style={{ margin: '0 0 1rem 0' }}>Confirm Layout Change</h3>
+                                <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
+                                    {(pendingLayout === 'wiz' || pendingLayout === 'mini-scripts')
+                                        ? "Changing to this layout (16 slots) will remove any plays assigned to slots beyond the first 16 (e.g., 217-299). This action cannot be undone."
+                                        : "Are you sure you want to change the card layout?"
+                                    }
+                                </p>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                    <button
+                                        onClick={() => { setShowLayoutConfirm(false); setPendingLayout(null); }}
+                                        className="btn btn-secondary"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmLayoutChange}
+                                        className="btn btn-primary"
+                                    >
+                                        Confirm Change
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Clear Confirmation Modal */}
+                    {confirmModal && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+                        }}>
+                            <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: '8px', maxWidth: '400px', border: '1px solid var(--border)' }}>
+                                <h3 style={{ margin: '0 0 1rem 0' }}>Confirm Clear</h3>
+                                <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
+                                    {confirmModal.message}
+                                </p>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                    <button
+                                        onClick={() => setConfirmModal(null)}
+                                        className="btn btn-secondary"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmClear}
+                                        className="btn btn-danger"
+                                    >
+                                        Confirm Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {/* Situation Assignment Modal */}
+                    {assignmentModalState && (
+                        <AssignSituationsModal
+                            playId={assignmentModalState.playId}
+                            plays={plays}
+                            weekDate={currentWeek?.weekDate}
+                            newInstallIds={installList || []}
+                            assignedIds={(() => {
+                                const playId = assignmentModalState.playId;
+                                const ids = new Set();
+                                const gp = currentWeek?.offensiveGamePlan;
+                                if (gp) {
+                                    (gp.sets || []).forEach(s => {
+                                        if ((s.playIds || []).includes(playId)) ids.add(s.id);
+                                    });
+                                    (gp.miniScripts || []).forEach(s => {
+                                        if ((s.playIds || []).includes(playId)) ids.add(s.id);
+                                    });
+                                }
+                                return ids;
+                            })()}
+                            onClose={() => setAssignmentModalState(null)}
+                            onUpdateWeek={(date, field, val) => {
+                                if (currentWeek && onUpdateWeek) {
+                                    onUpdateWeek(currentWeek.id, field, val);
+                                }
+                            }}
+                            onUpdatePlay={onUpdatePlay}
+                            onAssignSituation={handleAssignSituation}
+                            position={{ x: assignmentModalState.x, y: assignmentModalState.y }}
+                        />
+                    )}
                 </div>
             );
 
@@ -11671,8 +12020,8 @@
                                         plays={plays}
                                         practicePlans={plans}
                                         onQuickAddPlay={onQuickAddPlay}
-                                        isOpen={showSideMenu}
-                                        onToggle={setShowSideMenu}
+                                        isOpen={isSideMenuOpen}
+                                        onToggle={setIsSideMenuOpen}
                                         weekStats={weekStats}
                                         gamePlan={gamePlan}
                                         gamePlanLayouts={gamePlanLayouts}
@@ -52567,7 +52916,7 @@
                         {view === 'staff-tasks' && <StaffManager view="tasks" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
                         {view === 'depth' && <DepthChart roster={roster} depthChart={(currentWeek.depthChart && currentWeek.depthChart[depthChartType]) || {}} onUpdateDepthChart={(updated) => handleUpdateDepthChart(prev => ({ ...prev, [depthChartType]: updated }))} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} savedLayout={depthChartLayouts[depthChartType] || {}} onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)} onResetLayout={() => handleResetDepthLayout(depthChartType)} />}
-                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} currentWeek={currentWeek} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} onUpdateWeek={handleUpdateWeek} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} />}
 
 
                         {
