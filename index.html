@@ -5984,7 +5984,7 @@
             );
         };
 
-        const WristbandBuilder = ({ plays, weeks, gamePlan, onUpdatePlay, wbSettings, setWbSettings, onNavigate, installList = [] }) => {
+        const WristbandBuilder = ({ plays, weeks, gamePlan, onUpdatePlay, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent }) => {
             const { currentUser } = useAuth();
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
@@ -6010,6 +6010,26 @@
                     [cardId]: { ...prev[cardId], ...updates }
                 }));
             };
+
+            // Sync Season Opponent to Wristband Settings if not manually set
+            useEffect(() => {
+                if (seasonOpponent) {
+                    setWbSettings(prev => {
+                        const newSettings = { ...prev };
+                        let hasChanges = false;
+
+                        // Check common cards (1 and 2 usually) or all cards
+                        ['card1', 'card2', 'card3', 'card4', 'card5', 'card6'].forEach(cardId => {
+                            if (newSettings[cardId] && !newSettings[cardId].opp) {
+                                newSettings[cardId] = { ...newSettings[cardId], opp: seasonOpponent };
+                                hasChanges = true;
+                            }
+                        });
+
+                        return hasChanges ? newSettings : prev;
+                    });
+                }
+            }, [seasonOpponent]);
 
             // Migration effect: Convert old flat settings to new nested structure
             useEffect(() => {
@@ -8097,15 +8117,7 @@
                                         <option value="wiz">Wiz (16-slot grid)</option>
 
                                     </select>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
-                                    <input
-                                        className="form-input"
-                                        style={{ width: '120px', padding: '4px 8px' }}
-                                        onChange={e => updateCard(selectedCardId, { opp: e.target.value })}
-                                        placeholder="Opponent"
-                                    />
+
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iter:</label>
@@ -8210,7 +8222,7 @@
                                                     <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Card {selectedCardId === 'card1' ? '1' : (selectedCardId === 'card2' ? '2' : (selectedCardId === 'card3' ? '3' : (selectedCardId === 'card4' ? '4' : (selectedCardId === 'card5' ? '5' : '6'))))}{activeCard.iter ? ` - Iter ${activeCard.iter}` : ''}</span>
                                                 </div>
                                                 */}
-                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId, activeCard.opp || activeCard.opponent || '')}
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId, `${seasonOpponent || activeCard.opp || ''} ${activeCard.iter || ''}`)}
                                             </div>
                                         ) : (
                                             <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
@@ -8220,19 +8232,13 @@
                                                     <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
                                                 </div>
                                                 */}
-                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')}
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, `${seasonOpponent || activeCard.opp || ''} ${activeCard.iter || ''}`)}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             ) : activeCard ? (
                                 <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
-                                    {/*
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
-                                        <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
-                                        <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
-                                    </div>
-                                    */}
                                     {activeCard.type === 'rooski' || activeCard.type === 'wiz' ? (
                                         <div style={{
                                             width: '100%',
@@ -8241,101 +8247,22 @@
                                         }}>
                                             {renderWizGrid(
                                                 getSlotsForCard(selectedCardId),
-                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                `${seasonOpponent || activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
                                                 activeCard.wizView || activeCard.rooskiView || 'skill'
                                             )}
                                         </div>
                                     ) : activeCard.type === 'audible' ? (
                                         renderAudibleTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
                                     ) : (
-                                        renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
+                                        renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, `${seasonOpponent || activeCard.opp || ''} ${activeCard.iter || ''}`)
                                     )}
                                 </div>
                             ) : null}
                         </div>
                     </div>
 
-                    {/* Print Layout (hidden on screen, shown when printing) */}
-                    {selectedCardId === 'staples' ? (
-                        <div className="wristband-print-container" style={{ display: 'none' }}>
-                            <div className="wristband-print-grid">
-                                {/* Render 4 identical copies of the Staples card */}
-                                {[1, 2, 3, 4].map(copyNum => (
-                                    <div key={copyNum} className="wristband-print-card">
-                                        <>
-                                            {/* Header */}
-                                            <div className="print-card-header">
-                                                <span>STAPLES</span>
-                                                <span>10-89</span>
-                                            </div>
-                                            {/* Content */}
-                                            <div className="print-card-content">
-                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, 'STAPLES')}
-                                            </div>
-                                        </>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : activeCard && (activeCard.type === 'rooski' || activeCard.type === 'wiz') ? (
-                        <>
-                            {/* Skill Version - Page 1 */}
-                            <div className="wristband-print-container" style={{ display: 'none', pageBreakAfter: 'always' }}>
-                                <div className="wristband-print-grid">
-                                    {[1, 2, 3, 4].map(copyNum => (
-                                        <div key={copyNum} className="wristband-print-card">
-                                            {renderWizGrid(
-                                                getSlotsForCard(selectedCardId),
-                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
-                                                'skill'
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* O-Line Version - Page 2 */}
-                            <div className="wristband-print-container" style={{ display: 'none' }}>
-                                <div className="wristband-print-grid">
-                                    {[1, 2, 3, 4].map(copyNum => (
-                                        <div key={copyNum} className="wristband-print-card">
-                                            {renderWizGrid(
-                                                getSlotsForCard(selectedCardId),
-                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
-                                                'oline'
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </>
-                    ) : activeCard ? (
-                        <div className="wristband-print-container" style={{ display: 'none' }}>
-                            <div className="wristband-print-grid">
-                                {/* Render 4 identical copies of the active card */}
-                                {[1, 2, 3, 4].map(copyNum => {
-                                    return (
-                                        <div key={copyNum} className="wristband-print-card">
-                                            <>
-                                                {/* Header */}
-                                                <div className="print-card-header">
-                                                    <span>{activeCard.opp || 'OPPONENT'}</span>
-                                                    <span>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
-                                                </div>
-                                                {/* Content */}
-                                                <div className="print-card-content">
-                                                    {activeCard.type === 'audible'
-                                                        ? renderAudibleTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
-                                                        : renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
-                                                    }
-                                                </div>
-                                            </>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ) : null}
+                    {/* Print Layout temporarily removed for debugging */}
+                    {null}
                 </div>
             );
 
@@ -25899,12 +25826,61 @@
             const [tokens, setTokens] = useState([]);
             const [parsedFields, setParsedFields] = useState({});
 
+            // Fallback Buckets (ensure Run/Pass/Screen always exist)
+            const DEFAULT_DEFAULTS = [
+                { id: 'run', label: 'Run', color: '#10b981', textColor: '#ffffff' },
+                { id: 'pass', label: 'Pass', color: '#3b82f6', textColor: '#ffffff' },
+                { id: 'screen', label: 'Screen', color: '#8b5cf6', textColor: '#ffffff' }
+            ];
+
+            // Calculate Effective Buckets
+            const effectiveBuckets = useMemo(() => {
+                // If user has defined categories (buckets), use them strictly.
+                // This prevents legacy defaults (like 'screen') from reappearing if user created 'SCREENS'.
+                if (playCategories && playCategories.length > 0) {
+                    return playCategories;
+                }
+
+                // Fallback Layout if nothing is defined
+                return DEFAULT_DEFAULTS;
+            }, [playCategories]);
+
             // Helper for Game Plan Updates
             const onUpdateGamePlan = (newPlan) => {
                 if (onUpdateWeek && week) {
                     onUpdateWeek(week.id, 'offensiveGamePlan', newPlan);
                 }
             };
+
+            // Current Install List (Array of play IDs)
+            const installList = week.installList || [];
+
+            // Hydrated Install List
+            const hydratedInstall = installList.map(id => plays.find(p => p.id === id)).filter(Boolean);
+
+            // AUTO-MIGRATION: Ensure plays with 'type' but no 'bucketId' are assigned to matching bucket
+            useEffect(() => {
+                if (!onUpdatePlay || !hydratedInstall.length || !playBuckets.length) return;
+
+                hydratedInstall.forEach(play => {
+                    if (!play.bucketId && play.type) {
+                        const typeStr = play.type.toLowerCase();
+                        // Find a bucket that matches this type
+                        const matchingBucket = effectiveBuckets.find(b =>
+                            !b.categoryId && (
+                                b.id === typeStr ||
+                                b.label.toLowerCase() === typeStr ||
+                                (typeStr.includes('run') && (b.id === 'run' || b.id === 'run-root')) ||
+                                (typeStr.includes('pass') && (b.id === 'pass' || b.id === 'pass-root')) ||
+                                (typeStr.includes('screen') && (b.id === 'screen' || b.id === 'screen-root'))
+                            )
+                        );
+                        if (matchingBucket) {
+                            onUpdatePlay(play.id, { bucketId: matchingBucket.id });
+                        }
+                    }
+                });
+            }, [hydratedInstall.length, effectiveBuckets]);
 
             const handleAssignPlayToSituation = (playId, box) => {
                 if (!playId || !box || !box.setId) return;
@@ -26099,8 +26075,7 @@
             };
 
 
-            // Current Install List (Array of play IDs)
-            const installList = week.installList || [];
+            // Removed redundant installList declaration (moved to top)
 
             const handleAddToInstall = (playId) => {
                 if (!installList.includes(playId)) {
@@ -26211,93 +26186,34 @@
 
 
 
-            const handleListChange = (newItems, listType) => {
-                // Determine the NEW State for the whole Install List
-                // We need to merge this new partial list with the REST of the list
-                // without losing items from other columns.
-
-                // 1. Get current full list
+            const handleListChange = (newItems, bucketId, familyName) => {
+                // Update the install list order
                 const fullListIds = week.installList || [];
-
-                // 2. Identify IDs in the new partial list (the column that changed)
                 const newIdsSet = new Set(newItems.map(p => p.id));
 
-                // 3. Get all items currently in the full list that are NOT in this new partial list
-                // We preserve their relative order as much as possible
+                // Get all items NOT in the current bucket
                 const otherIds = fullListIds.filter(id => !newIdsSet.has(id));
 
-                // 4. Combine based on column implementation
-                // If we want to maintain the "Runs, then Passes, then Screens" order in the raw list,
-                // we can try to do that, but simply concatenating [others(filtered)] + [new] might shuffle them.
-                // A better approach for ReactSortable "multi-drag" or "columns" is:
-                // We trust the *filters* to separate them visually.
-                // So the `installList` order just needs to contain everyone.
-                // However, if we just append, items might jump around if we re-render.
-                // Ideally, we want to Replace the items that "belong" to this column with the new order,
-                // and leave the others alone.
+                // Combine: other items + new items from this bucket
+                const finalIds = [...otherIds, ...newItems.map(p => p.id)];
 
-                // But `handleListChange` is triggered by ReactSortable which gives us the NEW list for THIS column.
-
-                // Strategy:
-                // Reconstruct the master list by concatenating the columns in a verified order.
-                // But we only have the "new" state for ONE column. We need the "current" state for the others.
-
-                // Fetch all hydrated plays to sort them into buckets
-                const allHydrated = fullListIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
-
-                // Define buckets based on the SAME logic as the UI rendering
-                // RUNS: Run, RPO, or undefined
-                // PASSES: Pass, QUICK, INTER, SHOT, PAP
-                // SCREENS: Screen, GADGET
-
-                const isRun = (p) => !p.type || p.type === 'Run' || p.type === 'RPO';
-                const isPass = (p) => ['Pass', 'QUICK', 'INTER', 'SHOT', 'PAP'].includes(p.type);
-                const isScreen = (p) => ['Screen', 'GADGET'].includes(p.type);
-
-                // Bucket the *other* items (those not in the current modified column)
-                // Actually, simpler:
-                // If I am modifying 'Pass' column:
-                // New Master List = [CurrentRuns] + [NewPasses] + [CurrentScree     // We need to know which column we are modifying to re-assemble correctly.
-                // `listType` arg gives us this ('Run', 'Pass', 'Screen').
-
-                const currentRuns = allHydrated.filter(p => isRun(p) && !newIdsSet.has(p.id));
-                const currentPasses = allHydrated.filter(p => isPass(p) && !newIdsSet.has(p.id));
-                const currentScreens = allHydrated.filter(p => isScreen(p) && !newIdsSet.has(p.id));
-
-                let finalIds = [];
-
-                if (listType === 'Run') {
-                    // We are updating Run column. 
-                    // New Runs + Old Passes + Old Screens
-                    finalIds = [...newItems.map(p => p.id), ...currentPasses.map(p => p.id), ...currentScreens.map(p => p.id)];
-                } else if (listType === 'Pass') {
-                    // Old Runs + New Passes + Old Screens
-                    finalIds = [...currentRuns.map(p => p.id), ...newItems.map(p => p.id), ...currentScreens.map(p => p.id)];
-                } else if (listType === 'Screen') {
-                    // Old Runs + Old Passes + New Screens
-                    finalIds = [...currentRuns.map(p => p.id), ...currentPasses.map(p => p.id), ...newItems.map(p => p.id)];
-                } else {
-                    // Fallback
-                    finalIds = [...otherIds, ...newItems.map(p => p.id)];
-                }
-
-                // Update Week
+                // Update the week's install list
                 onUpdateWeek(week.id, 'installList', finalIds);
 
-                // Handle Type mutations if drag-between-columns is authorized
-                // (Optional: If we want dragging from Run -> Pass to change type to Pass)
-                // For now, let's keep it handled by the user explicitly changing type via Modal, 
-                // unless we want drag-to-sort to also be drag-to-convert.
-                // The previous code had it. Let's supporting it for the MAIN types.
+                // Assign bucketId and conceptFamily to plays that were dragged
                 newItems.forEach(p => {
-                    if (listType === 'Run' && !isRun(p)) {
-                        onUpdatePlay(p.id, { type: 'Run' });
+                    const updates = {};
+                    if (p.bucketId !== bucketId) updates.bucketId = bucketId;
+
+                    // Only update conceptFamily if familyName is provided (which it is for family-specific columns)
+                    // If familyName is 'No Concept', we set it to null or empty string
+                    const targetFamily = familyName === 'No Concept' ? '' : familyName;
+                    if (familyName !== undefined && p.conceptFamily !== targetFamily) {
+                        updates.conceptFamily = targetFamily;
                     }
-                    if (listType === 'Pass' && !isPass(p)) {
-                        onUpdatePlay(p.id, { type: 'Pass' });
-                    }
-                    if (listType === 'Screen' && !isScreen(p)) {
-                        onUpdatePlay(p.id, { type: 'Screen' });
+
+                    if (Object.keys(updates).length > 0) {
+                        onUpdatePlay(p.id, updates);
                     }
                 });
             };
@@ -26334,9 +26250,7 @@
                 return true;
             });
 
-            // Hydrated Install List
-            // Hydrated Install List
-            const hydratedInstall = installList.map(id => plays.find(p => p.id === id)).filter(Boolean);
+            // Removed redundant hydratedInstall declaration (moved to top)
 
             const handleToggleNewPlay = (playId) => {
                 const currentNewIds = week.newInstallIds || [];
@@ -26443,7 +26357,7 @@
 
                         {showImportModal && (
                             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
-                                <div className="card" style={{ width: '400px', padding: '1.5rem', background: 'white' }}>
+                                <div className="card" style={{ width: '400px', padding: '1.5rem', background: 'white', color: 'black' }}>
                                     <h3>Import Installs</h3>
                                     <p>Select a week to copy installs from. <strong>This will overwrite current data.</strong></p>
                                     <select
@@ -26544,11 +26458,11 @@
                             </div>
                         )}
 
-                        {/* THREE COLUMN LAYOUT */}
-                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '300px 1fr 1fr 1fr', gap: 0, overflow: 'hidden', minHeight: 0 }}>
+                        {/* FLEX LAYOUT: Sidebar + Main Content */}
+                        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
                             {/* LEFT COLUMN: MASTER PLAYBOOK SEARCH + INSTALL LIST */}
-                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: 'white', minHeight: 0 }}>
+                            <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: 'white', minHeight: 0 }}>
                                 {/* Master Playbook Search Section */}
                                 <div style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
                                     <div style={{ padding: '0.75rem', background: '#f1f5f9', borderBottom: '1px solid var(--border)' }}>
@@ -26634,144 +26548,207 @@
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold', color: '#991b1b' }}>Uncategorized Plays</h4>
                                             <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#fee2e2', color: '#991b1b', borderRadius: '12px', fontWeight: 'bold' }}>
-                                                {hydratedInstall.filter(p => !p.type).length}
+                                                {hydratedInstall.filter(p =>
+                                                    (p.bucketId && !effectiveBuckets.some(b => b.id === p.bucketId)) ||
+                                                    (!p.bucketId && (!p.type || !effectiveBuckets.some(b => b.id === p.type)))
+                                                ).length}
                                             </span>
                                         </div>
                                         <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.7rem', color: '#b91c1c' }}>
                                             Tag these to move to Run/Pass/Screen columns.
                                         </p>
                                     </div>
-                                    <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
+                                    <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column' }}>
                                         {(() => {
-                                            const uncategorized = hydratedInstall.filter(p => !p.type);
+                                            const uncategorized = hydratedInstall.filter(p => (p.bucketId && !effectiveBuckets.some(b => b.id === p.bucketId)) || (!p.bucketId && (!p.type || !effectiveBuckets.some(b => b.id === p.type))));
 
                                             if (uncategorized.length === 0) {
                                                 return (
-                                                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                                                        All installed plays are categorized.
-                                                    </div>
+                                                    <ReactSortable
+                                                        list={[]}
+                                                        setList={() => { }}
+                                                        group="installColumns"
+                                                        style={{
+                                                            minHeight: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.8rem', width: '100%' }}>
+                                                            No unassigned                                                                  <br />Drag plays here to unassign.
+                                                        </div>
+                                                    </ReactSortable>
                                                 );
                                             }
 
-                                            return uncategorized.map(play => (
-                                                <div
-                                                    key={play.id}
-                                                    className="card"
-                                                    style={{
-                                                        padding: '0.5rem 0.6rem',
-                                                        marginBottom: '0.25rem',
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        borderLeft: '3px solid #ef4444',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                    onClick={(e) => setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY })}
+                                            return (
+                                                <ReactSortable
+                                                    list={uncategorized}
+                                                    setList={(items) => handleListChange(items, null)}
+                                                    group="installColumns"
+                                                    animation={150}
+                                                    style={{ minHeight: '50px' }}
                                                 >
-                                                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                        <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.8rem' }}>{getPlayDisplayName(play)}</div>
-                                                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                                            {play.formation || 'No Formation'} • Needs Type Tag
+                                                    {uncategorized.map(play => (
+                                                        <div
+                                                            key={play.id}
+                                                            data-id={play.id}
+                                                            className="card"
+                                                            style={{
+                                                                padding: '0.5rem 0.6rem',
+                                                                marginBottom: '0.25rem',
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                borderLeft: '3px solid #64748b', // Grey for unassigned
+                                                                cursor: 'grab',
+                                                                background: 'white'
+                                                            }}
+                                                            onClick={(e) => setAssignmentModalState({ playId: play.id, x: e.clientX, y: e.clientY })}
+                                                        >
+                                                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                                                                <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.8rem' }}>{getPlayDisplayName(play)}</div>
+                                                            </div>
+                                                            <div style={{ color: '#64748b' }}>
+                                                                <Icon name="Tag" size={14} />
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div style={{ color: '#ef4444' }}>
-                                                        <Icon name="Tag" size={14} />
-                                                    </div>
-                                                </div>
-                                            ));
+                                                    ))}
+                                                </ReactSortable>
+                                            );
                                         })()}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* MIDDLE COLUMN: RUNS / RPOs */}
-                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: '#f8fafc', minHeight: 0 }}>
-                                <div style={{ padding: '0.75rem', background: '#ecfdf5', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#047857', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>RUNS / RPOs</span>
-                                    <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#d1fae5', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => getCategoryGroup(p.type) === 'RUN').length}
-                                    </span>
-                                </div>
-                                <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-                                    <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => getCategoryGroup(p.type) === 'RUN')}
-                                        type="Run"
-                                        onListChange={(newItems) => handleListChange(newItems, 'Run')}
-                                        onUpdatePlay={onUpdatePlay}
-                                        handleRemoveFromInstall={handleRemoveFromInstall}
-                                        handleTogglePriority={handleTogglePriority}
-                                        getGamePlanStatus={getGamePlanStatus}
-                                        getScriptCount={getScriptCount}
-                                        availableSlots={availableSlots}
-                                        handleToggleNewPlay={handleToggleNewPlay}
-                                        newInstallIds={week.newInstallIds || []}
-                                        onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
-                                        onDuplicatePlay={handleDuplicatePlay}
-                                        playBuckets={playBuckets}
-                                    />
-                                </div>
-                            </div>
 
-                            {/* RIGHT COLUMN: PASSES */}
-                            <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: '#f8fafc', minHeight: 0 }}>
-                                <div style={{ padding: '0.75rem', background: '#eff6ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#1d4ed8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>PASSES</span>
-                                    <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#dbeafe', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => getCategoryGroup(p.type) === 'PASS').length}
-                                    </span>
-                                </div>
-                                <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-                                    <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => getCategoryGroup(p.type) === 'PASS')}
-                                        type="Pass"
-                                        onListChange={(newItems) => handleListChange(newItems, 'Pass')}
-                                        onUpdatePlay={onUpdatePlay}
-                                        handleRemoveFromInstall={handleRemoveFromInstall}
-                                        handleTogglePriority={handleTogglePriority}
-                                        getGamePlanStatus={getGamePlanStatus}
-                                        getScriptCount={getScriptCount}
-                                        availableSlots={availableSlots}
-                                        handleToggleNewPlay={handleToggleNewPlay}
-                                        newInstallIds={week.newInstallIds || []}
-                                        onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
-                                        onDuplicatePlay={handleDuplicatePlay}
-                                        playBuckets={playBuckets}
-                                    />
-                                </div>
-                            </div>
+                            {/* BUCKET GRID: Dynamic columns based on playBuckets from Offense Setup */}
+                            {/* Bucket Grid - Full Width with Nested Concept Families */}
 
-                            {/* FAR RIGHT COLUMN: SCREENS */}
-                            <div style={{ display: 'flex', flexDirection: 'column', background: '#f8fafc', minHeight: 0 }}>
-                                <div style={{ padding: '0.75rem', background: '#faf5ff', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: '#7e22ce', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>SCREENS & GADGETS</span>
-                                    <span style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#f3e8ff', borderRadius: '12px' }}>
-                                        {hydratedInstall.filter(p => getCategoryGroup(p.type) === 'OTHER').length}
-                                    </span>
+                            {/* NEW LAYOUT: Grid + Inbox */}
+                            <div style={{ flex: 1, display: 'flex', height: 'calc(100vh - 250px)', overflow: 'hidden', gap: '1rem', padding: '1rem' }}>
+                                <div style={{
+                                    flex: 3,
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                                    gridAutoRows: 'min-content',
+                                    gap: '1rem',
+                                    overflowY: 'auto',
+                                    overflowX: 'hidden', // Prevent horizontal bleed
+                                    paddingRight: '0.5rem',
+                                    minWidth: 0 // Allow flex item to shrink
+                                }}>
+                                    {effectiveBuckets.filter(b => !b.categoryId).map(bucket => {
+                                        const bucketPlays = hydratedInstall.filter(p => p.bucketId === bucket.id);
+
+                                        // Group plays by concept family
+                                        const playsByFamily = bucketPlays.reduce((acc, play) => {
+                                            const family = play.conceptFamily || 'No Concept';
+                                            if (!acc[family]) acc[family] = [];
+                                            acc[family].push(play);
+                                            return acc;
+                                        }, {});
+
+                                        const families = Object.keys(playsByFamily).sort();
+
+                                        return (
+                                            <div key={bucket.id} className="card" style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                background: 'var(--bg-panel)',
+                                                border: '1px solid var(--border)',
+                                                height: 'fit-content'
+                                            }}>
+                                                {/* Bucket Header */}
+                                                <div style={{
+                                                    padding: '0.75rem 1rem',
+                                                    borderBottom: `3px solid ${bucket.color || 'var(--accent)'}`,
+                                                    background: 'var(--bg-main)',
+                                                    fontWeight: 'bold',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    fontSize: '1rem',
+                                                    color: 'var(--text-main)'
+                                                }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: bucket.color || 'var(--accent)' }}></div>
+                                                        {bucket.label || bucket.id}
+                                                    </span>
+                                                    <span style={{
+                                                        fontSize: '0.75rem',
+                                                        padding: '2px 8px',
+                                                        background: 'var(--bg-panel)',
+                                                        border: '1px solid var(--border)',
+                                                        borderRadius: '12px',
+                                                        fontWeight: 'bold',
+                                                        color: 'var(--text-secondary)'
+                                                    }}>
+                                                        {bucketPlays.length}
+                                                    </span>
+                                                </div>
+
+                                                {/* Content */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem' }}>
+                                                    {families.length === 0 ? (
+                                                        <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic', opacity: 0.7 }}>
+                                                            No plays assigned
+                                                        </div>
+                                                    ) : (
+                                                        families.map(family => (
+                                                            <div key={family} style={{
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '6px',
+                                                                overflow: 'hidden'
+                                                            }}>
+                                                                {family !== 'No Concept' && (
+                                                                    <div style={{
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        background: 'var(--bg-item)',
+                                                                        borderBottom: '1px solid var(--border)',
+                                                                        fontSize: '0.75rem',
+                                                                        fontWeight: 'bold',
+                                                                        color: 'var(--text-secondary)',
+                                                                        display: 'flex', justifyContent: 'space-between'
+                                                                    }}>
+                                                                        <span>{family}</span>
+                                                                        <span>{playsByFamily[family].length}</span>
+                                                                    </div>
+                                                                )}
+                                                                <div style={{ padding: '0.25rem' }}>
+                                                                    <InstallSortableColumn
+                                                                        items={playsByFamily[family]}
+                                                                        type={`${bucket.label}-${family}`}
+                                                                        onListChange={(newItems) => {
+                                                                            handleListChange(newItems, bucket.id, family);
+                                                                        }}
+                                                                        onUpdatePlay={onUpdatePlay}
+                                                                        handleRemoveFromInstall={handleRemoveFromInstall}
+                                                                        handleTogglePriority={handleTogglePriority}
+                                                                        getGamePlanStatus={getGamePlanStatus}
+                                                                        getScriptCount={getScriptCount}
+                                                                        availableSlots={availableSlots}
+                                                                        handleToggleNewPlay={handleToggleNewPlay}
+                                                                        newInstallIds={week.newInstallIds || []}
+                                                                        onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
+                                                                        onDuplicatePlay={handleDuplicatePlay}
+                                                                        playBuckets={effectiveBuckets}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-                                    <InstallSortableColumn
-                                        items={hydratedInstall.filter(p => getCategoryGroup(p.type) === 'OTHER')}
-                                        type="Screen"
-                                        onListChange={(newItems) => handleListChange(newItems, 'Screen')}
-                                        onUpdatePlay={onUpdatePlay}
-                                        handleRemoveFromInstall={handleRemoveFromInstall}
-                                        handleTogglePriority={handleTogglePriority}
-                                        getGamePlanStatus={getGamePlanStatus}
-                                        getScriptCount={getScriptCount}
-                                        availableSlots={availableSlots}
-                                        handleToggleNewPlay={handleToggleNewPlay}
-                                        newInstallIds={week.newInstallIds || []}
-                                        onOpenAssignmentModal={(id, x, y) => setAssignmentModalState({ playId: id, x, y })}
-                                        onDuplicatePlay={handleDuplicatePlay}
-                                        playBuckets={playBuckets}
-                                    />
-                                </div>
+
                             </div>
                         </div>
 
 
 
-                    </div>
+
+                    </div >
                     {assignmentModalState && (() => {
                         const { playId, x, y } = assignmentModalState;
                         const play = plays.find(p => p.id === playId);
@@ -26837,66 +26814,67 @@
                                             </button>
                                         </div>
 
-                                        {/* Play Type Toggles */}
+                                        {/* Play Type Toggles - Sets both type and bucketId */}
                                         <div style={{ marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
                                             <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Play Type</div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                {(playCategories.length > 0 ? playCategories : [
-                                                    { id: 'Run', label: 'Run' }, { id: 'RPO', label: 'RPO' },
-                                                    { id: 'Pass', label: 'Pass' }, { id: 'Screen', label: 'Screen' }
-                                                ]).map(cat => {
-                                                    const type = cat.label; // Use label for backward compat or cat.id? Existing code uses 'Run', 'RPO' labels as types often.
-                                                    // Actually, let's use the ID but fallback to label if needed.
-                                                    // Wait, Priority Plays mapped type -> ID. 
-                                                    // Here we set the type on the play. Ideally we set the ID.
-                                                    // But existing plays have 'Run', 'RPO'.
-                                                    // Let's use cat.label to be safe for display? No, we should transition to IDs?
-                                                    // If I set type=cat.id (e.g. 'run'), existing filters checks 'Run'.
-                                                    // My getCategoryGroup handles case insensitivity.
-                                                    // So I should set cat.id.
-
-                                                    const typeVal = cat.id;
-                                                    const isSelected = (!play.type && typeVal === 'run') || play.type === typeVal || play.type === cat.label;
+                                                {/* Use playBuckets (top-level only) for types */}
+                                                {effectiveBuckets.filter(b => !b.categoryId).map(bucket => {
+                                                    const isSelected = play.bucketId === bucket.id || (
+                                                        !play.bucketId && play.type && (
+                                                            play.type.toLowerCase() === bucket.id ||
+                                                            play.type.toLowerCase() === bucket.label.toLowerCase() ||
+                                                            (play.type.toLowerCase().includes('run') && (bucket.id === 'run' || bucket.id === 'run-root'))
+                                                        )
+                                                    );
                                                     return (
                                                         <button
-                                                            key={cat.id}
+                                                            key={bucket.id}
                                                             onClick={() => {
-                                                                if (onUpdatePlay) onUpdatePlay(playId, { type: typeVal });
+                                                                if (onUpdatePlay) onUpdatePlay(playId, {
+                                                                    type: bucket.label, // Keep type for backward compat
+                                                                    bucketId: bucket.id
+                                                                });
                                                             }}
                                                             className="btn-xs"
                                                             style={{
-                                                                background: isSelected ? '#3b82f6' : 'white',
-                                                                color: isSelected ? 'white' : '#64748b',
-                                                                border: isSelected ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                                                                background: isSelected ? bucket.color || '#3b82f6' : 'white',
+                                                                color: isSelected ? (bucket.textColor || 'white') : '#64748b',
+                                                                border: isSelected ? '1px solid rgba(0,0,0,0.1)' : '1px solid #cbd5e1',
                                                                 fontSize: '0.7rem',
-                                                                padding: '2px 6px',
+                                                                padding: '2px 8px',
                                                                 cursor: 'pointer',
-                                                                borderRadius: '4px'
+                                                                borderRadius: '4px',
+                                                                fontWeight: isSelected ? 'bold' : 'normal'
                                                             }}
                                                         >
-                                                            {type}
+                                                            {bucket.label}
                                                         </button>
                                                     );
                                                 })}
                                             </div>
                                         </div>
 
+                                        {/* Concept Family - Nested under the selected Bucket */}
                                         <div style={{ marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
                                             <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Concept Family</div>
                                             <select
-                                                value={play.bucketId || ''}
+                                                value={play.conceptFamily || ''}
                                                 onChange={(e) => {
-                                                    if (onUpdatePlay) onUpdatePlay(playId, { bucketId: e.target.value });
+                                                    if (onUpdatePlay) onUpdatePlay(playId, { conceptFamily: e.target.value });
                                                 }}
                                                 style={{ width: '100%', padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
                                             >
                                                 <option value="">-- No Concept Assigned --</option>
-                                                {(playBuckets || [])
-                                                    .filter(b => !play.type || getCategoryGroup(b.categoryId) === getCategoryGroup(play.type) || b.id === play.bucketId)
+                                                {/* Show options that are concept families (have categoryId) and belong to current bucket */}
+                                                {effectiveBuckets
+                                                    .filter(b => b.categoryId && (b.categoryId === play.bucketId || getCategoryGroup(b.categoryId) === getCategoryGroup(play.bucketId)))
                                                     .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
                                                     .map(b => (
-                                                        <option key={b.id} value={b.id}>{b.label}</option>
+                                                        <option key={b.id} value={b.label}>{b.label}</option>
                                                     ))}
+                                                {/* If no predefined concept families, show an "Add Custom" option or just let them type? 
+                                                    For now, let's keep it simple with existing categories. */}
                                             </select>
                                         </div>
 
@@ -26957,7 +26935,8 @@
                                 </div>
                             </div>
                         );
-                    })()}
+                    })()
+                    }
                 </>
             );
         };
@@ -47231,12 +47210,10 @@
             );
         };
 
-        const DEFAULT_PLAY_CATEGORIES = [
-            { id: 'run', label: 'Run', color: 'gray' },
-            { id: 'pass', label: 'Pass', color: 'blue' },
-            { id: 'rpo', label: 'RPO', color: 'indigo' },
-            { id: 'screen', label: 'Screen', color: 'purple' },
-            { id: 'gadget', label: 'Gadget', color: 'pink' }
+        const DEFAULT_PLAY_BUCKETS = [
+            { id: 'run', label: 'Run', color: '#10b981', textColor: '#ffffff' },
+            { id: 'pass', label: 'Pass', color: '#3b82f6', textColor: '#ffffff' },
+            { id: 'screen', label: 'Screen', color: '#8b5cf6', textColor: '#ffffff' }
         ];
 
         const App = () => {
@@ -48966,43 +48943,52 @@
             const [defensePlaySyntax, setDefensePlaySyntax] = useLocalStorage('oc-dashboard-play-syntax-defense', []);
             const [stPlaySyntax, setStPlaySyntax] = useLocalStorage('oc-dashboard-play-syntax-st', []);
             const [termLibrary, setTermLibrary] = useLocalStorage('oc-dashboard-term-library', {});
-            const [playBuckets, setPlayBuckets] = useLocalStorage('oc-dashboard-play-buckets', []);
+
             const [defenseTermLibrary, setDefenseTermLibrary] = useLocalStorage('oc-dashboard-term-library-defense', {});
             const [stTermLibrary, setStTermLibrary] = useLocalStorage('oc-dashboard-term-library-st', {});
             const [setupTab, setSetupTab] = useState('positions');
             const [setupCategory, setSetupCategory] = useState(null);
             const [selectedBucketCategory, setSelectedBucketCategory] = useState(null);
-            const [playCategories, setPlayCategories] = useLocalStorage('oc-dashboard-play-categories', DEFAULT_PLAY_CATEGORIES);
+            // Legacy: Keep playCategories for backward compatibility during transition
+            const [playCategories, setPlayCategories] = useLocalStorage('oc-dashboard-play-categories', []);
+            const [playBuckets, setPlayBuckets] = useLocalStorage('oc-dashboard-play-buckets', DEFAULT_PLAY_BUCKETS);
 
-            // AUTO-MIGRATION: Fix corrupted data where buckets (families) were stored in categories
+            // Ensure default buckets exist (Run, Pass, Screen)
             useEffect(() => {
-                if (playCategories && playCategories.length > 0) {
-                    const corruptedBuckets = playCategories.filter(c => c.categoryId);
-                    if (corruptedBuckets.length > 0) {
-                        console.log('Found corrupted buckets in categories, migrating...', corruptedBuckets);
+                if (!playBuckets || playBuckets.length === 0) {
+                    setPlayBuckets(DEFAULT_PLAY_BUCKETS);
+                }
+            }, [playBuckets, setPlayBuckets]);
 
-                        // 1. Remove them from categories
-                        const cleanCategories = playCategories.filter(c => !c.categoryId);
-                        setPlayCategories(cleanCategories);
+            // AUTO-MIGRATION: Assign bucketId to plays based on their type
+            useEffect(() => {
+                const needsMigration = plays.some(p => p.type && !p.bucketId && p.type !== 'GAP' && p.type !== 'note');
 
-                        // 2. Add them to buckets (preserving any existing buckets)
-                        // Use a Set to avoid duplicates based on ID
-                        const existingIds = new Set(playBuckets.map(b => b.id));
-                        const newBuckets = corruptedBuckets.filter(b => !existingIds.has(b.id));
+                if (needsMigration) {
+                    console.log('Migrating plays from categories to buckets...');
 
-                        if (newBuckets.length > 0) {
-                            setPlayBuckets([...playBuckets, ...newBuckets]);
+                    // Map old category types to new bucket IDs
+                    const typeToBucketMap = {
+                        'Run': 'run',
+                        'RPO': 'run',
+                        'Pass': 'pass',
+                        'Play Action': 'pass',
+                        'Screen': 'screen',
+                        'GADGET': 'screen',
+                        'Gadget': 'screen'
+                    };
+
+                    plays.forEach(play => {
+                        if (play.type && !play.bucketId && play.type !== 'GAP' && play.type !== 'note') {
+                            const bucketId = typeToBucketMap[play.type] || 'run';
+                            handlePatchPlay(play.id, { bucketId });
                         }
-                    }
-                }
-            }, [playCategories, playBuckets]);
+                    });
 
-            // Initialize selectedBucketCategory with first category
-            useEffect(() => {
-                if (!selectedBucketCategory && playCategories && playCategories.length > 0) {
-                    setSelectedBucketCategory(playCategories[0].id);
+                    console.log('Migration complete!');
                 }
-            }, [playCategories]);
+            }, [plays]);
+
 
             // Script Presets (Dynamic Script Templates)
             const [scriptPresets, setScriptPresets] = useLocalStorage('oc-dashboard-script-presets', [
@@ -50457,85 +50443,135 @@
 
                             {setupTab === 'buckets' && (
                                 <div style={{ padding: '2rem' }}>
-                                    <div style={{ display: 'flex', gap: '2rem' }}>
-                                        {/* Filters / Sidebar */}
-                                        <div style={{ width: '250px', flexShrink: 0 }}>
-                                            <h3 style={{ marginTop: 0 }}>Buckets</h3>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                {playCategories.map(cat => (
-                                                    <button
-                                                        key={cat.id}
-                                                        className="btn-ghost"
-                                                        style={{
-                                                            justifyContent: 'flex-start',
-                                                            background: selectedBucketCategory === cat.id ? 'var(--accent-light)' : 'transparent',
-                                                            borderLeft: selectedBucketCategory === cat.id ? '3px solid var(--accent)' : '3px solid transparent',
-                                                            fontWeight: selectedBucketCategory === cat.id ? 'bold' : 'normal',
-                                                            color: selectedBucketCategory === cat.id ? 'var(--accent)' : 'var(--text-secondary)',
-                                                            padding: '0.75rem 1rem',
-                                                            textAlign: 'left'
-                                                        }}
-                                                        onClick={() => setSelectedBucketCategory(cat.id)}
-                                                    >
-                                                        {cat.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <h3 style={{ margin: 0 }}>Concept Families</h3>
+                                        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                                            Manage your concept families within each bucket.
+                                        </p>
+                                    </div>
 
-                                        {/* Main Content */}
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                                <h3 style={{ margin: 0 }}>Concept Families for "{playCategories.find(c => c.id === selectedBucketCategory)?.label || '...'}"</h3>
-                                                <button className="btn btn-primary" onClick={() => {
-                                                    if (!selectedBucketCategory) {
-                                                        alert("Please select a bucket first.");
-                                                        return;
-                                                    }
-                                                    const label = prompt("New Concept Family Name (e.g. Smash, Drive):");
-                                                    if (label) {
-                                                        const id = label.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                                        // Check for duplicates
-                                                        if (playBuckets.some(b => b.id === id && b.categoryId === selectedBucketCategory)) {
-                                                            alert("Concept family already exists in this bucket.");
-                                                            return;
-                                                        }
-                                                        setPlayBuckets([...playBuckets, { id, label, categoryId: selectedBucketCategory }]);
-                                                    }
-                                                }}>
-                                                    <Icon name="Plus" size={16} /> Add Family
-                                                </button>
-                                            </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                                        {playCategories.map(bucket => {
+                                            // Derive families from plays in this bucket
+                                            // Ensure we match using bucketId OR categoryId, preferring bucketId if it matches the bucket's ID
+                                            const bucketPlays = plays.filter(p => p.bucketId === bucket.id);
+                                            const derivedFamilies = [...new Set(bucketPlays.map(p => p.conceptFamily).filter(Boolean))];    // Also include any explicitly defined families (if we decide to store them on the bucket object later)
+                                            // For now, we'll just use the derived ones + any purely "custom" ones if we added that feature.
+                                            // But since we can't persist custom ones without a backend change or state change, we'll stick to derived + "add via dummy" or just "manage derived".
+                                            // Wait, user wants to ADD. If I add a family, I can't just leave it floating.
+                                            // I'll add a 'families' array to playCategories in state to persist "unused" families.
+                                            const explicitFamilies = bucket.families || [];
+                                            const allFamilies = [...new Set([...derivedFamilies, ...explicitFamilies])].sort();
 
-                                            {(!selectedBucketCategory) ? (
-                                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', border: '2px dashed var(--border)', borderRadius: '8px' }}>
-                                                    Select a bucket to manage its concept families.
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                                                    {playBuckets.filter(b => b.categoryId === selectedBucketCategory).length === 0 && (
-                                                        <div style={{ gridColumn: '1/-1', padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                            No concept families defined yet.
+                                            return (
+                                                <div key={bucket.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                                                    <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <div style={{ width: 12, height: 12, borderRadius: '50%', background: bucket.color === 'gray' ? '#94a3b8' : bucket.color }}></div>
+                                                            <h4 style={{ margin: 0 }}>{bucket.label}</h4>
+                                                        </div>
+                                                        <button
+                                                            className="btn-icon"
+                                                            title="Add Family"
+                                                            onClick={() => {
+                                                                const name = prompt("New Concept Family Name:");
+                                                                if (name) {
+                                                                    // Add to bucket's explicit families list
+                                                                    const newCategories = playCategories.map(c => {
+                                                                        if (c.id === bucket.id) {
+                                                                            return { ...c, families: [...(c.families || []), name] };
+                                                                        }
+                                                                        return c;
+                                                                    });
+                                                                    setPlayCategories(newCategories);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Icon name="Plus" size={16} />
+                                                        </button>
+                                                    </div>
+
+                                                    {allFamilies.length === 0 ? (
+                                                        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: '4px' }}>
+                                                            No families defined.
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            {allFamilies.map(family => (
+                                                                <div key={family} style={{
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                    padding: '0.5rem 0.75rem',
+                                                                    background: 'var(--bg-main)',
+                                                                    borderRadius: '4px',
+                                                                    border: '1px solid var(--border)'
+                                                                }}>
+                                                                    <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{family}</span>
+                                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                                        <button
+                                                                            className="btn-icon" title="Rename Family" onClick={() => {
+                                                                                const newName = prompt("Rename Concept Family:", family);
+                                                                                if (newName && newName !== family) {
+                                                                                    // 1. Update plays
+                                                                                    const playsToUpdate = bucketPlays.filter(p => p.conceptFamily === family);
+                                                                                    if (playsToUpdate.length > 0) {
+                                                                                        const updates = playsToUpdate.map(p => ({ id: p.id, conceptFamily: newName }));
+                                                                                        handlePatchPlay(updates);
+                                                                                    }
+
+                                                                                    // 2. Update explicit families
+                                                                                    if ((bucket.families || []).includes(family)) {
+                                                                                        const newCategories = playCategories.map(c => {
+                                                                                            if (c.id === bucket.id) {
+                                                                                                const newFamilies = c.families.map(f => f === family ? newName : f);
+                                                                                                return { ...c, families: newFamilies };
+                                                                                            }
+                                                                                            return c;
+                                                                                        });
+                                                                                        setPlayCategories(newCategories);
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <Icon name="Edit" size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            className="btn-icon"
+                                                                            style={{ color: '#ef4444' }}
+                                                                            title="Delete Family"
+                                                                            onClick={() => {
+                                                                                if (confirm(`Delete family "${family}"? This will remove it from all plays in this bucket.`)) {
+                                                                                    // 1. Unassign from plays
+                                                                                    const playsToUpdate = bucketPlays.filter(p => p.conceptFamily === family);
+                                                                                    if (playsToUpdate.length > 0) {
+                                                                                        const updates = playsToUpdate.map(p => ({ id: p.id, conceptFamily: null }));
+                                                                                        handlePatchPlay(updates);
+                                                                                    }
+
+                                                                                    // 2. Remove from explicit list
+                                                                                    if ((bucket.families || []).includes(family)) {
+                                                                                        const newCategories = playCategories.map(c => {
+                                                                                            if (c.id === bucket.id) {
+                                                                                                return { ...c, families: c.families.filter(f => f !== family) };
+                                                                                            }
+                                                                                            return c;
+                                                                                        });
+                                                                                        setPlayCategories(newCategories);
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <Icon name="Trash" size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     )}
-                                                    {playBuckets.filter(b => b.categoryId === selectedBucketCategory).map(bucket => (
-                                                        <div key={bucket.id} className="card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <span style={{ fontWeight: '500' }}>{bucket.label}</span>
-                                                            <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => {
-                                                                if (confirm(`Delete concept family "${bucket.label}"?`)) {
-                                                                    setPlayBuckets(playBuckets.filter(b => b.id !== bucket.id && b.categoryId !== bucket.categoryId)); // Note: Filter logic needs to be precise if IDs aren't globally unique. Assuming buckets have unique IDs effectively for now, but adding cat check is safer.
-                                                                    // Actually, let's just filter by object ref or unique ID.
-                                                                    // Better:
-                                                                    setPlayBuckets(playBuckets.filter(b => !(b.id === bucket.id && b.categoryId === bucket.categoryId)));
-                                                                }
-                                                            }}>
-                                                                <Icon name="Trash" size={14} />
-                                                            </button>
-                                                        </div>
-                                                    ))}
                                                 </div>
-                                            )}
-                                        </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -52531,7 +52567,7 @@
                         {view === 'staff-tasks' && <StaffManager view="tasks" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} masterTasks={masterTasks} onUpdateMasterTasks={setMasterTasks} teamLogo={teamLogo} />}
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
                         {view === 'depth' && <DepthChart roster={roster} depthChart={(currentWeek.depthChart && currentWeek.depthChart[depthChartType]) || {}} onUpdateDepthChart={(updated) => handleUpdateDepthChart(prev => ({ ...prev, [depthChartType]: updated }))} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} savedLayout={depthChartLayouts[depthChartType] || {}} onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)} onResetLayout={() => handleResetDepthLayout(depthChartType)} />}
-                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} />}
 
 
                         {
@@ -52840,7 +52876,7 @@
                 <AuthProvider>
                     <App />
                 </AuthProvider>
-            </ErrorBoundary >,
+            </ErrorBoundary>,
             document.getElementById('root')
         );
     </script>
