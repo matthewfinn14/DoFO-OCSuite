@@ -6047,153 +6047,144 @@
             return (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'transparent', zIndex: 9999,
+                    background: 'rgba(0,0,0,0.4)', zIndex: 9999, // Darker backdrop
+                    display: 'flex', alignItems: 'center', justifyContent: 'center' // Center it
                 }} onClick={onClose}>
                     <div style={{
-                        position: 'absolute',
-                        top: top, left: left,
-                        background: 'white', width: `${popoverWidth}px`, maxHeight: `${popoverHeight}px`,
-                        borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+                        background: 'white', width: '420px', maxHeight: '600px', // Wider and taller
+                        borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                         display: 'flex', flexDirection: 'column', overflow: 'hidden'
                     }} onClick={e => e.stopPropagation()}>
 
                         {/* UNIFIED HEADER */}
-                        <PlayModalHeader
-                            play={play}
-                            playBuckets={playBuckets}
-                            onUpdatePlay={onUpdatePlay}
-                            onClose={onClose}
-                            title="Assign Situations"
-                            subtitle={play.name}
-                        />
-
-                        {/* Original Header Content (New/Priority) - Move to sub-header or keep? */}
-                        {/* We'll keep the New/Priority toggles below the main PlayHeader */}
-                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#fff', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={isPriority}
-                                    onChange={handleTogglePriority}
-                                    style={{ cursor: 'pointer' }}
-                                />
-                                <span style={{ color: isPriority ? '#f59e0b' : '#475569', fontWeight: isPriority ? 'bold' : 'normal' }}>Priority</span>
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={isNew}
-                                    onChange={handleToggleNew}
-                                    style={{ cursor: 'pointer' }}
-                                />
-                                <span style={{ color: isNew ? '#2563eb' : '#475569', fontWeight: isNew ? 'bold' : 'normal' }}>New?</span>
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={isWiz}
-                                    onChange={handleToggleWiz}
-                                    style={{ cursor: 'pointer' }}
-                                />
-                                <span style={{ color: isWiz ? '#8b5cf6' : '#475569', fontWeight: isWiz ? 'bold' : 'normal' }}>Wiz</span>
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={isMiniScript}
-                                    onChange={handleToggleMiniScript}
-                                    style={{ cursor: 'pointer' }}
-                                />
-                                <span style={{ color: isMiniScript ? '#06b6d4' : '#475569', fontWeight: isMiniScript ? 'bold' : 'normal' }}>Mini Script</span>
-                            </label>
+                        <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
+                                    {play.name}
+                                </h3>
+                                {playBuckets && playBuckets.length > 0 && (
+                                    <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                                        {playBuckets.map(bucket => (
+                                            <span key={bucket.id} style={{
+                                                fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px',
+                                                background: bucket.color, color: bucket.textColor || '#fff', fontWeight: 600
+                                            }}>
+                                                {bucket.label}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <button onClick={onClose} style={{
+                                background: 'transparent', border: 'none', cursor: 'pointer',
+                                color: '#94a3b8', padding: '4px'
+                            }}>
+                                <Icon name="X" size={20} />
+                            </button>
                         </div>
 
-                        {/* Wristband Selector */}
-                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#fff' }}>
-                            <label style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px', display: 'block' }}>Wristband</label>
-                            <select
-                                value={play.wristbandSlot || ''}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    onUpdatePlay(playId, { wristbandSlot: val === '' ? null : val });
-                                }}
+                        {/* TOGGLES ROW */}
+                        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                            <button
+                                onClick={handleTogglePriority}
                                 style={{
-                                    width: '100%',
-                                    padding: '4px 8px',
-                                    fontSize: '0.8rem',
-                                    borderRadius: '4px',
-                                    border: '1px solid #cbd5e1',
-                                    background: play.wristbandSlot ? '#eff6ff' : 'white',
-                                    color: play.wristbandSlot ? '#1d4ed8' : '#475569'
+                                    padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+                                    border: isPriority ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                                    background: isPriority ? '#fffbeb' : 'white',
+                                    color: isPriority ? '#b45309' : '#64748b',
                                 }}
                             >
-                                <option value="">Not assigned</option>
-                                {(() => {
-                                    // Get available slots
-                                    const allSlots = Array.from({ length: 108 }, (_, i) => (i + 1).toString());
-                                    const usedSlots = new Set(
-                                        plays
-                                            .filter(p => p.id !== playId && p.wristbandSlot)
-                                            .map(p => p.wristbandSlot)
-                                    );
-                                    const availableSlots = allSlots.filter(s => !usedSlots.has(s));
-
-                                    // If current play has a slot, include it
-                                    if (play.wristbandSlot && !availableSlots.includes(play.wristbandSlot)) {
-                                        availableSlots.push(play.wristbandSlot);
-                                        availableSlots.sort((a, b) => parseInt(a) - parseInt(b));
-                                    }
-
-                                    return availableSlots.map(slot => (
-                                        <option key={slot} value={slot}>#{slot}</option>
-                                    ));
-                                })()}
-                            </select>
+                                Priority
+                            </button>
+                            <button
+                                onClick={handleToggleWiz}
+                                style={{
+                                    padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+                                    border: isWiz ? '1px solid #8b5cf6' : '1px solid #cbd5e1',
+                                    background: isWiz ? '#f3e8ff' : 'white',
+                                    color: isWiz ? '#7c3aed' : '#64748b',
+                                }}
+                            >
+                                Wiz
+                            </button>
+                            <button
+                                onClick={handleToggleMiniScript}
+                                style={{
+                                    padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+                                    border: isMiniScript ? '1px solid #06b6d4' : '1px solid #cbd5e1',
+                                    background: isMiniScript ? '#ecfeff' : 'white',
+                                    color: isMiniScript ? '#0891b2' : '#64748b',
+                                }}
+                            >
+                                Mini Script
+                            </button>
+                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>WB:</label>
+                                <div style={{ position: 'relative', width: '60px' }}>
+                                    <input
+                                        type="text"
+                                        value={play.wristbandSlot || ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            onUpdatePlay(playId, { wristbandSlot: val });
+                                        }}
+                                        style={{
+                                            width: '100%', padding: '4px 6px', fontSize: '0.9rem', fontWeight: 600,
+                                            borderRadius: '4px', border: '1px solid #cbd5e1',
+                                            color: '#0f172a', textAlign: 'center'
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-
-                        {/* BODY - SCROLLABLE */}
-                        <div style={{ padding: '8px', overflowY: 'auto', flex: 1 }}>
+                        {/* BODY - SCROLLABLE CHIPS */}
+                        <div style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
                             {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
                                 const relevantBoxes = (section.boxes || []).filter(b => b.header && !b.hidden);
                                 if (relevantBoxes.length === 0) return null;
 
                                 return (
-                                    <div key={sIdx} style={{ marginBottom: '12px' }}>
+                                    <div key={sIdx} style={{ marginBottom: '20px' }}>
                                         <div style={{
-                                            fontSize: '0.65rem', fontWeight: 'bold', color: '#94a3b8',
-                                            marginBottom: '4px', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px'
+                                            fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8',
+                                            marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'
                                         }}>
                                             {section.title || `Section ${sIdx + 1}`}
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                             {relevantBoxes.map((box, bIdx) => {
                                                 const isCheck = assignedIds.has(box.setId);
+                                                // Determine active color based on box config or fallbacks
+                                                const activeBorderColor = box.color || '#3b82f6';
+
                                                 return (
-                                                    <div
+                                                    <button
                                                         key={bIdx}
                                                         onClick={() => onAssignSituation && onAssignSituation(playId, box)}
                                                         style={{
-                                                            display: 'flex', alignItems: 'center', gap: '8px',
-                                                            padding: '6px', borderRadius: '4px', cursor: 'pointer',
-                                                            background: isCheck ? '#eff6ff' : 'transparent',
-                                                            color: isCheck ? '#1e3a8a' : '#334155'
+                                                            padding: '6px 10px',
+                                                            borderRadius: '6px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.8rem',
+                                                            fontWeight: isCheck ? '600' : '500',
+                                                            border: isCheck ? `1px solid ${activeBorderColor}` : '1px solid #e2e8f0',
+                                                            background: isCheck ? '#fff' : 'white',
+                                                            color: isCheck ? '#0f172a' : '#64748b',
+                                                            boxShadow: isCheck ? `inset 0 0 0 1px ${activeBorderColor}` : 'none', // Faux border width increase
+                                                            transition: 'all 0.1s ease',
+                                                            position: 'relative',
+                                                            overflow: 'hidden'
                                                         }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = isCheck ? '#eff6ff' : '#f8fafc'}
-                                                        onMouseLeave={e => e.currentTarget.style.background = isCheck ? '#eff6ff' : 'transparent'}
                                                     >
-                                                        <div style={{
-                                                            width: '14px', height: '14px', borderRadius: '3px',
-                                                            border: `1px solid ${isCheck ? (box.color || '#3b82f6') : '#cbd5e1'}`,
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            background: isCheck ? (box.color || '#3b82f6') : 'white'
-                                                        }}>
-                                                            {isCheck && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
-                                                        </div>
-                                                        <span style={{ fontSize: '0.8rem', fontWeight: isCheck ? '600' : '400' }}>
-                                                            {box.header}
-                                                        </span>
-                                                    </div>
+                                                        {isCheck && (
+                                                            <div style={{
+                                                                position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px',
+                                                                background: activeBorderColor
+                                                            }} />
+                                                        )}
+                                                        {box.header}
+                                                    </button>
                                                 );
                                             })}
                                         </div>
@@ -26258,6 +26249,38 @@
             const [tokens, setTokens] = useState([]);
             const [parsedFields, setParsedFields] = useState({});
 
+            const handleAssignSituation = (playId, box) => {
+                const setId = box.setId;
+                if (!onUpdateWeek || !week || !week.id) return;
+
+                // Clone current gamePlan (offensiveGamePlan)
+                const currentGamePlan = week.offensiveGamePlan || {};
+
+                let updatedGamePlan;
+
+                if (setId.startsWith('ms_')) {
+                    // Handle Mini Script Update
+                    const newMiniScripts = (currentGamePlan.miniScripts || []).map(s =>
+                        s.id === setId ? { ...s, playIds: [...(s.playIds || []), playId] } : s
+                    );
+                    updatedGamePlan = { ...currentGamePlan, miniScripts: newMiniScripts };
+                } else {
+                    // Handle Standard Set Update
+                    const existingSet = currentGamePlan.sets?.find(s => s.id === setId);
+                    let newSets;
+                    if (existingSet) {
+                        newSets = (currentGamePlan.sets || []).map(s => s.id === setId ? { ...s, playIds: [...(s.playIds || []), playId] } : s);
+                    } else {
+                        // Implicit creation
+                        newSets = [...(currentGamePlan.sets || []), { id: setId, name: setId, playIds: [playId] }];
+                    }
+                    updatedGamePlan = { ...currentGamePlan, sets: newSets };
+                }
+
+                // Update Week
+                onUpdateWeek(week.id, 'offensiveGamePlan', updatedGamePlan);
+            };
+
             // Fallback Buckets (ensure Run/Pass/Screen always exist)
             const DEFAULT_DEFAULTS = [
                 { id: 'run', label: 'Run', color: '#10b981', textColor: '#ffffff' },
@@ -27209,186 +27232,23 @@
                         const assignedSits = getPlaySituations(playId);
                         const assignedIds = new Set(assignedSits.map(s => s.id));
 
-                        // Check current states
-                        const isNew = (week.newInstallIds || []).includes(playId);
-                        const isPriority = play.priority || false;
-
-                        // Toggle handlers
-                        const handleToggleNew = () => {
-                            if (!onUpdateWeek) return;
-                            const currentNewIds = week.newInstallIds || [];
-                            let newIds;
-                            if (currentNewIds.includes(playId)) {
-                                newIds = currentNewIds.filter(id => id !== playId);
-                            } else {
-                                newIds = [...currentNewIds, playId];
-                            }
-                            onUpdateWeek(week.id, 'newInstallIds', newIds);
-                        };
-
-                        const handleTogglePriority = () => {
-                            if (!onUpdatePlay) return;
-                            onUpdatePlay(playId, { priority: !isPriority });
-                        };
-
-                        const popoverHeight = 350;
-                        const popoverWidth = 280;
-
-                        // Simple collision detection
-                        let top = y;
-                        let left = x;
-                        if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 10;
-                        if (left + popoverWidth > window.innerWidth) left = window.innerWidth - popoverWidth - 10;
-
                         return (
-                            <div style={{
-                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                                background: 'transparent', zIndex: 9999,
-                            }} onClick={() => setAssignmentModalState(null)}>
-                                <div style={{
-                                    position: 'absolute',
-                                    top: top, left: left,
-                                    background: 'white', width: `${popoverWidth}px`, maxHeight: `${popoverHeight}px`,
-                                    borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
-                                    display: 'flex', flexDirection: 'column', overflow: 'hidden'
-                                }} onClick={e => e.stopPropagation()}>
-
-
-                                    {/* HEADER */}
-                                    <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.9rem' }}>{getPlayDisplayName(play)}</div>
-                                            <button
-                                                onClick={() => setAssignmentModalState(null)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8', lineHeight: 1 }}
-                                            >
-                                                ×
-                                            </button>
-                                        </div>
-
-                                        {/* Play Type Toggles - Sets both type and bucketId */}
-                                        <div style={{ marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Play Type</div>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                {/* Use playBuckets (top-level only) for types */}
-                                                {effectiveBuckets.filter(b => !b.categoryId).map(bucket => {
-                                                    const isSelected = play.bucketId === bucket.id || (
-                                                        !play.bucketId && play.type && (
-                                                            play.type.toLowerCase() === bucket.id ||
-                                                            play.type.toLowerCase() === bucket.label.toLowerCase() ||
-                                                            (play.type.toLowerCase().includes('run') && (bucket.id === 'run' || bucket.id === 'run-root'))
-                                                        )
-                                                    );
-                                                    return (
-                                                        <button
-                                                            key={bucket.id}
-                                                            onClick={() => {
-                                                                if (onUpdatePlay) onUpdatePlay(playId, {
-                                                                    type: bucket.label, // Keep type for backward compat
-                                                                    bucketId: bucket.id
-                                                                });
-                                                            }}
-                                                            className="btn-xs"
-                                                            style={{
-                                                                background: isSelected ? bucket.color || '#3b82f6' : 'white',
-                                                                color: isSelected ? (bucket.textColor || 'white') : '#64748b',
-                                                                border: isSelected ? '1px solid rgba(0,0,0,0.1)' : '1px solid #cbd5e1',
-                                                                fontSize: '0.7rem',
-                                                                padding: '2px 8px',
-                                                                cursor: 'pointer',
-                                                                borderRadius: '4px',
-                                                                fontWeight: isSelected ? 'bold' : 'normal'
-                                                            }}
-                                                        >
-                                                            {bucket.label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Concept Family - Nested under the selected Bucket */}
-                                        <div style={{ marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Concept Family</div>
-                                            <select
-                                                value={play.conceptFamily || ''}
-                                                onChange={(e) => {
-                                                    if (onUpdatePlay) onUpdatePlay(playId, { conceptFamily: e.target.value });
-                                                }}
-                                                style={{ width: '100%', padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                            >
-                                                <option value="">-- No Concept Assigned --</option>
-                                                {/* Show options that are concept families (have categoryId) and belong to current bucket */}
-                                                {effectiveBuckets
-                                                    .filter(b => b.categoryId && (b.categoryId === play.bucketId || getCategoryGroup(b.categoryId) === getCategoryGroup(play.bucketId)))
-                                                    .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
-                                                    .map(b => (
-                                                        <option key={b.id} value={b.label}>{b.label}</option>
-                                                    ))}
-                                                {/* If no predefined concept families, show an "Add Custom" option or just let them type? 
-                                                    For now, let's keep it simple with existing categories. */}
-                                            </select>
-                                        </div>
-
-                                    </div>
-
-                                    {/* BODY - SCROLLABLE */}
-                                    <div style={{ padding: '8px', overflowY: 'auto', flex: 1 }}>
-                                        {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
-                                            const relevantBoxes = (section.boxes || []).filter(b => b.header && !b.hidden);
-                                            if (relevantBoxes.length === 0) return null;
-
-                                            return (
-                                                <div key={sIdx} style={{ marginBottom: '12px' }}>
-                                                    <div style={{
-                                                        fontSize: '0.65rem', fontWeight: 'bold', color: '#94a3b8',
-                                                        marginBottom: '4px', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px'
-                                                    }}>
-                                                        {section.title || `Section ${sIdx + 1}`}
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        {relevantBoxes.map((box, bIdx) => {
-                                                            const isCheck = assignedIds.has(box.setId);
-                                                            return (
-                                                                <div
-                                                                    key={bIdx}
-                                                                    onClick={() => handleAssignPlayToSituation(playId, box)}
-                                                                    style={{
-                                                                        display: 'flex', alignItems: 'center', gap: '8px',
-                                                                        padding: '6px', borderRadius: '4px', cursor: 'pointer',
-                                                                        background: isCheck ? '#eff6ff' : 'transparent',
-                                                                        border: isCheck ? '1px solid #bfdbfe' : '1px solid transparent'
-                                                                    }}
-                                                                    onMouseEnter={e => !isCheck && (e.currentTarget.style.background = '#f8fafc')}
-                                                                    onMouseLeave={e => !isCheck && (e.currentTarget.style.background = 'transparent')}
-                                                                >
-                                                                    <div style={{
-                                                                        width: '16px', height: '16px', borderRadius: '4px', border: isCheck ? '1px solid #3b82f6' : '1px solid #cbd5e1',
-                                                                        background: isCheck ? '#3b82f6' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                                    }}>
-                                                                        {isCheck && <Icon name="Check" size={10} color="white" />}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '0.8rem', color: isCheck ? '#1d4ed8' : '#334155' }}>
-                                                                        {box.header}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {(!gamePlanLayouts?.CALL_SHEET?.sections?.length) && (
-                                            <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
-                                                No situations configured. Go to Settings &gt; Call Sheet Layout.
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                            <AssignSituationsModal
+                                playId={playId}
+                                plays={plays}
+                                weekDate={week.id}
+                                newInstallIds={week.newInstallIds || []}
+                                gamePlanLayouts={gamePlanLayouts}
+                                assignedIds={assignedIds}
+                                onClose={() => setAssignmentModalState(null)}
+                                onUpdateWeek={onUpdateWeek}
+                                onUpdatePlay={onUpdatePlay}
+                                onAssignSituation={handleAssignSituation}
+                                position={{ x, y }}
+                                playBuckets={effectiveBuckets}
+                            />
                         );
-                    })()
-                    }
+                    })()}
                 </>
             );
         };
