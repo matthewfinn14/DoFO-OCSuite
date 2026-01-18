@@ -32963,8 +32963,8 @@
                                                     onChange={(e) => {
                                                         const newCustomZones = { ...(gamePlan?.customZones || {}) };
                                                         newCustomZones[zone.id] = {
-                                                            ...newustomZones[zone.id],
-                                                            title: .target.value
+                                                            ...newCustomZones[zone.id],
+                                                            title: e.target.value
                                                         };
                                                         onUpdateGamePlan({ ...gamePlan, customZones: newCustomZones });
                                                     }}
