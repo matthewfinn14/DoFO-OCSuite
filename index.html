@@ -201,6 +201,27 @@
                 display: none !important;
             }
 
+            /* FZ DND Print Layout - Full Width */
+            .fzdnd-zone-container {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                margin-bottom: 0 !important;
+            }
+
+            .fzdnd-zone-grid {
+                display: block !important;
+                grid-template-columns: none !important;
+            }
+
+            .fzdnd-philosophy-column {
+                display: none !important;
+            }
+
+            .fzdnd-content-wrapper {
+                display: block !important;
+                width: 100% !important;
+            }
+
             /* Call sheet sections - allow natural flow, no forced page breaks */
             .call-sheet-section {
                 page-break-before: auto !important;
@@ -32914,14 +32935,14 @@
                                 const dataCols = hasPhilosophy ? definedCols.slice(1) : definedCols;
 
                                 return (
-                                    <div key={zone.id} style={{ marginBottom: '0', border: '2px solid black' }}>
+                                    <div key={zone.id} className="fzdnd-zone-container" style={{ marginBottom: '0', border: '2px solid black' }}>
                                         <div style={{ background: zone.color, color: zone.textColor, padding: '4px', textAlign: 'center', fontWeight: '900', fontSize: '1.0rem', textTransform: 'uppercase', fontStyle: 'italic', borderBottom: '2px solid black' }}>
                                             {zone.title}
                                         </div>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: hasPhilosophy ? '125px 1fr' : '1fr' }}>
+                                        <div className="fzdnd-zone-grid" style={{ display: 'grid', gridTemplateColumns: hasPhilosophy ? '125px 1fr' : '1fr' }}>
                                             {hasPhilosophy && (
-                                                <div style={{ borderRight: '2px solid black', padding: '0', display: 'flex', flexDirection: 'column' }}>
+                                                <div className="fzdnd-philosophy-column" style={{ borderRight: '2px solid black', padding: '0', display: 'flex', flexDirection: 'column' }}>
                                                     <div style={{ padding: '4px', textAlign: 'center', fontWeight: '800', fontSize: '0.85rem', background: 'white', color: 'black', borderBottom: '1px solid black' }}>
                                                         Philosophy:
                                                     </div>
@@ -32938,7 +32959,7 @@
                                                 </div>
                                             )}
 
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div className="fzdnd-content-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
                                                 {dataCols.length > 0 && (
                                                     <div style={{
                                                         display: 'grid',
