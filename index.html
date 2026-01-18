@@ -191,10 +191,58 @@
             tr,
             td,
             .box,
-            .call-sheet-section,
             .call-sheet-grid {
                 page-break-inside: avoid;
                 break-inside: avoid;
+            }
+
+            /* Hide empty rows in print */
+            .hidden-row {
+                display: none !important;
+            }
+
+            /* Call sheet sections - allow natural flow, no forced page breaks */
+            .call-sheet-section {
+                page-break-before: auto !important;
+                break-before: auto !important;
+                page-break-after: auto !important;
+                break-after: auto !important;
+                /* Keep header with content */
+                break-inside: avoid !important;
+                -webkit-column-break-inside: avoid !important;
+                margin-bottom: 0.5rem !important;
+            }
+
+            /* Multi-column layout for sheet view content */
+            .print-preview-content>div {
+                column-count: 2 !important;
+                column-gap: 1rem !important;
+                column-fill: auto !important;
+            }
+
+            /* Reduce font sizes and padding for density */
+            .print-preview-content table,
+            .print-preview-content div {
+                font-size: 0.8rem !important;
+            }
+
+            .print-preview-content td,
+            .print-preview-content th,
+            .call-sheet-section>div>div>div {
+                padding: 2px !important;
+            }
+
+            /* Smaller section headings */
+            .call-sheet-section>div:first-child {
+                font-size: 0.75rem !important;
+                padding: 4px !important;
+            }
+
+            /* Tighter grid cells */
+            .call-sheet-section div[style*="grid"]>div {
+                padding: 1px !important;
+                font-size: 0.65rem !important;
+                min-height: 14px !important;
             }
 
             /* BUT show the print portal */
@@ -32981,6 +33029,7 @@
                                 return (
                                     <div
                                         key={sIdx}
+                                        className="call-sheet-section"
                                         style={{ gridColumn: '1 / -1', breakInside: 'avoid', marginBottom: '0.5rem', border: isSheetEditing ? '1px dashed #3b82f6' : '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', background: 'white', display: 'flex', flexDirection: 'column' }}
                                         onDragOver={handleSheetSectionDragOver}
                                         onDrop={(e) => handleSheetSectionDrop(e, sIdx)}
@@ -33078,6 +33127,25 @@
                                                                         rows.push(gridPlays.slice(i, i + cols));
                                                                     }
 
+                                                                    // Helper: Check if a grid row is empty (all cells are empty or dashes)
+                                                                    const isGridRowEmpty = (rowSlots) => {
+                                                                        return rowSlots.every(slot => {
+                                                                            if (slot.type === 'GAP') return true;
+                                                                            const play = plays.find(p => p.id === slot.id);
+                                                                            return !play || !play.name || play.name === '-' || play.name.trim() === '';
+                                                                        });
+                                                                    };
+
+                                                                    // Helper: Check if entire grid has no filled rows
+                                                                    const isGridEmpty = (rows) => {
+                                                                        return rows.every(rowSlots => isGridRowEmpty(rowSlots));
+                                                                    };
+
+                                                                    // Skip rendering completely empty grids (unless in edit mode)
+                                                                    if (!isSheetEditing && isGridEmpty(rows)) {
+                                                                        return null;
+                                                                    }
+
                                                                     return (
                                                                         <div style={{ display: 'grid', gridTemplateColumns: `min-content repeat(${cols}, 1fr)`, gap: '0', width: '100%' }}>
                                                                             {/* Header Row */}
@@ -33096,37 +33164,40 @@
                                                                             ))}
 
                                                                             {/* Data Rows */}
-                                                                            {rows.map((rowSlots, rIdx) => (
-                                                                                <React.Fragment key={rIdx}>
-                                                                                    <div style={{
-                                                                                        padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold',
-                                                                                        display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
-                                                                                        borderBottom: '1px dotted #f1f5f9'
-                                                                                    }}>
-                                                                                        {(box.gridRowLabels && box.gridRowLabels[rIdx]) || (rIdx + 1)}
-                                                                                    </div>
-                                                                                    {rowSlots.map((slot, cIdx) => {
-                                                                                        const play = plays.find(p => p.id === slot.id);
-                                                                                        return (
-                                                                                            <div key={cIdx} style={{
-                                                                                                fontSize: '0.65rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-                                                                                                background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
-                                                                                                padding: '2px', minHeight: '16px', color: '#334155',
-                                                                                                display: 'flex', alignItems: 'center',
-                                                                                                borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
-                                                                                                borderBottom: '1px dotted #e2e8f0'
-                                                                                            }} title={play ? play.name : ''}>
-                                                                                                {play ? (
-                                                                                                    <>
-                                                                                                        {getWristbandLabel(play) && <span style={{ marginRight: '3px', fontSize: '0.9em', fontWeight: 'bold', color: '#3b82f6' }}>{getWristbandLabel(play)}</span>}
-                                                                                                        {getPlayDisplayName(play)}
-                                                                                                    </>
-                                                                                                ) : (slot.type === 'GAP' ? '' : '-')}
-                                                                                            </div>
-                                                                                        );
-                                                                                    })}
-                                                                                </React.Fragment>
-                                                                            ))}
+                                                                            {rows.map((rowSlots, rIdx) => {
+                                                                                const isEmpty = isGridRowEmpty(rowSlots);
+                                                                                return (
+                                                                                    <React.Fragment key={rIdx}>
+                                                                                        <div className={isEmpty ? 'hidden-row' : ''} style={{
+                                                                                            padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold',
+                                                                                            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
+                                                                                            borderBottom: '1px dotted #f1f5f9'
+                                                                                        }}>
+                                                                                            {(box.gridRowLabels && box.gridRowLabels[rIdx]) || (rIdx + 1)}
+                                                                                        </div>
+                                                                                        {rowSlots.map((slot, cIdx) => {
+                                                                                            const play = plays.find(p => p.id === slot.id);
+                                                                                            return (
+                                                                                                <div key={cIdx} className={isEmpty ? 'hidden-row' : ''} style={{
+                                                                                                    fontSize: '0.65rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                                                                                                    background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
+                                                                                                    padding: '2px', minHeight: '16px', color: '#334155',
+                                                                                                    display: 'flex', alignItems: 'center',
+                                                                                                    borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
+                                                                                                    borderBottom: '1px dotted #e2e8f0'
+                                                                                                }} title={play ? play.name : ''}>
+                                                                                                    {play ? (
+                                                                                                        <>
+                                                                                                            {getWristbandLabel(play) && <span style={{ marginRight: '3px', fontSize: '0.9em', fontWeight: 'bold', color: '#3b82f6' }}>{getWristbandLabel(play)}</span>}
+                                                                                                            {getPlayDisplayName(play)}
+                                                                                                        </>
+                                                                                                    ) : (slot.type === 'GAP' ? '' : '-')}
+                                                                                                </div>
+                                                                                            );
+                                                                                        })}
+                                                                                    </React.Fragment>
+                                                                                );
+                                                                            })}
                                                                         </div>
                                                                     );
                                                                 }
@@ -40923,17 +40994,19 @@
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                             <th style={{ textAlign: 'left', padding: '0.5rem' }}>Concept Family</th>
-                                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => <th key={d} style={{ textAlign: 'center', padding: '0.5rem' }}>{d.substr(0, 3)}</th>)}
+                                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => (
+                                                <th key={d} style={{ textAlign: 'center', padding: '0.5rem' }}>{d.substr(0, 3)}</th>
+                                            ))}
                                             <th style={{ textAlign: 'right', padding: '0.5rem' }}>Total</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {Object.keys(analytics.concepts.overall).sort().map(concept => (
+                                        {Object.keys(analytics.concepts.overall).map(concept => (
                                             <tr key={concept} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                                                <td style={{ padding: '0.5rem', fontWeight: '500' }}>{concept}</td>
+                                                <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>{concept}</td>
                                                 {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
-                                                    <td key={day} style={{ textAlign: 'center', padding: '0.5rem', color: analytics.concepts.daily[day]?.[concept] ? 'inherit' : 'var(--text-tertiary)' }}>
-                                                        {analytics.concepts.daily[day]?.[concept] || '-'}
+                                                    <td key={day} style={{ textAlign: 'center', padding: '0.5rem', color: analytics.concepts.daily[day]?.[concept] > 0 ? 'inherit' : 'var(--text-tertiary)' }}>
+                                                        {analytics.concepts.daily[day]?.[concept] || 0}
                                                     </td>
                                                 ))}
                                                 <td style={{ textAlign: 'right', padding: '0.5rem', fontWeight: 'bold' }}>{analytics.concepts.overall[concept]}</td>
@@ -40946,35 +41019,39 @@
 
                         {viewMode === 'usage' && (
                             <div style={cardStyle}>
-                                <h4 style={{ marginTop: 0 }}>Game Plan Usage</h4>
+                                <h3 style={{ marginBottom: '1rem' }}>Game Plan Usage</h3>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                             <th style={{ textAlign: 'left', padding: '0.5rem' }}>Play</th>
-                                            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Reps</th>
+                                            <th style={{ textAlign: 'center', padding: '0.5rem' }}>Reps</th>
                                             <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {analytics.gamePlanUsage.map((item, idx) => (
-                                            <tr key={item.id} style={{
+                                        {analytics.usage.map((item, idx) => (
+                                            <tr key={item.playId || idx} style={{
                                                 borderBottom: '1px solid var(--border-light)',
                                                 background: item.count === 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent'
                                             }}>
                                                 <td style={{ padding: '0.5rem' }}>
-                                                    <div style={{ fontWeight: 500 }}>{item.play ? item.play.name : 'Unknown Play'}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{item.play?.conceptFamily}</div>
+                                                    <div style={{ fontWeight: 'bold' }}>{item.play?.name || 'Unknown Play'}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{item.play?.conceptFamily || 'No Concept'}</div>
                                                 </td>
-                                                <td style={{ textAlign: 'right', padding: '0.5rem', fontWeight: 'bold', color: item.count === 0 ? 'var(--danger)' : 'inherit' }}>
+                                                <td style={{ textAlign: 'center', padding: '0.5rem', fontWeight: 'bold', color: item.count === 0 ? 'var(--danger)' : 'inherit' }}>
                                                     {item.count}
                                                 </td>
                                                 <td style={{ padding: '0.5rem' }}>
                                                     {item.count === 0 ? (
                                                         <span style={{ color: 'var(--danger)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            <Icon name="AlertCircle" size={14} /> Unused
+                                                            <Icon name="AlertCircle" size={14} />
+                                                            Not Practiced
                                                         </span>
                                                     ) : (
-                                                        <span style={{ color: 'var(--success)', fontSize: '0.8rem' }}>Active</span>
+                                                        <span style={{ color: 'var(--success)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <Icon name="CheckCircle" size={14} />
+                                                            In Practice
+                                                        </span>
                                                     )}
                                                 </td>
                                             </tr>
@@ -40989,21 +41066,22 @@
                                 <div style={cardStyle}>
                                     <h3 style={{ marginBottom: '1rem' }}>Unassigned Game Plan Plays</h3>
                                     <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                                        The following plays are on the Weekly Install List but have NOT been assigned to any practice script yet.
+                                        The following plays are in the Weekly Install List but have not been assigned to any practice script.
                                     </p>
 
                                     {analytics.unassigned.length === 0 ? (
                                         <div style={{
                                             padding: '2rem', textAlign: 'center', color: 'var(--success)',
-                                            background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px', border: '1px solid var(--success)'
+                                            background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px',
+                                            border: '1px solid rgba(34, 197, 94, 0.3)'
                                         }}>
                                             <Icon name="CheckCircle" size={24} style={{ marginBottom: '0.5rem' }} />
-                                            <div>All installed plays are assigned!</div>
+                                            <div style={{ fontWeight: 'bold' }}>All installed plays have been assigned!</div>
                                         </div>
                                     ) : (
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
                                             {analytics.unassigned.map(play => (
-                                                <div key={play?.id} style={{ padding: '0.75rem', background: 'var(--bg-panel)', borderLeft: '4px solid #ef4444', borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+                                                <div key={play?.id} style={{ padding: '0.75rem', background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '6px', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)' }}>
                                                     <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{play?.name || 'Unknown Play'}</div>
                                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                                         {play?.formation} • {play?.conceptFamily || 'No Concept'}
@@ -41015,7 +41093,7 @@
                                 </div>
                             )
                         }
-                    </div >
+                    </div>
 
                     {/* Leaderboard Section - Always Visible or part of Overall? */}
                     {/* Let's put Leaderboard at bottom if ViewMode is matching or just always. 
@@ -46402,7 +46480,7 @@
                                         </button>
                                         <button
                                             className="btn btn-secondary"
-                                            style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
+                                            yle={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
                                             onClick={() => {
                                                 if (confirm("Are you sure you want to ignore the existing team and create a new school instead?")) {
                                                     setInviteData(null);
