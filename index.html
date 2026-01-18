@@ -1849,7 +1849,42 @@
 
         // --- Data & Constants ---
 
-        const GAME_PLAN_LAYOUTS = { CALL_SHEET: [] };
+        const GAME_PLAN_LAYOUTS = {
+            CALL_SHEET: [],
+            MATRIX: {
+                id: 'MATRIX',
+                name: "Strike 'Em Out",
+                cols: [
+                    { id: 'FB_L', label: 'FB L', fullLabel: 'Base/Initial Left' },
+                    { id: 'FB_R', label: 'FB R', fullLabel: 'Base/Initial Right' },
+                    { id: 'CB_L', label: 'CB L', fullLabel: 'Base w/ Dressing Left' },
+                    { id: 'CB_R', label: 'CB R', fullLabel: 'Base w/ Dressing Right' },
+                    { id: 'CU_L', label: 'CU L', fullLabel: 'Convert Left' },
+                    { id: 'CU_R', label: 'CU R', fullLabel: 'Convert Right' },
+                    { id: 'SO_L', label: 'SO L', fullLabel: 'Explosive Left' },
+                    { id: 'SO_R', label: 'SO R', fullLabel: 'Explosive Right' }
+                ],
+                formations: [
+                    { id: '887', label: '887', color: '#ef4444' },
+                    { id: '888', label: '888', color: '#ef4444' },
+                    { id: '687', label: '687', color: '#fbbf24' },
+                    { id: '688', label: '688', color: '#fbbf24' },
+                    { id: '881', label: '881', color: '#facc15' },
+                    { id: '984', label: '984', color: '#4ade80' },
+                    { id: '983', label: '983', color: '#4ade80' },
+                    { id: '488', label: '488', color: '#60a5fa' },
+                    { id: '487', label: '487', color: '#60a5fa' },
+                    { id: 'jets', label: 'Jets/Specials', color: '#a8a29e' }
+                ],
+                playTypes: [
+                    { id: 'strong_run', label: 'STRONG RUN' },
+                    { id: 'weak_run', label: 'WEAK RUN' },
+                    { id: 'quick_game', label: 'QUICK GAME' },
+                    { id: 'drop_back', label: 'DROPBACK' },
+                    { id: 'gadget', label: 'GADGET' }
+                ]
+            }
+        };
 
         const TAG_CATEGORIES = {
             "Field Position": ["Backed Up", "Coming Out", "Open Field", "Fringe", "Red Zone", "Gold Zone", "Goal Line", "2-PT"],
