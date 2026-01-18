@@ -34951,85 +34951,120 @@
                             display: 'flex', flexDirection: 'column'
                         }}>
                             {/* Header with tab selector and controls */}
-                            <div className="print-preview-header" style={{ background: 'var(--bg)', padding: '1rem', borderBottom: '2px solid var(--accent)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <div className="print-preview-header" style={{
+                                background: '#1e293b', // darker background
+                                padding: '1rem',
+                                borderBottom: '1px solid #334155',
+                                display: 'flex',
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                flexWrap: 'wrap'
+                            }}>
+                                {/* Left: Navigation Tabs */}
+                                <div style={{
+                                    display: 'flex',
+                                    gap: '0.25rem',
+                                    overflowX: 'auto',
+                                    paddingBottom: '4px',
+                                    flex: 1,
+                                    minWidth: 0 // Allow shrinking
+                                }}>
+                                    {[
+                                        { id: 'staples', label: 'STAPLES' },
+                                        { id: 'priority', label: 'PRIORITY PLAYS' },
+                                        { id: 'sheet', label: 'SITUATIONS & SCRIPTS' },
+                                        { id: 'matrix', label: "STRIKE 'EM OUT" },
+                                        { id: 'fzdnd', label: 'FZDnD' },
+                                        { id: 'player-touches', label: 'PLAYER TOUCHES' }
+                                    ].map(tab => (
                                         <button
-                                            className={`btn ${printPreviewTab === 'staples' ? 'btn-primary' : 'btn-secondary'}`}
-                                            onClick={() => setPrintPreviewTab('staples')}
-                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                            key={tab.id}
+                                            className={`btn`}
+                                            onClick={() => setPrintPreviewTab(tab.id)}
+                                            style={{
+                                                fontSize: '0.85rem',
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: '6px',
+                                                border: '1px solid',
+                                                borderColor: printPreviewTab === tab.id ? 'rgba(255,255,255,0.2)' : 'transparent',
+                                                background: printPreviewTab === tab.id ? 'var(--primary)' : 'transparent',
+                                                color: printPreviewTab === tab.id ? 'white' : '#94a3b8',
+                                                fontWeight: printPreviewTab === tab.id ? '600' : '500',
+                                                whiteSpace: 'nowrap',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
                                         >
-                                            STAPLES
+                                            {tab.label}
                                         </button>
-                                        <button
-                                            className={`btn ${printPreviewTab === 'priority' ? 'btn-primary' : 'btn-secondary'}`}
-                                            onClick={() => setPrintPreviewTab('priority')}
-                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                                        >
-                                            PRIORITY PLAYS
-                                        </button>
-                                        <button
-                                            className={`btn ${printPreviewTab === 'sheet' ? 'btn-primary' : 'btn-secondary'}`}
-                                            onClick={() => setPrintPreviewTab('sheet')}
-                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                                        >
-                                            SITUATIONS & SCRIPTS
-                                        </button>
-                                        <button
-                                            className={`btn ${printPreviewTab === 'matrix' ? 'btn-primary' : 'btn-secondary'}`}
-                                            onClick={() => setPrintPreviewTab('matrix')}
-                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                                        >
-                                            STRIKE 'EM OUT
-                                        </button>
-                                        <button
-                                            className={`btn ${printPreviewTab === 'fzdnd' ? 'btn-primary' : 'btn-secondary'}`}
-                                            onClick={() => setPrintPreviewTab('fzdnd')}
-                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                                        >
-                                            FZDnD
-                                        </button>
-                                        <button
-                                            className={`btn ${printPreviewTab === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`}
-                                            onClick={() => setPrintPreviewTab('player-touches')}
-                                            style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                                        >
-                                            PLAYER TOUCHES
-                                        </button>
-                                    </div>
+                                    ))}
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '8px' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Scale:</span>
+
+                                {/* Right: Controls (Scale, Print, Close) */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                                    {/* Scale Dropdown */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.75rem', borderRadius: '6px' }}>
+                                        <label style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 500 }}>Scale:</label>
                                         <select
                                             value={printScale}
-                                            onChange={(e) => setPrintScale(parseFloat(e.target.value))}
-                                            style={{ fontSize: '0.8rem', padding: '0.2rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                                            onChange={(e) => setPrintScale(Number(e.target.value))}
+                                            style={{
+                                                background: 'transparent',
+                                                color: 'white',
+                                                border: 'none',
+                                                fontSize: '0.9rem',
+                                                cursor: 'pointer',
+                                                outline: 'none',
+                                                padding: '0.25rem'
+                                            }}
                                         >
-                                            <option value={1}>100%</option>
-                                            <option value={0.9}>90%</option>
-                                            <option value={0.85}>85%</option>
-                                            <option value={0.75}>75%</option>
-                                            <option value={0.67}>67%</option>
                                             <option value={0.5}>50%</option>
+                                            <option value={0.75}>75%</option>
+                                            <option value={0.85}>85%</option>
+                                            <option value={1}>100%</option>
                                         </select>
                                     </div>
+
+                                    {/* Print Button */}
                                     <button
                                         className="btn btn-primary"
                                         onClick={() => window.print()}
-                                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            padding: '0.5rem 1rem',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                        }}
                                     >
-                                        🖨️ PRINT
+                                        <Icon name="Printer" size={16} />
+                                        <span>PRINT</span>
                                     </button>
+
+                                    {/* Close Button */}
                                     <button
                                         className="btn btn-secondary"
                                         onClick={() => setShowPrintPreview(false)}
-                                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            padding: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '50%',
+                                            background: 'rgba(255,255,255,0.1)',
+                                            color: 'white',
+                                            border: 'none'
+                                        }}
                                     >
-                                        ✕ CLOSE
+                                        <Icon name="X" size={18} />
                                     </button>
                                 </div>
                             </div>
+
 
                             {/* Print content area */}
                             <div className="print-preview-content" style={{ flex: 1, overflow: 'auto', background: 'white', padding: '2rem' }}>
@@ -40693,6 +40728,333 @@
             { id: 'screen', label: 'Screen', color: '#8b5cf6', textColor: '#ffffff' }
         ];
 
+
+
+        /* -------------------------------------------------------------------------- */
+        /*                                  ANALYTICS                                  */
+        /* -------------------------------------------------------------------------- */
+
+        const PLAY_PROTOCOLS = {
+            'Regular': { color: '#3b82f6', label: 'Regular' },
+            'Scramble': { color: '#eab308', label: 'Scramble' },
+            'Sugar Huddle': { color: '#a855f7', label: 'Sugar' },
+            'Indy': { color: '#22c55e', label: 'Indy' },
+            'Low Red Zone': { color: '#ef4444', label: 'Red Zone' },
+            'High Red Zone': { color: '#f97316', label: 'High RZ' },
+            'Backed Up': { color: '#6366f1', label: 'Backed Up' },
+            'Two Minute': { color: '#ec4899', label: '2-Min' },
+            'Four Minute': { color: '#14b8a6', label: '4-Min' },
+            'Goal Line': { color: '#8b5cf6', label: 'Goal Line' },
+            'Short Yardage': { color: '#06b6d4', label: 'Short Yardage' }
+        };
+
+        const WeeklyAnalytics = ({ currentWeek, plays, practicePlans }) => {
+            const [viewMode, setViewMode] = React.useState('overall'); // 'overall', 'daily', 'usage', 'unassigned'
+            const printRef = React.useRef();
+
+            const analytics = React.useMemo(() => {
+                const results = {
+                    totalReps: 0,
+                    concepts: { overall: {}, daily: {} },
+                    unassigned: [],
+                    leaderboard: [],
+                    gamePlanUsage: []
+                };
+
+                if (!currentWeek || !practicePlans) return results;
+
+                // 1. Build Play Map
+                const playMap = new Map((plays || []).map(p => [p.id, p]));
+                const playCounts = new Map();
+                const practiceScriptPlays = new Set();
+
+                // 2. Process Practice Plans
+                Object.values(practicePlans).forEach(plan => {
+                    if (plan.weekId !== currentWeek.id) return;
+
+                    plan.periods?.forEach(period => {
+                        period.scripts?.forEach(script => {
+                            results.totalReps++;
+
+                            // Track PLAYS
+                            const playId = script.playId; // Assuming script has playId, or matched by name? 
+                            // Based on previous code, script might be the play object itself or have a reference.
+                            // Let's assume script has playId or is the play. 
+                            // Wait, previous code used script.playId if it existed, or looked up by name?
+                            // Let's look at how it counts.
+                            // "const pid = s.playId || s.id;"
+
+                            const pid = script.playId || script.id;
+                            if (pid) {
+                                practiceScriptPlays.add(pid);
+                                playCounts.set(pid, (playCounts.get(pid) || 0) + 1);
+
+                                const play = playMap.get(pid);
+                                if (play) {
+                                    // Count Concept
+                                    const family = play.conceptFamily || 'Unclassified';
+                                    results.concepts.overall[family] = (results.concepts.overall[family] || 0) + 1;
+
+                                    // Daily
+                                    const day = plan.date ? new Date(plan.date).toLocaleDateString('en-US', { weekday: 'long' }) : 'Unknown';
+                                    if (!results.concepts.daily[day]) results.concepts.daily[day] = {};
+                                    results.concepts.daily[day][family] = (results.concepts.daily[day][family] || 0) + 1;
+                                }
+                            }
+                        });
+                    });
+                });
+
+                // 3. Unassigned Game Plan Plays (Plays in InstallList but NOT in any script)
+                if (currentWeek.installList) {
+                    currentWeek.installList.forEach(item => {
+                        // item is { id: playId, ... } or just playId?
+                        // usually installList is array of play IDs or objects with id.
+                        // let's assume objects { id: ... } based on usage.
+                        const pid = item.id || item;
+                        if (!practiceScriptPlays.has(pid)) {
+                            const play = playMap.get(pid);
+                            if (play) results.unassigned.push(play);
+                        }
+                    });
+                }
+
+                // 4. Game Plan Usage
+                if (currentWeek.installList) {
+                    results.gamePlanUsage = currentWeek.installList.map(item => {
+                        const pid = item.id || item;
+                        const play = playMap.get(pid);
+                        return {
+                            id: pid,
+                            play: play,
+                            count: playCounts.get(pid) || 0
+                        };
+                    }).sort((a, b) => b.count - a.count);
+                }
+
+                // 5. Leaderboard (Top 50)
+                results.leaderboard = Array.from(playCounts.entries())
+                    .map(([id, count]) => ({ play: playMap.get(id), count }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 50);
+
+                return results;
+            }, [currentWeek, plays, practicePlans]);
+
+            const cardStyle = {
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '1.5rem',
+                marginBottom: '1.5rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            };
+
+            return (
+                <div className="analytics-dashboard">
+                    {/* Header / Tabs */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Icon name="BarChart2" /> Practice Analytics
+                        </h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-input)', padding: '0.25rem', borderRadius: '6px' }}>
+                            {['overall', 'daily', 'usage', 'unassigned'].map(mode => (
+                                <button
+                                    key={mode}
+                                    onClick={() => setViewMode(mode)}
+                                    style={{
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '4px',
+                                        border: 'none',
+                                        background: viewMode === mode ? 'var(--surface)' : 'transparent',
+                                        color: viewMode === mode ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                                        fontWeight: viewMode === mode ? 600 : 400,
+                                        cursor: 'pointer',
+                                        textTransform: 'capitalize',
+                                        boxShadow: viewMode === mode ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                                    }}
+                                >
+                                    {mode === 'usage' ? 'Game Plan Usage' : mode}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Content Area */}
+                    <div ref={printRef}>
+                        {viewMode === 'overall' && (
+                            <div style={cardStyle}>
+                                <h4 style={{ marginTop: 0 }}>Concept Breakdown (Overall)</h4>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Concept Family</th>
+                                            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Reps</th>
+                                            <th style={{ textAlign: 'right', padding: '0.5rem' }}>% Total</th>
+                                            <th style={{ width: '100px', padding: '0.5rem' }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.entries(analytics.concepts.overall)
+                                            .sort(([, a], [, b]) => b - a)
+                                            .map(([concept, count]) => (
+                                                <tr key={concept} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                                    <td style={{ padding: '0.5rem' }}>{concept}</td>
+                                                    <td style={{ textAlign: 'right', padding: '0.5rem' }}>{count}</td>
+                                                    <td style={{ textAlign: 'right', padding: '0.5rem' }}>
+                                                        {Math.round((count / analytics.totalReps) * 100)}%
+                                                    </td>
+                                                    <td style={{ padding: '0.5rem' }}>
+                                                        <div style={{ height: '8px', background: 'var(--bg-input)', borderRadius: '4px', overflow: 'hidden' }}>
+                                                            <div style={{ height: '100%', width: `${(count / analytics.totalReps) * 100}%`, background: 'var(--primary)' }}></div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {viewMode === 'daily' && (
+                            <div style={cardStyle}>
+                                <h4 style={{ marginTop: 0 }}>Daily Concept Breakdown</h4>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Concept Family</th>
+                                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => <th key={d} style={{ textAlign: 'center', padding: '0.5rem' }}>{d.substr(0, 3)}</th>)}
+                                            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.keys(analytics.concepts.overall).sort().map(concept => (
+                                            <tr key={concept} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                                <td style={{ padding: '0.5rem', fontWeight: '500' }}>{concept}</td>
+                                                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                                                    <td key={day} style={{ textAlign: 'center', padding: '0.5rem', color: analytics.concepts.daily[day]?.[concept] ? 'inherit' : 'var(--text-tertiary)' }}>
+                                                        {analytics.concepts.daily[day]?.[concept] || '-'}
+                                                    </td>
+                                                ))}
+                                                <td style={{ textAlign: 'right', padding: '0.5rem', fontWeight: 'bold' }}>{analytics.concepts.overall[concept]}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {viewMode === 'usage' && (
+                            <div style={cardStyle}>
+                                <h4 style={{ marginTop: 0 }}>Game Plan Usage</h4>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Play</th>
+                                            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Reps</th>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {analytics.gamePlanUsage.map((item, idx) => (
+                                            <tr key={item.id} style={{
+                                                borderBottom: '1px solid var(--border-light)',
+                                                background: item.count === 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent'
+                                            }}>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <div style={{ fontWeight: 500 }}>{item.play ? item.play.name : 'Unknown Play'}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{item.play?.conceptFamily}</div>
+                                                </td>
+                                                <td style={{ textAlign: 'right', padding: '0.5rem', fontWeight: 'bold', color: item.count === 0 ? 'var(--danger)' : 'inherit' }}>
+                                                    {item.count}
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    {item.count === 0 ? (
+                                                        <span style={{ color: 'var(--danger)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <Icon name="AlertCircle" size={14} /> Unused
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--success)', fontSize: '0.8rem' }}>Active</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {
+                            viewMode === 'unassigned' && (
+                                <div style={cardStyle}>
+                                    <h3 style={{ marginBottom: '1rem' }}>Unassigned Game Plan Plays</h3>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                        The following plays are on the Weekly Install List but have NOT been assigned to any practice script yet.
+                                    </p>
+
+                                    {analytics.unassigned.length === 0 ? (
+                                        <div style={{
+                                            padding: '2rem', textAlign: 'center', color: 'var(--success)',
+                                            background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px', border: '1px solid var(--success)'
+                                        }}>
+                                            <Icon name="CheckCircle" size={24} style={{ marginBottom: '0.5rem' }} />
+                                            <div>All installed plays are assigned!</div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+                                            {analytics.unassigned.map(play => (
+                                                <div key={play?.id} style={{ padding: '0.75rem', background: 'var(--bg-panel)', borderLeft: '4px solid #ef4444', borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+                                                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{play?.name || 'Unknown Play'}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                        {play?.formation} • {play?.conceptFamily || 'No Concept'}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        }
+                    </div >
+
+                    {/* Leaderboard Section - Always Visible or part of Overall? */}
+                    {/* Let's put Leaderboard at bottom if ViewMode is matching or just always. 
+                Previous design seemed to have it separate. Let's include it in 'overall' or separate.
+                The previous code had it in 'overall' I think? Or separate? 
+                Let's make it a separate card below content area, visible in 'overall' mode */}
+
+                    {
+                        viewMode === 'overall' && (
+                            <div style={cardStyle}>
+                                <h3 style={{ marginBottom: '1rem' }}>Most Practiced Plays (Top 50)</h3>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Play Name</th>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Concept</th>
+                                            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Reps</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {analytics.leaderboard.map(({ play, count }, idx) => (
+                                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)', background: idx < 3 ? 'rgba(234, 179, 8, 0.05)' : 'transparent' }}>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <div style={{ fontWeight: 'bold' }}>{play?.name || 'Unknown'}</div>
+                                                </td>
+                                                <td style={{ padding: '0.5rem', color: 'var(--text-secondary)' }}>{play?.conceptFamily}</td>
+                                                <td style={{ textAlign: 'right', padding: '0.5rem', fontWeight: 'bold' }}>{count}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )
+                    }
+                </div >
+            );
+        };
+
+
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
             const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
@@ -44949,6 +45311,17 @@
                                         </div>
                                     </div>
                                 </div>
+
+
+                                {/* Weekly Analytics Dashboard */}
+                                {view === 'staff-meeting' && (
+                                    <WeeklyAnalytics
+                                        currentWeek={currentWeek}
+                                        plays={plays}
+                                        practicePlans={currentWeek.practicePlans || {}}
+                                    />
+                                )}
+
 
                                 {/* Quick Links */}
                                 <div className="card" style={{ padding: '1.5rem' }}>
