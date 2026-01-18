@@ -29201,7 +29201,7 @@
             );
         };
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
             const [showLayoutVersions, setShowLayoutVersions] = useState(false);
@@ -29224,6 +29224,13 @@
                     setAppSidebarCollapsed(true);
                 }
             }, [showSideMenu, setAppSidebarCollapsed]);
+
+            // Effect to close right side menu when left sidebar is expanded
+            useEffect(() => {
+                if (appSidebarCollapsed === false && showSideMenu) {
+                    setShowSideMenu(false);
+                }
+            }, [appSidebarCollapsed]);
 
             // For Wristband Autocomplete
             const [showWristband, setShowWristband] = useState(true);
@@ -46039,6 +46046,7 @@
                             playCategories={playCategories}
                             playBuckets={playBuckets}
                             setAppSidebarCollapsed={setSidebarCollapsed}
+                            appSidebarCollapsed={sidebarCollapsed}
                         />}
 
                         {
