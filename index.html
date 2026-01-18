@@ -32908,14 +32908,14 @@
 
                                 return (
                                     <div key={zone.id} style={{ marginBottom: '0', border: '2px solid black' }}>
-                                        <div style={{ background: zone.color, color: zone.textColor, padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '1.4rem', textTransform: 'uppercase', fontStyle: 'italic', borderBottom: '2px solid black' }}>
+                                        <div style={{ background: zone.color, color: zone.textColor, padding: '4px', textAlign: 'center', fontWeight: '900', fontSize: '1.0rem', textTransform: 'uppercase', fontStyle: 'italic', borderBottom: '2px solid black' }}>
                                             {zone.title}
                                         </div>
 
                                         <div style={{ display: 'grid', gridTemplateColumns: hasPhilosophy ? '125px 1fr' : '1fr' }}>
                                             {hasPhilosophy && (
                                                 <div style={{ borderRight: '2px solid black', padding: '0', display: 'flex', flexDirection: 'column' }}>
-                                                    <div style={{ padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '1.2rem', background: 'white', color: 'black', fontStyle: 'italic', borderBottom: '1px solid black' }}>
+                                                    <div style={{ padding: '4px', textAlign: 'center', fontWeight: '800', fontSize: '0.85rem', background: 'white', color: 'black', borderBottom: '1px solid black' }}>
                                                         Philosophy:
                                                     </div>
                                                     <textarea
@@ -32942,10 +32942,10 @@
                                                         {/* HEADERS */}
                                                         {dataCols.map((colName, cIdx) => (
                                                             <div key={`header-${cIdx}`} style={{
-                                                                padding: '8px',
+                                                                padding: '4px',
                                                                 textAlign: 'center',
                                                                 fontWeight: '800',
-                                                                fontSize: '1.0rem',
+                                                                fontSize: '0.85rem',
                                                                 borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none',
                                                                 borderBottom: '1px solid black',
                                                                 background: 'white',
