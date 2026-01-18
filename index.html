@@ -32931,7 +32931,6 @@
                         <div style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
                             {FZDND_ZONES.map((zone) => {
                                 const definedCols = zone.columns || ['1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
-
                                 // Get custom zone data from gamePlan
                                 const customZone = (gamePlan?.customZones || {})[zone.id] || {};
                                 const zoneTitle = customZone.title || zone.title;
@@ -32939,7 +32938,6 @@
                                 const zoneTextColor = customZone.textColor || zone.textColor || '#000';
                                 const zonePhilosophy = (gamePlan?.zoneNotes || {})[zone.id] || '';
 
-                                // Get custom column headers
                                 const customCols = (gamePlan?.customColumns || {})[zone.id] || {};
 
                                 return (
@@ -32953,7 +32951,7 @@
                                         }}>
                                             {/* Zone Title - Left Side - Editable */}
                                             <div style={{
-                                                borderRight: '1px solid black',
+                                                borderRight: '1pxsolid black',
                                                 padding: '4px 8px',
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -32965,10 +32963,10 @@
                                                     onChange={(e) => {
                                                         const newCustomZones = { ...(gamePlan?.customZones || {}) };
                                                         newCustomZones[zone.id] = {
-                                                            ...newCustomZones[zone.id],
-                                                            title: e.target.value
+                                                            ...newustomZones[zone.id],
+                                                            title: .target.value
                                                         };
-                                                        updateGamePlan({ customZones: newCustomZones });
+                                                        onUpdateGamePlan({ ...gamePlan, customZones: newCustomZones });
                                                     }}
                                                     disabled={isLocked}
                                                     style={{
@@ -32995,7 +32993,7 @@
                                                                 ...newCustomZones[zone.id],
                                                                 color: e.target.value
                                                             };
-                                                            updateGamePlan({ customZones: newCustomZones });
+                                                            onUpdateGamePlan({ ...gamePlan, customZones: newCustomZones });
                                                         }}
                                                         style={{
                                                             width: '30px',
@@ -33009,7 +33007,7 @@
                                                 )}
                                             </div>
 
-                                            {/* Philosophy Notes - Right Side - Editable */}
+                                          le */}
                                             <div style={{ padding: '4px 8px' }}>
                                                 <input
                                                     type="text"
@@ -33063,7 +33061,7 @@
                                                                         ...(newCustomCols[zone.id] || {}),
                                                                         [cIdx]: e.target.value
                                                                     };
-                                                                    updateGamePlan({ customColumns: newCustomCols });
+                                                                    onUpdateGamePlan({ ...gamePlan, customColumns: newCustomCols });
                                                                 }}
                                                                 disabled={isLocked}
                                                                 style={{
