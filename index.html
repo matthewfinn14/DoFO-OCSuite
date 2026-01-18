@@ -32930,123 +32930,219 @@
                     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
                         <div style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
                             {FZDND_ZONES.map((zone) => {
-                                const definedCols = zone.columns || ['Philosophy', '1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
-                                const hasPhilosophy = definedCols[0] === 'Philosophy';
-                                const dataCols = hasPhilosophy ? definedCols.slice(1) : definedCols;
+                                const definedCols = zone.columns || ['1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
+
+                                // Get custom zone data from gamePlan
+                                const customZone = (gamePlan?.customZones || {})[zone.id] || {};
+                                const zoneTitle = customZone.title || zone.title;
+                                const zoneColor = customZone.color || zone.color;
+                                const zoneTextColor = customZone.textColor || zone.textColor || '#000';
+                                const zonePhilosophy = (gamePlan?.zoneNotes || {})[zone.id] || '';
+
+                                // Get custom column headers
+                                const customCols = (gamePlan?.customColumns || {})[zone.id] || {};
 
                                 return (
                                     <div key={zone.id} className="fzdnd-zone-container" style={{ marginBottom: '0', border: '2px solid black' }}>
-                                        <div style={{ background: zone.color, color: zone.textColor, padding: '4px', textAlign: 'center', fontWeight: '900', fontSize: '1.0rem', textTransform: 'uppercase', fontStyle: 'italic', borderBottom: '2px solid black' }}>
-                                            {zone.title}
-                                        </div>
-
-                                        <div className="fzdnd-zone-grid" style={{ display: 'grid', gridTemplateColumns: hasPhilosophy ? '125px 1fr' : '1fr' }}>
-                                            {hasPhilosophy && (
-                                                <div className="fzdnd-philosophy-column" style={{ borderRight: '2px solid black', padding: '0', display: 'flex', flexDirection: 'column' }}>
-                                                    <div style={{ padding: '4px', textAlign: 'center', fontWeight: '800', fontSize: '0.85rem', background: 'white', color: 'black', borderBottom: '1px solid black' }}>
-                                                        Philosophy:
-                                                    </div>
-                                                    <textarea
-                                                        style={{
-                                                            flex: 1, width: '100%', border: 'none', padding: '12px', resize: 'none', outline: 'none',
-                                                            fontFamily: 'inherit', minHeight: '150px', fontSize: '0.9rem', lineHeight: '1.4'
-                                                        }}
-                                                        placeholder="What is our team's identity here?&#10;What do I need to be reminded of in this zone?"
-                                                        value={(gamePlan?.zoneNotes || {})[zone.id] || ''}
-                                                        onChange={(e) => updateZoneNote(zone.id, e.target.value)}
-                                                        disabled={isLocked}
-                                                    />
-                                                </div>
-                                            )}
-
-                                            <div className="fzdnd-content-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
-                                                {dataCols.length > 0 && (
-                                                    <div style={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: `repeat(${dataCols.length}, minmax(0, 1fr))`,
+                                        {/* SPLIT HEADER: Title Left, Philosophy Right */}
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '1fr 1fr',
+                                            borderBottom: '2px solid black',
+                                            background: zoneColor
+                                        }}>
+                                            {/* Zone Title - Left Side - Editable */}
+                                            <div style={{
+                                                borderRight: '1px solid black',
+                                                padding: '4px 8px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}>
+                                                <input
+                                                    type="text"
+                                                    value={zoneTitle}
+                                                    onChange={(e) => {
+                                                        const newCustomZones = { ...(gamePlan?.customZones || {}) };
+                                                        newCustomZones[zone.id] = {
+                                                            ...newCustomZones[zone.id],
+                                                            title: e.target.value
+                                                        };
+                                                        updateGamePlan({ customZones: newCustomZones });
+                                                    }}
+                                                    disabled={isLocked}
+                                                    style={{
                                                         flex: 1,
-                                                        borderBottom: '1px solid black'
-                                                    }}>
-                                                        {/* HEADERS */}
-                                                        {dataCols.map((colName, cIdx) => (
-                                                            <div key={`header-${cIdx}`} style={{
-                                                                padding: '4px',
-                                                                textAlign: 'center',
-                                                                fontWeight: '800',
-                                                                fontSize: '0.85rem',
-                                                                borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none',
-                                                                borderBottom: '1px solid black',
-                                                                background: 'white',
-                                                                color: 'black',
-                                                                fontStyle: 'italic'
-                                                            }}>
-                                                                {colName}
-                                                            </div>
-                                                        ))}
-
-                                                        {/* CONTENT COLUMNS */}
-                                                        {dataCols.map((colName, cIdx) => {
-                                                            const realIdx = hasPhilosophy ? cIdx + 1 : cIdx;
-                                                            const setId = `fzdnd_${zone.id}_${realIdx}`;
-                                                            const set = (gamePlan?.sets || []).find(s => s.id === setId);
-                                                            const zonePlays = set ? set.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean) : [];
-
-                                                            return (
-                                                                <div
-                                                                    key={`content-${cIdx}`}
-                                                                    style={{
-                                                                        borderRight: cIdx < dataCols.length - 1 ? '1px solid black' : 'none',
-                                                                        minHeight: '150px',
-                                                                        background: 'white',
-                                                                        display: 'flex',
-                                                                        flexDirection: 'column'
-                                                                    }}
-                                                                    onDragOver={(e) => e.preventDefault()}
-                                                                    onDrop={(e) => handleFZDnDDrop(e, zone.id, realIdx)}
-                                                                >
-                                                                    <div style={{ padding: '0', flex: 1 }}>
-                                                                        {zonePlays.map((play, pIdx) => (
-                                                                            <div key={play.id} style={{
-                                                                                padding: '4px 6px', borderBottom: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: '600',
-                                                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                                                background: play.priority ? '#fef08a' : pIdx % 2 === 0 ? 'white' : '#f8fafc',
-                                                                                color: 'black'
-                                                                            }}>
-                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                                                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
-                                                                                    {/* WRISTBAND INPUT */}
-                                                                                    <div style={{ position: 'relative', width: '36px' }}>
-                                                                                        <input
-                                                                                            type="text"
-                                                                                            value={play.wristbandSlot || ''}
-                                                                                            placeholder="#"
-                                                                                            onChange={(e) => updatePlayWristband(play.id, e.target.value)}
-                                                                                            onClick={(e) => e.stopPropagation()}
-                                                                                            style={{
-                                                                                                width: '100%', fontSize: '0.75rem', padding: '2px 4px',
-                                                                                                border: '1px solid #94a3b8', borderRadius: '4px', textAlign: 'center',
-                                                                                                background: play.wristbandSlot ? '#dbeafe' : 'white',
-                                                                                                color: play.wristbandSlot ? '#1e40af' : '#64748b',
-                                                                                                fontWeight: 'bold'
-                                                                                            }}
-                                                                                        />
-                                                                                    </div>
-                                                                                </div>
-                                                                                {!isLocked && (
-                                                                                    <button onClick={() => handleRemoveFromFZDnD(zone.id, realIdx, play.id)} style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}>×</button>
-                                                                                )}
-                                                                            </div>
-                                                                        ))}
-                                                                        {Array.from({ length: Math.max(0, 5 - zonePlays.length) }).map((_, i) => (
-                                                                            <div key={`empty-${i}`} style={{ height: '32px', borderBottom: '1px solid #e2e8f0' }}></div>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: zoneTextColor,
+                                                        fontWeight: '900',
+                                                        fontSize: '1.0rem',
+                                                        textTransform: 'uppercase',
+                                                        fontStyle: 'italic',
+                                                        textAlign: 'center',
+                                                        outline: 'none',
+                                                        cursor: isLocked ? 'default' : 'text'
+                                                    }}
+                                                />
+                                                {!isLocked && (
+                                                    <input
+                                                        type="color"
+                                                        value={zoneColor}
+                                                        onChange={(e) => {
+                                                            const newCustomZones = { ...(gamePlan?.customZones || {}) };
+                                                            newCustomZones[zone.id] = {
+                                                                ...newCustomZones[zone.id],
+                                                                color: e.target.value
+                                                            };
+                                                            updateGamePlan({ customZones: newCustomZones });
+                                                        }}
+                                                        style={{
+                                                            width: '30px',
+                                                            height: '30px',
+                                                            border: '1px solid black',
+                                                            borderRadius: '4px',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        title="Change zone color"
+                                                    />
                                                 )}
                                             </div>
+
+                                            {/* Philosophy Notes - Right Side - Editable */}
+                                            <div style={{ padding: '4px 8px' }}>
+                                                <input
+                                                    type="text"
+                                                    value={zonePhilosophy}
+                                                    onChange={(e) => updateZoneNote(zone.id, e.target.value)}
+                                                    disabled={isLocked}
+                                                    placeholder="Philosophy reminders..."
+                                                    style={{
+                                                        width: '100%',
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: zoneTextColor,
+                                                        fontWeight: '600',
+                                                        fontSize: '0.9rem',
+                                                        fontStyle: 'italic',
+                                                        textAlign: 'center',
+                                                        outline: 'none',
+                                                        cursor: isLocked ? 'default' : 'text'
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Content Grid */}
+                                        <div className="fzdnd-content-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
+                                            {definedCols.length > 0 && (
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: `repeat(${definedCols.length}, minmax(0, 1fr))`,
+                                                    flex: 1,
+                                                    borderBottom: '1px solid black'
+                                                }}>
+                                                    {/* EDITABLE COLUMN HEADERS */}
+                                                    {definedCols.map((colName, cIdx) => (
+                                                        <div key={`header-${cIdx}`} style={{
+                                                            padding: '4px',
+                                                            textAlign: 'center',
+                                                            borderRight: cIdx < definedCols.length - 1 ? '1px solid black' : 'none',
+                                                            borderBottom: '1px solid black',
+                                                            background: 'white',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}>
+                                                            <input
+                                                                type="text"
+                                                                value={customCols[cIdx] || colName}
+                                                                onChange={(e) => {
+                                                                    const newCustomCols = { ...(gamePlan?.customColumns || {}) };
+                                                                    newCustomCols[zone.id] = {
+                                                                        ...(newCustomCols[zone.id] || {}),
+                                                                        [cIdx]: e.target.value
+                                                                    };
+                                                                    updateGamePlan({ customColumns: newCustomCols });
+                                                                }}
+                                                                disabled={isLocked}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    color: 'black',
+                                                                    fontWeight: '800',
+                                                                    fontSize: '0.85rem',
+                                                                    fontStyle: 'italic',
+                                                                    textAlign: 'center',
+                                                                    outline: 'none',
+                                                                    cursor: isLocked ? 'default' : 'text'
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ))}
+
+                                                    {/* CONTENT COLUMNS */}
+                                                    {definedCols.map((colName, cIdx) => {
+                                                        const setId = `fzdnd_${zone.id}_${cIdx}`;
+                                                        const set = (gamePlan?.sets || []).find(s => s.id === setId);
+                                                        const zonePlays = set ? set.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean) : [];
+
+                                                        return (
+                                                            <div
+                                                                key={`content-${cIdx}`}
+                                                                style={{
+                                                                    borderRight: cIdx < definedCols.length - 1 ? '1px solid black' : 'none',
+                                                                    minHeight: '150px',
+                                                                    background: 'white',
+                                                                    display: 'flex',
+                                                                    flexDirection: 'column'
+                                                                }}
+                                                                onDragOver={(e) => e.preventDefault()}
+                                                                onDrop={(e) => handleFZDnDDrop(e, zone.id, cIdx)}
+                                                            >
+                                                                <div style={{ padding: '0', flex: 1 }}>
+                                                                    {zonePlays.map((play, pIdx) => (
+                                                                        <div key={play.id} style={{
+                                                                            padding: '4px 6px', borderBottom: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: '600',
+                                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                                            background: play.priority ? '#fef08a' : pIdx % 2 === 0 ? 'white' : '#f8fafc',
+                                                                            color: 'black'
+                                                                        }}>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
+                                                                                {/* WRISTBAND INPUT */}
+                                                                                <div style={{ position: 'relative', width: '36px' }}>
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={play.wristbandSlot || ''}
+                                                                                        placeholder="#"
+                                                                                        onChange={(e) => updatePlayWristband(play.id, e.target.value)}
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                        style={{
+                                                                                            width: '100%', fontSize: '0.75rem', padding: '2px 4px',
+                                                                                            border: '1px solid #94a3b8', borderRadius: '4px', textAlign: 'center',
+                                                                                            background: play.wristbandSlot ? '#dbeafe' : 'white',
+                                                                                            color: play.wristbandSlot ? '#1e40af' : '#64748b',
+                                                                                            fontWeight: 'bold'
+                                                                                        }}
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+                                                                            {!isLocked && (
+                                                                                <button onClick={() => handleRemoveFromFZDnD(zone.id, cIdx, play.id)} style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}>×</button>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                    {Array.from({ length: Math.max(0, 5 - zonePlays.length) }).map((_, i) => (
+                                                                        <div key={`empty-${i}`} style={{ height: '32px', borderBottom: '1px solid #e2e8f0' }}></div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
