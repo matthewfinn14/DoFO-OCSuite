@@ -8935,28 +8935,64 @@
                                 <div key={`script-${idx}`} className="page-break-avoid" style={{ border: '2px solid black', marginTop: '0.5rem', breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                                     <div style={{ background: '#000', color: 'white', padding: '0.25rem 0.5rem', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Script: {seg.name} ({seg.type})</span>
-                                        <span>Phase: {seg.group || 'ALL'}</span>
+                                        <span>Phase: {seg.phase || seg.group || 'ALL'}</span>
                                     </div>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                                         <thead style={{ background: '#f3f4f6', borderBottom: '1px solid black' }}>
                                             <tr>
-                                                <th style={{ padding: '4px', borderRight: '1px solid black', width: '30px', textAlign: 'center' }}>#</th>
-                                                <th style={{ padding: '4px', borderRight: '1px solid black', width: '40px', textAlign: 'center' }}>Hash</th>
-                                                <th style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center' }}>Situation / YL</th>
-                                                <th style={{ padding: '4px', textAlign: 'left' }}>Play Call</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid black', width: '25px', textAlign: 'center' }}>#</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid black', width: '35px', textAlign: 'center' }}>Hash</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid black', width: '50px', textAlign: 'center' }}>Dn</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid black', width: '50px', textAlign: 'center' }}>Dist</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid black', width: '80px', textAlign: 'center' }}>Situation</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'left' }}>Play Call</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid black', width: '80px', textAlign: 'center' }}>Defense</th>
+                                                <th style={{ padding: '4px', width: '280px', textAlign: 'left' }}>Notes</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {seg.script.map((row, rIdx) => (
-                                                <tr key={rIdx} style={{ borderBottom: '1px solid #ddd' }}>
-                                                    <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center', fontWeight: 'bold' }}>{rIdx + 1}</td>
-                                                    <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center' }}>{row.hash || '-'}</td>
-                                                    <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center' }}>
-                                                        {row.situation || (row.yardLine ? `${row.yardLine} ${row.downDistance ? `(${row.downDistance})` : ''}` : '-')}
-                                                    </td>
-                                                    <td style={{ padding: '4px', fontWeight: 'bold' }}>{row.playCall || '-'}</td>
-                                                </tr>
-                                            ))}
+                                            {seg.script.map((row, rIdx) => {
+                                                // Format notes for print
+                                                let notesText = '';
+                                                if (row.notes && typeof row.notes === 'object') {
+                                                    const noteEntries = Object.entries(row.notes)
+                                                        .filter(([_, note]) => note && note.trim())
+                                                        .map(([coachId, note]) => {
+                                                            const coachName = coachId === 'ALL_COACHES' || coachId === 'ALL'
+                                                                ? 'Staff'
+                                                                : (staff?.find(s => s.id === coachId)?.name || coachId);
+                                                            return `${coachName}: ${note}`;
+                                                        });
+                                                    notesText = noteEntries.join('; ');
+                                                } else if (typeof row.notes === 'string') {
+                                                    notesText = row.notes;
+                                                }
+
+                                                return (
+                                                    <tr key={rIdx} style={{ borderBottom: '1px solid #ddd' }}>
+                                                        <td style={{ padding: '3px', borderRight: '1px solid black', textAlign: 'center', fontWeight: 'bold' }}>{rIdx + 1}</td>
+                                                        <td style={{ padding: '3px', borderRight: '1px solid black', textAlign: 'center' }}>{row.hash || '-'}</td>
+                                                        <td style={{ padding: '3px', borderRight: '1px solid black', textAlign: 'center', fontSize: '0.7rem' }}>
+                                                            {row.yardLine || '-'}
+                                                        </td>
+                                                        <td style={{ padding: '3px', borderRight: '1px solid black', textAlign: 'center', fontSize: '0.7rem' }}>
+                                                            {row.downDistance || '-'}
+                                                        </td>
+                                                        <td style={{ padding: '3px', borderRight: '1px solid black', textAlign: 'center', fontSize: '0.7rem' }}>
+                                                            {row.situation || '-'}
+                                                        </td>
+                                                        <td style={{ padding: '3px', borderRight: '1px solid black', fontWeight: 'bold' }}>
+                                                            {row.playName || row.playCall || '-'}
+                                                        </td>
+                                                        <td style={{ padding: '3px', borderRight: '1px solid black', textAlign: 'center', fontSize: '0.7rem' }}>
+                                                            {row.defense || '-'}
+                                                        </td>
+                                                        <td style={{ padding: '3px', fontSize: '0.65rem', lineHeight: '1.2' }}>
+                                                            {notesText || '-'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -45806,7 +45842,7 @@
                                             }                          </p>
                                         <button
                                             className="btn btn-primary"
-                                            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
+                                            style={{ width: '100%', padding: '', e: '1.1rem', marginBottom: '0.5rem' }}
                                             onClick={handleAcceptInvite}
                                         >
                                             Accept & Join Team
