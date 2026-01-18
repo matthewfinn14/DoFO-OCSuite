@@ -32900,7 +32900,6 @@
 
                 return (
                     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-                        {!showSideMenu && <PlaybookSidebar plays={plays} weekInstallIds={newInstallIds} />}
                         <div style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
                             {FZDND_ZONES.map((zone) => {
                                 const definedCols = zone.columns || ['Philosophy', '1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
