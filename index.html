@@ -117,7 +117,7 @@
         @media print {
             @page {
                 size: landscape !important;
-                margin: 0 !important;
+                margin: 0.25in !important;
             }
 
             body {
@@ -147,6 +147,8 @@
                 top: 0;
                 left: 0;
                 width: 100%;
+                padding: 1rem;
+                box-sizing: border-box;
                 z-index: 99998;
             }
 
@@ -6232,54 +6234,6 @@
 
         const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [] }) => {
             const { currentUser } = useAuth();
-
-            const validateWristbandAssignment = (slot) => {
-                const val = String(slot);
-                let isBlocked = false;
-                const currentWbSettings = wbSettings || {};
-                const enabledSections = currentWbSettings.enabledSections || {};
-
-                const cardKeys = ['card1', 'card2', 'card3', 'card4', 'card5', 'card6'];
-                for (const key of cardKeys) {
-                    if (enabledSections[key] !== false) continue;
-                    const card = currentWbSettings[key];
-                    if (!card) continue;
-                    const cardNum = parseInt(key.replace('card', ''));
-
-                    if (card.type && (card.type.includes('rooski') || card.type.includes('wiz'))) {
-                        for (let i = 1; i <= 16; i++) {
-                            if (val === `${cardNum}${String(i).padStart(2, '0')}`) isBlocked = true;
-                        }
-                    } else {
-                        const start = cardNum * 100 + 1;
-                        const end = start + 47;
-                        const num = parseInt(val);
-                        if (!isNaN(num) && num >= start && num <= end && String(num) === val) isBlocked = true;
-                    }
-                }
-
-                // Check Staples
-                if (enabledSections.staples === false) {
-                    const num = parseInt(val);
-                    if (!isNaN(num) && num >= 10 && num <= 89 && String(num) === val) isBlocked = true;
-                }
-
-                if (isBlocked) {
-                    alert("This wristband section is disabled.");
-                    return false;
-                }
-                return true;
-            };
-
-            const effectiveBuckets = useMemo(() => {
-                if (playCategories && playCategories.length > 0) return playCategories;
-                return [
-                    { id: 'run', label: 'Run', color: '#10b981', textColor: '#ffffff' },
-                    { id: 'pass', label: 'Pass', color: '#3b82f6', textColor: '#ffffff' },
-                    { id: 'screen', label: 'Screen', color: '#8b5cf6', textColor: '#ffffff' }
-                ];
-            }, [playCategories]);
-            const [assignmentModalState, setAssignmentModalState] = useState(null);
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
             const [selectedPlayId, setSelectedPlayId] = useState(null);
@@ -6290,54 +6244,6 @@
             const [quickAddSuggestions, setQuickAddSuggestions] = useState([]);
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [staplesInputs, setStaplesInputs] = useState({}); // Track input values for Staples slots
-            const [editingSlot, setEditingSlot] = useState(null); // Slot currently being edited (for Rooski name)
-            const [tempWizName, setTempWizName] = useState(''); // Temp value for Wiz name edit
-            const [showLayoutConfirm, setShowLayoutConfirm] = useState(false);
-            const [pendingLayout, setPendingLayout] = useState(null);
-            const [showConfigModal, setShowConfigModal] = useState(false);
-
-
-
-            const handleSidebarDoubleClick = (play, e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setAssignmentModalState({
-                    playId: play.id,
-                    x: e.clientX,
-                    y: e.clientY
-                });
-            };
-
-            const handleAssignSituation = (playId, box) => {
-                const setId = box.setId;
-                if (!onUpdateWeek || !currentWeek || !currentWeek.id) return;
-
-                // Clone current gamePlan (offensiveGamePlan)
-                const currentGamePlan = currentWeek.offensiveGamePlan || {};
-
-                let updatedGamePlan;
-
-                if (setId.startsWith('ms_')) {
-                    // Handle Mini Script Update
-                    const newMiniScripts = (currentGamePlan.miniScripts || []).map(s =>
-                        s.id === setId ? { ...s, playIds: [...(s.playIds || []), playId] } : s
-                    );
-                    updatedGamePlan = { ...currentGamePlan, miniScripts: newMiniScripts };
-                } else {
-                    // Handle Standard Set Update
-                    const existingSet = currentGamePlan.sets?.find(s => s.id === setId);
-                    let newSets;
-                    if (existingSet) {
-                        newSets = (currentGamePlan.sets || []).map(s => s.id === setId ? { ...s, playIds: [...(s.playIds || []), playId] } : s);
-                    } else {
-                        // Implicit creation
-                        newSets = [...(currentGamePlan.sets || []), { id: setId, name: setId, playIds: [playId] }];
-                    }
-                    updatedGamePlan = { ...currentGamePlan, sets: newSets };
-                }
-
-                // Update Week
-                onUpdateWeek(currentWeek.id, 'offensiveGamePlan', updatedGamePlan);
-            };
 
             // Layout constants
             const rowHeight = 11;
@@ -6350,26 +6256,6 @@
                     [cardId]: { ...prev[cardId], ...updates }
                 }));
             };
-
-            // Sync Season Opponent to Wristband Settings if not manually set
-            useEffect(() => {
-                if (seasonOpponent) {
-                    setWbSettings(prev => {
-                        const newSettings = { ...prev };
-                        let hasChanges = false;
-
-                        // Check common cards (1 and 2 usually) or all cards
-                        ['card1', 'card2', 'card3', 'card4', 'card5', 'card6'].forEach(cardId => {
-                            if (newSettings[cardId] && !newSettings[cardId].opp) {
-                                newSettings[cardId] = { ...newSettings[cardId], opp: seasonOpponent };
-                                hasChanges = true;
-                            }
-                        });
-
-                        return hasChanges ? newSettings : prev;
-                    });
-                }
-            }, [seasonOpponent]);
 
             // Migration effect: Convert old flat settings to new nested structure
             useEffect(() => {
@@ -6392,14 +6278,7 @@
                         card4: { type: 'standard', opp: '', iter: '1', rows: [] },
                         card5: { type: 'standard', opp: '', iter: '1', rows: [] },
                         card6: { type: 'standard', opp: '', iter: '1', rows: [] },
-                        version: 'v3',
-                        enabledSections: { staples: true, card1: true, card2: true, card3: true, card4: true, card5: true, card6: true }
-                    }));
-                } else if (!wbSettings.enabledSections) {
-                    // Backfill enabledSections if missing
-                    setWbSettings(prev => ({
-                        ...prev,
-                        enabledSections: { staples: true, card1: true, card2: true, card3: true, card4: true, card5: true, card6: true }
+                        version: 'v3'
                     }));
                 } else {
                     // Check for old 'modular' type and auto-migrate to 'mini-scripts'
@@ -6411,53 +6290,6 @@
                             // If it has 'rows' and NO version (legacy), migrate to mini-scripts
                             updates[cardKey] = { ...card, type: 'mini-scripts', version: 'v1' };
                             hasMigration = true;
-                        }
-
-                        // CLEANUP: Fix corrupted row data where col0/col1/col2/col3 are objects instead of strings
-                        if (card && (card.type === 'mini-scripts' || card.type === 'modular' || card.type === 'wiz' || card.type === 'rooski') && card.rows) {
-                            const cleanedRows = card.rows.map(row => {
-                                const cleanedRow = { ...row };
-                                // Check each column and replace if it's an object or looks like corrupted data
-                                ['col0', 'col1', 'col2', 'col3'].forEach(colKey => {
-                                    const value = cleanedRow[colKey];
-                                    // Check if it's an object
-                                    if (value && typeof value === 'object') {
-                                        console.warn(`Cleaning corrupted ${colKey} in ${cardKey} row ${row.id} (object)`);
-                                        cleanedRow[colKey] = ''; // Replace object with empty string
-                                    }
-                                    // Check if it's a string that looks like corrupted data
-                                    else if (value && typeof value === 'string') {
-                                        // Check for various corruption patterns:
-                                        // 1. Contains CSS property names (full or partial)
-                                        // 2. Contains object-like syntax (quotes, colons, braces)
-                                        // 3. Contains common corruption fragments
-                                        const corruptionPatterns = [
-                                            'whiteSpace:', 'background:', 'overflow:', 'textOverflow:',
-                                            'whiteSpa', 'backgro', 'overfl', 'textOv',  // Partial matches
-                                            '>sis', 'sis\'', 'nowr', 'ellip',  // Common corruption fragments
-                                            '\':', '\': \'', '{ ', ' }',  // Object syntax
-                                        ];
-
-                                        const isCorrupted = corruptionPatterns.some(pattern => value.includes(pattern));
-
-                                        if (isCorrupted) {
-                                            console.warn(`Cleaning corrupted ${colKey} in ${cardKey} row ${row.id}: "${value}"`);
-                                            cleanedRow[colKey] = ''; // Replace corrupted string with empty string
-                                        }
-                                    }
-                                });
-                                return cleanedRow;
-                            });
-
-                            // Only update if we actually cleaned something
-                            const needsCleaning = card.rows.some((row, idx) =>
-                                JSON.stringify(row) !== JSON.stringify(cleanedRows[idx])
-                            );
-
-                            if (needsCleaning) {
-                                updates[cardKey] = { ...card, rows: cleanedRows };
-                                hasMigration = true;
-                            }
                         }
                     });
 
@@ -6527,7 +6359,65 @@
                 setStaplesInputs(inputs);
             }, [slotMap]);
 
+            // Auto-cleanup Ghost Assignments (Rooski/Mini-Scripts overflow)
+            useEffect(() => {
+                if (!wbSettings || !selectedCardId) return;
 
+                const card = wbSettings[selectedCardId];
+                if (!card) return;
+
+                let startSlot = 0;
+                if (selectedCardId === 'card1') startSlot = 101;
+                else if (selectedCardId === 'card2') startSlot = 201;
+                else if (selectedCardId === 'card3') startSlot = 301;
+                else if (selectedCardId === 'card4') startSlot = 401;
+                else if (selectedCardId === 'card5') startSlot = 501;
+                else if (selectedCardId === 'card6') startSlot = 601;
+
+                if (startSlot === 0) return;
+
+                const updates = [];
+
+                if (card.type === 'rooski') {
+                    const maxRooski = startSlot + 15;
+                    const maxStandard = startSlot + 47; // Standard 48 slots
+
+                    // Identify ghosts: plays assigned to > maxRooski but within standard range
+                    plays.forEach(p => {
+                        if (!p.wristbandSlot) return;
+                        const slotStr = p.wristbandSlot.toString();
+                        const slot = parseInt(slotStr, 10);
+
+                        if (slot > maxRooski && slot <= maxStandard) {
+                            updates.push({ ...p, wristbandSlot: '' });
+                        }
+                    });
+
+                } else if (card.type === 'mini-scripts') {
+                    const minStandard = startSlot;
+                    const maxStandard = startSlot + 99; // Wide net
+
+                    // Identify ghosts: plays assigned to numeric slots (Traditional) when in Mini-Scripts
+                    plays.forEach(p => {
+                        if (!p.wristbandSlot) return;
+                        const slotStr = p.wristbandSlot.toString();
+
+                        // If it's pure number, it's a Traditional ghost in Mini-Scripts land
+                        // Mini-Scripts use "101A", "101B"
+                        if (/^\d+$/.test(slotStr)) {
+                            const slot = parseInt(slotStr, 10);
+                            if (slot >= minStandard && slot <= maxStandard) {
+                                updates.push({ ...p, wristbandSlot: '' });
+                            }
+                        }
+                    });
+                }
+
+                if (updates.length > 0) {
+                    // Use setTimeout to avoid render-cycle conflicts if immediate
+                    setTimeout(() => onUpdatePlay(updates), 0);
+                }
+            }, [wbSettings, selectedCardId, plays]); // Dependency on plays ensures we re-check if data loads later
 
 
             // Sync Mini-Script assignments (101A/101B)
@@ -6600,9 +6490,11 @@
                 if (!p.name) return '';
 
                 let s = p.name.trim();
+                const form = (p.formation || '').trim();
+
+                // 1. Strip structural formations from start
                 // We define "Structural" as anything not in the usual color list
                 const colors = ['RED', 'BLUE', 'GRN', 'GREEN', 'BRIGHT', 'BRT', 'ORNG', 'ORANGE', 'GOLD', 'BRN', 'BROWN', 'TEAL', 'PINK', 'PURPLE', 'YELLOW'];
-                const form = p.formation || '';
                 const isColorFormation = colors.includes(form.toUpperCase());
 
                 if (form && !isColorFormation) {
@@ -6628,22 +6520,11 @@
             };
 
             const handleAssignSlot = (slot) => {
-                if (!validateWristbandAssignment(slot)) return;
                 if (!selectedPlayId) return;
                 const play = plays.find(p => p.id === selectedPlayId);
                 if (play) {
                     // Update play with new slot - Check for Staples
                     const card = wbSettings[selectedCardId];
-
-                    // RESTRICTION: Wiz plays can ONLY be assigned to Wiz cards
-                    const isWizCard = card && (card.type === 'wiz' || card.type === 'rooski');
-                    const isWizPlay = play.isWiz || play.isRooski;
-
-                    if (isWizPlay && !isWizCard) {
-                        alert("Wiz plays can only be assigned to a Wiz card (16-slot grid).");
-                        return;
-                    }
-
                     if (card && card.type === 'staples') {
                         // NEW: Update ALL plays with matching signature
                         const signature = getPlaySignature(play);
@@ -6661,27 +6542,6 @@
                     }
                     setSelectedPlayId(null); // Deselect after assignment
                 }
-            };
-
-            // Handle saving the Wiz short name
-            const handleSaveWizName = (playId, slot) => {
-                if (!playId) return;
-                const play = plays.find(p => p.id === playId);
-                const activeCard = wbSettings[selectedCardId];
-                // Wiz or Rooski type fallback
-                const viewType = activeCard?.wizView || activeCard?.rooskiView || 'skill';
-
-                if (play) {
-                    if (viewType === 'skill') {
-                        onUpdatePlay({ ...play, wizSkillName: tempWizName });
-                    } else if (viewType === 'oline') {
-                        onUpdatePlay({ ...play, wizOlineName: tempWizName });
-                    } else {
-                        onUpdatePlay({ ...play, wizName: tempWizName }); // Fallback
-                    }
-                }
-                setEditingSlot(null);
-                setTempWizName('');
             };
 
             const handleUpdateRow = (cardId, rowId, updates) => {
@@ -6707,81 +6567,6 @@
                 const [moved] = newRows.splice(index, 1);
                 newRows.splice(newIndex, 0, moved);
                 updateCard(cardId, { rows: newRows });
-            };
-
-            const handleAssignPriorityPlays = () => {
-                const card = wbSettings[selectedCardId];
-                if (!card) return;
-
-                // 1. Identify Unassigned Priority Plays
-                const unassignedPriority = plays.filter(p => p.priority && !p.wristbandSlot);
-
-                if (unassignedPriority.length === 0) {
-                    alert("No unassigned priority plays found.");
-                    return;
-                }
-
-                // 2. Check Wiz Constraint
-                const wizPlays = unassignedPriority.filter(p => p.isRooski);
-                const standardPlays = unassignedPriority.filter(p => !p.isRooski);
-
-                // Check if we have ANY Wiz card configured
-                const hasWizCard = Object.values(wbSettings).some(c => c && (c.type === 'wiz' || c.type === 'rooski'));
-
-                if (wizPlays.length > 0 && !hasWizCard) {
-                    alert(`You have ${wizPlays.length} priority plays that require a WIZ layout, but no WIZ cards are configured. Please change a card layout to 'Wiz' to assign these.`);
-                    return;
-                }
-
-                // 3. Target Active Card & Select Compatible Plays
-                const availableSlots = getSlotsForCard(selectedCardId).filter(slot => {
-                    if (!validateWristbandAssignment(slot)) return false;
-                    // Check if slot is occupied
-                    // For now, simple check against play.wristbandSlot matching logic is reverse (play has slot).
-                    // So we must check if any play has this slot assigned.
-                    return !plays.some(p => p.wristbandSlot === String(slot) || p.wristbandSlot === slot);
-                });
-
-                if (availableSlots.length === 0) {
-                    alert("No available slots on the selected card.");
-                    return;
-                }
-
-                let playsToAssign = [];
-                const isWizCard = card.type === 'wiz' || card.type === 'rooski';
-
-                if (isWizCard) {
-                    // Prioritize Wiz plays, then fill with Standard
-                    playsToAssign = [...wizPlays, ...standardPlays];
-                } else {
-                    // Standard Card: ONLY Standard plays
-                    if (wizPlays.length > 0) {
-                        // Optional: Warn user that Wiz plays are being skipped?
-                        console.log("Skipping Wiz plays for Standard card assignment.");
-                    }
-                    playsToAssign = standardPlays;
-                }
-
-                if (playsToAssign.length === 0) {
-                    alert("No compatible priority plays found for this card layout.");
-                    return;
-                }
-
-                // 4. Assign
-                const updates = [];
-                const limit = Math.min(availableSlots.length, playsToAssign.length);
-
-                for (let i = 0; i < limit; i++) {
-                    updates.push({
-                        ...playsToAssign[i],
-                        wristbandSlot: String(availableSlots[i]) // assignments are strings
-                    });
-                }
-
-                if (updates.length > 0) {
-                    onUpdatePlay(updates);
-                    alert(`Successfully assigned ${updates.length} priority plays.`);
-                }
             };
 
             const handleAddPlayRow = (cardId, play) => {
@@ -6843,43 +6628,81 @@
                 updateCard(cardId, { rows: [...card.rows, newHeader, newPlayRow] });
             };
 
-            const getStartSlotForCard = (cardId) => {
-                if (cardId === 'staples') return null; // Special case
-                const map = { 'card1': 100, 'card2': 200, 'card3': 300, 'card4': 400, 'card5': 500, 'card6': 600 };
-                return map[cardId] || 100;
-            };
+            const handleLayoutChange = (newType) => {
+                let startSlot = 0;
+                if (selectedCardId === 'card1') startSlot = 101;
+                else if (selectedCardId === 'card2') startSlot = 201;
+                else if (selectedCardId === 'card3') startSlot = 301;
+                else if (selectedCardId === 'card4') startSlot = 401;
+                else if (selectedCardId === 'card5') startSlot = 501;
+                else if (selectedCardId === 'card6') startSlot = 601;
 
-            const confirmLayoutChange = () => {
-                if (pendingLayout === 'wiz' || pendingLayout === 'mini-scripts') {
-                    // Calculate start slot for current card (e.g. 201)
-                    const cardStartSlot = getStartSlotForCard(selectedCardId);
-                    if (cardStartSlot) {
-                        // Wiz/Mini ends at start + 15 (16 slots total) -> e.g., 201..216
-                        // Clear anything > 216 up to the end of the 100s block (e.g., 299)
+                const updates = [];
 
-                        // Find plays with wristbandSlot in range [cardStartSlot + 16, cardStartSlot + 99]
-                        const playsToClear = plays.filter(p => {
-                            if (!p.wristbandSlot) return false;
-                            const s = parseInt(p.wristbandSlot);
-                            return s >= cardStartSlot + 16 && s < cardStartSlot + 100;
+                if (newType === 'rooski') {
+                    // If switching TO Rooski (16 slots), clear plays assigned to slots > 16
+                    if (startSlot > 0) {
+                        const maxRooski = startSlot + 15;
+                        const maxStandard = startSlot + 47;
+
+                        plays.forEach(p => {
+                            const slot = parseInt(p.wristbandSlot || 0);
+                            if (slot > maxRooski && slot <= maxStandard) {
+                                updates.push({ ...p, wristbandSlot: '' });
+                            }
                         });
+                    }
+                } else if (newType === 'mini-scripts') {
+                    // If switching TO Mini-Scripts, clear ALMOST ALL Standard assignments (101-148)
+                    // because Mini-Scripts uses A/B slots.
+                    // However, we should be careful. If I switch Standard -> Mini-Scripts, maybe I WANT to keep them?
+                    // But the user specifically said "traditional wristband coordinates should have been cleared".
+                    // So we will clear the traditional numeric slots range for this card.
+                    if (startSlot > 0) {
+                        const minStandard = startSlot;
+                        const maxStandard = startSlot + 99; // Cover a wide range just in case
 
-                        playsToClear.forEach(p => {
-                            onUpdatePlay(p.id, { wristbandSlot: null });
+                        plays.forEach(p => {
+                            // Check if it's a pure number (Traditional)
+                            // We don't want to wipe "101A" if we are already in Mini-Scripts and just re-selecting logic?
+                            // But usually we switch FROM something else.
+                            // If p.wristbandSlot is "101", parseInt is 101.
+                            // If p.wristbandSlot is "101A", parseInt is 101.
+                            // We should differentiate.
+                            // Traditional slots are strictly numeric strings?
+                            // Actually, let's just use parseInt check, but verify the string is just numbers?
+                            // Or, if we entered Mini-Scripts, maybe we assume the user is starting fresh or using the Builder rows.
+                            // The user said "traditional wristband coordinates should have been cleared".
+                            // So let's clear anything that acts like a traditional coordinate in that range.
+
+                            if (!p.wristbandSlot) return;
+
+                            const slotStr = p.wristbandSlot.toString();
+                            const slotNum = parseInt(slotStr, 10);
+
+                            // Check if it's in the card's 100s range
+                            if (slotNum >= minStandard && slotNum <= maxStandard) {
+                                // Only clear if it looks like a traditional slot (no letters)
+                                // Standard slots are "101", "102". Mini-scripts are "101A", "101B".
+                                // If I have "101A", user might want to keep it?
+                                // BUT, if I am initiating the switch TO mini-scripts, implies I wasn't using it before?
+                                // Or maybe I swtiched away and back?
+                                // Safest: Clear pure numeric slots.
+                                const isNumeric = /^\d+$/.test(slotStr);
+                                if (isNumeric) {
+                                    updates.push({ ...p, wristbandSlot: '' });
+                                }
+                            }
                         });
                     }
                 }
 
-                updateCard(selectedCardId, { type: pendingLayout });
-                setShowLayoutConfirm(false);
-                setPendingLayout(null);
-            };
+                if (updates.length > 0) {
+                    onUpdatePlay(updates);
+                }
 
-            const handleLayoutChange = (newType) => {
-                setPendingLayout(newType);
-                setShowLayoutConfirm(true);
+                updateCard(selectedCardId, { type: newType });
             };
-
 
 
             const handleClearCard = (cardId) => {
@@ -6943,30 +6766,14 @@
                         });
                     } else {
                         // Standard Clear (works for Standard, Rooski, Mini-Scripts if they use slots)
-                        // UPDATE: Need to be robust for all types.
-                        // Standard: 101-199
-                        // Rooski (Wiz): 101-116 (but mapped to 1-16 visually, stored as 101?)
-                        // Wait, Wiz slots are stored as?
-                        // If I used getStartSlotForCard, I can see base is 100, 200 etc.
-                        // Standard uses 101..199.
-                        // Rooski uses 101..116? Or maybe just 1..16 if global?
-                        // Let's check how Rooski (Wiz) slots are generated.
-                        // In WristbandBuilder, Wiz just uses the grid.
-                        // The slots in grid are generated: 201, 202... for 200s card?
-                        // Yes, line 6428: map[cardId] || 100.
-                        // So for card2, slots are 201...216.
-                        // For Mini-Scripts: 201A, 201B...
-
-                        const start = cardId === 'card1' ? 100 : (cardId === 'card2' ? 200 : (cardId === 'card3' ? 300 : (cardId === 'card4' ? 400 : (cardId === 'card5' ? 500 : 600))));
-                        // range is start+1 to start+99 inclusive.
+                        const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
+                        const end = start + 99; // Allow for wider range (e.g. up to 199) to catch A/B slots if parsed as int
 
                         plays.forEach(play => {
                             if (play.wristbandSlot) {
-                                const slotStr = play.wristbandSlot.toString();
-                                const slotNum = parseInt(slotStr, 10);
-
-                                // Check if numeric part falls in range
-                                if (!isNaN(slotNum) && slotNum > start && slotNum < start + 100) {
+                                const slot = parseInt(play.wristbandSlot, 10);
+                                // Check if slot matches the card range (e.g. 101-199)
+                                if (!isNaN(slot) && slot >= start && slot < start + 100) {
                                     updates.push({ ...play, wristbandSlot: '' });
                                 }
                             }
@@ -7827,12 +7634,12 @@
 
                 // Determine which data to use based on type
                 let data = null;
-                if (type === 'skill' && (play.wizSkillData || play.rooskiSkillData)) {
-                    // wizSkillData is an array of elements
-                    data = { elements: play.wizSkillData || play.rooskiSkillData };
-                } else if (type === 'oline' && (play.wizOlineData || play.rooskiOlineData)) {
-                    // wizOlineData is an array of elements
-                    data = { elements: play.wizOlineData || play.rooskiOlineData };
+                if (type === 'skill' && play.rooskiSkillData) {
+                    // rooskiSkillData is an array of elements, wrap it in the expected structure
+                    data = { elements: play.rooskiSkillData };
+                } else if (type === 'oline' && play.rooskiOlineData) {
+                    // rooskiOlineData is an array of elements, wrap it in the expected structure
+                    data = { elements: play.rooskiOlineData };
                 } else if (play.diagramData) {
                     // diagramData should already have the { elements: [...] } structure
                     data = play.diagramData;
@@ -7929,7 +7736,7 @@
                 );
             };
 
-            const renderWizGrid = (slots, title, viewType) => {
+            const renderRooskiGrid = (slots, title, viewType) => {
                 // 4x4 Grid for 3x5 card - each cell has diagram on top, coordinate/name below
                 const rows = [];
                 for (let i = 0; i < slots.length; i += 4) {
@@ -7937,7 +7744,7 @@
                 }
 
                 return (
-                    <div className="wiz-grid-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
+                    <div className="rooski-grid-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black' }}>
                         {/* Header - Split layout */}
                         <div style={{
                             background: 'black',
@@ -7949,7 +7756,7 @@
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         }}>
-                            <span style={{ textTransform: 'uppercase' }}>WIZ</span>
+                            <span style={{ textTransform: 'uppercase' }}>ROOSKI</span>
                             <span>{title}</span>
                         </div>
                         {/* Grid */}
@@ -7963,11 +7770,9 @@
                                         let shouldShowPlay = false;
                                         if (play) {
                                             if (viewType === 'skill') {
-                                                // Show all plays except those explicitly marked for O-Line only
-                                                shouldShowPlay = !play.isOlineOnly;
+                                                shouldShowPlay = play.rooskiSkillData && !play.isOlineOnly;
                                             } else if (viewType === 'oline') {
-                                                // Show all plays in O-Line view
-                                                shouldShowPlay = true;
+                                                shouldShowPlay = play.rooskiOlineData;
                                             }
                                         }
 
@@ -7978,49 +7783,15 @@
                                             <div
                                                 key={slot}
                                                 style={{
-                                                    width: '25%', // Fixed width
-                                                    flexShrink: 0, // Prevent shrinking
+                                                    flex: 1,
                                                     borderRight: cIndex < 3 ? '1px solid black' : 'none',
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     cursor: isClickable ? 'pointer' : 'default',
-                                                    background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white',
-                                                    position: 'relative'
+                                                    background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white'
                                                 }}
                                                 onClick={() => handleAssignSlot(slot)}
                                             >
-                                                {/* Unassign Button (X) */}
-                                                {displayPlay && (
-                                                    <div
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onUpdatePlay(displayPlay.id, { wristbandSlot: '' });
-                                                        }}
-                                                        title="Unassign Play"
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: '2px',
-                                                            right: '2px',
-                                                            width: '14px',
-                                                            height: '14px',
-                                                            background: 'rgba(255, 255, 255, 0.9)',
-                                                            border: '1px solid #fee2e2',
-                                                            borderRadius: '3px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            cursor: 'pointer',
-                                                            fontSize: '10px',
-                                                            color: '#dc2626',
-                                                            fontWeight: 'bold',
-                                                            zIndex: 10
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#fee2e2'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)'}
-                                                    >
-                                                        ✕
-                                                    </div>
-                                                )}
                                                 {/* Diagram area - takes up most of the cell */}
                                                 <div style={{
                                                     flex: 1,
@@ -8036,109 +7807,41 @@
                                                 {/* Bottom row: Coordinate (left) | Play Name (right) */}
                                                 <div style={{
                                                     display: 'flex',
-                                                    borderTop: '1px solid #000',
-                                                    height: '14px',
-                                                    minHeight: '14px',
-                                                    background: '#fff'
+                                                    borderTop: '1px solid #ccc',
+                                                    height: '18px',
+                                                    minHeight: '18px'
                                                 }}>
                                                     {/* Coordinate cell */}
-                                                    <div
-                                                        onClick={(e) => {
-                                                            if (displayPlay) {
-                                                                e.stopPropagation();
-                                                                // Revert logic: Clear the specific name for the current view
-                                                                if (viewType === 'skill') {
-                                                                    onUpdatePlay(displayPlay.id, { wizSkillName: '' });
-                                                                } else if (viewType === 'oline') {
-                                                                    onUpdatePlay(displayPlay.id, { wizOlineName: '' });
-                                                                }
-                                                            }
-                                                        }}
-                                                        title="Click to revert to full play call"
-                                                        style={{
-                                                            width: '28px',
-                                                            minWidth: '28px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            fontSize: '7pt',
-                                                            fontWeight: 'bold',
-                                                            color: '#000',
-                                                            borderRight: '1px solid #000',
-                                                            background: 'white',
-                                                            cursor: displayPlay ? 'pointer' : 'default',
-                                                            lineHeight: 1
-                                                        }}>
+                                                    <div style={{
+                                                        width: '35px',
+                                                        minWidth: '35px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '8pt',
+                                                        fontWeight: 'bold',
+                                                        color: '#000',
+                                                        borderRight: '1px solid #ccc',
+                                                        background: 'white'
+                                                    }}>
                                                         {slot}
                                                     </div>
 
                                                     {/* Play name cell */}
-                                                    <div
-                                                        style={{
-                                                            flex: 1,
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            minWidth: 0, // Allow flex child to shrink below content size
-                                                            justifyContent: 'center',
-                                                            fontSize: '6.5pt',
-                                                            fontWeight: 'bold',
-                                                            padding: '0 2px',
-                                                            textAlign: 'center',
-                                                            lineHeight: 1,
-                                                            whiteSpace: 'nowrap',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            background: 'white'
-                                                        }}
-                                                        onClick={(e) => {
-                                                            if (displayPlay) {
-                                                                e.stopPropagation(); // Prevent slot assignment
-                                                                setEditingSlot(slot);
-
-                                                                // Resolve current name based on view
-                                                                let currentName = displayPlay.name;
-                                                                if (viewType === 'skill') {
-                                                                    currentName = displayPlay.wizSkillName || displayPlay.wizName || displayPlay.rooskiSkillName || displayPlay.rooskiName || displayPlay.name;
-                                                                } else if (viewType === 'oline') {
-                                                                    currentName = displayPlay.wizOlineName || displayPlay.wizName || displayPlay.rooskiOlineName || displayPlay.rooskiName || displayPlay.name;
-                                                                }
-
-                                                                setTempWizName(currentName);
-                                                            }
-                                                        }}
-                                                    >
-                                                        {editingSlot === slot ? (
-                                                            <input
-                                                                autoFocus
-                                                                value={tempWizName}
-                                                                onChange={(e) => setTempWizName(e.target.value)}
-                                                                startDate={(e) => e.stopPropagation()}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onBlur={() => handleSaveWizName(displayPlay.id, slot)}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') {
-                                                                        handleSaveWizName(displayPlay.id, slot);
-                                                                    }
-                                                                }}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '100%',
-                                                                    border: 'none',
-                                                                    outline: 'none',
-                                                                    textAlign: 'center',
-                                                                    fontSize: '7pt',
-                                                                    padding: 0,
-                                                                    margin: 0,
-                                                                    background: '#f0f9ff'
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            displayPlay ? (
-                                                                viewType === 'skill'
-                                                                    ? (displayPlay.wizSkillName || displayPlay.wizName || displayPlay.rooskiSkillName || displayPlay.rooskiName || displayPlay.name)
-                                                                    : (displayPlay.wizOlineName || displayPlay.wizName || displayPlay.rooskiOlineName || displayPlay.rooskiName || displayPlay.name)
-                                                            ) : ''
-                                                        )}
+                                                    <div style={{
+                                                        flex: 1,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '7pt',
+                                                        padding: '0 2px',
+                                                        textAlign: 'center',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        background: 'white'
+                                                    }}>
+                                                        {displayPlay ? displayPlay.name : ''}
                                                     </div>
                                                 </div>
                                             </div>
@@ -8151,132 +7854,609 @@
                 );
             };
 
+            // Card-specific slots
             const getSlotsForCard = (cardId) => {
-                if (cardId === 'staples') {
-                    // Staples: 10-89 (Standard convention)
-                    return Array.from({ length: 80 }, (_, i) => i + 10);
-                }
-                if (cardId === 'wiz') {
-                    return Array.from({ length: 16 }, (_, i) => `X${String(i + 1).padStart(2, '0')}`);
-                }
-                // Standard Cards
-                let start = 101;
-                if (cardId === 'card2') start = 201;
-                if (cardId === 'card3') start = 301;
-                if (cardId === 'card4') start = 401;
-                if (cardId === 'card5') start = 501;
-                if (cardId === 'card6') start = 601;
-                return Array.from({ length: 48 }, (_, i) => i + start);
-            };
+                const card = wbSettings[cardId];
 
-            const activeCard = wbSettings?.[selectedCardId] || { type: 'standard' };
+                if (card && card.type === 'staples') {
+                    const slots = [];
+                    for (let i = 10; i <= 89; i++) slots.push(i);
+                    return slots;
+                }
+
+                if (card && card.type === 'rooski') {
+                    // Rooski uses 16 slots: X01-X16 where X is the series number
+                    const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : (cardId === 'card3' ? 3 : (cardId === 'card4' ? 4 : (cardId === 'card5' ? 5 : 6))));
+                    const slots = [];
+                    for (let i = 1; i <= 16; i++) {
+                        slots.push(`${series}${String(i).padStart(2, '0')}`);
+                    }
+                    return slots;
+                }
+
+                // Standard/Modular use 48 slots
+                const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
+                const slots = [];
+                for (let i = start; i <= start + 47; i++) slots.push(i);
+                return slots;
+            };
 
             const renderMiniScriptEditorRows = (card, cardId) => {
-                const slots = getSlotsForCard(cardId);
-                // Render simple rows map
-                return (
-                    <div className="editor-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
-                        {slots.map(slot => {
-                            // Access item from nested structure if needed, or flat
-                            const item = (card.rows && card.rows[slot]) || {};
-                            return (
-                                <div key={slot} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px', border: '1px solid #eee', borderRadius: '4px' }}>
-                                    <div style={{ width: '40px', fontWeight: 'bold', textAlign: 'center', background: '#f0f0f0', borderRadius: '2px' }}>{slot}</div>
-                                    <input
-                                        value={item.col2 || ''}
-                                        onChange={(e) => updateCard(cardId, { rows: { ...(card.rows || {}), [slot]: { ...item, col2: e.target.value } } })}
-                                        className="form-control-sm"
-                                        style={{ flex: 1, border: '1px solid #ccc', borderRadius: '3px', padding: '2px 4px' }}
-                                        placeholder="Play Call"
-                                    />
-                                    <input
-                                        value={item.col3 || ''}
-                                        onChange={(e) => updateCard(cardId, { rows: { ...(card.rows || {}), [slot]: { ...item, col3: e.target.value } } })}
-                                        style={{ width: '50px', border: '1px solid #ccc', borderRadius: '3px', padding: '2px 4px' }}
-                                        placeholder="Tempo"
-                                    />
+                const rows = [];
+                const startCoord = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
+
+                let currentCoord = startCoord;
+
+                // Iterate through all rows directly
+                if (card.rows && card.rows.length > 0) {
+                    card.rows.forEach((item, i) => {
+                        if (item.type === 'header') {
+                            // Render Header
+                            rows.push(
+                                <div key={item.id} style={{ padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-input)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                        <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Header Label</label>
+                                        <input
+                                            value={item.label}
+                                            onChange={(e) => handleUpdateRow(selectedCardId, item.id, { label: e.target.value })}
+                                            style={{ width: '100%', fontWeight: 'bold', fontSize: '0.9rem', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                            placeholder="SECTION HEADER"
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Color</label>
+                                        <select
+                                            value={item.color || 'gray'}
+                                            onChange={(e) => handleUpdateRow(selectedCardId, item.id, { color: e.target.value })}
+                                            style={{ fontSize: '0.8rem', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                        >
+                                            <option value="gray">Gray</option>
+                                            <option value="black">Black</option>
+                                            <option value="red">Red</option>
+                                            <option value="blue">Blue</option>
+                                            <option value="green">Green</option>
+                                            <option value="orange">Orange</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '2px', alignSelf: 'flex-end', paddingBottom: '2px' }}>
+                                        <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, -1)} title="Move Up">↑</button>
+                                        <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, 1)} title="Move Down">↓</button>
+                                        <button className="btn btn-danger" style={{ padding: '4px 8px' }} onClick={() => handleRemoveRow(selectedCardId, item.id)} title="Delete Header">×</button>
+                                    </div>
                                 </div>
                             );
-                        })}
-                    </div>
-                );
+                        } else {
+                            // Render Play Row (3 Inputs: Play1, Tempo, Play2)
+                            rows.push(
+                                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '40px 80px 1fr 80px 1fr 80px', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                            {currentCoord}
+                                        </div>
+                                        <select
+                                            value={item.color || ''}
+                                            onChange={(e) => handleUpdateRow(selectedCardId, item.id, { color: e.target.value })}
+                                            style={{ width: '100%', fontSize: '0.6rem', padding: '1px', border: '1px solid var(--border)', borderRadius: '2px', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                                            title="Row Color"
+                                        >
+                                            <option value="">Default</option>
+                                            <option value="blue">Blue</option>
+                                            <option value="orange">Tan</option>
+                                            <option value="green">Green</option>
+                                            <option value="red">Red</option>
+                                            <option value="yellow">Yel</option>
+                                            <option value="purple">Purp</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Tempo (Left) */}
+                                    <input
+                                        value={item.col0 || ''}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col0: e.target.value })}
+                                        placeholder="Tempo"
+                                        style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem', textAlign: 'center', fontWeight: 'bold' }}
+                                    />
+
+                                    {/* Play 1 */}
+                                    <input
+                                        value={item.col1 || ''}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col1: e.target.value })}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const playName = e.dataTransfer.getData('text/plain');
+                                            if (playName) {
+                                                const p = plays.find(p => p.name === playName);
+                                                handleUpdateRow(selectedCardId, item.id, { col1: playName, col1Id: p ? p.id : null });
+                                            }
+                                        }}
+                                        placeholder="Play A"
+                                        style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    />
+
+                                    {/* Tempo (Middle) */}
+                                    <input
+                                        value={item.col2 || ''}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col2: e.target.value })}
+                                        placeholder="Tempo"
+                                        style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem', textAlign: 'center', fontWeight: 'bold' }}
+                                    />
+
+                                    {/* Play 2 */}
+                                    <input
+                                        value={item.col3 || ''}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col3: e.target.value })}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const playName = e.dataTransfer.getData('text/plain');
+                                            if (playName) {
+                                                const p = plays.find(p => p.name === playName);
+                                                handleUpdateRow(selectedCardId, item.id, { col3: playName, col3Id: p ? p.id : null });
+                                            }
+                                        }}
+                                        placeholder="Play B"
+                                        style={{ width: '100%', padding: '6px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-panel)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    />
+
+                                    {/* Actions */}
+                                    <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-end' }}>
+                                        <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, -1)} title="Move Up">↑</button>
+                                        <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={() => handleMoveRow(selectedCardId, item.id, 1)} title="Move Down">↓</button>
+                                        <button className="btn btn-danger" style={{ padding: '4px 8px' }} onClick={() => handleRemoveRow(selectedCardId, item.id)} title="Delete">×</button>
+                                    </div>
+                                </div>
+                            );
+                            currentCoord++;
+                        }
+                    });
+                }
+
+                return rows;
             };
 
+            const miniScripts = useMemo(() => {
+                return (gamePlan?.miniScripts || []);
+            }, [gamePlan]);
+
+            const activeCard = wbSettings[selectedCardId];
+
             return (
-                <div className="wristband-builder" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                    {/* Toolbar */}
-                    <div style={{ padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '0.5rem', overflowX: 'auto' }}>
-                        {['staples', 'card1', 'card2', 'card3', 'card4', 'card5', 'card6'].map(id => (
-                            <button
-                                key={id}
-                                onClick={() => setSelectedCardId(id)}
-                                className={`btn-sm ${selectedCardId === id ? 'btn-primary' : 'btn-secondary'}`}
-                                style={{ whiteSpace: 'nowrap', opacity: wbSettings?.enabledSections?.[id] === false ? 0.5 : 1 }}
-                            >
-                                {id.toUpperCase()}
-                            </button>
-                        ))}
-                        <button
-                            onClick={() => setSelectedCardId('wiz')}
-                            className={`btn-sm ${selectedCardId === 'wiz' ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            WIZ
-                        </button>
-                        <div style={{ flex: 1 }} />
-                        <button className="btn-sm btn-secondary" onClick={() => setShowConfigModal(true)}>
-                            <Icon name="Settings" size={14} /> Configure
-                        </button>
-                    </div>
+                <div style={{ display: 'flex', height: 'calc(100vh - 100px)', gap: '2rem' }}>
+                    {/* Left: Sidebar (Plays or Scripts) */}
+                    <div style={{ width: '250px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
 
-                    {/* Content */}
-                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-                        <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
-                            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h2 style={{ margin: 0, textTransform: 'uppercase' }}>{selectedCardId}</h2>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button className="btn-sm btn-danger" onClick={() => {
-                                        if (confirm("Are you sure you want to clear this card?")) {
-                                            updateCard(selectedCardId, { rows: {} });
-                                        }
-                                    }}>Clear Card</button>
-                                </div>
-                            </div>
 
-                            {/* Render Logic */}
-                            {(activeCard.type === 'wiz' || activeCard.type === 'rooski') ? (
-                                renderWizGrid(getSlotsForCard('wiz'), activeCard.opp || 'Wiz Card', activeCard.wizView || 'skill')
-                            ) : (
-                                renderMiniScriptEditorRows(activeCard, selectedCardId)
-                            )}
-                        </div>
-                    </div>
+                        {sidebarMode === 'plays' ? (
+                            <>
+                                <input
+                                    className="form-input"
+                                    placeholder="Search plays..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    style={{ marginBottom: '1rem' }}
+                                />
+                                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    {filteredPlays.map(play => (
+                                        <div
+                                            key={play.id}
+                                            draggable={true}
+                                            onDragStart={(e) => {
+                                                e.dataTransfer.setData('text/plain', play.name);
+                                            }}
+                                            onClick={() => {
+                                                if (activeCard && (activeCard.type === 'mini-scripts' || activeCard.type === 'modular')) {
+                                                    handleAddPlayRow(selectedCardId, play);
+                                                } else {
+                                                    setSelectedPlayId(play.id);
+                                                }
+                                            }}
+                                            style={{
+                                                padding: '0.35rem 0.5rem',
+                                                borderRadius: '4px',
+                                                border: '1px solid',
+                                                borderColor: selectedPlayId === play.id ? 'var(--accent)' : 'var(--border)',
+                                                backgroundColor: selectedPlayId === play.id ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-panel)',
+                                                cursor: 'pointer',
+                                                opacity: play.wristbandSlot ? 0.5 : 1
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    {play.priority && <Icon name="Star" size={12} style={{ fill: '#eab308', color: '#eab308' }} />}
 
-                    {/* Configuration Modal */}
-                    {showConfigModal && (
-                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', maxWidth: '500px', width: '100%' }}>
-                                <h3>Configuration</h3>
-                                <p>Enable Sections:</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {['staples', 'card1', 'card2', 'card3', 'card4', 'card5', 'card6'].map(sec => (
-                                        <label key={sec}>
-                                            <input
-                                                type="checkbox"
-                                                checked={wbSettings?.enabledSections?.[sec] !== false}
-                                                onChange={(e) => setWbSettings(prev => ({ ...prev, enabledSections: { ...prev.enabledSections, [sec]: e.target.checked } }))}
-                                            /> {sec.toUpperCase()}
-                                        </label>
+                                                    {/* Rooski Badge */}
+                                                    {play.isRooski && (
+                                                        <span style={{
+                                                            fontSize: '0.6rem',
+                                                            background: '#fee2e2',
+                                                            color: '#991b1b',
+                                                            padding: '1px 3px',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 'bold',
+                                                            border: '1px solid #fecaca'
+                                                        }}>R</span>
+                                                    )}
+
+                                                    {/* Mini Script Badge */}
+                                                    {play.isMiniScript && (
+                                                        <span style={{
+                                                            fontSize: '0.6rem',
+                                                            background: '#e0e7ff',
+                                                            color: '#3730a3',
+                                                            padding: '1px 3px',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 'bold',
+                                                            border: '1px solid #c7d2fe'
+                                                        }}>MS</span>
+                                                    )}
+
+                                                    <span>{play.name}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                    {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>}
+                                                    {play.staplesSlot && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '4px' }}>[{play.staplesSlot}]</span>}
+                                                </div>
+                                            </div>
+
+                                        </div>
                                     ))}
                                 </div>
-                                <div style={{ marginTop: '1rem', textAlign: 'right' }}>
-                                    <button className="btn btn-primary" onClick={() => setShowConfigModal(false)}>Done</button>
+                            </>
+                        ) : (
+                            <>
+                                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <div style={{ padding: '0.5rem', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '4px', marginBottom: '0.5rem' }}>
+                                        <h4 style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Tempo Protocols</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem' }}>
+                                            {CALENDAR_CONSTANTS.PRACTICE_TEMPO_PROTOCOLS.map(p => (
+                                                <button
+                                                    key={p.id}
+                                                    onClick={() => handleAddTempoRow(selectedCardId, p.id)}
+                                                    className="btn btn-secondary"
+                                                    style={{ fontSize: '0.7rem', padding: '4px' }}
+                                                >
+                                                    + {p.code}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <h4 style={{ fontSize: '0.8rem', margin: '0.5rem 0' }}>Mini Scripts</h4>
+                                    {miniScripts.map((script, idx) => (
+                                        <div
+                                            key={script.id || idx}
+                                            onClick={() => handleAddScriptRows(selectedCardId, script)}
+                                            style={{
+                                                padding: '0.5rem',
+                                                borderRadius: '4px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-panel)',
+                                                cursor: 'pointer'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                                        >
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>{script.name}</div>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                                                {script.playIds?.length || 0} plays
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {miniScripts.length === 0 && (
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
+                                            No mini scripts found in game plan
+                                        </div>
+                                    )}
                                 </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Right: Main Content */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        {/* Header Tabs */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                {['staples', 'card1', 'card2', 'card3', 'card4', 'card5', 'card6'].map(id => (
+                                    <button
+                                        key={id}
+                                        onClick={() => setSelectedCardId(id)}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            borderRadius: '6px 6px 0 0',
+                                            border: '1px solid var(--border)',
+                                            borderBottom: selectedCardId === id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                                            background: selectedCardId === id ? 'var(--bg-panel)' : 'transparent',
+                                            color: selectedCardId === id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {id === 'card1' ? '100s' : (id === 'card2' ? '200s' : (id === 'card3' ? '300s' : (id === 'card4' ? '400s' : (id === 'card5' ? '500s' : (id === 'card6' ? '600s' : 'STAPLES')))))}
+                                    </button>
+                                ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="btn btn-secondary" onClick={() => onNavigate && onNavigate('print-hub')}>Print</button>
+                                <button className="btn btn-danger" onClick={() => handleClearCard(selectedCardId)}>Clear Card</button>
+                                <button className="btn btn-danger" onClick={handleClearBoth} style={{ fontWeight: 'bold' }}>Clear All</button>
                             </div>
                         </div>
-                    )}
+
+
+                        {/* Card Settings Bar */}
+                        {activeCard && (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                padding: '0.75rem',
+                                background: 'var(--bg-panel)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '4px',
+                                marginBottom: '1rem'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Layout:</label>
+                                    <select
+                                        className="form-input"
+                                        style={{ width: 'auto', padding: '4px 8px' }}
+                                        value={activeCard.type}
+                                        onChange={e => handleLayoutChange(e.target.value)}
+                                        disabled={selectedCardId === 'staples'}
+                                    >
+                                        <option value="standard">Standard (Traditional)</option>
+
+                                        <option value="mini-scripts">Mini-Scripts</option>
+
+                                        <option value="rooski">Rooski (16-slot grid)</option>
+
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Opponent:</label>
+                                    <input
+                                        className="form-input"
+                                        style={{ width: '120px', padding: '4px 8px' }}
+                                        onChange={e => updateCard(selectedCardId, { opp: e.target.value })}
+                                        placeholder="Opponent"
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Iter:</label>
+                                    <input
+                                        style={{ width: '50px', padding: '4px 8px' }}
+                                        value={activeCard.iter}
+                                        onChange={e => updateCard(selectedCardId, { iter: e.target.value })}
+                                        placeholder="1"
+                                    />
+                                </div>
+                                {(activeCard.type === 'standard' || activeCard.type === 'audible') && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Color:</label>
+                                        <select
+                                            className="form-input"
+                                            style={{ width: 'auto', padding: '4px 8px' }}
+                                            value={activeCard.color || 'none'}
+                                            onChange={e => updateCard(selectedCardId, { color: e.target.value })}
+                                        >
+                                            <option value="none">None (White)</option>
+                                            <option value="green">Green</option>
+                                            <option value="orange">Orange</option>
+                                            <option value="red">Red</option>
+                                            <option value="blue">Blue</option>
+                                            <option value="yellow">Yellow</option>
+                                            <option value="purple">Purple</option>
+                                            <option value="teal">Teal</option>
+                                            <option value="pink">Pink</option>
+                                        </select>
+                                    </div>
+                                )}
+                                {activeCard.type === 'rooski' && (
+                                    <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>View:</label>
+                                            <select
+                                                className="form-input"
+                                                style={{ width: 'auto', padding: '4px 8px' }}
+                                                value={activeCard.rooskiView || 'skill'}
+                                                onChange={e => updateCard(selectedCardId, { rooskiView: e.target.value })}
+                                            >
+                                                <option value="skill">Skill Positions</option>
+                                                <option value="oline">O-Line</option>
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Rendering Logic */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+                            {selectedCardId === 'staples' ? (
+                                <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
+                                        <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>STAPLES</span>
+                                        <span style={{ fontWeight: 'bold' }}>10-89</span>
+                                    </div>
+                                    {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, 'STAPLES')}
+                                </div>
+                            ) : (activeCard.type === 'mini-scripts') ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button className="btn btn-secondary" onClick={() => handleAddHeaderRow(selectedCardId)} style={{ fontSize: '0.8rem' }}>+ Add Section Header</button>
+                                    </div>
+                                    {/* Modular Editor List */}
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {/* Header */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '40px 80px 1fr 80px 1fr 80px', gap: '0.5rem', padding: '0 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                                                <div style={{ textAlign: 'center' }}>#</div>
+                                                <div style={{ textAlign: 'center' }}>Tempo</div>
+                                                <div>Play A</div>
+                                                <div style={{ textAlign: 'center' }}>Tempo</div>
+                                                <div>Play B</div>
+                                                <div></div>
+                                            </div>
+                                            {/* Rows */}
+                                            {renderMiniScriptEditorRows(activeCard, selectedCardId)}
+                                        </div>
+                                    </div>
+
+                                    {/* Split Preview */}
+                                    <div style={{ width: '100%' }}>
+                                        <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Preview</h3>
+                                        {activeCard.type === 'mini-scripts' ? (
+                                            <div style={{
+                                                background: 'white',
+                                                padding: '1rem',
+                                                border: '2px solid #333',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                                width: '100%',
+                                                maxWidth: '600px',
+                                                margin: '0 auto',
+                                                aspectRatio: '5/3',
+                                                color: 'black'
+                                            }}>
+                                                {/* Header REMOVED per user request
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '2px solid #333' }}>
+                                                    <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.9rem' }}>{activeCard.opp || 'OPPONENT'}</span>
+                                                    <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Card {selectedCardId === 'card1' ? '1' : (selectedCardId === 'card2' ? '2' : (selectedCardId === 'card3' ? '3' : (selectedCardId === 'card4' ? '4' : (selectedCardId === 'card5' ? '5' : '6'))))}{activeCard.iter ? ` - Iter ${activeCard.iter}` : ''}</span>
+                                                </div>
+                                                */}
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'modular-preview', selectedCardId, activeCard.opp || activeCard.opponent || '')}
+                                            </div>
+                                        ) : (
+                                            <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                                {/*
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
+                                                    <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
+                                                    <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
+                                                </div>
+                                                */}
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : activeCard ? (
+                                <div style={{ maxWidth: '800px', width: '600px', margin: '0 auto', background: 'white', color: 'black', padding: '1.5rem', border: '2px solid #333', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', aspectRatio: '5/3' }}>
+                                    {/*
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--accent)' }}>
+                                        <span style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{activeCard.opp || 'OPPONENT'}</span>
+                                        <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
+                                    </div>
+                                    */}
+                                    {activeCard.type === 'rooski' ? (
+                                        <div style={{
+                                            width: '100%',
+                                            aspectRatio: '5 / 3',
+                                            margin: '0 auto'
+                                        }}>
+                                            {renderRooskiGrid(
+                                                getSlotsForCard(selectedCardId),
+                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                activeCard.rooskiView || 'skill'
+                                            )}
+                                        </div>
+                                    ) : activeCard.type === 'audible' ? (
+                                        renderAudibleTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
+                                    ) : (
+                                        renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
+                                    )}
+                                </div>
+                            ) : null}\n                        </div>
+                    </div>
+
+                    {/* Print Layout (hidden on screen, shown when printing) */}
+                    {selectedCardId === 'staples' ? (
+                        <div className="wristband-print-container" style={{ display: 'none' }}>
+                            <div className="wristband-print-grid">
+                                {/* Render 4 identical copies of the Staples card */}
+                                {[1, 2, 3, 4].map(copyNum => (
+                                    <div key={copyNum} className="wristband-print-card">
+                                        <>
+                                            {/* Header */}
+                                            <div className="print-card-header">
+                                                <span>STAPLES</span>
+                                                <span>10-89</span>
+                                            </div>
+                                            {/* Content */}
+                                            <div className="print-card-content">
+                                                {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, 'STAPLES')}
+                                            </div>
+                                        </>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : activeCard && activeCard.type === 'rooski' ? (
+                        <>
+                            {/* Skill Version - Page 1 */}
+                            <div className="wristband-print-container" style={{ display: 'none', pageBreakAfter: 'always' }}>
+                                <div className="wristband-print-grid">
+                                    {[1, 2, 3, 4].map(copyNum => (
+                                        <div key={copyNum} className="wristband-print-card">
+                                            {renderRooskiGrid(
+                                                getSlotsForCard(selectedCardId),
+                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                'skill'
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* O-Line Version - Page 2 */}
+                            <div className="wristband-print-container" style={{ display: 'none' }}>
+                                <div className="wristband-print-grid">
+                                    {[1, 2, 3, 4].map(copyNum => (
+                                        <div key={copyNum} className="wristband-print-card">
+                                            {renderRooskiGrid(
+                                                getSlotsForCard(selectedCardId),
+                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                'oline'
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    ) : activeCard ? (
+                        <div className="wristband-print-container" style={{ display: 'none' }}>
+                            <div className="wristband-print-grid">
+                                {/* Render 4 identical copies of the active card */}
+                                {[1, 2, 3, 4].map(copyNum => {
+                                    return (
+                                        <div key={copyNum} className="wristband-print-card">
+                                            <>
+                                                {/* Header */}
+                                                <div className="print-card-header">
+                                                    <span>{activeCard.opp || 'OPPONENT'}</span>
+                                                    <span>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
+                                                </div>
+                                                {/* Content */}
+                                                <div className="print-card-content">
+                                                    {activeCard.type === 'audible'
+                                                        ? renderAudibleTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
+                                                        : renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
+                                                    }
+                                                </div>
+                                            </>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             );
+
         };
+
+        // New print card component for spreadsheet style
 
         // New print card component for spreadsheet style
         const WristbandPrintCardSpreadsheet = ({ title, slots, slotMap, colorClass }) => {
