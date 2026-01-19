@@ -25441,7 +25441,7 @@
                 }
             });
 
-            const setValue = (value) => {
+            const setValue = React.useCallback((value) => {
                 try {
                     const valueToStore = value instanceof Function ? value(storedValue) : value;
                     setStoredValue(valueToStore);
@@ -25449,7 +25449,7 @@
                 } catch (error) {
                     console.error(error);
                 }
-            };
+            }, [key, storedValue]);
 
             return [storedValue, setValue];
         };
@@ -29360,19 +29360,20 @@
             // Side Menu State
             const [showSideMenu, setShowSideMenu] = useState(false);
 
-            // Effect to collapse global sidebar when local side menu is open
-            useEffect(() => {
-                if (showSideMenu && setAppSidebarCollapsed) {
+            // Function to toggle side menu and collapse global sidebar
+            const handleToggleSideMenu = (newState) => {
+                setShowSideMenu(newState);
+                if (newState && setAppSidebarCollapsed) {
                     setAppSidebarCollapsed(true);
                 }
-            }, [showSideMenu, setAppSidebarCollapsed]);
+            };
 
             // Effect to close right side menu when left sidebar is expanded
             useEffect(() => {
-                if (appSidebarCollapsed === false && showSideMenu) {
+                if (!appSidebarCollapsed && showSideMenu) {
                     setShowSideMenu(false);
                 }
-            }, [appSidebarCollapsed]);
+            }, [appSidebarCollapsed, showSideMenu]);
 
             // For Wristband Autocomplete
             const [showWristband, setShowWristband] = useState(true);
@@ -35250,7 +35251,7 @@
                             practicePlans={practicePlans}
                             onQuickAddPlay={onQuickAddPlay}
                             isOpen={showSideMenu}
-                            onToggle={setShowSideMenu}
+                            onToggle={handleToggleSideMenu}
                             weekStats={weekStats}
                             gamePlan={gamePlan}
                             gamePlanLayouts={gamePlanLayouts}
