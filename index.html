@@ -29997,7 +29997,7 @@
                 };
 
                 return (
-                    <div style={{ padding: '0.25rem' }}>
+                    <div style={{ padding: '0' }}>
                         {playsInSet.map((p, pIdx) => (
                             <div key={`${p.id}_${pIdx}`} style={{
                                 display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 0', position: 'relative',
@@ -30680,7 +30680,7 @@
                 };
 
                 return (
-                    <div style={{ position: 'relative', width: '100%', marginTop: '4px' }}>
+                    <div style={{ position: 'relative', width: '100%', marginTop: '0' }}>
                         <input
                             ref={inputRef}
                             type="text"
@@ -33857,12 +33857,10 @@
                                             <td
                                                 colSpan={columnGroups.reduce((acc, g) => {
                                                     if (collapsedGroups.has(g.id)) return acc + 1;
-                                                    let cols = 2;
-                                                    if (collapsedHashColumns.has(`${g.id}_LEFT`)) cols--;
-                                                    if (collapsedHashColumns.has(`${g.id}_RIGHT`)) cols--;
-                                                    return acc + cols;
+                                                    // Always count 2 columns per group (visible + collapsed)
+                                                    return acc + 2;
                                                 }, 1)}
-                                                style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold', backgroundColor: formation.color, color: 'white', fontSize: '0.9rem', cursor: 'pointer' }}
+                                                style={{ padding: '2px 4px', border: '1px solid var(--border)', fontWeight: 'bold', backgroundColor: formation.color, color: 'white', fontSize: '0.8rem', lineHeight: '1.1', cursor: 'pointer' }}
                                                 onClick={() => setEditingFormationId(formation.id)}
                                             >
                                                 {editingFormationId === formation.id ? (
@@ -33886,10 +33884,8 @@
                                             const isRowCollapsed = collapsedRows.has(playType.id);
                                             const totalColSpan = columnGroups.reduce((acc, g) => {
                                                 if (collapsedGroups.has(g.id)) return acc + 1;
-                                                let cols = g.cols.length;
-                                                if (collapsedHashColumns.has(`${g.id}_LEFT`)) cols--;
-                                                if (collapsedHashColumns.has(`${g.id}_RIGHT`)) cols--;
-                                                return acc + cols;
+                                                // Always count full columns (2)
+                                                return acc + g.cols.length;
                                             }, 1);
 
                                             if (isRowCollapsed) {
@@ -33922,7 +33918,7 @@
                                                 <tr key={`${formation.id}_${playType.id}`}>
                                                     <td
                                                         style={{
-                                                            padding: '0.5rem',
+                                                            padding: '2px 4px',
                                                             border: '1px solid var(--border)',
                                                             fontWeight: 'bold',
                                                             backgroundColor: '#dbeafe',
@@ -33930,7 +33926,9 @@
                                                             left: 0,
                                                             zIndex: 5,
                                                             cursor: 'pointer',
-                                                            color: '#1e40af'
+                                                            color: '#1e40af',
+                                                            fontSize: '0.75rem',
+                                                            lineHeight: '1.1'
                                                         }}
                                                         onClick={() => toggleRow(playType.id)}
                                                         title="Click to collapse row"
@@ -33956,18 +33954,24 @@
                                                                 </td>
                                                             );
                                                         } else {
-                                                            // Show expanded columns, but skip collapsed hash columns
+                                                            // Show expanded columns
                                                             return group.cols.map(col => {
-                                                                // Skip LEFT HASH if collapsed
-                                                                if (col.id === 'LEFT' && leftHashCollapsed) return null;
-                                                                // Skip RIGHT HASH if collapsed
-                                                                if (col.id === 'RIGHT' && rightHashCollapsed) return null;
+                                                                const commonStyle = { padding: '0', border: '1px solid #e2e8f0', verticalAlign: 'middle', backgroundColor: '#f8fafc', width: '20px' };
+
+                                                                // Show placeholder for collapsed LEFT HASH
+                                                                if (col.id === 'LEFT' && leftHashCollapsed) {
+                                                                    return <td key={`matrix_${formation.id}_${playType.id}_${col.id}_collapsed`} style={commonStyle}></td>;
+                                                                }
+                                                                // Show placeholder for collapsed RIGHT HASH
+                                                                if (col.id === 'RIGHT' && rightHashCollapsed) {
+                                                                    return <td key={`matrix_${formation.id}_${playType.id}_${col.id}_collapsed`} style={commonStyle}></td>;
+                                                                }
 
                                                                 const setId = `matrix_${formation.id}_${playType.id}_${col.id}`;
                                                                 return (
                                                                     <td
                                                                         key={setId}
-                                                                        style={{ padding: '0.25rem', border: '1px solid #ddd', verticalAlign: 'top', cursor: 'default', minHeight: '60px', backgroundColor: 'white' }}
+                                                                        style={{ padding: '0', border: '1px solid #ddd', verticalAlign: 'top', cursor: 'default', backgroundColor: 'white', lineHeight: '1' }}
                                                                     >
                                                                         {renderPlayListSimple(setId)}
                                                                         {onQuickAddPlay && (
@@ -35188,8 +35192,43 @@
             return (
                 <div className="game-plan-container" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)', gap: '1rem' }}>
 
+                    <style media="print">{`
+                        @media print {
+                            @page {
+                                size: ${viewMode === 'sheet' ? 'landscape' : 'portrait'};
+                                margin: 0.25in;
+                            }
+                            body { 
+                                margin: 0; 
+                                padding: 0; 
+                                -webkit-print-color-adjust: exact !important; 
+                                print-color-adjust: exact !important; 
+                            }
+                            .sidebar, .app-sidebar, header, nav, .app-toolbar, .no-print { 
+                                display: none !important; 
+                            }
+                            /* OVERRIDE AGGRESSIVE HIDING */
+                            .main-content > * { display: block !important; }
+                            .main-content > *:not(.wristband-print-container) { display: block !important; }
+                            
+                            .game-plan-container, .game-plan-content {
+                                display: block !important; /* Kill Flexbox for print */
+                                width: 100% !important;
+                                height: auto !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                overflow: visible !important;
+                                border: none !important;
+                            }
+                            ${viewMode === 'sheet' ? `
+                                .game-plan-content {
+                                    zoom: 0.75;
+                                }
+                            ` : ''}
+                        }
+                    `}</style>
                     {/* Toolbar */}
-                    <div className="app-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
+                    <div className="app-toolbar no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                             <button
                                 className="btn"
@@ -35226,8 +35265,8 @@
                             <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')} style={{ height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 PLAYER TOUCHES
                             </button>
-                            <button className={`btn ${showPrintPreview ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowPrintPreview(!showPrintPreview)} style={{ border: '2px solid var(--accent)', height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
-                                {showPrintPreview ? 'CLOSE PREVIEW' : 'PRINT PREVIEW'}
+                            <button className="btn btn-secondary" onClick={() => window.print()} style={{ border: '2px solid var(--accent)', height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
+                                <Icon name="Printer" size={16} style={{ marginBottom: '4px' }} /> PRINT
                             </button>
                         </div>
 
@@ -35246,19 +35285,21 @@
                             {viewMode === 'priority' && renderPriorityPlays()}
                             {viewMode === 'staples' && renderStaples()}
                         </div>
-                        <GamePlannerSideMenu
-                            plays={plays}
-                            practicePlans={practicePlans}
-                            onQuickAddPlay={onQuickAddPlay}
-                            isOpen={showSideMenu}
-                            onToggle={handleToggleSideMenu}
-                            weekStats={weekStats}
-                            gamePlan={gamePlan}
-                            gamePlanLayouts={gamePlanLayouts}
-                            playBuckets={playBuckets}
-                            playCategories={playCategories}
-                            onAddSection={(newLayouts) => onUpdateLayouts(newLayouts)}
-                        />
+                        <div className="no-print">
+                            <GamePlannerSideMenu
+                                plays={plays}
+                                practicePlans={practicePlans}
+                                onQuickAddPlay={onQuickAddPlay}
+                                isOpen={showSideMenu}
+                                onToggle={handleToggleSideMenu}
+                                weekStats={weekStats}
+                                gamePlan={gamePlan}
+                                gamePlanLayouts={gamePlanLayouts}
+                                playBuckets={playBuckets}
+                                playCategories={playCategories}
+                                onAddSection={(newLayouts) => onUpdateLayouts(newLayouts)}
+                            />
+                        </div>
                     </div>
 
                     {/* Play Selector Modal */}
