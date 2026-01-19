@@ -114,7 +114,15 @@
             display: none;
         }
 
+        .print-only-text {
+            display: none !important;
+        }
+
         @media print {
+            .print-only-text {
+                display: block !important;
+            }
+
             @page {
                 size: landscape !important;
                 margin: 0.25in !important;
@@ -139,6 +147,50 @@
             input,
             select {
                 display: none !important;
+            }
+
+            /* Compact FZDnD Rows for Print */
+            .fzdnd-row-container {
+                min-height: 22px !important;
+                border: 1px solid black !important;
+                border-top: none !important;
+                /* Avoid double top borders */
+                border-left: 1px solid black !important;
+                /* Ensure left border */
+                border-right: 1px solid black !important;
+                /* Ensure right border */
+            }
+
+            .fzdnd-cell {
+                min-height: 22px !important;
+                padding: 1px 2px !important;
+                border-bottom: 1px solid black !important;
+                border-right: 1px solid black !important;
+            }
+
+            .fzdnd-cell:last-child {
+                border-right: none !important;
+                /* Container handles the right edge, or keep it if container lacks it? Container has right border now. */
+            }
+
+            .fzdnd-cell input {
+                height: 18px !important;
+                font-size: 0.65rem !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            /* Toggle Cell in Print */
+            .fzdnd-toggle-cell {
+                border-right: 1px solid black !important;
+                border-bottom: 1px solid black !important;
+                background: transparent !important;
+            }
+
+            /* Header Row for Print */
+            .fzdnd-header-row {
+                border-left: 1px solid black !important;
+                border-right: 1px solid black !important;
             }
 
             .print-only-scripts {
@@ -33196,20 +33248,28 @@
                                                         onUpdateGamePlan({ ...gamePlan, customZones: newCustomZones });
                                                     }}
                                                     disabled={isLocked}
+                                                    className="hide-on-print"
                                                     style={{
                                                         flex: 1,
                                                         background: 'transparent',
                                                         border: 'none',
                                                         color: zoneTextColor,
-                                                        fontWeight: '900',
-                                                        fontSize: '1.0rem',
+                                                        fontWeight: 'bold',
+                                                        fontSize: '1rem',
                                                         textTransform: 'uppercase',
-                                                        fontStyle: 'italic',
-                                                        textAlign: 'center',
                                                         outline: 'none',
                                                         cursor: isLocked ? 'default' : 'text'
                                                     }}
                                                 />
+                                                <span className="print-only-text" style={{
+                                                    flex: 1,
+                                                    color: zoneTextColor,
+                                                    fontWeight: 'bold',
+                                                    fontSize: '1rem',
+                                                    textTransform: 'uppercase'
+                                                }}>
+                                                    {zoneTitle}
+                                                </span>
                                                 {!isLocked && (
                                                     <input
                                                         type="color"
@@ -33264,7 +33324,7 @@
                                             {definedCols.length > 0 && (
                                                 <>
                                                     {/* COLUMN HEADERS */}
-                                                    <div style={{
+                                                    <div className="fzdnd-header-row" style={{
                                                         display: 'grid',
                                                         gridTemplateColumns: `40px repeat(${definedCols.length}, minmax(0, 1fr))`,
                                                         borderBottom: '1px solid black'
@@ -33306,6 +33366,15 @@
                                                                         cursor: isLocked ? 'default' : 'text'
                                                                     }}
                                                                 />
+                                                                <span className="print-only-text" style={{
+                                                                    color: 'black',
+                                                                    fontWeight: '800',
+                                                                    fontSize: '0.85rem',
+                                                                    fontStyle: 'italic',
+                                                                    textAlign: 'center'
+                                                                }}>
+                                                                    {customCols[cIdx] || colName}
+                                                                </span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -33319,6 +33388,7 @@
                                                             return (
                                                                 <div
                                                                     key={`row-${rowIdx}`}
+                                                                    className="hide-on-print"
                                                                     onClick={() => toggleFZDnDRow(zone.id, rowIdx)}
                                                                     style={{
                                                                         padding: '4px 8px',
@@ -33343,6 +33413,7 @@
                                                         return (
                                                             <div
                                                                 key={`row-${rowIdx}`}
+                                                                className="fzdnd-row-container"
                                                                 style={{
                                                                     display: 'grid',
                                                                     gridTemplateColumns: `40px repeat(${definedCols.length}, minmax(0, 1fr))`,
@@ -33351,6 +33422,7 @@
                                                             >
                                                                 {/* COLLAPSE ARROW */}
                                                                 <div
+                                                                    className="fzdnd-toggle-cell"
                                                                     onClick={() => toggleFZDnDRow(zone.id, rowIdx)}
                                                                     style={{
                                                                         borderRight: '1px solid black',
@@ -33365,7 +33437,7 @@
                                                                     }}
                                                                     title="Click to collapse row"
                                                                 >
-                                                                    ▼
+                                                                    <span className="hide-on-print">▼</span>
                                                                 </div>
 
                                                                 {/* CELLS FOR EACH COLUMN */}
@@ -33378,6 +33450,7 @@
                                                                     return (
                                                                         <div
                                                                             key={`cell-${cIdx}`}
+                                                                            className="fzdnd-cell"
                                                                             style={{
                                                                                 borderRight: cIdx < definedCols.length - 1 ? '1px solid black' : 'none',
                                                                                 borderBottom: '1px solid #e2e8f0',
