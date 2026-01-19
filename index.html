@@ -6390,6 +6390,38 @@
             );
         };
 
+        const checkRedundantFormation = (playName, formationName) => {
+            if (!playName || !formationName) return false;
+            const pName = playName.toLowerCase();
+            const fName = formationName.toLowerCase();
+
+            // 1. Direct Check
+            if (pName.includes(fName)) return true;
+
+            // 2. Abbreviation Check
+            const abbreviations = {
+                'green': 'grn',
+                'orange': 'orng',
+                'yellow': 'ylw',
+                'blue': 'blu',
+                'gold': 'gld',
+                'black': 'blk',
+                'white': 'wht',
+                'brown': 'brn',
+                'right': 'rt',
+                'left': 'lt'
+            };
+
+            let normalizedFormation = fName;
+            Object.keys(abbreviations).forEach(full => {
+                normalizedFormation = normalizedFormation.replace(new RegExp(full, 'g'), abbreviations[full]);
+            });
+
+            if (pName.includes(normalizedFormation)) return true;
+
+            return false;
+        };
+
         const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [] }) => {
             const { currentUser } = useAuth();
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
@@ -7112,7 +7144,7 @@
                         return {
                             slot: slot,
                             type: 'play',
-                            text: play ? `${play.name}${play.formation ? ' - ' + play.formation : ''}` : '',
+                            text: play ? `${play.name}${play.formation && !checkRedundantFormation(play.name, play.formation) ? ' - ' + play.formation : ''}` : '',
                             play: play
                         };
                     });
@@ -7666,7 +7698,7 @@
                     const play = slotMap[slot];
                     return {
                         slot: slot,
-                        text: play ? `${play.name}${play.formation ? ' - ' + play.formation : ''}` : '',
+                        text: play ? `${play.name}${play.formation && !checkRedundantFormation(play.name, play.formation) ? ' - ' + play.formation : ''}` : '',
                         play: play
                     };
                 });
@@ -19846,7 +19878,7 @@
                                 >
                                     <option value="">-- Select Play --</option>
                                     {plays.map(p => (
-                                        <option key={p.id} value={p.id}>{p.formation} - {p.name}</option>
+                                        <option key={p.id} value={p.id}>{p.formation && !checkRedundantFormation(p.name, p.formation) ? `${p.formation} - ` : ''}{p.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -20147,7 +20179,7 @@
                                         <td style={{ padding: '0.75rem 0.5rem' }}>{formatYardLine(entry.situation.yardLine)}</td>
                                         <td style={{ padding: '0.75rem 0.5rem' }}>{entry.situation.hash}</td>
                                         <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>
-                                            {entry.play.formation} - {entry.play.name}
+                                            {entry.play.formation && !checkRedundantFormation(entry.play.name, entry.play.formation) ? `${entry.play.formation} - ` : ''}{entry.play.name}
                                         </td>
                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                             <span style={{ color: entry.result.yards >= 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
@@ -27920,7 +27952,7 @@
                                     let text = '';
                                     const play = plays.find(p => p.id === row.playId);
                                     text = play ? (row.playName || play.name) : 'Unknown';
-                                    if (play && play.formation) text += ' - ' + play.formation;
+                                    if (play && play.formation && !play.name.toLowerCase().includes(play.formation.toLowerCase())) text += ' - ' + play.formation;
 
                                     displayRows.push({
                                         slot: currentLogical,
@@ -27962,7 +27994,7 @@
 
                                 return {
                                     slot: slot,
-                                    text: play ? `${play.name}${play.formation ? ' - ' + play.formation : ''}` : '',
+                                    text: play ? `${play.name}${play.formation && !checkRedundantFormation(play.name, play.formation) ? ' - ' + play.formation : ''}` : '',
                                     type: 'play',
                                     color: rowColor
                                 };
@@ -33273,27 +33305,50 @@
                                                     {zoneTitle}
                                                 </span>
                                                 {!isLocked && (
-                                                    <input
-                                                        type="color"
-                                                        value={zoneColor}
-                                                        onChange={(e) => {
-                                                            const newCustomZones = { ...(gamePlan?.customZones || {}) };
-                                                            newCustomZones[zone.id] = {
-                                                                ...newCustomZones[zone.id],
-                                                                color: e.target.value
-                                                            };
-                                                            onUpdateGamePlan({ ...gamePlan, customZones: newCustomZones });
-                                                        }}
-                                                        style={{
-                                                            width: '18px',
-                                                            height: '18px',
-                                                            border: '1px solid rgba(0,0,0,0.3)',
-                                                            borderRadius: '3px',
-                                                            cursor: 'pointer',
-                                                            padding: 0
-                                                        }}
-                                                        title="Change zone color"
-                                                    />
+                                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                                        <input
+                                                            type="color"
+                                                            value={zoneColor}
+                                                            onChange={(e) => {
+                                                                const newCustomZones = { ...(gamePlan?.customZones || {}) };
+                                                                newCustomZones[zone.id] = {
+                                                                    ...newCustomZones[zone.id],
+                                                                    color: e.target.value
+                                                                };
+                                                                onUpdateGamePlan({ ...gamePlan, customZones: newCustomZones });
+                                                            }}
+                                                            style={{
+                                                                width: '18px',
+                                                                height: '18px',
+                                                                border: '1px solid rgba(0,0,0,0.3)',
+                                                                borderRadius: '3px',
+                                                                cursor: 'pointer',
+                                                                padding: 0
+                                                            }}
+                                                            title="Change zone color"
+                                                        />
+                                                        <input
+                                                            type="color"
+                                                            value={zoneTextColor}
+                                                            onChange={(e) => {
+                                                                const newCustomZones = { ...(gamePlan?.customZones || {}) };
+                                                                newCustomZones[zone.id] = {
+                                                                    ...newCustomZones[zone.id],
+                                                                    textColor: e.target.value
+                                                                };
+                                                                onUpdateGamePlan({ ...gamePlan, customZones: newCustomZones });
+                                                            }}
+                                                            style={{
+                                                                width: '18px',
+                                                                height: '18px',
+                                                                border: '1px solid rgba(0,0,0,0.3)',
+                                                                borderRadius: '3px',
+                                                                cursor: 'pointer',
+                                                                padding: 0
+                                                            }}
+                                                            title="Change text color"
+                                                        />
+                                                    </div>
                                                 )}
                                             </div>
 
