@@ -29654,6 +29654,13 @@
                 query: ''
             });
 
+            // For FZDnD wristband autocomplete
+            const [fzdndWbAutocomplete, setFzdndWbAutocomplete] = useState({
+                playId: null,
+                query: ''
+            });
+
+
             // Helper to create new play from FZDnD autocomplete
             const createFZDnDPlay = (playName, zoneId, rowIdx, colIdx) => {
                 if (!onQuickAddPlay) return;
@@ -33383,27 +33390,127 @@
                                                                                 }}>
                                                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
-                                                                                        {/* WRISTBAND INPUT */}
-                                                                                        <div style={{ position: 'relative', width: '36px' }}>
-                                                                                            <input
-                                                                                                type="text"
-                                                                                                value={play.wristbandSlot || ''}
-                                                                                                placeholder="#"
-                                                                                                onChange={(e) => updatePlayWristband(play.id, e.target.value)}
-                                                                                                onClick={(e) => e.stopPropagation()}
-                                                                                                style={{
-                                                                                                    width: '100%',
-                                                                                                    fontSize: '0.75rem',
-                                                                                                    padding: '2px 4px',
-                                                                                                    border: '1px solid #94a3b8',
-                                                                                                    borderRadius: '4px',
-                                                                                                    textAlign: 'center',
-                                                                                                    background: play.wristbandSlot ? '#dbeafe' : 'white',
-                                                                                                    color: play.wristbandSlot ? '#1e40af' : '#64748b',
-                                                                                                    fontWeight: 'bold'
-                                                                                                }}
-                                                                                            />
-                                                                                        </div>
+                                                                                        {/* WRISTBAND INPUT WITH AUTOCOMPLETE */}
+                                                                                        {(() => {
+                                                                                            const isFocused = fzdndWbAutocomplete.playId === play.id;
+
+                                                                                            // Get used slots excluding current play
+                                                                                            const usedSlots = new Set(
+                                                                                                plays
+                                                                                                    .filter(p => p.id !== play.id && p.wristbandSlot)
+                                                                                                    .map(p => p.wristbandSlot)
+                                                                                            );
+
+                                                                                            // Filter available slots
+                                                                                            const availableSlots = (validWristbandSlots || [])
+                                                                                                .filter(slot => !usedSlots.has(slot));
+
+                                                                                            const query = isFocused ? fzdndWbAutocomplete.query : '';
+
+                                                                                            // Filter slots based on query
+                                                                                            const filteredSlots = query
+                                                                                                ? availableSlots.filter(s => s.toString().includes(query)).slice(0, 10)
+                                                                                                : [];
+
+                                                                                            return (
+                                                                                                <div style={{ position: 'relative', width: '36px' }}>
+                                                                                                    <input
+                                                                                                        type="text"
+                                                                                                        value={isFocused ? query : (play.wristbandSlot || '')}
+                                                                                                        placeholder="#"
+                                                                                                        onFocus={() => setFzdndWbAutocomplete({
+                                                                                                            playId: play.id,
+                                                                                                            query: play.wristbandSlot || ''
+                                                                                                        })}
+                                                                                                        onChange={(e) => {
+                                                                                                            setFzdndWbAutocomplete({
+                                                                                                                playId: play.id,
+                                                                                                                query: e.target.value
+                                                                                                            });
+                                                                                                        }}
+                                                                                                        onKeyDown={(e) => {
+                                                                                                            if (e.key === 'Enter' && query.trim()) {
+                                                                                                                // Select first match or use typed value
+                                                                                                                const slot = filteredSlots.length > 0
+                                                                                                                    ? filteredSlots[0]
+                                                                                                                    : query.trim();
+                                                                                                                updatePlayWristband(play.id, slot);
+                                                                                                                setFzdndWbAutocomplete({ playId: null, query: '' });
+                                                                                                            } else if (e.key === 'Escape') {
+                                                                                                                setFzdndWbAutocomplete({ playId: null, query: '' });
+                                                                                                            }
+                                                                                                        }}
+                                                                                                        onBlur={() => {
+                                                                                                            setTimeout(() => {
+                                                                                                                if (fzdndWbAutocomplete.playId === play.id) {
+                                                                                                                    // Save the value on blur
+                                                                                                                    if (fzdndWbAutocomplete.query.trim()) {
+                                                                                                                        updatePlayWristband(play.id, fzdndWbAutocomplete.query.trim());
+                                                                                                                    }
+                                                                                                                    setFzdndWbAutocomplete({ playId: null, query: '' });
+                                                                                                                }
+                                                                                                            }, 200);
+                                                                                                        }}
+                                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                                        style={{
+                                                                                                            width: '100%',
+                                                                                                            fontSize: '0.75rem',
+                                                                                                            padding: '2px 4px',
+                                                                                                            border: isFocused ? '1px solid #3b82f6' : '1px solid #94a3b8',
+                                                                                                            borderRadius: '4px',
+                                                                                                            textAlign: 'center',
+                                                                                                            background: play.wristbandSlot ? '#dbeafe' : 'white',
+                                                                                                            color: play.wristbandSlot ? '#1e40af' : '#64748b',
+                                                                                                            fontWeight: 'bold',
+                                                                                                            outline: 'none'
+                                                                                                        }}
+                                                                                                    />
+
+                                                                                                    {/* AUTOCOMPLETE DROPDOWN */}
+                                                                                                    {isFocused && filteredSlots.length > 0 && (
+                                                                                                        <div style={{
+                                                                                                            position: 'absolute',
+                                                                                                            top: '100%',
+                                                                                                            left: 0,
+                                                                                                            minWidth: '60px',
+                                                                                                            background: 'white',
+                                                                                                            border: '1px solid #cbd5e1',
+                                                                                                            borderRadius: '4px',
+                                                                                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                                                                                            maxHeight: '200px',
+                                                                                                            overflowY: 'auto',
+                                                                                                            zIndex: 1000,
+                                                                                                            marginTop: '2px'
+                                                                                                        }}>
+                                                                                                            {filteredSlots.map(slot => (
+                                                                                                                <div
+                                                                                                                    key={slot}
+                                                                                                                    onMouseDown={(e) => {
+                                                                                                                        e.preventDefault();
+                                                                                                                        updatePlayWristband(play.id, slot);
+                                                                                                                        setFzdndWbAutocomplete({ playId: null, query: '' });
+                                                                                                                    }}
+                                                                                                                    style={{
+                                                                                                                        padding: '6px 8px',
+                                                                                                                        cursor: 'pointer',
+                                                                                                                        fontSize: '0.75rem',
+                                                                                                                        borderBottom: '1px solid #f1f5f9',
+                                                                                                                        background: 'white',
+                                                                                                                        color: '#1f2937',
+                                                                                                                        textAlign: 'center',
+                                                                                                                        fontWeight: 'bold'
+                                                                                                                    }}
+                                                                                                                    onMouseEnter={(e) => e.currentTarget.style.background = '#dbeafe'}
+                                                                                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                                                                                                >
+                                                                                                                    {slot}
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            );
+                                                                                        })()}
                                                                                     </div>
                                                                                     {!isLocked && (
                                                                                         <button
