@@ -28516,7 +28516,7 @@
                             layout.playTypes.forEach(pt => {
                                 layout.cols.forEach(col => {
                                     const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
-                                    const cellData = gamePlan?.sets?.[setId];
+                                    const cellData = gamePlan?.sets?.find(s => s.id === setId);
                                     if (cellData && cellData.assignedPlayIds) cellData.assignedPlayIds.forEach(id => playIds.add(id));
                                     else if (cellData && cellData.playIds) cellData.playIds.forEach(id => playIds.add(id));
                                 });
@@ -34901,8 +34901,45 @@
                 const getAllAssignedIds = () => Object.values(priorityCategories).flat();
                 const assignedIds = new Set(getAllAssignedIds());
 
-                // Plays that are Starred but not in any category
-                const unassignedPriorityPlays = plays.filter(p => p.priority && !assignedIds.has(p.id));
+                // Get all plays that are in the game plan (from any source: matrix, FZDND, scripts)
+                const getAllGamePlanPlayIds = () => {
+                    const playIds = new Set();
+
+                    // Collect from all sets (includes matrix cells, FZDND, and script sections)
+                    if (gamePlan?.sets && Array.isArray(gamePlan.sets)) {
+                        gamePlan.sets.forEach(set => {
+                            if (set.playIds && Array.isArray(set.playIds)) {
+                                set.playIds.forEach(item => {
+                                    const id = typeof item === 'string' ? item : item?.id;
+                                    if (id && id !== 'GAP' && !id.startsWith('NOTE:')) {
+                                        playIds.add(id);
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    // Collect from mini scripts
+                    if (gamePlan?.miniScripts && Array.isArray(gamePlan.miniScripts)) {
+                        gamePlan.miniScripts.forEach(script => {
+                            if (script.playIds && Array.isArray(script.playIds)) {
+                                script.playIds.forEach(item => {
+                                    const id = typeof item === 'string' ? item : item?.id;
+                                    if (id && id !== 'GAP' && !id.startsWith('NOTE:')) {
+                                        playIds.add(id);
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    return playIds;
+                };
+
+                const gamePlanPlayIds = getAllGamePlanPlayIds();
+
+                // Plays that are in the game plan but not yet assigned to a priority category
+                const unassignedPriorityPlays = plays.filter(p => gamePlanPlayIds.has(p.id) && !assignedIds.has(p.id));
 
                 const updateCategories = (newCategories) => {
                     if (onUpdateGamePlan) {
@@ -35044,8 +35081,7 @@
                             <div style={{ padding: '0.75rem', background: '#eff6ff', borderBottom: '1px solid var(--border)' }}>
                                 <h4 style={{ margin: 0, color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Icon name="Star" size={16} color="#eab308" style={{ fill: '#eab308' }} />
-                                    Priority Inbox
-                                    <span style={{ fontSize: '0.75rem', fontWeight: 'normal', opacity: 0.8 }}>(Unassigned)</span>
+                                    Unassigned/Non-Priority Plays
                                 </h4>
                             </div>
                             <div style={{ flex: 1, overflowY: 'auto', padding: '0', display: 'flex', flexDirection: 'column' }}>
@@ -35059,7 +35095,7 @@
                                 />
                                 {unassignedPriorityPlays.length === 0 && (
                                     <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontStyle: 'italic', fontSize: '0.9rem' }}>
-                                        No unassigned priority plays. <br />Star more plays in Install Manager.
+                                        No plays in game plan yet. <br />Add plays via Strike 'Em Out, FZDND, or Situations & Scripts.
                                     </div>
                                 )}
                             </div>
