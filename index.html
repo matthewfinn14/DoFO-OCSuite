@@ -29630,6 +29630,69 @@
                 });
             };
 
+            // For FZDnD collapsible rows
+            const [collapsedFZDnDRows, setCollapsedFZDnDRows] = useState(new Set());
+
+            const toggleFZDnDRow = (zoneId, rowIdx) => {
+                const key = `${zoneId}_${rowIdx}`;
+                setCollapsedFZDnDRows(prev => {
+                    const newCollapsed = new Set(prev);
+                    if (newCollapsed.has(key)) {
+                        newCollapsed.delete(key);
+                    } else {
+                        newCollapsed.add(key);
+                    }
+                    return newCollapsed;
+                });
+            };
+
+            // For FZDnD autocomplete input
+            const [fzdndAutocomplete, setFzdndAutocomplete] = useState({
+                zoneId: null,
+                rowIdx: null,
+                colIdx: null,
+                query: ''
+            });
+
+            // Helper to create new play from FZDnD autocomplete
+            const createFZDnDPlay = (playName, zoneId, rowIdx, colIdx) => {
+                if (!onQuickAddPlay) return;
+
+                // Create the play using the quick add function
+                const newPlay = onQuickAddPlay(playName.trim());
+
+                // Assign to cell
+                assignPlayToFZDnDCell(zoneId, rowIdx, colIdx, newPlay.id);
+
+                // Reset autocomplete
+                setFzdndAutocomplete({ zoneId: null, rowIdx: null, colIdx: null, query: '' });
+            };
+
+            // Helper to assign play to FZDnD cell
+            const assignPlayToFZDnDCell = (zoneId, rowIdx, colIdx, playId) => {
+                const setId = `fzdnd_${zoneId}_${colIdx}`;
+                let sets = [...(gamePlan?.sets || [])];
+                let set = sets.find(s => s.id === setId);
+
+                if (!set) {
+                    set = { id: setId, playIds: [] };
+                    sets.push(set);
+                }
+
+                // Ensure playIds array has at least rowIdx + 1 elements
+                while (set.playIds.length <= rowIdx) {
+                    set.playIds.push(null);
+                }
+
+                // Set the play at this row index
+                set.playIds[rowIdx] = playId;
+
+                onUpdateGamePlan({ ...gamePlan, sets });
+
+                // Reset autocomplete
+                setFzdndAutocomplete({ zoneId: null, rowIdx: null, colIdx: null, query: '' });
+            };
+
             // Helper to get play objects for a set ID
             const getPlaysForSet = (setId) => {
                 let set = gamePlan?.sets?.find(s => s.id === setId);
@@ -33157,112 +33220,351 @@
                                         {/* Content Grid */}
                                         <div className="fzdnd-content-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
                                             {definedCols.length > 0 && (
-                                                <div style={{
-                                                    display: 'grid',
-                                                    gridTemplateColumns: `repeat(${definedCols.length}, minmax(0, 1fr))`,
-                                                    flex: 1,
-                                                    borderBottom: '1px solid black'
-                                                }}>
-                                                    {/* EDITABLE COLUMN HEADERS */}
-                                                    {definedCols.map((colName, cIdx) => (
-                                                        <div key={`header-${cIdx}`} style={{
-                                                            padding: '4px',
-                                                            textAlign: 'center',
-                                                            borderRight: cIdx < definedCols.length - 1 ? '1px solid black' : 'none',
-                                                            borderBottom: '1px solid black',
-                                                            background: 'white',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}>
-                                                            <input
-                                                                type="text"
-                                                                value={customCols[cIdx] || colName}
-                                                                onChange={(e) => {
-                                                                    const newCustomCols = { ...(gamePlan?.customColumns || {}) };
-                                                                    newCustomCols[zone.id] = {
-                                                                        ...(newCustomCols[zone.id] || {}),
-                                                                        [cIdx]: e.target.value
-                                                                    };
-                                                                    onUpdateGamePlan({ ...gamePlan, customColumns: newCustomCols });
-                                                                }}
-                                                                disabled={isLocked}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    background: 'transparent',
-                                                                    border: 'none',
-                                                                    color: 'black',
-                                                                    fontWeight: '800',
-                                                                    fontSize: '0.85rem',
-                                                                    fontStyle: 'italic',
-                                                                    textAlign: 'center',
-                                                                    outline: 'none',
-                                                                    cursor: isLocked ? 'default' : 'text'
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    ))}
+                                                <>
+                                                    {/* COLUMN HEADERS */}
+                                                    <div style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: `40px repeat(${definedCols.length}, minmax(0, 1fr))`,
+                                                        borderBottom: '1px solid black'
+                                                    }}>
+                                                        <div style={{ borderRight: '1px solid black', borderBottom: '1px solid black' }}></div>
+                                                        {definedCols.map((colName, cIdx) => (
+                                                            <div key={`header-${cIdx}`} style={{
+                                                                padding: '4px',
+                                                                textAlign: 'center',
+                                                                borderRight: cIdx < definedCols.length - 1 ? '1px solid black' : 'none',
+                                                                borderBottom: '1px solid black',
+                                                                background: 'white',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={customCols[cIdx] || colName}
+                                                                    onChange={(e) => {
+                                                                        const newCustomCols = { ...(gamePlan?.customColumns || {}) };
+                                                                        newCustomCols[zone.id] = {
+                                                                            ...(newCustomCols[zone.id] || {}),
+                                                                            [cIdx]: e.target.value
+                                                                        };
+                                                                        onUpdateGamePlan({ ...gamePlan, customColumns: newCustomCols });
+                                                                    }}
+                                                                    disabled={isLocked}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        background: 'transparent',
+                                                                        border: 'none',
+                                                                        color: 'black',
+                                                                        fontWeight: '800',
+                                                                        fontSize: '0.85rem',
+                                                                        fontStyle: 'italic',
+                                                                        textAlign: 'center',
+                                                                        outline: 'none',
+                                                                        cursor: isLocked ? 'default' : 'text'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
 
-                                                    {/* CONTENT COLUMNS */}
-                                                    {definedCols.map((colName, cIdx) => {
-                                                        const setId = `fzdnd_${zone.id}_${cIdx}`;
-                                                        const set = (gamePlan?.sets || []).find(s => s.id === setId);
-                                                        const zonePlays = set ? set.playIds.map(id => plays.find(p => p.id === id)).filter(Boolean) : [];
+                                                    {/* ROWS */}
+                                                    {[0, 1, 2, 3, 4].map(rowIdx => {
+                                                        const rowKey = `${zone.id}_${rowIdx}`;
+                                                        const isRowCollapsed = collapsedFZDnDRows.has(rowKey);
+
+                                                        if (isRowCollapsed) {
+                                                            return (
+                                                                <div
+                                                                    key={`row-${rowIdx}`}
+                                                                    onClick={() => toggleFZDnDRow(zone.id, rowIdx)}
+                                                                    style={{
+                                                                        padding: '4px 8px',
+                                                                        background: '#eff6ff',
+                                                                        cursor: 'pointer',
+                                                                        borderBottom: '1px solid #cbd5e1',
+                                                                        color: '#1e3a8a',
+                                                                        fontSize: '0.8rem',
+                                                                        fontStyle: 'italic',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '0.5rem'
+                                                                    }}
+                                                                    title="Click to expand row"
+                                                                >
+                                                                    <span style={{ fontSize: '0.7rem' }}>▶</span>
+                                                                    <span>Row {rowIdx + 1} (Collapsed)</span>
+                                                                </div>
+                                                            );
+                                                        }
 
                                                         return (
                                                             <div
-                                                                key={`content-${cIdx}`}
+                                                                key={`row-${rowIdx}`}
                                                                 style={{
-                                                                    borderRight: cIdx < definedCols.length - 1 ? '1px solid black' : 'none',
-                                                                    minHeight: '150px',
-                                                                    background: 'white',
-                                                                    display: 'flex',
-                                                                    flexDirection: 'column'
+                                                                    display: 'grid',
+                                                                    gridTemplateColumns: `40px repeat(${definedCols.length}, minmax(0, 1fr))`,
+                                                                    minHeight: '32px'
                                                                 }}
-                                                                onDragOver={(e) => e.preventDefault()}
-                                                                onDrop={(e) => handleFZDnDDrop(e, zone.id, cIdx)}
                                                             >
-                                                                <div style={{ padding: '0', flex: 1 }}>
-                                                                    {zonePlays.map((play, pIdx) => (
-                                                                        <div key={play.id} style={{
-                                                                            padding: '4px 6px', borderBottom: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: '600',
-                                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                                            background: play.priority ? '#fef08a' : pIdx % 2 === 0 ? 'white' : '#f8fafc',
-                                                                            color: 'black'
-                                                                        }}>
-                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
-                                                                                {/* WRISTBAND INPUT */}
-                                                                                <div style={{ position: 'relative', width: '36px' }}>
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        value={play.wristbandSlot || ''}
-                                                                                        placeholder="#"
-                                                                                        onChange={(e) => updatePlayWristband(play.id, e.target.value)}
-                                                                                        onClick={(e) => e.stopPropagation()}
-                                                                                        style={{
-                                                                                            width: '100%', fontSize: '0.75rem', padding: '2px 4px',
-                                                                                            border: '1px solid #94a3b8', borderRadius: '4px', textAlign: 'center',
-                                                                                            background: play.wristbandSlot ? '#dbeafe' : 'white',
-                                                                                            color: play.wristbandSlot ? '#1e40af' : '#64748b',
-                                                                                            fontWeight: 'bold'
-                                                                                        }}
-                                                                                    />
+                                                                {/* COLLAPSE ARROW */}
+                                                                <div
+                                                                    onClick={() => toggleFZDnDRow(zone.id, rowIdx)}
+                                                                    style={{
+                                                                        borderRight: '1px solid black',
+                                                                        borderBottom: '1px solid #e2e8f0',
+                                                                        background: '#dbeafe',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        fontSize: '0.7rem',
+                                                                        color: '#1e40af'
+                                                                    }}
+                                                                    title="Click to collapse row"
+                                                                >
+                                                                    ▼
+                                                                </div>
+
+                                                                {/* CELLS FOR EACH COLUMN */}
+                                                                {definedCols.map((_, cIdx) => {
+                                                                    const setId = `fzdnd_${zone.id}_${cIdx}`;
+                                                                    const set = (gamePlan?.sets || []).find(s => s.id === setId);
+                                                                    const playId = set?.playIds?.[rowIdx];
+                                                                    const play = playId ? plays.find(p => p.id === playId) : null;
+
+                                                                    return (
+                                                                        <div
+                                                                            key={`cell-${cIdx}`}
+                                                                            style={{
+                                                                                borderRight: cIdx < definedCols.length - 1 ? '1px solid black' : 'none',
+                                                                                borderBottom: '1px solid #e2e8f0',
+                                                                                background: play ? (play.priority ? '#fef08a' : (rowIdx % 2 === 0 ? 'white' : '#f8fafc')) : 'white',
+                                                                                padding: play ? '4px 6px' : '0',
+                                                                                minHeight: '32px',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center'
+                                                                            }}
+                                                                            onDragOver={(e) => e.preventDefault()}
+                                                                            onDrop={(e) => {
+                                                                                e.preventDefault();
+                                                                                const playId = e.dataTransfer.getData('playId');
+                                                                                if (!playId) return;
+
+                                                                                const setId = `fzdnd_${zone.id}_${cIdx}`;
+                                                                                let sets = [...(gamePlan?.sets || [])];
+                                                                                let set = sets.find(s => s.id === setId);
+
+                                                                                if (!set) {
+                                                                                    set = { id: setId, playIds: [] };
+                                                                                    sets.push(set);
+                                                                                }
+
+                                                                                // Ensure playIds array has at least rowIdx + 1 elements
+                                                                                while (set.playIds.length <= rowIdx) {
+                                                                                    set.playIds.push(null);
+                                                                                }
+
+                                                                                // Set the play at this row index
+                                                                                set.playIds[rowIdx] = playId;
+
+                                                                                onUpdateGamePlan({ ...gamePlan, sets });
+                                                                            }}
+                                                                        >
+                                                                            {play ? (
+                                                                                <div style={{
+                                                                                    display: 'flex',
+                                                                                    justifyContent: 'space-between',
+                                                                                    alignItems: 'center',
+                                                                                    width: '100%',
+                                                                                    fontSize: '0.8rem',
+                                                                                    fontWeight: '600',
+                                                                                    color: 'black'
+                                                                                }}>
+                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={play.name}>{play.name}</span>
+                                                                                        {/* WRISTBAND INPUT */}
+                                                                                        <div style={{ position: 'relative', width: '36px' }}>
+                                                                                            <input
+                                                                                                type="text"
+                                                                                                value={play.wristbandSlot || ''}
+                                                                                                placeholder="#"
+                                                                                                onChange={(e) => updatePlayWristband(play.id, e.target.value)}
+                                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                                style={{
+                                                                                                    width: '100%',
+                                                                                                    fontSize: '0.75rem',
+                                                                                                    padding: '2px 4px',
+                                                                                                    border: '1px solid #94a3b8',
+                                                                                                    borderRadius: '4px',
+                                                                                                    textAlign: 'center',
+                                                                                                    background: play.wristbandSlot ? '#dbeafe' : 'white',
+                                                                                                    color: play.wristbandSlot ? '#1e40af' : '#64748b',
+                                                                                                    fontWeight: 'bold'
+                                                                                                }}
+                                                                                            />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    {!isLocked && (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                const setId = `fzdnd_${zone.id}_${cIdx}`;
+                                                                                                let sets = [...(gamePlan?.sets || [])];
+                                                                                                let set = sets.find(s => s.id === setId);
+                                                                                                if (set && set.playIds[rowIdx]) {
+                                                                                                    set.playIds[rowIdx] = null;
+                                                                                                    onUpdateGamePlan({ ...gamePlan, sets });
+                                                                                                }
+                                                                                            }}
+                                                                                            style={{
+                                                                                                border: 'none',
+                                                                                                background: 'none',
+                                                                                                color: '#dc2626',
+                                                                                                cursor: 'pointer',
+                                                                                                fontSize: '1rem',
+                                                                                                fontWeight: 'bold'
+                                                                                            }}
+                                                                                        >
+                                                                                            ×
+                                                                                        </button>
+                                                                                    )}
                                                                                 </div>
-                                                                            </div>
-                                                                            {!isLocked && (
-                                                                                <button onClick={() => handleRemoveFromFZDnD(zone.id, cIdx, play.id)} style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}>×</button>
+                                                                            ) : (
+                                                                                // AUTOCOMPLETE INPUT FOR EMPTY CELLS
+                                                                                (() => {
+                                                                                    const isFocused = fzdndAutocomplete.zoneId === zone.id &&
+                                                                                        fzdndAutocomplete.rowIdx === rowIdx &&
+                                                                                        fzdndAutocomplete.colIdx === cIdx;
+
+                                                                                    const query = isFocused ? fzdndAutocomplete.query : '';
+
+                                                                                    // Filter plays based on query
+                                                                                    const filteredPlays = query
+                                                                                        ? plays.filter(p => p.name.toLowerCase().includes(query.toLowerCase())).slice(0, 10)
+                                                                                        : [];
+
+                                                                                    const showCreateOption = query.trim() && filteredPlays.length === 0;
+
+                                                                                    return (
+                                                                                        <div style={{ position: 'relative', width: '100%', padding: '2px' }}>
+                                                                                            <input
+                                                                                                type="text"
+                                                                                                placeholder="Type play name..."
+                                                                                                value={query}
+                                                                                                disabled={isLocked}
+                                                                                                onFocus={() => setFzdndAutocomplete({
+                                                                                                    zoneId: zone.id,
+                                                                                                    rowIdx,
+                                                                                                    colIdx: cIdx,
+                                                                                                    query: ''
+                                                                                                })}
+                                                                                                onChange={(e) => setFzdndAutocomplete({
+                                                                                                    zoneId: zone.id,
+                                                                                                    rowIdx,
+                                                                                                    colIdx: cIdx,
+                                                                                                    query: e.target.value
+                                                                                                })}
+                                                                                                onKeyDown={(e) => {
+                                                                                                    if (e.key === 'Enter' && query.trim()) {
+                                                                                                        if (filteredPlays.length > 0) {
+                                                                                                            assignPlayToFZDnDCell(zone.id, rowIdx, cIdx, filteredPlays[0].id);
+                                                                                                        } else {
+                                                                                                            createFZDnDPlay(query, zone.id, rowIdx, cIdx);
+                                                                                                        }
+                                                                                                    } else if (e.key === 'Escape') {
+                                                                                                        setFzdndAutocomplete({ zoneId: null, rowIdx: null, colIdx: null, query: '' });
+                                                                                                    }
+                                                                                                }}
+                                                                                                onBlur={() => {
+                                                                                                    setTimeout(() => {
+                                                                                                        setFzdndAutocomplete({ zoneId: null, rowIdx: null, colIdx: null, query: '' });
+                                                                                                    }, 200);
+                                                                                                }}
+                                                                                                style={{
+                                                                                                    width: '100%',
+                                                                                                    fontSize: '0.8rem',
+                                                                                                    padding: '4px 6px',
+                                                                                                    border: isFocused ? '1px solid #3b82f6' : '1px solid #e2e8f0',
+                                                                                                    borderRadius: '4px',
+                                                                                                    outline: 'none',
+                                                                                                    background: 'white',
+                                                                                                    color: '#1f2937',
+                                                                                                    cursor: isLocked ? 'not-allowed' : 'text'
+                                                                                                }}
+                                                                                            />
+
+                                                                                            {/* AUTOCOMPLETE DROPDOWN */}
+                                                                                            {isFocused && (filteredPlays.length > 0 || showCreateOption) && (
+                                                                                                <div style={{
+                                                                                                    position: 'absolute',
+                                                                                                    top: '100%',
+                                                                                                    left: 0,
+                                                                                                    right: 0,
+                                                                                                    background: 'white',
+                                                                                                    border: '1px solid #cbd5e1',
+                                                                                                    borderRadius: '4px',
+                                                                                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                                                                                    maxHeight: '200px',
+                                                                                                    overflowY: 'auto',
+                                                                                                    zIndex: 1000,
+                                                                                                    marginTop: '2px'
+                                                                                                }}>
+                                                                                                    {filteredPlays.map(p => (
+                                                                                                        <div
+                                                                                                            key={p.id}
+                                                                                                            onMouseDown={(e) => {
+                                                                                                                e.preventDefault();
+                                                                                                                assignPlayToFZDnDCell(zone.id, rowIdx, cIdx, p.id);
+                                                                                                            }}
+                                                                                                            style={{
+                                                                                                                padding: '6px 8px',
+                                                                                                                cursor: 'pointer',
+                                                                                                                fontSize: '0.8rem',
+                                                                                                                borderBottom: '1px solid #f1f5f9',
+                                                                                                                background: 'white',
+                                                                                                                color: '#1f2937',
+                                                                                                                ':hover': { background: '#f8fafc' }
+                                                                                                            }}
+                                                                                                            onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                                                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                                                                                        >
+                                                                                                            {p.name}
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                    {showCreateOption && (
+                                                                                                        <div
+                                                                                                            onMouseDown={(e) => {
+                                                                                                                e.preventDefault();
+                                                                                                                createFZDnDPlay(query, zone.id, rowIdx, cIdx);
+                                                                                                            }}
+                                                                                                            style={{
+                                                                                                                padding: '6px 8px',
+                                                                                                                cursor: 'pointer',
+                                                                                                                fontSize: '0.8rem',
+                                                                                                                background: '#eff6ff',
+                                                                                                                color: '#1e40af',
+                                                                                                                fontWeight: '600',
+                                                                                                                fontStyle: 'italic'
+                                                                                                            }}
+                                                                                                            onMouseEnter={(e) => e.currentTarget.style.background = '#dbeafe'}
+                                                                                                            onMouseLeave={(e) => e.currentTarget.style.background = '#eff6ff'}
+                                                                                                        >
+                                                                                                            + Create "{query}"
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    );
+                                                                                })()
                                                                             )}
                                                                         </div>
-                                                                    ))}
-                                                                    {Array.from({ length: Math.max(0, 5 - zonePlays.length) }).map((_, i) => (
-                                                                        <div key={`empty-${i}`} style={{ height: '32px', borderBottom: '1px solid #e2e8f0' }}></div>
-                                                                    ))}
-                                                                </div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         );
                                                     })}
-                                                </div>
+                                                </>
                                             )}
                                         </div>
                                     </div>
