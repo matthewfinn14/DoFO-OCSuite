@@ -42840,54 +42840,11 @@
                             <Icon name="Layers" size={12} /> Install
                         </button>
                         {/* Expanded Depth Charts */}
-                        <CollapsibleCategory
-                            title={<span style={{ fontSize: '0.75rem', opacity: 0.85 }}>Depth Charts</span>}
-                            icon="Users"
-                            defaultOpen={false}
-                            nested={true}
-                        >
-                            <button className={`nav-item ${isActive && view === 'depth' && depthChartType === 'OFFENSE' ? 'active' : ''}`}
-                                onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('OFFENSE'); }}
-                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                Offense
-                            </button>
-                            <button className={`nav-item ${isActive && view === 'depth' && depthChartType === 'DEFENSE' ? 'active' : ''}`}
-                                onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('DEFENSE'); }}
-                                style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                Defense
-                            </button>
-
-                            {/* Special Teams Sub-items */}
-                            <CollapsibleCategory title="Special Teams" defaultOpen={false} nested={true} style={{ fontSize: '0.7rem', paddingLeft: '2rem' }}>
-                                {[
-                                    { id: 'KICKOFF', name: 'Kickoff' },
-                                    { id: 'KICK_RETURN', name: 'Kick Return' },
-                                    { id: 'PUNT', name: 'Punt' },
-                                    { id: 'PUNT_RETURN', name: 'Punt Return' },
-                                    { id: 'PAT_BLOCK', name: 'PAT/FG Block' }
-                                ].map(st => (
-                                    <button key={st.id} className={`nav-item ${isActive && view === 'depth' && depthChartType === st.id ? 'active' : ''}`}
-                                        onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType(st.id); }}
-                                        style={{ paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                        {st.name}
-                                    </button>
-                                ))}
-                            </CollapsibleCategory>
-
-                            {/* Scout Sub-items */}
-                            <CollapsibleCategory title="Scout Teams" defaultOpen={false} nested={true} style={{ fontSize: '0.7rem', paddingLeft: '2rem' }}>
-                                <button className={`nav-item ${isActive && view === 'depth' && depthChartType === 'SCOUT_OFFENSE' ? 'active' : ''}`}
-                                    onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('SCOUT_OFFENSE'); }}
-                                    style={{ paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                    Scout Offense
-                                </button>
-                                <button className={`nav-item ${isActive && view === 'depth' && depthChartType === 'SCOUT_DEFENSE' ? 'active' : ''}`}
-                                    onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('SCOUT_DEFENSE'); }}
-                                    style={{ paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
-                                    Scout Defense
-                                </button>
-                            </CollapsibleCategory>
-                        </CollapsibleCategory>
+                        <button className={`nav-item ${isActive && view === 'depth' ? 'active' : ''}`}
+                            onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('OFFENSE'); }}
+                            style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            <Icon name="Users" size={12} /> Depth Charts
+                        </button>
                         <button className={`nav-item ${isActive && view === 'game-plan' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('game-plan'); }}
                             style={{ paddingLeft: '1.25rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
@@ -47161,7 +47118,49 @@
                         {view === 'staff-roster' && <StaffManager view="roster" currentUser={currentUser} staff={staff} onUpdateStaff={setStaff} dutyAssignments={dutyAssignments} onUpdateDuties={setDutyAssignments} teamLogo={teamLogo} />}
 
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
-                        {view === 'depth' && <DepthChart roster={roster} depthChart={(currentWeek.depthChart && currentWeek.depthChart[depthChartType]) || {}} onUpdateDepthChart={(updated) => handleUpdateDepthChart(prev => ({ ...prev, [depthChartType]: updated }))} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} savedLayout={depthChartLayouts[depthChartType] || {}} onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)} onResetLayout={() => handleResetDepthLayout(depthChartType)} />}
+                        {view === 'depth' && (
+                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    gap: '0.5rem',
+                                    padding: '1rem',
+                                    background: 'var(--surface)',
+                                    borderBottom: '1px solid var(--border)',
+                                    alignItems: 'center',
+                                    overflowX: 'auto'
+                                }}>
+                                    {[
+                                        { id: 'OFFENSE', label: 'Offense', icon: 'Shield' },
+                                        { id: 'DEFENSE', label: 'Defense', icon: 'Shield' },
+                                        { id: 'KICKOFF', label: 'Kickoff', icon: 'ArrowRight' },
+                                        { id: 'KICK_RETURN', label: 'Kick Return', icon: 'RotateCw' },
+                                        { id: 'PUNT', label: 'Punt', icon: 'ArrowUp' },
+                                        { id: 'PUNT_RETURN', label: 'Punt Return', icon: 'ArrowDown' },
+                                        { id: 'PAT_BLOCK', label: 'PAT/FG Block', icon: 'XOctagon' },
+                                        { id: 'SCOUT_OFFENSE', label: 'Scout Offense', icon: 'Search' },
+                                        { id: 'SCOUT_DEFENSE', label: 'Scout Defense', icon: 'Search' }
+                                    ].map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setDepthChartType(tab.id)}
+                                            className={`btn ${depthChartType === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                        >
+                                            <Icon name={tab.icon} size={16} />
+                                            {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div style={{ flex: 1, overflow: 'hidden' }}>
+                                    <DepthChart roster={roster} depthChart={(currentWeek.depthChart && currentWeek.depthChart[depthChartType]) || {}} onUpdateDepthChart={(updated) => handleUpdateDepthChart(prev => ({ ...prev, [depthChartType]: updated }))} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} savedLayout={depthChartLayouts[depthChartType] || {}} onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)} onResetLayout={() => handleResetDepthLayout(depthChartType)} />
+                                </div>
+                            </div>
+                        )}
                         {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} currentWeek={currentWeek} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} onUpdateWeek={handleUpdateWeek} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} playCategories={playCategories} />}
 
 
