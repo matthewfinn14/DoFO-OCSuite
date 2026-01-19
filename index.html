@@ -41125,19 +41125,19 @@
         /*                                  ANALYTICS                                  */
         /* -------------------------------------------------------------------------- */
 
-        const PLAY_PROTOCOLS = {
-            'Regular': { color: '#3b82f6', label: 'Regular' },
-            'Scramble': { color: '#eab308', label: 'Scramble' },
-            'Sugar Huddle': { color: '#a855f7', label: 'Sugar' },
-            'Indy': { color: '#22c55e', label: 'Indy' },
-            'Low Red Zone': { color: '#ef4444', label: 'Red Zone' },
-            'High Red Zone': { color: '#f97316', label: 'High RZ' },
-            'Backed Up': { color: '#6366f1', label: 'Backed Up' },
-            'Two Minute': { color: '#ec4899', label: '2-Min' },
-            'Four Minute': { color: '#14b8a6', label: '4-Min' },
-            'Goal Line': { color: '#8b5cf6', label: 'Goal Line' },
-            'Short Yardage': { color: '#06b6d4', label: 'Short Yardage' }
-        };
+        const PLAY_PROTOCOLS = [
+            { id: 'REGULAR', color: '#3b82f6', label: 'Regular', code: 'R' },
+            { id: 'SCRAMBLE', color: '#eab308', label: 'Scramble', code: 'SC' },
+            { id: 'SUGAR', color: '#a855f7', label: 'Sugar Huddle', code: 'SH' },
+            { id: 'INDY', color: '#22c55e', label: 'Indy', code: 'IN' },
+            { id: 'LOW_RZ', color: '#ef4444', label: 'Low Red Zone', code: 'LR' },
+            { id: 'HIGH_RZ', color: '#f97316', label: 'High Red Zone', code: 'HR' },
+            { id: 'BACKED_UP', color: '#6366f1', label: 'Backed Up', code: 'BU' },
+            { id: 'TWO_MIN', color: '#ec4899', label: 'Two Minute', code: '2M' },
+            { id: 'FOUR_MIN', color: '#14b8a6', label: 'Four Minute', code: '4M' },
+            { id: 'GOAL_LINE', color: '#8b5cf6', label: 'Goal Line', code: 'GL' },
+            { id: 'SHORT_YD', color: '#06b6d4', label: 'Short Yardage', code: 'SY' }
+        ];
 
         const WeeklyAnalytics = ({ currentWeek, plays, practicePlans }) => {
             const [viewMode, setViewMode] = React.useState('overall'); // 'overall', 'daily', 'usage', 'unassigned'
