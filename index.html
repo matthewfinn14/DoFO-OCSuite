@@ -6760,9 +6760,15 @@
                 if (!selectedPlayId) return;
                 const play = plays.find(p => p.id === selectedPlayId);
                 if (play) {
-                    // Update play with new slot - Check for Staples
                     const card = wbSettings[selectedCardId];
-                    if (card && card.type === 'staples') {
+                    if (!card) return;
+
+                    // Determine flags based on card layout
+                    const isWiz = card.layout === 'wiz';
+                    const isMiniScript = card.layout === 'mini-scripts';
+
+                    // Update play with new slot - Check for Staples
+                    if (card.type === 'staples') {
                         // NEW: Update ALL plays with matching signature
                         const signature = getPlaySignature(play);
                         const matchingPlays = plays.filter(p => getPlaySignature(p) === signature);
@@ -6770,12 +6776,20 @@
                         // Create update objects for all matching plays
                         const updates = matchingPlays.map(p => ({
                             ...p,
-                            staplesSlot: slot.toString()
+                            staplesSlot: slot.toString(),
+                            // Staples doesn't usually change the main card type, but usually staples are T.
+                            // We will leave main flags alone for staples assignment to avoid side effects
                         }));
 
                         onUpdatePlay(updates);
                     } else {
-                        onUpdatePlay({ ...play, wristbandSlot: slot.toString() });
+                        onUpdatePlay({
+                            ...play,
+                            wristbandSlot: slot.toString(),
+                            isWiz: isWiz,
+                            isMiniScript: isMiniScript,
+                            isRooski: false // Clear legacy flag if any
+                        });
                     }
                     setSelectedPlayId(null); // Deselect after assignment
                 }
@@ -6876,69 +6890,49 @@
 
                 const updates = [];
 
-                if (newType === 'rooski' || newType === 'wiz') {
-                    // If switching TO Rooski (16 slots), clear plays assigned to slots > 16
-                    if (startSlot > 0) {
-                        const maxRooski = startSlot + 15;
-                        const maxStandard = startSlot + 47;
+                // Unified Layout Change Logic
+                updateCard(selectedCardId, { layout: newType, type: newType });
 
-                        plays.forEach(p => {
-                            const slot = parseInt(p.wristbandSlot || 0);
-                            if (slot > maxRooski && slot <= maxStandard) {
-                                updates.push({ ...p, wristbandSlot: '' });
+                if (startSlot > 0) {
+                    const isWiz = newType === 'wiz';
+                    const isMini = newType === 'mini-scripts';
+                    const isRooski = newType === 'rooski';
+
+                    const cardMin = startSlot;
+                    const cardMax = startSlot + 99;
+                    const wizMax = startSlot + 15;
+
+                    const updatesToApply = [];
+
+                    plays.forEach(p => {
+                        const slot = parseInt(p.wristbandSlot || 0);
+                        if (slot >= cardMin && slot <= cardMax) {
+                            let update = { ...p };
+                            let changed = false;
+
+                            // 1. Update Layout Flags
+                            if (p.isWiz !== isWiz || p.isMiniScript !== isMini || (isRooski && !p.isRooski) || (!isRooski && p.isRooski === true)) {
+                                update.isWiz = isWiz;
+                                update.isMiniScript = isMini;
+                                if (isRooski) update.isRooski = true;
+                                else if (p.isRooski) update.isRooski = false;
+                                changed = true;
                             }
-                        });
-                    }
-                } else if (newType === 'mini-scripts') {
-                    // If switching TO Mini-Scripts, clear ALMOST ALL Standard assignments (101-148)
-                    // because Mini-Scripts uses A/B slots.
-                    // However, we should be careful. If I switch Standard -> Mini-Scripts, maybe I WANT to keep them?
-                    // But the user specifically said "traditional wristband coordinates should have been cleared".
-                    // So we will clear the traditional numeric slots range for this card.
-                    if (startSlot > 0) {
-                        const minStandard = startSlot;
-                        const maxStandard = startSlot + 99; // Cover a wide range just in case
 
-                        plays.forEach(p => {
-                            // Check if it's a pure number (Traditional)
-                            // We don't want to wipe "101A" if we are already in Mini-Scripts and just re-selecting logic?
-                            // But usually we switch FROM something else.
-                            // If p.wristbandSlot is "101", parseInt is 101.
-                            // If p.wristbandSlot is "101A", parseInt is 101.
-                            // We should differentiate.
-                            // Traditional slots are strictly numeric strings?
-                            // Actually, let's just use parseInt check, but verify the string is just numbers?
-                            // Or, if we entered Mini-Scripts, maybe we assume the user is starting fresh or using the Builder rows.
-                            // The user said "traditional wristband coordinates should have been cleared".
-                            // So let's clear anything that acts like a traditional coordinate in that range.
-
-                            if (!p.wristbandSlot) return;
-
-                            const slotStr = p.wristbandSlot.toString();
-                            const slotNum = parseInt(slotStr, 10);
-
-                            // Check if it's in the card's 100s range
-                            if (slotNum >= minStandard && slotNum <= maxStandard) {
-                                // Only clear if it looks like a traditional slot (no letters)
-                                // Standard slots are "101", "102". Mini-scripts are "101A", "101B".
-                                // If I have "101A", user might want to keep it?
-                                // BUT, if I am initiating the switch TO mini-scripts, implies I wasn't using it before?
-                                // Or maybe I swtiched away and back?
-                                // Safest: Clear pure numeric slots.
-                                const isNumeric = /^\d+$/.test(slotStr);
-                                if (isNumeric) {
-                                    updates.push({ ...p, wristbandSlot: '' });
-                                }
+                            // 2. Clear Out-of-Bounds (for 16-slot grids)
+                            if ((isWiz || isRooski) && slot > wizMax) {
+                                update.wristbandSlot = '';
+                                changed = true;
                             }
-                        });
+
+                            if (changed) updatesToApply.push(update);
+                        }
+                    });
+
+                    if (updatesToApply.length > 0) {
+                        onUpdatePlay(updatesToApply);
                     }
                 }
-
-                if (updates.length > 0) {
-                    onUpdatePlay(updates);
-                }
-
-                updateCard(selectedCardId, { type: newType });
             };
 
 
@@ -8064,16 +8058,9 @@
                                         const play = slotMap[slot];
 
                                         // Filter plays based on view type
-                                        let shouldShowPlay = false;
-                                        if (play) {
-                                            if (viewType === 'skill') {
-                                                shouldShowPlay = (play.rooskiSkillData || play.wizSkillData) && !play.isOlineOnly;
-                                            } else if (viewType === 'oline') {
-                                                shouldShowPlay = (play.rooskiOlineData || play.wizOlineData);
-                                            }
-                                        }
-
-                                        const displayPlay = shouldShowPlay ? play : null;
+                                        // Always show the play if it is assigned to the slot
+                                        // The renderPlayThumbnail function will handle showing/hiding the diagram based on available data
+                                        const displayPlay = play;
                                         const isClickable = selectedPlayId && !play;
 
                                         return (
@@ -47696,7 +47683,6 @@
                 </div>
             );
         };
-
         class ErrorBoundary extends React.Component {
             constructor(props) {
                 super(props);
