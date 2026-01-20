@@ -4816,7 +4816,7 @@
                 if (playSyntax && playSyntax.length > 0) {
                     // 1. Calculate Name: Join all values
                     const nameParts = playSyntax.map(s => (formData.syntaxValues && formData.syntaxValues[s.id])).filter(v => v);
-                    const newName = nameParts.join(' ');
+                    const newName = nameParts.join(' ').toUpperCase();
 
                     // 2. Extract Formation: Find component with label containing "Formation"
                     const formationComp = playSyntax.find(s => s.label.toLowerCase().includes('formation'));
@@ -5262,7 +5262,7 @@
                                         <input
                                             className="form-input"
                                             value={formData.name}
-                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
                                             placeholder="e.g. TRIBE / Spider 2 Y Banana"
                                             required
                                         />
@@ -5425,7 +5425,7 @@
                                         <input
                                             className="form-input"
                                             value={formData.name}
-                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
                                             placeholder="e.g. TRIBE / Spider 2 Y Banana"
                                             required
                                         />
@@ -5849,8 +5849,15 @@
                                 const nameLower = play.name.toLowerCase();
                                 const parts = [];
                                 // Logic for Formation & Formation Tag
-                                const showForm = play.formation && !nameLower.includes(play.formation.toLowerCase());
-                                const showFormTag = play.formationTag && !nameLower.includes(play.formationTag.toLowerCase());
+                                const normalize = (s) => (s || '').toLowerCase()
+                                    .replace(/green/g, 'grn').replace(/bright/g, 'brt')
+                                    .replace(/black/g, 'blk').replace(/white/g, 'wht')
+                                    .replace(/blue/g, 'blu').replace(/brown/g, 'brn')
+                                    .replace(/right/g, 'rt').replace(/left/g, 'lt');
+
+                                const nName = normalize(play.name);
+                                const showForm = play.formation && !nName.includes(normalize(play.formation));
+                                const showFormTag = play.formationTag && !nName.includes(normalize(play.formationTag));
 
                                 if (showForm) {
                                     let txt = play.formation;
@@ -5860,10 +5867,8 @@
                                     parts.push(`(${play.formationTag})`);
                                 }
 
-                                // Logic for Color
-                                if (play.color && !nameLower.includes(play.color.toLowerCase())) {
-                                    parts.push(play.color);
-                                }
+                                // Logic for Color - REMOVED
+
 
                                 return parts.map((part, i) => (
                                     <React.Fragment key={i}>
@@ -6469,7 +6474,7 @@
             return false;
         };
 
-        const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [] }) => {
+        const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [], onQuickAddPlay }) => {
             const { currentUser } = useAuth();
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
@@ -7033,7 +7038,7 @@
             };
 
             const handleQuickAddChange = (value) => {
-                setQuickAddValue(value);
+                setQuickAddValue(value.toUpperCase());
                 // Filter plays for autocomplete
                 if (value.trim()) {
                     const suggestions = plays.filter(p =>
@@ -8269,7 +8274,7 @@
                                     {/* Play 1 */}
                                     <input
                                         value={item.col1 || ''}
-                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col1: e.target.value })}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col1: e.target.value.toUpperCase() })}
                                         onDragOver={(e) => e.preventDefault()}
                                         onDrop={(e) => {
                                             e.preventDefault();
@@ -8277,6 +8282,14 @@
                                             if (playName) {
                                                 const p = plays.find(p => p.name === playName);
                                                 handleUpdateRow(selectedCardId, item.id, { col1: playName, col1Id: p ? p.id : null });
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            if (item.col1 && !item.col1Id && onQuickAddPlay) {
+                                                const newPlay = onQuickAddPlay(item.col1);
+                                                if (newPlay) {
+                                                    handleUpdateRow(selectedCardId, item.id, { col1: newPlay.name, col1Id: newPlay.id });
+                                                }
                                             }
                                         }}
                                         placeholder="Play A"
@@ -8294,7 +8307,7 @@
                                     {/* Play 2 */}
                                     <input
                                         value={item.col3 || ''}
-                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col3: e.target.value })}
+                                        onChange={(e) => handleUpdateRow(selectedCardId, item.id, { col3: e.target.value.toUpperCase() })}
                                         onDragOver={(e) => e.preventDefault()}
                                         onDrop={(e) => {
                                             e.preventDefault();
@@ -8302,6 +8315,14 @@
                                             if (playName) {
                                                 const p = plays.find(p => p.name === playName);
                                                 handleUpdateRow(selectedCardId, item.id, { col3: playName, col3Id: p ? p.id : null });
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            if (item.col3 && !item.col3Id && onQuickAddPlay) {
+                                                const newPlay = onQuickAddPlay(item.col3);
+                                                if (newPlay) {
+                                                    handleUpdateRow(selectedCardId, item.id, { col3: newPlay.name, col3Id: newPlay.id });
+                                                }
                                             }
                                         }}
                                         placeholder="Play B"
@@ -10783,10 +10804,20 @@
                                                                             style={{ padding: '4px', width: '100%', fontWeight: 'bold' }}
                                                                             value={slot.playName || ''}
                                                                             onChange={e => {
-                                                                                const val = e.target.value;
+                                                                                const val = e.target.value.toUpperCase();
                                                                                 const foundPlay = plays.find(p => p.name === val);
                                                                                 const newScript = seg.script.map(s => s.id === slot.id ? { ...s, playName: val, playId: foundPlay ? foundPlay.id : '' } : s);
                                                                                 updateSegment(seg.id, 'script', newScript);
+                                                                            }}
+                                                                            onBlur={() => {
+                                                                                if (slot.playName && !slot.playId && onQuickAddPlay) {
+                                                                                    // Create new play on blur if it doesn't exist
+                                                                                    const newPlay = onQuickAddPlay(slot.playName);
+                                                                                    if (newPlay) {
+                                                                                        const newScript = seg.script.map(s => s.id === slot.id ? { ...s, playName: newPlay.name, playId: newPlay.id } : s);
+                                                                                        updateSegment(seg.id, 'script', newScript);
+                                                                                    }
+                                                                                }
                                                                             }}
                                                                             onKeyDown={(e) => handleScriptInputKeyDown(e, seg.id, slot.id, 'playName', seg.script, (newScript) => updateSegment(seg.id, 'script', newScript))}
                                                                             onDragOver={(e) => e.preventDefault()}
@@ -12584,7 +12615,7 @@
                                                                                 value={slot.playName || ''}
                                                                                 onChange={e => {
                                                                                     const newScript = [...activeSegment.script];
-                                                                                    newScript[idx] = { ...newScript[idx], playName: e.target.value, playId: '' }; // Clear ID on manual edit
+                                                                                    newScript[idx] = { ...newScript[idx], playName: e.target.value.toUpperCase(), playId: '' }; // Clear ID on manual edit
                                                                                     updateScript(newScript);
                                                                                 }}
                                                                                 placeholder="Select or type play..."
@@ -27171,7 +27202,7 @@
                                         <input
                                             className="form-input"
                                             value={rawPlayCall}
-                                            onChange={e => setRawPlayCall(e.target.value)}
+                                            onChange={e => setRawPlayCall(e.target.value.toUpperCase())}
                                             placeholder="Type play call here..."
                                             onKeyDown={e => e.key === 'Enter' && handleTokenize()}
                                         />
@@ -29329,8 +29360,8 @@
                                         placeholder="Add / Search..."
                                         value={quickAddValue}
                                         onChange={e => {
-                                            setQuickAddValue(e.target.value);
-                                            setSearchTerm(e.target.value);
+                                            setQuickAddValue(e.target.value.toUpperCase());
+                                            setSearchTerm(e.target.value.toUpperCase());
                                         }}
                                         onKeyDown={e => {
                                             if (e.key === 'Enter' && quickAddValue) {
@@ -31038,7 +31069,7 @@
                             placeholder="+"
                             value={searchTerm}
                             onChange={(e) => {
-                                setSearchTerm(e.target.value);
+                                setSearchTerm(e.target.value.toUpperCase());
                                 setShowDropdown(true);
                             }}
                             onFocus={() => setShowDropdown(true)}
@@ -31306,7 +31337,7 @@
                                         placeholder={placeholder}
                                         value={searchTerm}
                                         onChange={(e) => {
-                                            setSearchTerm(e.target.value);
+                                            setSearchTerm(e.target.value.toUpperCase());
                                             setShowDropdown(true);
                                         }}
                                         onFocus={() => setShowDropdown(true)}
@@ -31987,6 +32018,7 @@
                                                     playId={row.content}
                                                     isLocked={isLocked}
                                                     renderWristbandInput={renderWristbandInput}
+                                                    onQuickAddPlay={onQuickAddPlay}
                                                     onUpdate={(pid) => {
                                                         const newLayouts = { ...gamePlanLayouts };
                                                         const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
@@ -32031,6 +32063,7 @@
                                                     playId={row.contentRight}
                                                     isLocked={isLocked}
                                                     renderWristbandInput={renderWristbandInput}
+                                                    onQuickAddPlay={onQuickAddPlay}
                                                     onUpdate={(pid) => {
                                                         const newLayouts = { ...gamePlanLayouts };
                                                         const targetSection = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
@@ -33896,7 +33929,7 @@
                                                                                                     zoneId: zone.id,
                                                                                                     rowIdx,
                                                                                                     colIdx: cIdx,
-                                                                                                    query: e.target.value
+                                                                                                    query: e.target.value.toUpperCase()
                                                                                                 })}
                                                                                                 onKeyDown={(e) => {
                                                                                                     if (e.key === 'Enter' && query.trim()) {
@@ -42967,11 +43000,13 @@
             const handleQuickAddPlay = (playNameOrObj) => {
                 let newPlay;
                 if (typeof playNameOrObj === 'object' && playNameOrObj !== null) {
-                    newPlay = playNameOrObj;
+                    newPlay = { ...playNameOrObj };
+                    if (newPlay.name) newPlay.name = newPlay.name.toUpperCase();
                 } else {
+                    const rawName = typeof playNameOrObj === 'string' ? playNameOrObj.trim() : (playNameOrObj || '');
                     newPlay = {
                         id: `play_${Date.now()}`,
-                        name: typeof playNameOrObj === 'string' ? playNameOrObj.trim() : (playNameOrObj || ''),
+                        name: rawName.toUpperCase(),
                         wristbandSlot: '',
                         staplesSlot: '', // [NEW] Staples Wristband Slot (10-89)
                         formation: '',
@@ -44308,6 +44343,7 @@
 
             const handleSavePlay = (playData) => {
                 const { assignedScriptIds, ...savedPlayData } = playData;
+                if (savedPlayData.name) savedPlayData.name = savedPlayData.name.toUpperCase();
 
                 // Sync Mini Script Assignments
                 if (assignedScriptIds !== undefined) {
@@ -44400,18 +44436,22 @@
                 if (typeof arg1 === 'string' || typeof arg1 === 'number') {
                     // (id, updates) signature - used by InstallSortableColumn checkboxes
                     const id = arg1;
-                    const updates = arg2;
+                    const updates = { ...arg2 };
+                    if (updates.name) updates.name = updates.name.toUpperCase();
                     setPlays(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
                 } else {
                     // (updatedPlay) signature - full object replacement
                     const updatedPlay = arg1;
                     if (Array.isArray(updatedPlay)) {
                         // Batch update
-                        const updateMap = new Map(updatedPlay.map(p => [p.id, p]));
+                        const uppercased = updatedPlay.map(p => p.name ? { ...p, name: p.name.toUpperCase() } : p);
+                        const updateMap = new Map(uppercased.map(p => [p.id, p]));
                         setPlays(prev => prev.map(p => updateMap.has(p.id) ? updateMap.get(p.id) : p));
                     } else {
                         // Single update
-                        setPlays(prev => prev.map(p => p.id === updatedPlay.id ? updatedPlay : p));
+                        const finalPlay = { ...updatedPlay };
+                        if (finalPlay.name) finalPlay.name = finalPlay.name.toUpperCase();
+                        setPlays(prev => prev.map(p => p.id === finalPlay.id ? finalPlay : p));
                     }
                 }
             };
@@ -47435,7 +47475,7 @@
                                 </div>
                             </div>
                         )}
-                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} currentWeek={currentWeek} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} onUpdateWeek={handleUpdateWeek} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} playCategories={playCategories} />}
+                        {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} currentWeek={currentWeek} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} onUpdateWeek={handleUpdateWeek} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} playCategories={playCategories} onQuickAddPlay={handleQuickAddPlay} />}
 
 
                         {
@@ -47498,6 +47538,7 @@
                                 drills={drills}
                                 teamLogo={teamLogo}
                                 currentWeek={currentWeek}
+                                onQuickAddPlay={handleQuickAddPlay}
                             />
                         )}
                         {view === 'pregame' && (
@@ -47536,6 +47577,7 @@
                                 scriptPresets={scriptPresets}
                                 gamePlan={currentWeek.offensiveGamePlan}
                                 gamePlanLayouts={(currentWeek.gamePlanLayouts && currentWeek.gamePlanLayouts.CALL_SHEET) ? currentWeek.gamePlanLayouts : GAME_PLAN_LAYOUTS}
+                                onQuickAddPlay={handleQuickAddPlay}
                                 playBuckets={playBuckets}
                                 playCategories={playCategories}
                                 roster={roster}

@@ -267,9 +267,13 @@ Based on code comments and placeholders:
 - **Debug Scripts**: Python scripts for syntax validation
 - **Backup Files**: Multiple `.bak` files for recovery
 
+### Architectural Guidelines
+
+- **Quick Add / Play Creation**: Any feature that allows users to "Quick Add" a play (Game Planner, Script Builder, Wristband etc.) MUST default to adding that play to the global `plays` list in the Master Playbook. This ensures consistency and prevents "ghost plays" (plays that exist only in a specific script/view but are not reusable or editable). Use `handleQuickAddPlay`, `onQuickAddPlay`, or ensure `onBlur` handlers trigger creation.
+
 ---
 
-**Last Updated**: January 2026  
-**Version**: Active Development  
-**License**: Proprietary  
+**Last Updated**: January 2026
+**Version**: Active Development
+**License**: Proprietary
 **Contact**: [Your contact information]
