@@ -225,13 +225,33 @@
             .app-container,
             .main-content,
             .game-plan-container,
-            .game-plan-content {
+            .game-plan-content,
+            .depth-view-container,
+            .depth-content-wrapper,
+            .depth-chart-print-section,
+            .depth-chart-print-view {
                 height: auto !important;
                 overflow: visible !important;
                 display: block !important;
                 flex: none !important;
                 margin: 0 !important;
                 padding: 0 !important;
+            }
+
+            /* Hide controls and checkboxes during print */
+            @media print {
+
+                .btn,
+                button,
+                input[type="checkbox"],
+                label {
+                    display: none !important;
+                }
+
+                h2 {
+                    display: block !important;
+                    margin-bottom: 1rem !important;
+                }
             }
 
             /* Ensure content utilizes full width and avoids breaks */
@@ -539,6 +559,13 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+        }
+
+        .wristband-grid-cell-body img,
+        .wristband-grid-cell-body svg {
+            object-fit: cover;
+            width: 100%;
+            height: 100%;
         }
 
         .wristband-grid-cell-footer {
@@ -4364,7 +4391,7 @@
                                 ref={svgRef}
                                 width="100%"
                                 height="100%"
-                                viewBox="0 0 800 500"
+                                viewBox="0 0 900 600"
                                 preserveAspectRatio="none"
                                 onMouseDown={handleMouseDown}
                                 onMouseMove={handleMouseMove}
@@ -4889,7 +4916,7 @@
                 // Simple SVG data URI approach
                 // Note: Converting elements to SVG string
                 const svgContent = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" style="background: white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" style="background: white">
                         <g opacity="0.1">
                                     <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" stroke-width="2" />
                                     <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" stroke-width="2" />
@@ -5072,7 +5099,7 @@
                 );
 
                 return (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" style={{ background: 'white', borderRadius: '8px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid meet" style={{ background: 'white', borderRadius: '8px' }}>
                         <g opacity="0.1">
                             <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
                             <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
@@ -5721,7 +5748,7 @@
                             <img src={play.image} className="play-image" alt={play.name} />
                         ) : (
                             <div className="play-diagram" style={{ height: '180px', background: 'white' }}>
-                                <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
+                                <svg viewBox="0 0 900 600" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
                                     <g opacity="0.1">
                                         <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
                                         <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
@@ -5943,7 +5970,7 @@
         const WristbandDiagramSVG = ({ data, minimal }) => {
             return (
                 <svg
-                    viewBox="0 0 800 500"
+                    viewBox="0 0 900 600"
                     width="100%"
                     height="100%"
                     style={{ display: 'block' }}
@@ -6011,7 +6038,7 @@
             );
         };
 
-        const WristbandGridCard = ({ startSlot, endSlot, slotMap }) => {
+        const WristbandGridCard = ({ startSlot, endSlot, slotMap, onUpdatePlay }) => {
             const slots = [];
             for (let i = startSlot; i <= endSlot; i++) {
                 slots.push(i);
@@ -6025,7 +6052,27 @@
                     {slots.map((slot, index) => {
                         const play = slot ? slotMap[slot] : null;
                         return (
-                            <div key={index} className="wristband-grid-cell" style={{ display: 'flex', flexDirection: 'column', height: '100%', border: '1px solid black', overflow: 'hidden' }}>
+                            <div key={index} className="wristband-grid-cell" style={{ display: 'flex', flexDirection: 'column', height: '100%', border: '1px solid black', overflow: 'hidden', position: 'relative' }}>
+                                {/* Clear button in top-right corner */}
+                                {play && onUpdatePlay && (
+                                    <button
+                                        className="wristband-clear-btn"
+                                        onClick={(e) => { e.stopPropagation(); onUpdatePlay({ ...play, wristbandSlot: '' }); }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '2px',
+                                            right: '2px',
+                                            zIndex: 10,
+                                            fontSize: '10px',
+                                            padding: '0 4px',
+                                            lineHeight: '14px',
+                                            background: 'rgba(255, 255, 255, 0.9)',
+                                            borderRadius: '2px'
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+                                )}
                                 {/* Top: Diagram (80%) */}
                                 <div className="wristband-grid-cell-body" style={{ flex: '0 0 75%', borderBottom: '1px solid black', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
                                     {play?.diagramData ? (
@@ -7819,17 +7866,62 @@
                 );
             };
 
+            // Helper function to calculate bounding box of diagram elements
+            const calculateDiagramBounds = (elements) => {
+                if (!elements || elements.length === 0) {
+                    return { minX: 0, minY: 0, maxX: 800, maxY: 500, width: 800, height: 500 };
+                }
+
+                let minX = Infinity, minY = Infinity;
+                let maxX = -Infinity, maxY = -Infinity;
+                const padding = 20; // Padding around the bounding box
+
+                elements.forEach(el => {
+                    if (el.type === 'player') {
+                        const { x, y } = el.points[0];
+                        const size = 30; // Player icon size
+                        minX = Math.min(minX, x - size / 2);
+                        minY = Math.min(minY, y - size / 2);
+                        maxX = Math.max(maxX, x + size / 2);
+                        maxY = Math.max(maxY, y + size / 2);
+                    } else {
+                        // Routes/arrows - check all points
+                        el.points.forEach(p => {
+                            minX = Math.min(minX, p.x);
+                            minY = Math.min(minY, p.y);
+                            maxX = Math.max(maxX, p.x);
+                            maxY = Math.max(maxY, p.y);
+                        });
+                    }
+                });
+
+                // Add padding
+                minX = Math.max(0, minX - padding);
+                minY = Math.max(0, minY - padding);
+                maxX = Math.min(800, maxX + padding);
+                maxY = Math.min(500, maxY + padding);
+
+                return {
+                    minX,
+                    minY,
+                    maxX,
+                    maxY,
+                    width: maxX - minX,
+                    height: maxY - minY
+                };
+            };
+
             const renderPlayThumbnail = (play, type = 'standard') => {
                 if (!play) return null;
 
                 // Determine which data to use based on type
                 let data = null;
-                if (type === 'skill' && play.rooskiSkillData) {
-                    // rooskiSkillData is an array of elements, wrap it in the expected structure
-                    data = { elements: play.rooskiSkillData };
-                } else if (type === 'oline' && play.rooskiOlineData) {
-                    // rooskiOlineData is an array of elements, wrap it in the expected structure
-                    data = { elements: play.rooskiOlineData };
+                if (type === 'skill' && (play.rooskiSkillData || play.wizSkillData)) {
+                    // rooskiSkillData/wizSkillData is an array of elements, wrap it in the expected structure
+                    data = { elements: play.rooskiSkillData || play.wizSkillData };
+                } else if (type === 'oline' && (play.rooskiOlineData || play.wizOlineData)) {
+                    // rooskiOlineData/wizOlineData is an array of elements, wrap it in the expected structure
+                    data = { elements: play.rooskiOlineData || play.wizOlineData };
                 } else if (play.diagramData) {
                     // diagramData should already have the { elements: [...] } structure
                     data = play.diagramData;
@@ -7837,21 +7929,36 @@
 
                 if (!data || !data.elements || data.elements.length === 0) return null;
 
+                // Calculate bounding box for smart crop
+                const bounds = calculateDiagramBounds(data.elements);
+                // Determine target aspect ratio (use 1:1 for square cells)
+                const targetRatio = 1; // Can be adjusted to 4:3 if needed
+                const sourceRatio = bounds.width / bounds.height;
+
+                // Adjust viewBox dimensions to maintain aspect ratio
+                let viewBoxWidth = bounds.width;
+                let viewBoxHeight = bounds.height;
+
+                if (sourceRatio > targetRatio) {
+                    // Wider than target, expand height
+                    viewBoxHeight = bounds.width / targetRatio;
+                } else {
+                    // Taller than target, expand width
+                    viewBoxWidth = bounds.height * targetRatio;
+                }
+
+                // Center the content in the new viewBox
+                const viewBoxX = bounds.minX - (viewBoxWidth - bounds.width) / 2;
+                const viewBoxY = bounds.minY - (viewBoxHeight - bounds.height) / 2;
+
                 return (
                     <svg
-                        viewBox="0 0 800 500"
+                        viewBox={`${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
                         width="100%"
                         height="100%"
                         style={{ display: 'block' }}
                         preserveAspectRatio="xMidYMid meet"
                     >
-                        <g opacity="0.1">
-                            <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="4" />
-                            <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
-                        </g>
                         {data.elements && data.elements.map(el => {
                             if (el.type === 'player') {
                                 const { x, y } = el.points[0];
@@ -7952,7 +8059,7 @@
                         {/* Grid */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {rows.map((rowSlots, rIndex) => (
-                                <div key={rIndex} style={{ flex: 1, display: 'flex', borderBottom: rIndex < rows.length - 1 ? '1px solid black' : 'none' }}>
+                                <div key={rIndex} style={{ height: '25%', minHeight: '25%', maxHeight: '25%', display: 'flex', borderBottom: rIndex < rows.length - 1 ? '1px solid black' : 'none' }}>
                                     {rowSlots.map((slot, cIndex) => {
                                         const play = slotMap[slot];
 
@@ -7960,9 +8067,9 @@
                                         let shouldShowPlay = false;
                                         if (play) {
                                             if (viewType === 'skill') {
-                                                shouldShowPlay = play.rooskiSkillData && !play.isOlineOnly;
+                                                shouldShowPlay = (play.rooskiSkillData || play.wizSkillData) && !play.isOlineOnly;
                                             } else if (viewType === 'oline') {
-                                                shouldShowPlay = play.rooskiOlineData;
+                                                shouldShowPlay = (play.rooskiOlineData || play.wizOlineData);
                                             }
                                         }
 
@@ -7978,10 +8085,35 @@
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     cursor: isClickable ? 'pointer' : 'default',
-                                                    background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white'
+                                                    background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white',
+                                                    overflow: 'hidden',
+                                                    position: 'relative'
                                                 }}
                                                 onClick={() => handleAssignSlot(slot)}
                                             >
+                                                {/* Clear button in top-right corner */}
+                                                {displayPlay && (
+                                                    <button
+                                                        className="wristband-clear-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onUpdatePlay({ ...displayPlay, wristbandSlot: '' });
+                                                        }}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '2px',
+                                                            right: '2px',
+                                                            zIndex: 10,
+                                                            fontSize: '10px',
+                                                            padding: '0 4px',
+                                                            lineHeight: '14px',
+                                                            background: 'rgba(255, 255, 255, 0.9)',
+                                                            borderRadius: '2px'
+                                                        }}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                )}
                                                 {/* Diagram area - takes up most of the cell */}
                                                 <div style={{
                                                     flex: 1,
@@ -7989,7 +8121,7 @@
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     overflow: 'hidden',
-                                                    padding: '2px'
+                                                    minHeight: 0
                                                 }}>
                                                     {displayPlay && renderPlayThumbnail(displayPlay, viewType)}
                                                 </div>
@@ -7999,7 +8131,8 @@
                                                     display: 'flex',
                                                     borderTop: '1px solid #ccc',
                                                     height: '18px',
-                                                    minHeight: '18px'
+                                                    minHeight: '18px',
+                                                    maxHeight: '18px'
                                                 }}>
                                                     {/* Coordinate cell */}
                                                     <div style={{
@@ -8284,7 +8417,7 @@
                                                     <span>{play.name}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                    {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{play.wristbandSlot}</span>}
+                                                    {play.wristbandSlot && <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>{getWristbandLabel(play)}</span>}
                                                     {play.staplesSlot && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '4px' }}>[{play.staplesSlot}]</span>}
                                                 </div>
                                             </div>
@@ -18681,12 +18814,12 @@
             );
         };
 
-        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout, positionNames = {}, onUpdatePositionNames, depthStrings = {}, onUpdateDepthStrings, depthRowCounts = {}, onUpdateDepthRowCounts, customPositions = {}, hiddenPositions = {} }) => {
+        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout, positionNames = {}, onUpdatePositionNames, depthStrings = {}, onUpdateDepthStrings, depthRowCounts = {}, onUpdateDepthRowCounts, customPositions = {}, hiddenPositions = {}, forcePrintView = false }) => {
             // Derive base type and squad level
             const formattedType = chartType || 'OFFENSE';
             const baseChartType = formattedType.replace(/^(V|JV|J2|SCOUT)_/, '');
             const squadPrefix = formattedType.match(/^(V|JV|J2|SCOUT)_/)?.[1] || '';
-            const squadName = { 'V': 'Varsity', 'JV': 'JV', 'J2': 'JV2' }[squadPrefix] || 'Varsity';
+            const squadName = { 'V': 'Varsity', 'JV': 'JV', 'J2': 'JV2', 'SCOUT': 'Scout Team' }[squadPrefix] || 'Varsity';
 
             // Map chart type to Setup Phase (OFFENSE, DEFENSE, SPECIAL_TEAMS)
             const getSetupPhase = (type) => {
@@ -18871,7 +19004,7 @@
             };
 
             const PrintView = () => (
-                <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+                <div className="depth-chart-print-view" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
                     <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>{squadName} {chartTitles[baseChartType] || chartTitles['OFFENSE']} - Depth Chart</h1>
                     <div style={{ position: 'relative', height: '600px', border: '1px solid #ccc' }}>
                         {/* Field Lines */}
@@ -18971,6 +19104,15 @@
                     };
                 }
             }, [draggingId, tempPosition]);
+
+            // Direct Return for Forced Print View (Print All Mode)
+            if (forcePrintView) {
+                return (
+                    <div style={{ height: 'auto', pageBreakInside: 'avoid' }}>
+                        <PrintView />
+                    </div>
+                );
+            }
 
             return (
                 <>
@@ -20327,7 +20469,7 @@
                                         ref={fieldRef}
                                         width="100%"
                                         height="100%"
-                                        viewBox="0 0 800 500"
+                                        viewBox="0 0 900 600"
                                         preserveAspectRatio="none"
                                         style={{ border: '2px solid #cbd5e1', borderRadius: '8px', cursor: (draggingPlayer !== null || selectionBox !== null) ? 'grabbing' : 'default' }}
                                         onMouseDown={(e) => {
@@ -25987,66 +26129,68 @@
                 if (!data || !data.elements || data.elements.length === 0) return null;
 
                 return (
-                    <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
+                    <svg viewBox="0 0 900 600" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
                         <g opacity="0.1">
                             <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
                             <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
                             <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="4" />
                             <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="2" />
                             <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
-                        </g>
-                        {data.elements && data.elements.map(el => {
-                            if (el.type === 'player') {
-                                const { x, y } = el.points[0];
-                                const size = 30;
-                                const isRect = el.shape === 'square';
+                        </g >
+                        {
+                            data.elements && data.elements.map(el => {
+                                if (el.type === 'player') {
+                                    const { x, y } = el.points[0];
+                                    const size = 30;
+                                    const isRect = el.shape === 'square';
+                                    return (
+                                        <g key={el.id}>
+                                            {isRect ? (
+                                                <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="2" />
+                                            ) : (
+                                                <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="2" />
+                                            )}
+                                            <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
+                                        </g>
+                                    );
+                                }
+
+                                let d = '';
+                                if (el.style === 'zigzag') {
+                                    d = getZigZagPath(el.points);
+                                } else if (el.type === 'free' || el.points.length > 1) {
+                                    d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                                }
+
+                                let markerEnd = undefined;
+                                let tBlock = null;
+
+                                if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
+                                    markerEnd = `url(#arrowhead-${el.color})`;
+                                } else if (el.endType === 't') {
+                                    const points = el.points;
+                                    const end = points[points.length - 1];
+                                    const prev = points[points.length - 2] || points[0];
+                                    const dx = end.x - prev.x;
+                                    const dy = end.y - prev.y;
+                                    const len = Math.hypot(dx, dy) || 1;
+                                    const perpX = (-dy / len) * 15;
+                                    const perpY = (dx / len) * 15;
+                                    tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={el.color} strokeWidth="4" />;
+                                } else if (el.endType === 'dot') {
+                                    const end = el.points[el.points.length - 1];
+                                    tBlock = <circle cx={end.x} cy={end.y} r="6" fill={el.color} />;
+                                }
+
                                 return (
                                     <g key={el.id}>
-                                        {isRect ? (
-                                            <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="2" />
-                                        ) : (
-                                            <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="2" />
-                                        )}
-                                        <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
+                                        <path d={d} stroke={el.color} strokeWidth="4" fill="none" strokeDasharray={el.style === 'dashed' ? "10,5" : "none"} markerEnd={markerEnd} />
+                                        {tBlock}
                                     </g>
                                 );
-                            }
-
-                            let d = '';
-                            if (el.style === 'zigzag') {
-                                d = getZigZagPath(el.points);
-                            } else if (el.type === 'free' || el.points.length > 1) {
-                                d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-                            }
-
-                            let markerEnd = undefined;
-                            let tBlock = null;
-
-                            if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
-                                markerEnd = `url(#arrowhead-${el.color})`;
-                            } else if (el.endType === 't') {
-                                const points = el.points;
-                                const end = points[points.length - 1];
-                                const prev = points[points.length - 2] || points[0];
-                                const dx = end.x - prev.x;
-                                const dy = end.y - prev.y;
-                                const len = Math.hypot(dx, dy) || 1;
-                                const perpX = (-dy / len) * 15;
-                                const perpY = (dx / len) * 15;
-                                tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={el.color} strokeWidth="4" />;
-                            } else if (el.endType === 'dot') {
-                                const end = el.points[el.points.length - 1];
-                                tBlock = <circle cx={end.x} cy={end.y} r="6" fill={el.color} />;
-                            }
-
-                            return (
-                                <g key={el.id}>
-                                    <path d={d} stroke={el.color} strokeWidth="4" fill="none" strokeDasharray={el.style === 'dashed' ? "10,5" : "none"} markerEnd={markerEnd} />
-                                    {tBlock}
-                                </g>
-                            );
-                        })}
-                    </svg>
+                            })
+                        }
+                    </svg >
                 );
             };
 
@@ -27726,7 +27870,7 @@
                         const PRINT_SCALE_MODIFIER = 1.5;
 
                         return (
-                            <svg viewBox="0 0 800 500" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
+                            <svg viewBox="0 0 900 600" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
                                 <g opacity="0.1">
                                     <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="4" />
                                     <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="4" />
@@ -42065,6 +42209,18 @@
         };
 
 
+        const DEPTH_CHART_TYPES = [
+            { id: 'OFFENSE', label: 'Offense' },
+            { id: 'DEFENSE', label: 'Defense' },
+            { id: 'KICKOFF', label: 'Kickoff' },
+            { id: 'KICK_RETURN', label: 'Kick Return' },
+            { id: 'PUNT', label: 'Punt' },
+            { id: 'PUNT_RETURN', label: 'Punt Return' },
+            { id: 'PAT_BLOCK', label: 'PAT/FG Block' },
+            { id: 'SCOUT_OFFENSE', label: 'Scout Offense' },
+            { id: 'SCOUT_DEFENSE', label: 'Scout Defense' }
+        ];
+
         const App = () => {
             // Custom Hook for Auto-Sync to prevent initial-load overwrites
             const useAutoSync = (authUser, key, data, debounceMs = 2000, isEnabled = true) => {
@@ -42101,6 +42257,8 @@
             // -- SCHOOL INITIALIZATION CHECK --
             const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
             const [inviteData, setInviteData] = useState(null); // NEW: Invite State
+            const [isViewingAll, setIsViewingAll] = useState(false);
+            const [selectedCharts, setSelectedCharts] = useState(DEPTH_CHART_TYPES.map(t => t.id));
 
             // -- PROGRAM RECORDS MIGRATION --
             const [programRecords, setProgramRecords] = useLocalStorage('hc-program-records', {});
@@ -47119,45 +47277,145 @@
 
                         {view === 'archive' && <ArchiveManager roster={roster} staff={staff} onUpdateRoster={setRoster} onUpdateStaff={setStaff} />}
                         {view === 'depth' && (
-                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{
-                                    display: 'flex',
-                                    gap: '0.5rem',
-                                    padding: '1rem',
-                                    background: 'var(--surface)',
-                                    borderBottom: '1px solid var(--border)',
-                                    alignItems: 'center',
-                                    overflowX: 'auto'
-                                }}>
-                                    {[
-                                        { id: 'OFFENSE', label: 'Offense', icon: 'Shield' },
-                                        { id: 'DEFENSE', label: 'Defense', icon: 'Shield' },
-                                        { id: 'KICKOFF', label: 'Kickoff', icon: 'ArrowRight' },
-                                        { id: 'KICK_RETURN', label: 'Kick Return', icon: 'RotateCw' },
-                                        { id: 'PUNT', label: 'Punt', icon: 'ArrowUp' },
-                                        { id: 'PUNT_RETURN', label: 'Punt Return', icon: 'ArrowDown' },
-                                        { id: 'PAT_BLOCK', label: 'PAT/FG Block', icon: 'XOctagon' },
-                                        { id: 'SCOUT_OFFENSE', label: 'Scout Offense', icon: 'Search' },
-                                        { id: 'SCOUT_DEFENSE', label: 'Scout Defense', icon: 'Search' }
-                                    ].map(tab => (
+                            <div className="depth-view-container" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                {/* Hide top bar when printing all */}
+                                {!isViewingAll && (
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '0.5rem',
+                                        padding: '1rem',
+                                        background: 'var(--surface)',
+                                        borderBottom: '1px solid var(--border)',
+                                        alignItems: 'center',
+                                        overflowX: 'auto'
+                                    }}>
+                                        {DEPTH_CHART_TYPES.map(tab => (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => setDepthChartType(tab.id)}
+                                                className={`btn ${depthChartType === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.5rem',
+                                                    whiteSpace: 'nowrap',
+                                                    minWidth: '100px'
+                                                }}
+                                            >
+                                                {tab.label}
+                                            </button>
+                                        ))}
+                                        <div style={{ flex: 1 }} />
                                         <button
-                                            key={tab.id}
-                                            onClick={() => setDepthChartType(tab.id)}
-                                            className={`btn ${depthChartType === tab.id ? 'btn-primary' : 'btn-secondary'}`}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.5rem',
-                                                whiteSpace: 'nowrap'
-                                            }}
+                                            className="btn btn-secondary"
+                                            onClick={() => window.print()}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}
                                         >
-                                            <Icon name={tab.icon} size={16} />
-                                            {tab.label}
+                                            <Icon name="Printer" size={16} /> Print
                                         </button>
-                                    ))}
-                                </div>
-                                <div style={{ flex: 1, overflow: 'hidden' }}>
-                                    <DepthChart roster={roster} depthChart={(currentWeek.depthChart && currentWeek.depthChart[depthChartType]) || {}} onUpdateDepthChart={(updated) => handleUpdateDepthChart(prev => ({ ...prev, [depthChartType]: updated }))} chartType={depthChartType} positionNames={positionNames} customPositions={customPositions} hiddenPositions={hiddenPositions} savedLayout={depthChartLayouts[depthChartType] || {}} onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)} onResetLayout={() => handleResetDepthLayout(depthChartType)} />
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => setIsViewingAll(true)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}
+                                        >
+                                            <Icon name="Eye" size={16} /> See All
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="depth-content-wrapper" style={{ flex: 1, overflow: isViewingAll ? 'visible' : 'auto' }}>
+                                    {isViewingAll ? (
+                                        // CONSOLIDATED VIEW WITH CHECKBOXES
+                                        <div style={{ padding: '2rem' }}>
+                                            {/* Header and Controls */}
+                                            <div style={{ marginBottom: '2rem', borderBottom: '2px solid var(--border)', paddingBottom: '1rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                                    <h2 style={{ margin: 0 }}>Depth Charts - All Units</h2>
+                                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                                        <button
+                                                            className="btn btn-secondary"
+                                                            onClick={() => setIsViewingAll(false)}
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                        >
+                                                            <Icon name="ArrowLeft" size={16} /> Back
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-primary"
+                                                            onClick={() => window.print()}
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                        >
+                                                            <Icon name="Printer" size={16} /> Print Selected
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Checkboxes */}
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                                                    {DEPTH_CHART_TYPES.map(chartTypeObj => (
+                                                        <label key={chartTypeObj.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedCharts.includes(chartTypeObj.id)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedCharts([...selectedCharts, chartTypeObj.id]);
+                                                                    } else {
+                                                                        setSelectedCharts(selectedCharts.filter(id => id !== chartTypeObj.id));
+                                                                    }
+                                                                }}
+                                                                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                            />
+                                                            <span style={{ fontWeight: '500' }}>{chartTypeObj.label}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Render Selected Charts */}
+                                            <div>
+                                                {DEPTH_CHART_TYPES.filter(ct => selectedCharts.includes(ct.id)).map((chartTypeObj, index) => (
+                                                    <div
+                                                        key={chartTypeObj.id}
+                                                        className="depth-chart-print-section"
+                                                        style={{
+                                                            pageBreakAfter: 'always',
+                                                            marginBottom: '2rem',
+                                                            display: selectedCharts.includes(chartTypeObj.id) ? 'block' : 'none'
+                                                        }}
+                                                    >
+                                                        <DepthChart
+                                                            roster={roster}
+                                                            depthChart={(currentWeek.depthChart && currentWeek.depthChart[chartTypeObj.id]) || {}}
+                                                            onUpdateDepthChart={(updated) => handleUpdateDepthChart(prev => ({ ...prev, [chartTypeObj.id]: updated }))}
+                                                            chartType={chartTypeObj.id}
+                                                            positionNames={positionNames}
+                                                            customPositions={customPositions}
+                                                            hiddenPositions={hiddenPositions}
+                                                            savedLayout={depthChartLayouts[chartTypeObj.id] || {}}
+                                                            onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(chartTypeObj.id, id, x, y)}
+                                                            onResetLayout={() => handleResetDepthLayout(chartTypeObj.id)}
+                                                            forcePrintView={true}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        // RENDER SINGLE DEPTH CHART
+                                        <DepthChart
+                                            roster={roster}
+                                            depthChart={(currentWeek.depthChart && currentWeek.depthChart[depthChartType]) || {}}
+                                            onUpdateDepthChart={(updated) => handleUpdateDepthChart(prev => ({ ...prev, [depthChartType]: updated }))}
+                                            chartType={depthChartType}
+                                            positionNames={positionNames}
+                                            customPositions={customPositions}
+                                            hiddenPositions={hiddenPositions}
+                                            savedLayout={depthChartLayouts[depthChartType] || {}}
+                                            onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)}
+                                            onResetLayout={() => handleResetDepthLayout(depthChartType)}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         )}
