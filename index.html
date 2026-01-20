@@ -6897,7 +6897,6 @@
                     const isWiz = newType === 'wiz';
                     const isMini = newType === 'mini-scripts';
                     const isRooski = newType === 'rooski';
-
                     const cardMin = startSlot;
                     const cardMax = startSlot + 99;
                     const wizMax = startSlot + 15;
@@ -8492,6 +8491,36 @@
                                 <button className="btn btn-danger" onClick={() => handleClearCard(selectedCardId)}>Clear Card</button>
                                 <button className="btn btn-danger" onClick={handleClearBoth} style={{ fontWeight: 'bold' }}>Clear All</button>
                             </div>
+                            {confirmModal && (
+                                <div style={{
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 9999
+                                }}>
+                                    <div style={{
+                                        backgroundColor: 'var(--bg-panel)',
+                                        padding: '2rem',
+                                        borderRadius: '8px',
+                                        maxWidth: '500px',
+                                        textAlign: 'center',
+                                        border: '1px solid var(--border)'
+                                    }}>
+                                        <h3 style={{ marginTop: 0 }}>Confirm Action</h3>
+                                        <p>{confirmModal.message}</p>
+                                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+                                            <button className="btn btn-secondary" onClick={() => setConfirmModal(null)}>Cancel</button>
+                                            <button className="btn btn-danger" onClick={confirmClear}>Confirm</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
 
