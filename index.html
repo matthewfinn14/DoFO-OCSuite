@@ -9166,7 +9166,7 @@
             );
         };
 
-        const MultiSelectDropdown = ({ options = [], value = [], onChange, placeholder = "Select...", className = "" }) => {
+        const MultiSelectDropdown = ({ options = [], value = [], onChange, placeholder = "Select...", className = "", center = false }) => {
             const [isOpen, setIsOpen] = useState(false);
             const [searchTerm, setSearchTerm] = useState("");
             const wrapperRef = useRef(null);
@@ -9188,8 +9188,8 @@
                 onChange(newValue);
             };
 
-            const filteredOptions = options.filter(opt =>              opt === '__ADD_CUSTOM__' ||
-             opt.toLowerCase().includes(searchTerm.toLowerCase())
+            const filteredOptions = options.filter(opt => opt === '__ADD_CUSTOM__' ||
+                opt.toLowerCase().includes(searchTerm.toLowerCase())
             );
 
             return (
@@ -9209,6 +9209,7 @@
                             minHeight: '30px',
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: center ? 'center' : 'flex-start',
                             color: value.length === 0 ? '#9ca3af' : 'var(--text-primary)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -11447,7 +11448,7 @@
 
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                                 <thead>
-                                    <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                                    <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'center' }}>
                                         <th style={{ padding: '0.5rem' }}>#</th>
                                         <th style={{ padding: '0.5rem' }}>Time</th>
                                         <th style={{ padding: '0.5rem' }}>Dur</th>
@@ -11478,8 +11479,8 @@
                                         }}
                                         onClick={() => setSelectedSegmentId('WARMUP')}
                                     >
-                                        <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>0</td>
-                                        <td style={{ padding: '0.5rem' }}>
+                                        <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)', textAlign: 'center' }}>0</td>
+                                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                             {plan.startTime ? (() => {
                                                 const date = new Date(`2000-01-01T${plan.startTime}`);
                                                 let hours = date.getHours();
@@ -11492,19 +11493,19 @@
                                             <input
                                                 type="number"
                                                 className="form-input"
-                                                style={{ width: '50px', padding: '0.25rem' }}
+                                                style={{ width: '50px', padding: '0.25rem', textAlign: 'center' }}
                                                 value={plan.warmupDuration || 0}
                                                 onChange={e => updateCurrentPlan({ ...plan, warmupDuration: parseInt(e.target.value) || 0 })}
                                                 onClick={e => e.stopPropagation()}
                                             />
                                         </td>
-                                        <td style={{ padding: '0.5rem' }}>
+                                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                             <select
                                                 className="form-select"
                                                 value={plan.warmupPhase || 'ALL'}
                                                 onChange={e => updateCurrentPlan({ ...plan, warmupPhase: e.target.value })}
                                                 onClick={e => e.stopPropagation()}
-                                                style={{ width: '70px', padding: '0.25rem', fontSize: '0.85rem' }}
+                                                style={{ width: '70px', padding: '0.25rem', fontSize: '0.85rem', textAlign: 'center' }}
                                             >
                                                 <option value="ALL">ALL</option>
                                                 <option value="O">O</option>
@@ -11513,19 +11514,21 @@
                                                 <option value="C">C</option>
                                             </select>
                                         </td>
-                                        <td style={{ padding: '0.5rem', fontStyle: 'italic' }}>Warmup</td>
+                                        <td style={{ padding: '0.5rem', fontStyle: 'italic', textAlign: 'center' }}>Warmup</td>
                                         {plan.isTwoPlatoon ? (
                                             <>
-                                                <td style={{ padding: '0.5rem' }}>
+                                                <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                     <MultiSelectDropdown
+                                                        center
                                                         options={getFocusItemsForPhase('O')}
                                                         value={Array.isArray(plan.warmupOffenseFocus) ? plan.warmupOffenseFocus : (plan.warmupOffenseFocus ? [plan.warmupOffenseFocus] : [])}
                                                         onChange={vals => handleFocusChange('WARMUP', 'warmupOffenseFocus', vals)}
                                                         placeholder="-- Offense --"
                                                     />
                                                 </td>
-                                                <td style={{ padding: '0.5rem' }}>
+                                                <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                     <MultiSelectDropdown
+                                                        center
                                                         options={getFocusItemsForPhase('D')}
                                                         value={Array.isArray(plan.warmupDefenseFocus) ? plan.warmupDefenseFocus : (plan.warmupDefenseFocus ? [plan.warmupDefenseFocus] : [])}
                                                         onChange={vals => handleFocusChange('WARMUP', 'warmupDefenseFocus', vals)}
@@ -11534,12 +11537,12 @@
                                                 </td>
                                             </>
                                         ) : (
-                                            <td style={{ padding: '0.5rem' }}>
+                                            <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                 {customInputState?.id === 'WARMUP' ? (
                                                     <input
                                                         autoFocus
                                                         className="form-input"
-                                                        style={{ padding: '0.25rem', width: '100%' }}
+                                                        style={{ padding: '0.25rem', width: '100%', textAlign: 'center' }}
                                                         defaultValue=""
                                                         placeholder="Custom focus..."
                                                         onBlur={(e) => {
@@ -11558,6 +11561,7 @@
                                                     />
                                                 ) : (
                                                     <MultiSelectDropdown
+                                                        center
                                                         options={[...getFocusItemsForPhase(plan.warmupPhase || 'ALL'), '__ADD_CUSTOM__']}
                                                         value={Array.isArray(plan.warmupSituation) ? plan.warmupSituation : (plan.warmupSituation ? [plan.warmupSituation] : [])}
                                                         onChange={(vals) => {
@@ -11572,7 +11576,7 @@
                                                 )}
                                             </td>
                                         )}
-                                        <td style={{ padding: '0.5rem' }}>
+                                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                             <select
                                                 className="form-select"
                                                 style={{ padding: '0.25rem', width: '90px' }}
@@ -11745,7 +11749,7 @@
                                                 }}
                                                 onClick={() => setSelectedSegmentId(seg.id)}
                                             >
-                                                <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                                <td style={{ padding: '0.5rem', fontWeight: 'bold', color: 'var(--accent)', textAlign: 'center' }}>
                                                     {index + 1}
                                                     {/* Insert Segment Button */}
                                                     {!isLocked && (
@@ -11776,7 +11780,7 @@
                                                         </button>
                                                     )}
                                                 </td>
-                                                <td style={{ padding: '0.5rem' }}>
+                                                <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                     {plan.startTime ? (() => {
                                                         const [startH, startM] = plan.startTime.split(':').map(Number);
                                                         const warmup = parseInt(plan.warmupDuration) || 0;
@@ -11809,25 +11813,25 @@
                                                         return `${hours}:${minutes.toString().padStart(2, '0')}`;
                                                     })() : seg.startTime}
                                                 </td>
-                                                <td style={{ padding: '0.5rem' }}>
+                                                <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                     <span className="print-only-text">{seg.duration}</span>
                                                     {!isLocked && (
                                                         <input
                                                             type="number"
                                                             className="form-input no-print"
-                                                            style={{ width: '60px', padding: '0.25rem' }}
+                                                            style={{ width: '60px', padding: '0.25rem', textAlign: 'center' }}
                                                             value={seg.duration}
                                                             onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value))}
                                                             onClick={e => e.stopPropagation()}
                                                         />
                                                     )}
                                                 </td>
-                                                <td style={{ padding: '0.5rem' }}>
+                                                <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                     <span className="print-only-text">{seg.phase || 'ALL'}</span>
                                                     {!isLocked && (
                                                         <select
                                                             className="form-select no-print"
-                                                            style={{ width: '70px', padding: '0.25rem', fontSize: '0.85rem' }}
+                                                            style={{ width: '70px', padding: '0.25rem', fontSize: '0.85rem', textAlign: 'center' }}
                                                             value={seg.phase || 'ALL'}
                                                             onChange={e => updateSegment(seg.id, 'phase', e.target.value)}
                                                             onClick={e => e.stopPropagation()}
@@ -11840,12 +11844,12 @@
                                                         </select>
                                                     )}
                                                 </td>
-                                                <td style={{ padding: '0.5rem' }}>
+                                                <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                     <span className="print-only-text">{seg.type}</span>
                                                     {!isLocked && (
                                                         <select
                                                             className="form-select no-print"
-                                                            style={{ width: '130px', padding: '0.25rem' }}
+                                                            style={{ width: '130px', padding: '0.25rem', textAlign: 'center' }}
                                                             value={seg.type}
                                                             onChange={e => {
                                                                 const newType = e.target.value;
@@ -11895,10 +11899,11 @@
                                                 </td>
                                                 {plan.isTwoPlatoon ? (
                                                     <>
-                                                        <td style={{ padding: '0.5rem' }}>
+                                                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                             <span className="print-only-text">{Array.isArray(seg.offenseFocus || seg.situation) ? (seg.offenseFocus || seg.situation).join(', ') : (seg.offenseFocus || seg.situation)}</span>
                                                             {!isLocked && (
                                                                 <MultiSelectDropdown
+                                                                    center
                                                                     className="no-print"
                                                                     options={segmentSettings[seg.type]?.allowedFocusItems?.length > 0
                                                                         ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase('O').includes(f))
@@ -11909,10 +11914,11 @@
                                                                 />
                                                             )}
                                                         </td>
-                                                        <td style={{ padding: '0.5rem' }}>
+                                                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                             <span className="print-only-text">{Array.isArray(seg.defenseFocus) ? seg.defenseFocus.join(', ') : seg.defenseFocus}</span>
                                                             {!isLocked && (
                                                                 <MultiSelectDropdown
+                                                                    center
                                                                     className="no-print"
                                                                     options={segmentSettings[seg.type]?.allowedFocusItems?.length > 0
                                                                         ? segmentSettings[seg.type].allowedFocusItems.filter(f => getFocusItemsForPhase('D').includes(f))
@@ -11925,14 +11931,14 @@
                                                         </td>
                                                     </>
                                                 ) : (
-                                                    <td style={{ padding: '0.5rem' }}>
+                                                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                         <span className="print-only-text">{Array.isArray(seg.situation) ? seg.situation.join(', ') : seg.situation}</span>
                                                         {!isLocked && (
                                                             customInputState?.id === seg.id ? (
                                                                 <input
                                                                     autoFocus
                                                                     className="form-input no-print"
-                                                                    style={{ padding: '0.25rem', width: '100%' }}
+                                                                    style={{ padding: '0.25rem', width: '100%', textAlign: 'center' }}
                                                                     defaultValue=""
                                                                     placeholder="Custom focus..."
                                                                     onBlur={(e) => {
@@ -11951,6 +11957,7 @@
                                                                 />
                                                             ) : (
                                                                 <MultiSelectDropdown
+                                                                    center
                                                                     className="no-print"
                                                                     options={[
                                                                         ...(segmentSettings[seg.type]?.allowedFocusItems?.length > 0
@@ -11972,12 +11979,12 @@
                                                         )}
                                                     </td>
                                                 )}
-                                                <td style={{ padding: '0.5rem' }}>
+                                                <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                     <span className="print-only-text">{seg.contactLevel}</span>
                                                     {!isLocked && (
                                                         <select
                                                             className="form-select no-print"
-                                                            style={{ padding: '0.25rem', width: '90px' }}
+                                                            style={{ padding: '0.25rem', width: '90px', textAlign: 'center' }}
                                                             value={seg.contactLevel || ''}
                                                             onChange={e => updateSegment(seg.id, 'contactLevel', e.target.value)}
                                                             onClick={e => e.stopPropagation()}
