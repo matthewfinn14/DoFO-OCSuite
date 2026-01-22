@@ -2412,6 +2412,8 @@
                 case "FilterX": return <svg {...commonProps}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /><line x1="14" x2="20" y1="3" y2="9" /><line x1="20" x2="14" y1="3" y2="9" /></svg>;
                 case "XCircle": return <svg {...commonProps}><circle cx="12" cy="12" r="10" /><line x1="15" x2="9" y1="9" y2="15" /><line x1="9" x2="15" y1="9" y2="15" /></svg>;
 
+                case "BarChart2": return <svg {...commonProps}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>;
+
                 default:
                     // Fallback to text (Emoji or just text)
                     return <span style={{ fontSize: '0.8rem', marginRight: '0.2rem', display: 'inline-block', width: 'auto', textAlign: 'center', opacity: 0.8, ...style, color: 'red' }}>MISSING: {name}</span>;
@@ -6761,42 +6763,67 @@
                 return s.replace(/\s+/g, ' ').replace(/\*$/, '').trim();
             };
 
+            const assignPlayToSlot = (play, slot, cardId) => {
+                const card = wbSettings[cardId];
+                if (!card) return;
+
+                const isWiz = card.layout === 'wiz';
+                const isMiniScript = card.layout === 'mini-scripts';
+
+                if (card.type === 'staples') {
+                    const signature = getPlaySignature(play);
+                    const matchingPlays = plays.filter(p => getPlaySignature(p) === signature);
+                    const updates = matchingPlays.map(p => ({
+                        ...p,
+                        staplesSlot: slot.toString(),
+                    }));
+                    onUpdatePlay(updates);
+                } else {
+                    onUpdatePlay({
+                        ...play,
+                        wristbandSlot: slot.toString(),
+                        isWiz: isWiz,
+                        isMiniScript: isMiniScript,
+                        isRooski: false
+                    });
+                }
+            };
+
+            const handleAutoAssign = (play) => {
+                const card = wbSettings[selectedCardId];
+                if (!card) return;
+
+                let availableSlot = null;
+                if (card.type === 'staples') {
+                    for (let i = 10; i <= 89; i++) {
+                        if (!slotMap[i]) {
+                            availableSlot = i;
+                            break;
+                        }
+                    }
+                } else {
+                    const startSlot = selectedCardId === 'card1' ? 101 : (selectedCardId === 'card2' ? 201 : (selectedCardId === 'card3' ? 301 : (selectedCardId === 'card4' ? 401 : (selectedCardId === 'card5' ? 501 : 601))));
+                    const maxSlots = (card.layout === 'wiz' || card.layout === 'rooski') ? 16 : 48;
+                    for (let i = 0; i < maxSlots; i++) {
+                        const slot = startSlot + i;
+                        if (!slotMap[slot]) {
+                            availableSlot = slot;
+                            break;
+                        }
+                    }
+                }
+
+                if (availableSlot) {
+                    assignPlayToSlot(play, availableSlot, selectedCardId);
+                }
+            };
+
             const handleAssignSlot = (slot) => {
                 if (!selectedPlayId) return;
                 const play = plays.find(p => p.id === selectedPlayId);
                 if (play) {
-                    const card = wbSettings[selectedCardId];
-                    if (!card) return;
-
-                    // Determine flags based on card layout
-                    const isWiz = card.layout === 'wiz';
-                    const isMiniScript = card.layout === 'mini-scripts';
-
-                    // Update play with new slot - Check for Staples
-                    if (card.type === 'staples') {
-                        // NEW: Update ALL plays with matching signature
-                        const signature = getPlaySignature(play);
-                        const matchingPlays = plays.filter(p => getPlaySignature(p) === signature);
-
-                        // Create update objects for all matching plays
-                        const updates = matchingPlays.map(p => ({
-                            ...p,
-                            staplesSlot: slot.toString(),
-                            // Staples doesn't usually change the main card type, but usually staples are T.
-                            // We will leave main flags alone for staples assignment to avoid side effects
-                        }));
-
-                        onUpdatePlay(updates);
-                    } else {
-                        onUpdatePlay({
-                            ...play,
-                            wristbandSlot: slot.toString(),
-                            isWiz: isWiz,
-                            isMiniScript: isMiniScript,
-                            isRooski: false // Clear legacy flag if any
-                        });
-                    }
-                    setSelectedPlayId(null); // Deselect after assignment
+                    assignPlayToSlot(play, slot, selectedCardId);
+                    setSelectedPlayId(null);
                 }
             };
 
@@ -8381,6 +8408,7 @@
                                                     setSelectedPlayId(play.id);
                                                 }
                                             }}
+                                            onDoubleClick={() => handleAutoAssign(play)}
                                             style={{
                                                 padding: '0.35rem 0.5rem',
                                                 borderRadius: '4px',
@@ -9669,7 +9697,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, roster, drills, teamLogo }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, roster, drills, teamLogo }) => {
             console.log('PracticeScriptBuilder debug:', { currentWeek, teamLogo });
 
             const [selectedDay, setSelectedDay] = useState('Monday');
@@ -11058,6 +11086,9 @@
                                     gamePlanLayouts={gamePlanLayouts}
                                     playBuckets={typeof playBuckets !== 'undefined' ? playBuckets : []}
                                     playCategories={typeof playCategories !== 'undefined' ? playCategories : []}
+                                    onUpdatePlay={onUpdatePlay}
+                                    onUpdateGamePlan={onUpdateGamePlan}
+                                    currentWeek={currentWeek}
                                     onQuickAddPlay={(play) => {
                                         // Quick add logic for script mode (might need to infer segment?)
                                         // In script mode, all segments are visible.
@@ -12351,6 +12382,8 @@
                             gamePlanLayouts={gamePlanLayouts}
                             playBuckets={typeof playBuckets !== 'undefined' ? playBuckets : []}
                             playCategories={typeof playCategories !== 'undefined' ? playCategories : []}
+                            onUpdatePlay={onUpdatePlay}
+                            currentWeek={currentWeek}
                             onQuickAddPlay={(play) => {
                                 if (selectedSegmentId && selectedSegmentId !== 'WARMUP') {
                                     const seg = plan.segments.find(s => s.id === selectedSegmentId);
@@ -12718,6 +12751,8 @@
                                         playBuckets={playBuckets}
                                         playCategories={playCategories}
                                         onAddSection={handleAddSection}
+                                        onUpdatePlay={onUpdatePlay}
+                                        currentWeek={currentWeek}
                                     />
                                 </div>
                             </div>
@@ -15197,67 +15232,6 @@
         const PRESET_COLORS = ['#38bdf8', '#3b82f6', '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#000000', '#4b5563'];
 
         const CALENDAR_CONSTANTS = {
-            ANNUAL_DEFAULTS: [
-                { month: 'January', program: ['Off-Season Lifts Begin', 'Player Meetings'], tasks: [] },
-                { month: 'February', program: ['Combine Testing', 'Super Bowl Watch Party'], tasks: [] },
-                { month: 'March', program: ['Spring Ball Install', '7on7 Tryouts'], tasks: [] },
-                { month: 'April', program: ['Spring Game', 'Fundraising Kickoff'], tasks: [] },
-                { month: 'May', program: ['Spring Football', 'Academic Review'], tasks: [] },
-                { month: 'June', program: ['Summer Camp Starts', '7on7 League'], tasks: [] },
-                { month: 'July', program: ['Team Camp', 'Dead Period'], tasks: [] },
-                { month: 'August', program: ['Fall Camp', 'Scrimmage 1'], tasks: [] },
-                { month: 'September', program: ['Season Opener', 'Homecoming'], tasks: [] },
-                { month: 'October', program: ['Conference Play', 'Pink Out'], tasks: [] },
-                { month: 'November', program: ['Senior Night', 'Playoffs Round 1'], tasks: [] },
-                { month: 'December', program: ['State Championship', 'Banquet'], tasks: [] }
-            ],
-            SUMMER_DEFAULTS: [
-                { month: 'Week 1', program: [], tasks: [] },
-                { month: 'Week 2', program: [], tasks: [] },
-                { month: 'Week 3', program: [], tasks: [] },
-                { month: 'Week 4', program: [], tasks: [] },
-                { month: 'Week 5', program: [], tasks: [] },
-                { month: 'Week 6', program: [], tasks: [] },
-                { month: 'Week 7', program: [], tasks: [] },
-                { month: 'Week 8', program: [], tasks: [] }
-            ],
-            PRESEASON_DEFAULTS: [
-                { month: 'Family Week', program: [], tasks: [] },
-                { month: 'Camp Week: Sun', program: [], tasks: [] },
-                { month: 'Camp Week: Mon', program: [], tasks: [] },
-                { month: 'Camp Week: Tue', program: [], tasks: [] },
-                { month: 'Camp Week: Wed', program: [], tasks: [] },
-                { month: 'Camp Week: Thu', program: [], tasks: [] },
-                { month: 'Camp Week: Fri', program: [], tasks: [] },
-                { month: 'Camp Week: Sat', program: [], tasks: [] },
-                { month: 'First Week: Sun', program: [], tasks: [] },
-                { month: 'First Week: Mon', program: [], tasks: [] },
-                { month: 'First Week: Tue', program: [], tasks: [] },
-                { month: 'First Week: Wed', program: [], tasks: [] },
-                { month: 'First Week: Thu', program: [], tasks: [] },
-                { month: 'First Week: Fri', program: [], tasks: [] },
-                { month: 'First Week: Sat', program: [], tasks: [] },
-                { month: 'Week 0: Sun', program: [], tasks: [] },
-                { month: 'Week 0: Mon', program: [], tasks: [] },
-                { month: 'Week 0: Tue', program: [], tasks: [] },
-                { month: 'Week 0: Wed', program: [], tasks: [] },
-                { month: 'Week 0: Thu', program: [], tasks: [] },
-                { month: 'Week 0: Fri', program: [], tasks: [] },
-                { month: 'Week 0: Sat', program: [], tasks: [] }
-            ],
-            GAME_WEEK_DEFAULTS: [
-                { month: 'Monday', program: [], tasks: [] },
-                { month: 'Tuesday', program: [], tasks: [] },
-                { month: 'Wednesday', program: [], tasks: [] },
-                { month: 'Thursday', program: [], tasks: [] },
-                { month: 'Friday', program: [], tasks: [] },
-                { month: 'Saturday', program: [], tasks: [] },
-                { month: 'Sunday', program: [], tasks: [] }
-            ],
-            SIDEBAR_DEFAULTS: {
-                program: ['Staff Meeting', 'Parent Meeting', 'Fundraiser', 'Alumni Event'],
-                tasks: ['Order Spirit Pack', 'Confirm Bus Schedule', 'Inventory Check', 'Facility Request', 'Upload Hudl Film']
-            },
             PRACTICE_TEMPO_PROTOCOLS: [
                 { id: 'thud', code: 'THUD', label: 'Thud' },
                 { id: 'tag', code: 'TAG', label: 'Tag' },
@@ -15277,791 +15251,6 @@
             }
         };
 
-
-
-        const StaffCalendar = ({ data, onUpdate, staff = [], roster = [], tasks = [], onUpdateTasks = () => { } }) => {
-            const [editingEvent, setEditingEvent] = useState(null); // { monthIndex, field, eventIndex, eventData }
-            const [draggedItem, setDraggedItem] = useState(null); // { monthIndex, field, index }
-            const [sidebarItems, setSidebarItems] = useLocalStorage('oc-dashboard-sidebar', CALENDAR_CONSTANTS.SIDEBAR_DEFAULTS);
-            const [activeSidebarTab, setActiveSidebarTab] = useState('program');
-            const [globalCalendarTemplates, setGlobalCalendarTemplates] = useState([]);
-
-            // View Mode State
-            const [viewMode, setViewMode] = useState('full'); // 'full', 'summer', 'preseason', 'game'
-
-            // Local Storage for sub-views
-            const [summerData, setSummerData] = useLocalStorage('oc-dashboard-calendar-summer', CALENDAR_CONSTANTS.SUMMER_DEFAULTS);
-            const [preseasonData, setPreseasonData] = useLocalStorage('oc-dashboard-calendar-preseason', CALENDAR_CONSTANTS.PRESEASON_DEFAULTS);
-            const [gameWeekData, setGameWeekData] = useLocalStorage('oc-dashboard-calendar-gameweek', CALENDAR_CONSTANTS.GAME_WEEK_DEFAULTS);
-
-            // Fetch global calendar event templates
-            useEffect(() => {
-                const fetchGlobalTemplates = async () => {
-                    try {
-                        const snapshot = await window.db.collection('global_templates')
-                            .where('type', '==', 'calendar_event')
-                            .get();
-                        const templates = snapshot.docs.map(doc => ({
-                            id: doc.id,
-                            name: doc.data().name,
-                            category: doc.data().category,
-                            description: doc.data().description,
-                            data: doc.data().data || {}
-                        }));
-                        setGlobalCalendarTemplates(templates);
-                    } catch (err) {
-                        console.error("Error fetching global calendar templates:", err);
-                    }
-                };
-                fetchGlobalTemplates();
-            }, []);
-
-            // Derived Data based on View
-            const currentData = useMemo(() => {
-                if (viewMode === 'summer') return summerData;
-                if (viewMode === 'preseason') return preseasonData;
-                if (viewMode === 'game') return gameWeekData;
-                return data || CALENDAR_CONSTANTS.ANNUAL_DEFAULTS; // Fallback for 'full'
-            }, [viewMode, summerData, preseasonData, gameWeekData, data]);
-
-            const handleCurrentUpdate = (newData) => {
-                if (viewMode === 'summer') setSummerData(newData);
-                else if (viewMode === 'preseason') setPreseasonData(newData);
-                else if (viewMode === 'game') setGameWeekData(newData);
-                else onUpdate(newData); // Prop update for Full Year
-            };
-
-            // Effect to migrate legacy string data for current view
-            useEffect(() => {
-                if (!currentData) return;
-                let hasChanges = false;
-                const migrateList = (list) => (list || []).map(item => {
-                    if (typeof item === 'string') {
-                        hasChanges = true;
-                        return { id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, title: item, notes: '', tasks: [] };
-                    }
-                    return { ...item, notes: item.notes || '' };
-                });
-
-                const migrated = currentData.map(month => ({
-                    ...month,
-                    program: migrateList(month.program)
-                }));
-
-                if (hasChanges) {
-                    handleCurrentUpdate(migrated);
-                }
-            }, [viewMode]); // Trigger on view change
-
-            // Helper to ensure view doesn't crash on mixed (during migration)
-            const normalizeEvent = (item) => {
-                if (typeof item === 'string') return { id: item, title: item, tasks: [] };
-                return { ...item, tasks: item.tasks || [] };
-            };
-
-            const handleAddItem = (monthIndex, field) => {
-                const newEvent = {
-                    id: Date.now(),
-                    title: 'New Event',
-                    notes: '',
-                    tasks: []
-                };
-                const newData = [...currentData];
-                const currentList = [...(newData[monthIndex][field] || [])];
-                newData[monthIndex] = { ...newData[monthIndex], [field]: [...currentList, newEvent] };
-                handleCurrentUpdate(newData);
-                setEditingEvent({ monthIndex, field, eventIndex: currentList.length, eventData: newEvent });
-            };
-
-            const handleRemoveItem = (monthIndex, field, index, e) => {
-                e.stopPropagation();
-                if (!window.confirm('Delete this event?')) return;
-                const newData = [...currentData];
-                const list = [...(newData[monthIndex][field] || [])];
-                list.splice(index, 1);
-                newData[monthIndex] = { ...newData[monthIndex], [field]: list };
-                handleCurrentUpdate(newData);
-            };
-
-            // Edit Sidebar Item (New)
-            const handleEditSidebarItem = (field, idx) => {
-                let itemRaw;
-                if (field === 'tasks') {
-                    itemRaw = tasks[idx];
-                } else {
-                    itemRaw = sidebarItems[field][idx];
-                }
-
-                if (!itemRaw) return;
-
-                // Normalize to full object for editing
-                const eventData = {
-                    title: typeof itemRaw === 'string' ? itemRaw : (itemRaw.title || itemRaw.task),
-                    notes: typeof itemRaw === 'string' ? '' : (itemRaw.note || itemRaw.notes || ''),
-                    tasks: typeof itemRaw === 'object' ? (itemRaw.tasks || []) : [],
-                    id: field === 'tasks' ? itemRaw.id : `temp_sidebar_${idx}`, // Keep real ID for tasks
-                    originalId: field === 'tasks' ? itemRaw.id : null // Track original ID for updates
-                };
-
-                setEditingEvent({ isSidebar: true, field, eventIndex: idx, eventData });
-            };
-
-            // Save Event Changes (Title, Notes, Tasks Link)
-            const saveEventChanges = (updatedEvent) => {
-                if (editingEvent.isSidebar) {
-                    const { field, eventIndex } = editingEvent;
-
-                    // CASE A: Editing Live Task
-                    if (field === 'tasks') {
-                        const originalId = updatedEvent.originalId || updatedEvent.id;
-                        const taskIndex = tasks.findIndex(t => t.id === originalId);
-                        if (taskIndex > -1) {
-                            const updatedTasks = [...tasks];
-                            updatedTasks[taskIndex] = {
-                                ...updatedTasks[taskIndex],
-                                task: updatedEvent.title,
-                                notes: updatedEvent.notes
-                                // Note: We don't update ID or internal structure here easily, mostly just content
-                            };
-                            onUpdateTasks(updatedTasks);
-                        }
-                    }
-                    // CASE B: Editing Template
-                    else {
-                        setSidebarItems(prev => {
-                            const newList = [...prev[field]];
-                            // Save back as concise object, but now supports full tasks/xp
-                            newList[eventIndex] = {
-                                title: updatedEvent.title,
-                                note: updatedEvent.notes, // maintain 'note' field name for compatibility, or migrate? keeping 'note' for sidebar view logic
-                                tasks: updatedEvent.tasks
-                            };
-                            return { ...prev, [field]: newList };
-                        });
-                    }
-
-                    setEditingEvent(null);
-                    return;
-                }
-
-                // CALENDAR UPDATE
-                const { monthIndex, field, eventIndex } = editingEvent;
-                const newData = [...currentData];
-                const currentList = [...(newData[monthIndex][field] || [])];
-                currentList[eventIndex] = updatedEvent;
-                newData[monthIndex] = { ...newData[monthIndex], [field]: currentList };
-                handleCurrentUpdate(newData);
-                setEditingEvent(null);
-            };
-
-            // Load Global Calendar Template
-            const loadCalendarTemplate = (templateId) => {
-                if (!templateId) return;
-                const template = globalCalendarTemplates.find(t => t.id === templateId);
-                if (!template) return;
-
-                if (confirm(`Load template "${template.name}"? This will add events from the template to your calendar.`)) {
-                    const templateData = template.data;
-
-                    // Update sidebar items with template data
-                    setSidebarItems(prev => ({
-                        ...prev,
-                        program: [...(prev.program || []), ...(templateData.program || [])],
-
-                    }));
-
-                    // If template has tasks, add them to the task list
-                    if (templateData.tasks && templateData.tasks.length > 0) {
-                        const newTasks = templateData.tasks.map(task => ({
-                            id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                            task: task.task || task.title || 'New Task',
-                            assignTo: task.assignTo || [],
-                            dueDate: task.dueDate || '',
-                            notes: task.notes || '',
-                            completed: false
-                        }));
-                        onUpdateTasks([...tasks, ...newTasks]);
-                    }
-
-                    alert(`Template "${template.name}" loaded successfully!`);
-                }
-            };
-
-            // Add Sidebar Item
-            const handleAddSidebarItem = (field) => {
-                const text = prompt(`Enter new ${field} template Title:`);
-                if (!text) return;
-                const note = prompt(`Enter optional default note (or leave blank):`);
-
-                const newItem = { title: text, note: note || '' };
-                setSidebarItems(prev => ({ ...prev, [field]: [...prev[field], newItem] }));
-            };
-
-            // Remove Sidebar Item
-            const handleRemoveSidebarItem = (field, idx) => {
-                setSidebarItems(prev => {
-                    const newList = [...prev[field]];
-                    newList.splice(idx, 1);
-                    return { ...prev, [field]: newList };
-                });
-            };
-
-
-            // Drag & Drop Handlers
-            const onDragStart = (e, monthIndex, field, index, isSidebar = false) => {
-                setDraggedItem({ monthIndex, field, index, isSidebar });
-                e.dataTransfer.effectAllowed = "move";
-                // Ghost image styling if needed
-            };
-
-            const onDragOver = (e, monthIndex, field, index) => {
-                e.preventDefault(); // Necessary for drop
-                if (!draggedItem) return;
-                // Allow cross-month dragging if fields match
-                if (draggedItem.field !== field) return;
-                // Visual feedback logic could go here
-            };
-
-            const onDrop = (e, monthIndex, field, dropIndex) => {
-                e.preventDefault();
-                if (!draggedItem) return;
-                if (draggedItem.field !== field) return;
-
-                const newData = [...currentData];
-
-                // CASE 1: Dragging FROM Sidebar
-                if (draggedItem.isSidebar) {
-                    // Determine where to pull data from: SidebarItems (Program/Valhalla) or Live Tasks (Tasks)
-                    let itemRaw;
-                    if (field === 'tasks') {
-                        itemRaw = tasks[draggedItem.index]; // Pull from live tasks
-                    } else {
-                        itemRaw = sidebarItems[field][draggedItem.index];
-                    }
-
-                    if (!itemRaw) return;
-
-                    // Create new event from template (Support full object)
-                    const title = typeof itemRaw === 'string' ? itemRaw : (itemRaw.title || itemRaw.task); // Support 'task' property from functionality
-                    const note = typeof itemRaw === 'string' ? '' : (itemRaw.note || itemRaw.notes || '');
-                    const itemTasks = typeof itemRaw === 'object' ? (JSON.parse(JSON.stringify(itemRaw.tasks || []))) : []; // Deep copy existing sub-tasks
-
-                    const newEvent = {
-                        id: Date.now(),
-                        title: title,
-                        notes: note,
-                        tasks: itemTasks,
-                        date: '' // Reset date for new event
-                    };
-
-                    const targetList = [...(newData[monthIndex][field] || [])];
-                    // Insert at drop index or end
-                    if (dropIndex !== undefined) {
-                        targetList.splice(dropIndex, 0, newEvent);
-                    } else {
-                        targetList.push(newEvent);
-                    }
-                    newData[monthIndex] = { ...newData[monthIndex], [field]: targetList };
-                    handleCurrentUpdate(newData);
-                    // Note: We keep the item in sidebar (template behavior)
-                    setDraggedItem(null);
-                    return;
-                }
-
-                // CASE 2: Dragging FROM Calendar (Reorder or Cross-Month)
-                const sourceList = [...(newData[draggedItem.monthIndex][field] || [])];
-                const targetList = (draggedItem.monthIndex === monthIndex)
-                    ? sourceList
-                    : [...(newData[monthIndex][field] || [])];
-
-                // Remove from source
-                const [movedItem] = sourceList.splice(draggedItem.index, 1);
-
-                // Add to target
-                if (draggedItem.monthIndex === monthIndex) {
-                    // Same list reorder
-                    targetList.splice(dropIndex, 0, movedItem);
-                    newData[monthIndex] = { ...newData[monthIndex], [field]: targetList };
-                } else {
-                    // Cross-list move
-                    targetList.splice(dropIndex, 0, movedItem);
-                    newData[draggedItem.monthIndex] = { ...newData[draggedItem.monthIndex], [field]: sourceList };
-                    newData[monthIndex] = { ...newData[monthIndex], [field]: targetList };
-                }
-
-                handleCurrentUpdate(newData);
-                setDraggedItem(null);
-                setDraggedItem(null);
-            };
-
-            // Sidebar Task Deletion Handler
-            const handleDeleteTaskTemplate = (taskIndex) => {
-                if (!window.confirm("Are you sure you want to delete this task? This will remove it permanently from the Staff Tasks list.")) return;
-                const taskToDelete = tasks[taskIndex];
-                if (!taskToDelete) return;
-                const updatedTasks = tasks.filter(t => t.id !== taskToDelete.id);
-                onUpdateTasks(updatedTasks);
-            };
-            const [newTaskData, setNewTaskData] = useState({ task: '', assignTo: [], deadline: '', priority: 'Medium', phase: 'Prep' });
-
-            const handleCreateTaskFromEvent = () => {
-                if (!newTaskData.task) return;
-
-                // Create the task in the GLOBAL task list
-                const newTask = {
-                    id: `task_${Date.now()}`,
-                    category: editingEvent.eventData.title || 'General', // Use Event title as category
-                    ...newTaskData,
-                    recurrence: 'None',
-                    collaborationType: newTaskData.assignTo.length > 1 ? 'Individual' : 'Individual',
-                    createdFromEventId: editingEvent.eventData.id,
-                    eventPhase: newTaskData.phase
-                };
-
-                onUpdateTasks([...tasks, newTask]);
-                setNewTaskData({ task: '', assignTo: [], deadline: '', priority: 'Medium', phase: 'Prep' }); // Reset
-            };
-
-            // Assignment Options
-            const STAFF_ROLES = ['Head Coach', 'OC', 'DC', 'STC', 'Position Coach'];
-            // Simplify staff names to avoid mapping issues if staff is empty or structured differently
-            const STAFF_NAMES = Array.isArray(staff) ? staff.map(s => s.name || s) : [];
-            const PLAYERS = Array.isArray(roster) ? roster.filter(Boolean) : [];
-
-            // Reorder calendar based on view
-            let renderIndices = [];
-            let columns = 3;
-            if (viewMode === 'full') {
-                renderIndices = [11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Dec -> Nov
-                columns = 3;
-            } else if (viewMode === 'summer') {
-                renderIndices = [0, 1, 2, 3, 4, 5, 6, 7]; // Week 1-8
-                columns = 4;
-            } else if (viewMode === 'preseason') {
-                renderIndices = Array.from({ length: 22 }, (_, i) => i); // 0-21
-                columns = 7;
-            } else if (viewMode === 'game') {
-                renderIndices = [6, 0, 1, 2, 3, 4, 5]; // Sun-Sat
-                columns = 4;
-            }
-
-            const getHeaderLabel = (f) => {
-                if (f === 'program') return 'EVENTS';
-                if (f === 'tasks') return 'TASKS';
-
-                return f; // Fallback
-            };
-
-            const renderList = (month, idx, field, icon, color) => {
-                const rawList = month[field] || [];
-                // Normalize on render to handle mixed data types safely
-                const list = rawList.map(item => normalizeEvent(item));
-
-                return (
-                    <div style={{ marginBottom: field === 'program' ? '1.5rem' : 0 }}>
-                        <div style={{
-                            fontSize: '0.75rem', color: color, fontWeight: 'bold',
-                            marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                        }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icon name={icon} size={12} /> {getHeaderLabel(field)}
-                            </span>
-                            <button onClick={() => handleAddItem(idx, field)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: color }}>
-                                <Icon name="PlusCircle" size={14} />
-                            </button>
-                        </div>
-                        <ul className="calendar-list" style={{ margin: 0, padding: 0, listStyle: 'none', minHeight: '30px' }} onDragOver={(e) => onDragOver(e, idx, field, list.length)} onDrop={(e) => onDrop(e, idx, field, list.length)}>
-                            {list.map((item, i) => (
-                                <li
-                                    key={item.id}
-                                    draggable
-                                    onDragStart={(e) => onDragStart(e, idx, field, i)}
-                                    onDragOver={(e) => { e.stopPropagation(); onDragOver(e, idx, field, i); }}
-                                    onDrop={(e) => { e.stopPropagation(); onDrop(e, idx, field, i); }}
-                                    onClick={() => setEditingEvent({ monthIndex: idx, field, eventIndex: i, eventData: item })}
-                                    style={{
-                                        marginBottom: '6px', padding: '6px', borderRadius: '4px',
-                                        background: 'white', color: '#1e293b', border: '1px solid transparent',
-                                        cursor: 'grab', transition: 'all 0.2s',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                        opacity: (draggedItem?.monthIndex === idx && draggedItem?.field === field && draggedItem?.index === i) ? 0.4 : 1
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-                                    onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
-                                >
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        <span style={{ fontSize: '0.9rem' }}>{item.title}</span>
-                                        {(item.tasks && item.tasks.length > 0) && (
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <Icon name="CheckSquare" size={10} />
-                                                {item.tasks.filter(t => t.completed).length}/{item.tasks.length} tasks
-                                            </span>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={(e) => handleRemoveItem(idx, field, i, e)}
-                                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444', opacity: 0.5 }}
-                                        title="Remove"
-                                    >
-                                        &times;
-                                    </button>
-                                </li>
-                            ))}
-                            {list.length === 0 && <li style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px' }}>Drop items here...</li>}
-                        </ul>
-                    </div>
-                );
-            };
-
-            const renderSidebarSection = (field, icon, color, title, customList = null) => (
-                <div style={{ marginBottom: '2rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <h4 style={{ margin: 0, color: color, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-                            <Icon name={icon} size={14} /> {title}
-                        </h4>
-                        {!customList && (
-                            <button onClick={() => handleAddSidebarItem(field)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: color, opacity: 0.8 }}>
-                                <Icon name="Plus" size={14} />
-                            </button>
-                        )}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {(customList || sidebarItems[field]).map((item, i) => {
-                            const title = typeof item === 'string' ? item : (item.title || item.task); // Handle 'task' property
-                            const note = typeof item === 'object' ? (item.note || item.notes || '') : '';
-
-                            return (
-                                <div
-                                    key={i}
-                                    draggable
-                                    onDragStart={(e) => onDragStart(e, null, field, i, true)}
-                                    onDoubleClick={() => handleEditSidebarItem(field, i)}
-                                    title="Double-click to edit"
-                                    style={{
-                                        padding: '0.5rem', background: 'var(--bg-panel)', border: '1px solid var(--border)',
-                                        borderRadius: '4px', fontSize: '0.85rem', cursor: 'grab', display: 'flex', justifyContent: 'space-between',
-                                        flexDirection: 'column'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span>{title}</span>
-                                        <div style={{ display: 'flex', gap: '4px' }}>
-                                            {!customList ? (
-                                                <>
-                                                    <button onClick={() => handleEditSidebarItem(field, i)} style={{ border: 'none', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', opacity: 0.6 }} title="Edit Template">
-                                                        <Icon name="Edit" size={12} />
-                                                    </button>
-                                                    <button onClick={() => handleRemoveSidebarItem(field, i)} style={{ border: 'none', background: 'none', color: '#ef4444', opacity: 0.5, cursor: 'pointer' }} title="Remove Template">&times;</button>
-                                                </>
-                                            ) : (
-                                                <button onClick={() => handleDeleteTaskTemplate(i)} style={{ border: 'none', background: 'none', color: '#ef4444', opacity: 0.5, cursor: 'pointer' }} title="Delete Task Forever">&times;</button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {note && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note}</div>}
-                                    {item.tasks && item.tasks.length > 0 && <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{item.tasks.length} tasks</div>}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            );
-
-            return (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <div className="card" style={{ padding: '1.5rem', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <h2 style={{ margin: '0 0 0.25rem 0' }}>Annual Program Calendar</h2>
-                            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>
-                                Master schedule for Staff, Program Events, and Valhalla XP.
-                            </p>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <label style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>VIEW:</label>
-                            <select
-                                value={viewMode}
-                                onChange={(e) => setViewMode(e.target.value)}
-                                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '1rem', cursor: 'pointer' }}
-                            >
-                                <option value="full">Full Year (Quarterly)</option>
-                                <option value="summer">Summer (8-Week)</option>
-                                <option value="preseason">Pre-Season (4-Week)</option>
-                                <option value="game">Game Week (Daily)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: '1.5rem', padding: '1rem' }}>
-                        {/* Sidebar */}
-                        <div style={{ width: '250px', background: 'var(--surface)', borderRadius: '8px', padding: '1rem', overflowY: 'auto', border: '1px solid var(--border)', flexShrink: 0 }}>
-                            <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                                    TEMPLATE CATEGORY
-                                </label>
-                                <div style={{ position: 'relative' }}>
-                                    <select
-                                        value={activeSidebarTab}
-                                        onChange={(e) => setActiveSidebarTab(e.target.value)}
-                                        style={{
-                                            width: '100%', padding: '0.5rem', borderRadius: '6px',
-                                            border: '1px solid var(--border)', fontSize: '0.9rem',
-                                            background: 'white', appearance: 'none', cursor: 'pointer'
-                                        }}
-                                    >
-                                        <option value="program">Events (Staff/Program)</option>
-                                        <option value="tasks">Tasks (To-Do)</option>
-
-                                    </select>
-                                    <Icon name="ChevronDown" size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }} />
-                                </div>
-                            </div>
-
-                            {/* Load Global Template Button */}
-                            {globalCalendarTemplates.length > 0 && (
-                                <div style={{ marginBottom: '1rem', padding: '0 0.5rem' }}>
-                                    <div style={{ position: 'relative' }}>
-                                        <select
-                                            onChange={(e) => {
-                                                loadCalendarTemplate(e.target.value);
-                                                e.target.value = ''; // Reset selection
-                                            }}
-                                            value=""
-                                            style={{
-                                                width: '100%', padding: '0.5rem', borderRadius: '6px',
-                                                border: '1px solid var(--border)', fontSize: '0.85rem',
-                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                                color: 'white', appearance: 'none', cursor: 'pointer',
-                                                fontWeight: '500'
-                                            }}
-                                        >
-                                            <option value="" disabled>🌐 Load Global Template...</option>
-                                            {globalCalendarTemplates.map(t => (
-                                                <option key={t.id} value={t.id} style={{ background: 'white', color: 'black' }}>
-                                                    {t.name}{t.category ? ` (${t.category})` : ''}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <Icon name="ChevronDown" size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'white' }} />
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeSidebarTab === 'program' && renderSidebarSection('program', 'Calendar', '#60a5fa', 'Events')}
-                            {activeSidebarTab === 'tasks' && renderSidebarSection('tasks', 'CheckSquare', '#f97316', 'Tasks (Staff)', tasks)}
-
-                        </div>
-
-                        {/* Calendar Grid */}
-                        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                                gap: '1rem', paddingBottom: '2rem'
-                            }}>
-                                {renderIndices.map(idx => {
-                                    const month = currentData[idx];
-                                    if (!month) return null;
-                                    const isFamilyWeek = viewMode === 'preseason' && idx === 0;
-
-                                    return (
-                                        <div key={idx} className="card" style={{
-                                            padding: 0,
-                                            overflow: 'visible',
-                                            border: '1px solid var(--border)',
-                                            gridColumn: isFamilyWeek ? '1 / -1' : 'auto' // Family Week spans full width
-                                        }}>
-                                            <div style={{ background: 'var(--surface)', padding: '0.75rem 1rem', fontWeight: 'bold', fontSize: '0.95rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
-                                                {month.month}
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>
-                                                    {viewMode === 'full' ? (idx + 1) : ''}
-                                                </span>
-                                            </div>
-                                            <div style={{ padding: '1rem', background: '#f8fafc', minHeight: '200px' }}>
-                                                {renderList(month, idx, 'program', 'Calendar', '#60a5fa')}
-                                                {renderList(month, idx, 'tasks', 'CheckSquare', '#f97316')}
-
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Event Editor Modal */}
-                    {editingEvent && (
-                        <div style={{
-                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.8)', zIndex: 2000,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }} onClick={() => setEditingEvent(null)}>
-                            <div className="card" style={{ width: '600px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-                                <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                                    {editingEvent.field === 'tasks' ? 'Edit Task' : 'Edit Event'}
-                                </h3>
-
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label className="form-label">{editingEvent.field === 'tasks' ? 'Task Name' : 'Event Title'}</label>
-                                    <input
-                                        className="form-input"
-                                        autoFocus
-                                        value={editingEvent.eventData.title}
-                                        onChange={e => setEditingEvent({ ...editingEvent, eventData: { ...editingEvent.eventData, title: e.target.value } })}
-                                    />
-                                </div>
-
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label className="form-label">{editingEvent.field === 'tasks' ? 'Description / Notes' : 'Notes / Details'}</label>
-                                    <textarea
-                                        className="form-input"
-                                        rows={3}
-                                        value={editingEvent.eventData.notes || ''}
-                                        onChange={e => setEditingEvent({ ...editingEvent, eventData: { ...editingEvent.eventData, notes: e.target.value } })}
-                                        placeholder={editingEvent.field === 'tasks' ? "Add task details..." : "Add details, locations, or reminders..."}
-                                    />
-                                </div>
-
-                                {/* Task Assignment Section - Only show for Events (not when editing a Task itself) */}
-                                {editingEvent.field !== 'tasks' && (
-                                    <div style={{ background: 'var(--bg-body)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
-                                        <h4 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <Icon name="CheckSquare" size={16} /> Assign Tasks
-                                        </h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                            <input
-                                                className="form-input"
-                                                placeholder="Task Description"
-                                                value={newTaskData.task}
-                                                onChange={e => setNewTaskData({ ...newTaskData, task: e.target.value })}
-                                            />
-                                            <select
-                                                className="form-select"
-                                                value={newTaskData.priority}
-                                                onChange={e => setNewTaskData({ ...newTaskData, priority: e.target.value })}
-                                            >
-                                                <option value="High">High Priority</option>
-                                                <option value="Medium">Medium</option>
-                                                <option value="Low">Low</option>
-                                            </select>
-                                        </div>
-
-                                        <div style={{ marginBottom: '0.5rem' }}>
-                                            <select
-                                                className="form-select" style={{ width: '100%' }}
-                                                value={newTaskData.phase}
-                                                onChange={e => setNewTaskData({ ...newTaskData, phase: e.target.value })}
-                                            >
-                                                <option value="Prep">Event Prep</option>
-                                                <option value="During">During Event</option>
-                                                <option value="After">After Event</option>
-                                            </select>
-                                        </div>
-
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                            {/* Assign To Dropdown - Multi-select Logic Simplified for now */}
-                                            <select
-                                                className="form-select"
-                                                value={newTaskData.assignTo[0] || ''}
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    if (!val) return;
-                                                    // Toggle logic
-                                                    setNewTaskData(prev => ({
-                                                        ...prev,
-                                                        assignTo: prev.assignTo.includes(val) ? prev.assignTo.filter(x => x !== val) : [...prev.assignTo, val]
-                                                    }));
-                                                }}
-                                            >
-                                                <option value="">+ Assign To...</option>
-                                                <optgroup label="Staff Roles">
-                                                    {STAFF_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                                                </optgroup>
-                                                <optgroup label="Staff Members">
-                                                    {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
-                                                </optgroup>
-                                                <optgroup label="Players">
-                                                    {PLAYERS.sort((a, b) => ((a?.lastName || '') || '').localeCompare((b?.lastName || '') || '')).map(p => (
-                                                        <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-                                                    ))}
-                                                </optgroup>
-                                            </select>
-                                            <input
-                                                type="date"
-                                                className="form-input"
-                                                value={newTaskData.deadline}
-                                                onChange={e => setNewTaskData({ ...newTaskData, deadline: e.target.value })}
-                                            />
-                                        </div>
-
-                                        {/* Selected Assignees Chips */}
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.5rem' }}>
-                                            {newTaskData.assignTo.map(assignee => {
-                                                // Try to find readable name
-                                                let label = assignee;
-                                                const player = roster.find(p => p.id === assignee);
-                                                if (player) label = `${player.firstName} ${player.lastName}`;
-
-                                                return (
-                                                    <span key={assignee} onClick={() => setNewTaskData(prev => ({ ...prev, assignTo: prev.assignTo.filter(x => x !== assignee) }))}
-                                                        style={{ background: 'var(--accent)', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        {label} <span style={{ opacity: 0.7 }}>x</span>
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
-
-                                        <button className="btn btn-secondary" style={{ width: '100%' }} onClick={handleCreateTaskFromEvent}>Add Task</button>
-                                    </div>
-                                )}
-
-                                {/* List of Existing Tasks for this Event Category (Live view from global tasks) */}
-                                {editingEvent.field !== 'tasks' && (
-                                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                                        <h5 style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Tasks Linked to "{editingEvent.eventData.title}"</h5>
-
-                                        {['Prep', 'During', 'After'].map(phase => {
-                                            const phaseTasks = tasks.filter(t => (t.category === editingEvent.eventData.title || t.createdFromEventId === editingEvent.eventData.id) && (t.eventPhase === phase || (!t.eventPhase && phase === 'Prep'))); // Default to Prep for legacy
-                                            if (phaseTasks.length === 0) return null;
-
-                                            return (
-                                                <div key={phase} style={{ marginBottom: '1rem' }}>
-                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--accent)', borderBottom: '1px solid var(--border)', marginBottom: '0.25rem' }}>
-                                                        {phase === 'Prep' ? 'Event Prep' : phase === 'During' ? 'During Event' : 'After Event'}
-                                                    </div>
-                                                    {phaseTasks.map(task => (
-                                                        <div key={task.id} style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                <input type="checkbox" checked={task.completed} onChange={() => {
-                                                                    const updated = tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t);
-                                                                    onUpdateTasks(updated);
-                                                                }} />
-                                                                <span style={{ textDecoration: task.completed ? 'line-through' : 'none', color: task.completed ? 'var(--text-secondary)' : 'var(--text)' }}>
-                                                                    {task.task}
-                                                                </span>
-                                                            </div>
-                                                            <span style={{ fontSize: '0.8rem', background: 'var(--bg-body)', padding: '2px 4px', borderRadius: '4px' }}>
-                                                                {task.assignTo.length > 0 ? `${task.assignTo.length} assigned` : 'Unassigned'}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                                    <button className="btn text-danger" onClick={() => setEditingEvent(null)}>Cancel</button>
-                                    <button className="btn btn-primary" onClick={() => saveEventChanges(editingEvent.eventData)}>Save Changes</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
 
         // --- SUMMER COMPETITION MANAGER ---
         const SummerCompetitionManager = ({ roster, compData, onUpdateComp }) => {
@@ -22920,8 +22109,6 @@
                                         },
                                         {
                                             key: 'program', label: 'Program Management', items: [
-                                                { key: 'staffTasks', label: 'Staff Tasks' },
-                                                { key: 'calendar', label: 'Annual Calendar' },
                                                 { key: 'budget', label: 'Budget' },
                                                 { key: 'culturalCalibration', label: 'Culture Calibration' },
                                                 { key: 'onboarding', label: 'Onboarding' },
@@ -28707,11 +27894,12 @@
             );
         };
 
-        function GamePlannerSideMenu({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection }) {
+        function GamePlannerSideMenu({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection, onUpdatePlay, onUpdateGamePlan, currentWeek }) {
             const [searchTerm, setSearchTerm] = useState('');
             const [quickAddValue, setQuickAddValue] = useState('');
             const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, buckets
             const [expandedSections, setExpandedSections] = useState({});
+            const [situationModalPlayId, setSituationModalPlayId] = useState(null);
 
             const toggleSection = (id) => {
                 setExpandedSections(prev => ({
@@ -28796,12 +27984,52 @@
                 e.dataTransfer.effectAllowed = 'copy';
             };
 
+            const handleAssignSituation = (playId, situationId, type) => {
+                if (!onUpdateGamePlan) return;
+
+                const updatedGamePlan = { ...gamePlan };
+
+                // Helper to find and update target in sets or miniScripts
+                const findAndAdd = (list) => {
+                    if (!list) return false;
+                    let found = false;
+                    if (Array.isArray(list)) {
+                        const target = list.find(s => s.id === situationId);
+                        if (target) {
+                            if (!target.assignedPlayIds) target.assignedPlayIds = [];
+                            if (!target.assignedPlayIds.includes(playId)) {
+                                target.assignedPlayIds.push(playId);
+                                found = true;
+                            }
+                        }
+                    } else if (typeof list === 'object') {
+                        const target = list[situationId];
+                        if (target) {
+                            if (!target.assignedPlayIds) target.assignedPlayIds = [];
+                            if (!target.assignedPlayIds.includes(playId)) {
+                                target.assignedPlayIds.push(playId);
+                                found = true;
+                            }
+                        }
+                    }
+                    return found;
+                };
+
+                const updatedSets = findAndAdd(updatedGamePlan.sets);
+                const updatedMinis = findAndAdd(updatedGamePlan.miniScripts);
+
+                if (updatedSets || updatedMinis) {
+                    onUpdateGamePlan(updatedGamePlan);
+                }
+            };
+
             const renderRow = (play) => {
                 const u = playUsage[play.id] || { days: { M: 0, T: 0, W: 0, TH: 0, F: 0 } };
                 return (
                     <div
                         key={play.id}
-                        style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.8rem' }}
+                        style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.8rem', cursor: 'default' }}
+                        onDoubleClick={() => setSituationModalPlayId(play.id)}
                     >
                         <div
                             draggable
@@ -29464,212 +28692,27 @@
 
                         {activeTab === 'buckets' && renderBucketsContent()}
                         {activeTab === 'install' && renderInstallContent()}
-
                     </div>
+
+                    {situationModalPlayId && (
+                        <AssignSituationsModal
+                            playId={situationModalPlayId}
+                            onClose={() => setSituationModalPlayId(null)}
+                            plays={plays}
+                            gamePlanLayouts={gamePlanLayouts}
+                            onUpdatePlay={onUpdatePlay}
+                            onAssignSituation={(playId, situationId, type) => {
+                                handleAssignSituation(playId, situationId, type);
+                            }}
+                            playBuckets={playBuckets}
+                            currentWeek={currentWeek}
+                        />
+                    )}
                 </div>
             );
         };
 
-        const PlayUsageRow = ({ play, usage, onDragStart, getPlayDisplayName }) => {
-            const days = ['M', 'T', 'W', 'TH', 'F'];
-            return (
-                <div
-                    draggable
-                    onDragStart={(e) => onDragStart(e, play)}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '8px',
-                        borderBottom: '1px solid #e2e8f0',
-                        background: 'white',
-                        cursor: 'grab'
-                    }}
-                >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: '600', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {getPlayDisplayName(play)}
-                        </div>
-                        {play.priority ? <div style={{ fontSize: '0.75rem', color: '#ca8a04', fontWeight: 'bold' }}>★</div> : null}
-                    </div>
-                    <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
-                        {days.map(d => (
-                            <div key={d} style={{
-                                width: '20px',
-                                height: '20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: usage.days[d] > 0 ? '#dbeafe' : '#f1f5f9',
-                                color: usage.days[d] > 0 ? '#1e40af' : '#94a3b8',
-                                fontSize: '0.65rem',
-                                fontWeight: 'bold',
-                                borderRadius: '2px'
-                            }}>
-                                {usage.days[d] > 0 ? usage.days[d] : '-'}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
 
-        const GamePlanSideMenu = ({ isOpen, onClose, plays, practicePlans, onQuickAddPlay }) => {
-            const [searchTerm, setSearchTerm] = useState('');
-
-            // Calculate Usage
-            const usageMap = useMemo(() => {
-                const map = {};
-                plays.forEach(p => {
-                    map[p.id] = { total: 0, days: { M: 0, T: 0, W: 0, TH: 0, F: 0 } };
-                });
-
-                // Iterate Practice Plans
-                Object.entries(practicePlans).forEach(([day, plan]) => {
-                    if (!map[Object.keys(map)[0]]?.days.hasOwnProperty(day)) return; // Skip non-M-F if any
-
-                    (plan.segments || []).forEach(seg => {
-                        (seg.script || []).forEach(item => {
-                            const pid = typeof item === 'object' ? item.id : item;
-                            if (map[pid]) {
-                                map[pid].total++;
-                                if (map[pid].days[day] !== undefined) {
-                                    map[pid].days[day]++;
-                                }
-                            }
-                        });
-                    });
-                });
-                return map;
-            }, [plays, practicePlans]);
-
-            // Filter and Sort
-            const { practiced, priority, others } = useMemo(() => {
-                let filtered = plays.filter(p => !p.archived);
-                if (searchTerm) {
-                    const lower = searchTerm.toLowerCase();
-                    filtered = filtered.filter(p => p.name.toLowerCase().includes(lower) || p.formation?.toLowerCase().includes(lower) || p.concept?.toLowerCase().includes(lower));
-                }
-
-                const practicedList = [];
-                const priorityList = [];
-                const othersList = [];
-
-                filtered.forEach(p => {
-                    const u = usageMap[p.id] || { total: 0 };
-                    if (u.total > 0) {
-                        practicedList.push(p);
-                    } else if (p.priority) {
-                        priorityList.push(p);
-                    } else {
-                        othersList.push(p);
-                    }
-                });
-
-                // Sort
-                practicedList.sort((a, b) => usageMap[b.id].total - usageMap[a.id].total);
-                priorityList.sort((a, b) => a.name.localeCompare(b.name));
-                othersList.sort((a, b) => a.name.localeCompare(b.name));
-
-                return { practiced: practicedList, priority: priorityList, others: othersList };
-            }, [plays, usageMap, searchTerm]);
-
-            const handleDragStart = (e, play) => {
-                e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id }));
-                e.dataTransfer.effectAllowed = 'copy';
-            };
-
-            const handleQuickAdd = (e) => {
-                if (e.key === 'Enter' && searchTerm) {
-                    if (onQuickAddPlay) {
-                        onQuickAddPlay(searchTerm);
-                        setSearchTerm('');
-                    }
-                }
-            };
-
-            // Helper for display name
-            const getPlayDisplayName = (play) => {
-                return play.name;
-            };
-
-            return (
-                <div style={{
-                    width: isOpen ? '350px' : '0px',
-                    transition: 'width 0.3s ease-in-out',
-                    background: 'white',
-                    borderLeft: isOpen ? '1px solid #cbd5e1' : 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                    height: '100%',
-                    position: 'relative' // Ensure it stacks correctly
-                }}>
-                    <div style={{ padding: '12px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>Practice Usage</span>
-                        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>✕</button>
-                    </div>
-
-                    <div style={{ padding: '12px', borderBottom: '1px solid #e2e8f0' }}>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                type="text"
-                                placeholder="Search or Quick Add..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                onKeyDown={handleQuickAdd}
-                                style={{ width: '100%', padding: '8px 24px 8px 8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                            />
-                            <div style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>+</div>
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>Press Enter to create new play</div>
-                    </div>
-
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                        {/* Section 1: Practiced */}
-                        {practiced.length > 0 && (
-                            <div>
-                                <div style={{ padding: '8px 12px', background: '#eff6ff', color: '#1e40af', fontWeight: 'bold', fontSize: '0.8rem', borderBottom: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>THIS WEEK ({practiced.length})</span>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>Sort: Usage</span>
-                                </div>
-                                {practiced.map(p => (
-                                    <PlayUsageRow key={p.id} play={p} usage={usageMap[p.id]} onDragStart={handleDragStart} getPlayDisplayName={p => p.name} />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Section 2: Priority */}
-                        {priority.length > 0 && (
-                            <div>
-                                <div style={{ padding: '8px 12px', background: '#fefce8', color: '#854d0e', fontWeight: 'bold', fontSize: '0.8rem', borderBottom: '1px solid #fef9c3', borderTop: '1px solid #e2e8f0' }}>
-                                    PRIORITY (UNUSED)
-                                </div>
-                                {priority.map(p => (
-                                    <PlayUsageRow key={p.id} play={p} usage={usageMap[p.id]} onDragStart={handleDragStart} getPlayDisplayName={p => p.name} />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Section 3: Others */}
-                        {others.length > 0 && (
-                            <div>
-                                <div style={{ padding: '8px 12px', background: '#f8fafc', color: '#475569', fontWeight: 'bold', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', borderTop: '1px solid #e2e8f0' }}>
-                                    MASTER PLAYBOOK
-                                </div>
-                                {others.slice(0, 100).map(p => (
-                                    <PlayUsageRow key={p.id} play={p} usage={usageMap[p.id]} onDragStart={handleDragStart} getPlayDisplayName={p => p.name} />
-                                ))}
-                                {others.length > 100 && (
-                                    <div style={{ padding: '8px', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
-                                        ... {others.length - 100} more plays ...
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
 
         const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed }) => {
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
@@ -36154,6 +35197,9 @@
                                 playBuckets={playBuckets}
                                 playCategories={playCategories}
                                 onAddSection={(newLayouts) => onUpdateLayouts(newLayouts)}
+                                onUpdatePlay={onUpdatePlay}
+                                onUpdateGamePlan={onUpdateGamePlan}
+                                currentWeek={currentWeek}
                             />
                         </div>
                     </div>
@@ -44102,13 +43148,6 @@
                 }
             ]);
 
-            // Weekly Task Management State (must be at top level, not conditional)
-            const [weeklyToday, setWeeklyToday] = useLocalStorage(`weekly-tasks-today-${currentWeekId}`, []);
-            const [weeklyThisWeek, setWeeklyThisWeek] = useLocalStorage(`weekly-tasks-thisweek-${currentWeekId}`, []);
-            const [weeklyThisMonth, setWeeklyThisMonth] = useLocalStorage(`weekly-tasks-thismonth-${currentWeekId}`, []);
-            const [weeklySomeday, setWeeklySomeday] = useLocalStorage(`weekly-tasks-someday-${currentWeekId}`, []);
-            const [weeklyTaskInputs, setWeeklyTaskInputs] = useState({ today: '', thisWeek: '', thisMonth: '', someday: '' });
-            const [weeklyDraggedTask, setWeeklyDraggedTask] = useState(null);
 
 
 
@@ -44366,8 +43405,6 @@
 
 
 
-            // Annual Calendar State
-            const [calendarData, setCalendarData] = useLocalStorage('oc-dashboard-annual-calendar', CALENDAR_CONSTANTS.ANNUAL_CALENDAR_DEFAULTS);
 
 
 
@@ -46662,171 +45699,6 @@
                                     </div>
                                 </div>
 
-                                {/* Task Management Columns */}
-                                {(() => {
-                                    // Use top-level state (hooks are at component level)
-                                    const weeklyLists = {
-                                        today: weeklyToday,
-                                        thisWeek: weeklyThisWeek,
-                                        thisMonth: weeklyThisMonth,
-                                        someday: weeklySomeday
-                                    };
-
-                                    const weeklySetters = {
-                                        today: setWeeklyToday,
-                                        thisWeek: setWeeklyThisWeek,
-                                        thisMonth: setWeeklyThisMonth,
-                                        someday: setWeeklySomeday
-                                    };
-
-                                    const addTaskItem = (col, text) => {
-                                        if (!text?.trim()) return;
-                                        weeklySetters[col]([...weeklyLists[col], text.trim()]);
-                                        setWeeklyTaskInputs(prev => ({ ...prev, [col]: '' }));
-                                    };
-
-                                    const handleTaskDragOver = (e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                    };
-
-                                    const handleTaskDrop = (e, targetCol, targetIndex = null) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (!weeklyDraggedTask) return;
-
-                                        const { type: sourceCol, index: sourceIndex, item } = weeklyDraggedTask;
-                                        console.log('DROP:', { sourceCol, targetCol, sourceIndex, targetIndex, item });
-                                        console.log('SourceList Before:', weeklyLists[sourceCol]);
-                                        console.log('TargetList Before:', weeklyLists[targetCol]);
-
-                                        // Same Column Reordering
-                                        if (sourceCol === targetCol) {
-                                            if (sourceIndex === targetIndex) {
-                                                setWeeklyDraggedTask(null);
-                                                return;
-                                            }
-
-                                            const newList = [...weeklyLists[sourceCol]];
-                                            // Remove from source index
-                                            const [removedItem] = newList.splice(sourceIndex, 1);
-
-                                            // Insert at target index
-                                            // Note: If we drag from top (0) to bottom (5), the target index is based on the list BEFORE removal.
-                                            // But since we remove first, indices shift. 
-                                            // Simple Approach: If dropped on a specific item, insert at that index.
-                                            // If dropped on empty space (targetIndex null), push to end.
-
-                                            if (targetIndex !== null) {
-                                                // Optional: Adjust target index if dragging down?
-                                                // For simplicity in this specific UI, direct splice is usually sufficient and intuitive enough.
-                                                // If precise 'insert after' behavior is needed, logic would be: if (sourceIndex < targetIndex) finalIndex = targetIndex - 1;
-                                                // But let's stick to standard splice insertion for now as it's safe.
-                                                newList.splice(targetIndex, 0, removedItem);
-                                            } else {
-                                                newList.push(removedItem);
-                                            }
-
-                                            weeklySetters[sourceCol](newList);
-                                        }
-                                        // Different Column Move
-                                        else {
-                                            // Remove from source (safely using functional update)
-                                            weeklySetters[sourceCol](prevList => prevList.filter((_, i) => i !== sourceIndex));
-
-                                            // Add to target (safely using functional update)
-                                            weeklySetters[targetCol](prevList => {
-                                                const newList = [...prevList];
-                                                if (targetIndex !== null) {
-                                                    newList.splice(targetIndex, 0, item);
-                                                } else {
-                                                    newList.push(item);
-                                                }
-                                                return newList;
-                                            });
-                                        }
-
-                                        setWeeklyDraggedTask(null);
-                                    };
-
-                                    return (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                                            {['today', 'thisWeek', 'thisMonth', 'someday'].map(col => {
-                                                const titleMap = { today: 'Today', thisWeek: 'This Week', thisMonth: 'This Month', someday: 'Someday' };
-                                                const taskList = weeklyLists[col];
-
-                                                return (
-                                                    <div
-                                                        key={col}
-                                                        className="card"
-                                                        style={{ display: 'flex', flexDirection: 'column', minHeight: '400px', background: 'var(--surface)', border: '1px solid var(--border)' }}
-                                                        onDragOver={handleTaskDragOver}
-                                                        onDrop={(e) => handleTaskDrop(e, col)}
-                                                    >
-                                                        <h3 style={{ fontSize: '1.1rem', padding: '0 1rem 0.5rem 1rem', borderBottom: '2px solid var(--accent)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                                                            {titleMap[col]}
-                                                            <span style={{ fontSize: '1rem', opacity: 0.7, fontWeight: 'normal' }}>{taskList.length}</span>
-                                                        </h3>
-
-                                                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', minHeight: '200px' }}>
-                                                            {taskList.map((item, idx) => (
-                                                                <div
-                                                                    key={idx}
-                                                                    draggable
-                                                                    onDragStart={(e) => {
-                                                                        setWeeklyDraggedTask({ type: col, index: idx, item });
-                                                                        e.dataTransfer.effectAllowed = "move";
-                                                                    }}
-                                                                    onDragOver={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                    }}
-                                                                    onDrop={(e) => handleTaskDrop(e, col, idx)}
-                                                                    style={{
-                                                                        padding: '0.75rem',
-                                                                        background: 'white',
-                                                                        borderRadius: '6px',
-                                                                        border: '1px solid var(--border)',
-                                                                        fontSize: '0.9rem',
-                                                                        cursor: 'grab',
-                                                                        display: 'flex',
-                                                                        justifyContent: 'space-between',
-                                                                        alignItems: 'center'
-                                                                    }}
-                                                                >
-                                                                    <span>{typeof item === 'string' ? item : item.task || JSON.stringify(item)}</span>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const newList = taskList.filter((_, i) => i !== idx);
-                                                                            weeklySetters[col](newList);
-                                                                        }}
-                                                                        style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }}
-                                                                    >
-                                                                        <Icon name="X" size={14} />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-
-                                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', paddingLeft: '0.5rem', paddingRight: '0.5rem', paddingBottom: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
-                                                            <input
-                                                                className="form-input"
-                                                                style={{ fontSize: '0.9rem', padding: '0.75rem' }}
-                                                                placeholder="Add item..."
-                                                                value={weeklyTaskInputs[col] || ''}
-                                                                onChange={e => setWeeklyTaskInputs(prev => ({ ...prev, [col]: e.target.value }))}
-                                                                onKeyDown={e => e.key === 'Enter' && addTaskItem(col, weeklyTaskInputs[col])}
-                                                            />
-                                                            <button className="btn-sm btn-primary" onClick={() => addTaskItem(col, weeklyTaskInputs[col])} style={{ padding: '0 0.5rem', borderRadius: '8px' }}>
-                                                                <Icon name="Plus" size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                })()}
                             </div>
                         )}
                         {view === 'director-ops' && <DirectorOpsView dutyAssignments={dutyAssignments} staff={staff} currentWeek={currentWeek} currentUser={currentUser} positionFatigue={positionFatigue} setPositionFatigue={setPositionFatigue} />}
@@ -46844,7 +45716,7 @@
                         {view === 'glossary-st' && <GlossaryView phase="SPECIAL_TEAMS" />}
                         {view === 'multi-sport' && <MultiSportTrackingView roster={roster} onUpdateRoster={setRoster} />}
                         {view === 'dashboard' && <GamedayDashboard plays={plays} />}
-                        {view === 'calendar' && <StaffCalendar data={calendarData} onUpdate={setCalendarData} staff={staff} roster={roster} />}
+
                         {view === 'season-setup' && <SeasonSetupView weeks={weeks} onUpdateWeek={handleUpdateWeek} onAddWeek={handleAddWeek} onDeleteWeek={handleDeleteWeek} mode="season" />}
                         {view === 'pre-season-setup' && <SeasonSetupView weeks={weeks} onUpdateWeek={handleUpdateWeek} onAddWeek={handleAddWeek} onDeleteWeek={handleDeleteWeek} mode="pre-season" />}
                         {view === 'summer-setup' && <SeasonSetupView weeks={weeks} onUpdateWeek={handleUpdateWeek} onAddWeek={handleAddWeek} onDeleteWeek={handleDeleteWeek} mode="summer" />}
@@ -47640,6 +46512,8 @@
                                 plays={plays}
                                 plans={currentWeek.practicePlans || {}}
                                 onUpdatePlans={(updated) => handleUpdateWeek(currentWeek.id, 'practicePlans', updated)}
+                                onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)}
+                                onUpdatePlay={handlePatchPlay}
                                 staff={staff}
                                 addCustomFocusItem={addCustomFocusItem}
                                 user={currentUser}
@@ -47688,6 +46562,8 @@
                                 plays={plays}
                                 plans={currentWeek.practicePlans || {}}
                                 onUpdatePlans={(updated) => handleUpdateWeek(currentWeek.id, 'practicePlans', updated)}
+                                onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', updated)}
+                                onUpdatePlay={handlePatchPlay}
                                 staff={staff}
                                 addCustomFocusItem={addCustomFocusItem}
                                 user={currentUser}
