@@ -28965,9 +28965,11 @@
 
                                                             const existingIndex = collection.findIndex(item => item.id === box.setId);
                                                             if (existingIndex >= 0) {
-                                                                collection[existingIndex] = { ...collection[existingIndex], playIds: allIds, assignedPlayIds: uniqueIds };
+                                                                // Only update playIds (script rows), keep assignedPlayIds (Quick List) separate
+                                                                collection[existingIndex] = { ...collection[existingIndex], playIds: allIds };
                                                             } else {
-                                                                collection.push({ id: box.setId, playIds: allIds, assignedPlayIds: uniqueIds });
+                                                                // Create new item - only set playIds, assignedPlayIds (Quick List) starts empty
+                                                                collection.push({ id: box.setId, playIds: allIds, assignedPlayIds: [] });
                                                             }
 
                                                             const updatedGamePlan = { ...gamePlan, [collectionKey]: collection };
@@ -29008,9 +29010,11 @@
 
                                                             const existingIndex = collection.findIndex(item => item.id === box.setId);
                                                             if (existingIndex >= 0) {
-                                                                collection[existingIndex] = { ...collection[existingIndex], playIds: allIds, assignedPlayIds: uniqueIds };
+                                                                // Only update playIds (script rows), keep assignedPlayIds (Quick List) separate
+                                                                collection[existingIndex] = { ...collection[existingIndex], playIds: allIds };
                                                             } else {
-                                                                collection.push({ id: box.setId, playIds: allIds, assignedPlayIds: uniqueIds });
+                                                                // Create new item - only set playIds, assignedPlayIds (Quick List) starts empty
+                                                                collection.push({ id: box.setId, playIds: allIds, assignedPlayIds: [] });
                                                             }
 
                                                             const updatedGamePlan = { ...gamePlan, [collectionKey]: collection };
