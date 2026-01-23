@@ -3322,12 +3322,12 @@
                     // Skill Wiz Default (11 Players)
                     // OL is smaller text (approx 40px) and tighter spacing.
                     // "Behind the LOS" -> Push Y down.
-                    // WIZ Card visible area: y=20 to y=480 (460px)
-                    // Position LOS at y=400 to allow ~380px above for routes and ~60px below for backfield
+                    // WIZ Card visible area: y=60 to y=520 (460px)
+                    // Position LOS at y=400 to allow ~340px above for routes (~17 yards) and ~120px below for backfield (~6 yards)
                     const wizLos = 400;
                     const initialSize = 40;
                     const spacing = 50;
-                    const olY = wizLos + 20; // Push down 20px (stays within y=480)
+                    const olY = wizLos + 20; // Push down 20px (stays within y=520)
 
                     return [
                         // OL
@@ -4470,19 +4470,38 @@
                         </div>
 
                         {/* Canvas */}
-                        <div style={{ flex: 1, position: 'relative', background: '#ffffff', cursor: selectedTool === 'delete' ? 'no-drop' : (selectedTool === 'player' ? 'default' : 'crosshair'), overflow: 'hidden' }}>
-                            <svg
-                                ref={svgRef}
-                                width="100%"
-                                height="100%"
-                                viewBox={fieldViewMode === 'wiz-card' ? '0 20 800 460' : '0 0 900 600'}
-                                preserveAspectRatio={fieldViewMode === 'wiz-card' ? 'xMidYMid meet' : 'none'}
-                                onMouseDown={handleMouseDown}
-                                onMouseMove={handleMouseMove}
-                                onMouseUp={handleMouseUp}
-                                onDoubleClick={handleDoubleClick} // New
-                                onMouseLeave={handleMouseUp}
-                            >
+                        <div style={{
+                            flex: 1,
+                            position: 'relative',
+                            background: '#e5e7eb',
+                            cursor: selectedTool === 'delete' ? 'no-drop' : (selectedTool === 'player' ? 'default' : 'crosshair'),
+                            overflow: 'hidden',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}>
+                            {/* Inner container with correct aspect ratio for WIZ Card mode */}
+                            <div style={{
+                                width: fieldViewMode === 'wiz-card' ? 'auto' : '100%',
+                                height: fieldViewMode === 'wiz-card' ? '100%' : '100%',
+                                aspectRatio: fieldViewMode === 'wiz-card' ? '800 / 460' : 'auto',
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                background: '#ffffff',
+                                boxShadow: fieldViewMode === 'wiz-card' ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'
+                            }}>
+                                <svg
+                                    ref={svgRef}
+                                    width="100%"
+                                    height="100%"
+                                    viewBox={fieldViewMode === 'wiz-card' ? '0 60 800 460' : '0 0 900 600'}
+                                    preserveAspectRatio="none"
+                                    onMouseDown={handleMouseDown}
+                                    onMouseMove={handleMouseMove}
+                                    onMouseUp={handleMouseUp}
+                                    onDoubleClick={handleDoubleClick}
+                                    onMouseLeave={handleMouseUp}
+                                >
                                 <defs>
                                     {COLORS.map(c => (
                                         <marker key={c} id={`arrowhead-${c}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
@@ -4704,15 +4723,15 @@
                                 {/* WIZ Card Boundary Guides - shown when in wiz-skill mode with Full Field view to indicate what will be visible on printed WIZ cards */}
                                 {mode === 'wiz-skill' && fieldViewMode === 'standard' && (
                                     <g>
-                                        {/* Dimmed areas outside WIZ card visible bounds (y < 20 and y > 480) */}
-                                        <rect x="0" y="0" width="900" height="20" fill="rgba(0,0,0,0.15)" />
-                                        <rect x="0" y="480" width="900" height="120" fill="rgba(0,0,0,0.15)" />
-                                        <rect x="800" y="20" width="100" height="460" fill="rgba(0,0,0,0.15)" />
+                                        {/* Dimmed areas outside WIZ card visible bounds (y < 60 and y > 520) */}
+                                        <rect x="0" y="0" width="900" height="60" fill="rgba(0,0,0,0.15)" />
+                                        <rect x="0" y="520" width="900" height="80" fill="rgba(0,0,0,0.15)" />
+                                        <rect x="800" y="60" width="100" height="460" fill="rgba(0,0,0,0.15)" />
 
-                                        {/* Border showing exact WIZ card visible area (0-800 x, 20-480 y) */}
+                                        {/* Border showing exact WIZ card visible area (0-800 x, 60-520 y) */}
                                         <rect
                                             x="0"
-                                            y="20"
+                                            y="60"
                                             width="800"
                                             height="460"
                                             fill="none"
@@ -4722,7 +4741,7 @@
                                         />
 
                                         {/* Label for visible area */}
-                                        <text x="10" y="35" fontSize="10" fill="#22c55e" fontWeight="bold">WIZ Card Visible Area</text>
+                                        <text x="10" y="75" fontSize="10" fill="#22c55e" fontWeight="bold">WIZ Card Visible Area</text>
                                     </g>
                                 )}
 
@@ -4746,6 +4765,7 @@
                                 {/* Drawing Path Preview */}
                                 {currentPath && renderElement(currentPath, true)}
                             </svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -5208,8 +5228,8 @@
                     </div>
                 );
 
-                // Use WIZ card viewBox (0 20 800 460) for skill diagrams to match print output
-                const viewBox = useWizCardView ? '0 20 800 460' : '0 0 900 600';
+                // Use WIZ card viewBox (0 60 800 460) for skill diagrams to match print output
+                const viewBox = useWizCardView ? '0 60 800 460' : '0 0 900 600';
 
                 return (
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" style={{ background: 'white', borderRadius: '8px' }}>
@@ -9083,7 +9103,7 @@
                 const fieldWidth = 800;
                 const fieldHeight = 460;
                 const viewBoxX = 0;
-                const viewBoxY = 20; // Slight offset to show more of the LOS area
+                const viewBoxY = 60; // Offset to show ~13 yards upfield and ~6 yards backfield from LOS at y=400
 
                 // Define colors for route lines
                 const routeColors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#f97316', '#06b6d4', '#ec4899'];
@@ -25037,7 +25057,7 @@
                         const fieldWidth = 800;
                         const fieldHeight = 460;
                         const viewBoxX = 0;
-                        const viewBoxY = 20;
+                        const viewBoxY = 60;
 
                         const routeColors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#f97316', '#06b6d4', '#ec4899'];
 
