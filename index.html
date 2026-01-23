@@ -3320,13 +3320,13 @@
 
                 if (mode === 'wiz-skill') {
                     // Skill Wiz Default (11 Players)
-                    // OL is smaller text (approx 40px) and tighter spacing.
+                    // OL is smaller text to match skill player icon size (~24px)
                     // "Behind the LOS" -> Push Y down.
                     // WIZ Card visible area: y=60 to y=520 (460px)
                     // Position LOS at y=400 to allow ~340px above for routes (~17 yards) and ~120px below for backfield (~6 yards)
                     const wizLos = 400;
-                    const initialSize = 40;
-                    const spacing = 50;
+                    const initialSize = 24; // Reduced from 40 to match skill player circles
+                    const spacing = 40;
                     const olY = wizLos + 20; // Push down 20px (stays within y=520)
 
                     return [
