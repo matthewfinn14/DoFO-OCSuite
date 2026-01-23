@@ -25654,38 +25654,56 @@
                 return map;
             }, [plays, practicePlans]);
 
-            // Filter and Sort for "Usage" Tab
-            const sortedPlays = useMemo(() => {
-                let filtered = (plays || []).filter(p => !p.archived);
-                if (searchTerm) {
-                    const lower = searchTerm.toLowerCase();
-                    filtered = filtered.filter(p => p.name.toLowerCase().includes(lower) || p.formation?.toLowerCase().includes(lower) || p.concept?.toLowerCase().includes(lower));
-                }
+            // Grouping for "Usage" Tab (Buckets Style)
+            const usageData = useMemo(() => {
+                let filteredPlays = (plays || []).filter(p => !p.archived);
+                const query = searchTerm.toLowerCase();
 
-                const used = [];
-                const priority = [];
-                const rest = [];
-
-                filtered.forEach(p => {
-                    const u = playUsage[p.id] || { total: 0 };
-                    if (u.total > 0) {
-                        used.push(p);
-                    } else if (p.priority) {
-                        priority.push(p);
-                    } else {
-                        rest.push(p);
+                // Map of filtered plays for quick lookup
+                const filteredMap = {};
+                filteredPlays.forEach(p => {
+                    if (!searchTerm ||
+                        p.name.toLowerCase().includes(query) ||
+                        p.formation?.toLowerCase().includes(query) ||
+                        p.concept?.toLowerCase().includes(query)) {
+                        filteredMap[p.id] = p;
                     }
                 });
 
-                // Sort Used: Total Desc
-                used.sort((a, b) => playUsage[b.id].total - playUsage[a.id].total);
+                const categories = (playCategories || []).map(cat => {
+                    const families = (playBuckets || []).filter(b => b.categoryId === cat.id).map(bucket => {
+                        const bucketPlays = (bucket.plays || [])
+                            .map(pid => filteredMap[pid])
+                            .filter(Boolean)
+                            .sort((a, b) => a.name.localeCompare(b.name));
+                        return { ...bucket, plays: bucketPlays };
+                    }).filter(f => f.plays.length > 0);
 
-                // Sort Priority & Rest: Alpha
-                priority.sort((a, b) => a.name.localeCompare(b.name));
-                rest.sort((a, b) => a.name.localeCompare(b.name));
+                    const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
+                    return { ...cat, families, totalPlays };
+                }).filter(c => c.totalPlays > 0);
 
-                return { used, priority, rest };
-            }, [plays, playUsage, searchTerm, gamePlan]);
+                // Find unassigned plays
+                const assignedPlayIds = new Set();
+                (playBuckets || []).forEach(b => {
+                    if (b.plays) b.plays.forEach(pid => assignedPlayIds.add(pid));
+                });
+
+                const unassignedPlays = Object.values(filteredMap).filter(p => !assignedPlayIds.has(p.id))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+
+                if (unassignedPlays.length > 0) {
+                    categories.push({
+                        id: 'unassigned',
+                        label: 'Unassigned',
+                        color: '#64748b',
+                        families: [{ id: 'unassigned-family', label: 'Other Plays', plays: unassignedPlays }],
+                        totalPlays: unassignedPlays.length
+                    });
+                }
+
+                return categories;
+            }, [plays, playCategories, playBuckets, searchTerm]);
 
             const handleDragStart = (e, play) => {
                 e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id, name: play.name })); // Pass name too just in case
@@ -26361,35 +26379,77 @@
                                     />
                                 </div>
 
-                                {/* Header Row */}
-                                <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.75rem 4px 0.75rem' }}>
-                                    <div style={{ flex: 1 }}></div>
-                                    <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
-                                        {['M', 'T', 'W', 'TH', 'F'].map(day => (
-                                            <div key={day} style={{ width: '18px', textAlign: 'center', fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b' }}>
-                                                {day}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 0.75rem 0.75rem' }}>
-                                    {sortedPlays.used.length > 0 && (
-                                        <div style={{ marginBottom: '1rem' }}>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Used This Week</div>
-                                            {sortedPlays.used.map(renderRow)}
+                                    {/* Header Row */}
+                                    <div style={{ display: 'flex', alignItems: 'center', paddingBottom: '4px', marginRight: '10px' }}>
+                                        <div style={{ flex: 1 }}></div>
+                                        <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
+                                            {['M', 'T', 'W', 'TH', 'F'].map(day => (
+                                                <div key={day} style={{ width: '18px', textAlign: 'center', fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b' }}>
+                                                    {day}
+                                                </div>
+                                            ))}
                                         </div>
-                                    )}
-                                    {sortedPlays.priority.length > 0 && (
-                                        <div style={{ marginBottom: '1rem' }}>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Priority (Unused)</div>
-                                            {sortedPlays.priority.map(renderRow)}
-                                        </div>
-                                    )}
-                                    {sortedPlays.rest.length > 0 && (
-                                        <div>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Master Playbook</div>
-                                            {sortedPlays.rest.map(renderRow)}
+                                    </div>
+                                    {usageData.length > 0 ? (
+                                        usageData.map(category => {
+                                            const isCatExpanded = expandedSections[`cat-usage-${category.id}`];
+                                            return (
+                                                <div key={category.id} style={{ marginBottom: '8px' }}>
+                                                    <div
+                                                        onClick={() => toggleSection(`cat-usage-${category.id}`)}
+                                                        style={{
+                                                            padding: '8px 10px',
+                                                            background: category.color || '#3b82f6',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            borderRadius: '4px',
+                                                            marginBottom: '2px'
+                                                        }}
+                                                    >
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'white', textTransform: 'uppercase' }}>
+                                                            {category.label}
+                                                        </span>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span style={{ fontSize: '0.65rem', color: 'white', opacity: 0.9 }}>{category.totalPlays}</span>
+                                                            <Icon name={isCatExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="white" />
+                                                        </div>
+                                                    </div>
+
+                                                    {isCatExpanded && (
+                                                        <div style={{ marginLeft: '8px', borderLeft: `2px solid ${category.color || '#3b82f6'}`, paddingLeft: '6px', paddingTop: '4px' }}>
+                                                            {category.families.map(family => {
+                                                                const isFamExpanded = expandedSections[`fam-usage-${family.id}`];
+                                                                return (
+                                                                    <div key={family.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                                                        <div
+                                                                            onClick={() => toggleSection(`fam-usage-${family.id}`)}
+                                                                            style={{ padding: '6px 8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                                                        >
+                                                                            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#1e293b' }}>{family.label || family.name}</span>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{family.plays.length}</span>
+                                                                                <Icon name={isFamExpanded ? "ChevronDown" : "ChevronRight"} size={12} color="#64748b" />
+                                                                            </div>
+                                                                        </div>
+                                                                        {isFamExpanded && (
+                                                                            <div style={{ padding: '4px 8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                                                                                {family.plays.map(renderRow)}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                            No plays found matching "{searchTerm}"
                                         </div>
                                     )}
                                 </div>
@@ -43084,7 +43144,6 @@
                                     roster={roster}
                                     drills={drills}
                                     teamLogo={teamLogo}
-                                    setAppSidebarCollapsed={setSidebarCollapsed}
                                     currentWeek={currentWeek}
                                 />
                             )}
