@@ -1,6 +1,6 @@
 # PlayChip Component System - Implementation Spec
 
-## Status: In Progress (Updated 2026-01-22)
+## Status: In Progress (Updated 2026-01-23)
 
 ### Completed
 - [x] `PlayChip` component - visual chip with flags, colors, drag support
@@ -29,6 +29,11 @@
   - Confirm dialog on delete
   - Segment header with time/type/duration
 - [x] **Practice Scripts page** - now uses PracticeScriptTable component (~340 lines removed)
+- [x] **Add All to Script buttons** - available in all 3 tabs of GamePlannerSideMenu:
+  - Play Usage tab: category-level and family-level buttons
+  - Game Plan tab: Call Sheet boxes and Matrix formations
+  - Install tab: category-level and family-level buttons
+- [x] **Sidebar toggle closes right menu** - left sidebar arrow closes right-side play menu when expanding
 
 ### Data Model
 ```
@@ -49,11 +54,12 @@ I'm continuing work on the PlayChip component system for DoFO-OCSuite.
 Reference: PLAY_CHIP_SPEC.md
 
 Last session completed:
-- PlayDetailsModal with bucket/concept family selection
-- Visual feedback on situation chip clicks
-- Separated Quick List from Script Rows
+- PracticeScriptTable reusable component (removed ~340 lines of duplicate code)
+- PlayChip rendering in script tables (right-click → PlayDetailsModal)
+- Add All to Script buttons in all 3 tabs (Play Usage, Game Plan, Install)
+- Sidebar toggle closes right-side play menu when expanding
 
 Next priorities (ask me which to tackle):
-1. Integrate PlayChipInput into existing views
+1. Integrate PlayChipInput into existing views (Wristband Builder, Smart Call Sheet, Master Playbook)
 2. Any bugs or UX issues with current implementation
 ```

@@ -3290,7 +3290,7 @@
         };
 
         // --- PLAY DIAGRAM EDITOR ---
-        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], wizLibrary = [], setWizLibrary = () => { }, positionNames = {}, readOnly = false }) => {
+        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], onAddFormation = () => { }, wizLibrary = [], setWizLibrary = () => { }, positionNames = {}, readOnly = false }) => {
 
             // Helper for default formation (Red QB, Blue Skill, Black OL)
             const getDefaultFormation = () => {
@@ -3322,9 +3322,12 @@
                     // Skill Wiz Default (11 Players)
                     // OL is smaller text (approx 40px) and tighter spacing.
                     // "Behind the LOS" -> Push Y down.
+                    // WIZ Card visible area: y=20 to y=480 (460px)
+                    // Position LOS at y=400 to allow ~380px above for routes and ~60px below for backfield
+                    const wizLos = 400;
                     const initialSize = 40;
                     const spacing = 50;
-                    const olY = los + 25; // Push down 25px
+                    const olY = wizLos + 20; // Push down 20px (stays within y=480)
 
                     return [
                         // OL
@@ -3334,12 +3337,14 @@
                         { id: Date.now() + 4, type: 'player', points: [{ x: center - (spacing * 2), y: olY }], color: cOL, label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
                         { id: Date.now() + 5, type: 'player', points: [{ x: center + (spacing * 2), y: olY }], color: cOL, label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
                         // Skill Players (Custom Colors, Filled)
-                        { id: Date.now() + 6, type: 'player', points: [{ x: center, y: los + 100 }], color: cQB, label: positionNames['QB'] || 'Q', shape: 'circle', variant: 'filled' },
-                        { id: Date.now() + 7, type: 'player', points: [{ x: center, y: los + 140 }], color: '#3b82f6', label: positionNames['RB'] || 'B', shape: 'circle', variant: 'filled' }, // Blue
-                        { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: los + 15 }], color: '#a855f7', label: positionNames['X'] || 'X', shape: 'circle', variant: 'filled' }, // Purple
-                        { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: los + 15 }], color: '#22c55e', label: positionNames['Z'] || 'Z', shape: 'circle', variant: 'filled' }, // Green
-                        { id: Date.now() + 10, type: 'player', points: [{ x: 200, y: los + 35 }], color: '#ef4444', label: positionNames['A'] || 'A', shape: 'circle', variant: 'filled' }, // Red (A/Slot)
-                        { id: Date.now() + 11, type: 'player', points: [{ x: center + 120, y: los + 15 }], color: '#eab308', label: positionNames['Y'] || 'Y', shape: 'circle', variant: 'filled' }, // Yellow
+                        // QB at shotgun depth (60px behind LOS, stays within visible area)
+                        { id: Date.now() + 6, type: 'player', points: [{ x: center, y: wizLos + 60 }], color: cQB, label: positionNames['QB'] || 'Q', shape: 'circle', variant: 'filled' },
+                        // RB closer to QB (at y=460, within visible bounds)
+                        { id: Date.now() + 7, type: 'player', points: [{ x: center - 60, y: wizLos + 60 }], color: '#3b82f6', label: positionNames['RB'] || 'B', shape: 'circle', variant: 'filled' }, // Blue
+                        { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: wizLos + 10 }], color: '#a855f7', label: positionNames['X'] || 'X', shape: 'circle', variant: 'filled' }, // Purple
+                        { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: wizLos + 10 }], color: '#22c55e', label: positionNames['Z'] || 'Z', shape: 'circle', variant: 'filled' }, // Green
+                        { id: Date.now() + 10, type: 'player', points: [{ x: 200, y: wizLos + 25 }], color: '#ef4444', label: positionNames['A'] || 'A', shape: 'circle', variant: 'filled' }, // Red (A/Slot)
+                        { id: Date.now() + 11, type: 'player', points: [{ x: center + 120, y: wizLos + 10 }], color: '#eab308', label: positionNames['Y'] || 'Y', shape: 'circle', variant: 'filled' }, // Yellow
                     ];
                 }
 
@@ -3452,6 +3457,10 @@
 
             // Field Position State (for dynamic yard lines)
             const [fieldPosition, setFieldPosition] = useState(50); // Starting yard line (0-100)
+
+            // Field View Mode State (for WIZ Card view that matches print output)
+            // 'standard' = full 900x600 viewBox, 'wiz-card' = cropped 800x460 viewBox matching WIZ grid cells
+            const [fieldViewMode, setFieldViewMode] = useState(mode === 'wiz-skill' ? 'wiz-card' : 'standard');
 
             // Formation Selector State (for Wiz Skill)
             const [selectedFormationId, setSelectedFormationId] = useState('');
@@ -3571,6 +3580,48 @@
                 const updatedLibrary = wizLibrary.filter(p => p.id !== parseInt(presetId));
                 setWizLibrary(updatedLibrary);
                 localStorage.setItem('wiz_ol_library', JSON.stringify(updatedLibrary));
+            };
+
+            // Formation Actions
+            const flipFormation = () => {
+                const flippedElements = elements.map(el => {
+                    if (el.type === 'player' || el.type === 'poly' || el.type === 'free') {
+                        return {
+                            ...el,
+                            points: el.points.map(p => ({
+                                x: 800 - p.x,
+                                y: p.y
+                            }))
+                        };
+                    }
+                    return el;
+                });
+                updateElements(flippedElements);
+            };
+
+            const saveAsFormationTemplate = () => {
+                const name = window.prompt("Enter Formation Name:");
+                if (!name) return;
+
+                // Convert pixel coords back to percentages (0-100)
+                // Editor width is 800, height is 500 (based on loadFormation logic)
+                const positions = elements
+                    .filter(el => el.type === 'player')
+                    .map(el => ({
+                        label: el.label,
+                        x: (el.points[0].x / 800) * 100,
+                        y: (el.points[0].y / 500) * 100
+                    }));
+
+                const newFormation = {
+                    id: `form-${Date.now()}`,
+                    name: name,
+                    type: mode === 'scout-defense' ? 'Defense' : 'Offense',
+                    positions: positions
+                };
+
+                onAddFormation(newFormation);
+                alert(`Formation "${name}" saved to library!`);
             };
 
             // Drag State
@@ -4073,7 +4124,7 @@
                                 fill={el.shape === 'text-only' ? (el.color || 'black') : textColor}
                                 style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'Arial, sans-serif' }}
                             >
-                                {el.label}
+                                {el.type === 'player' ? (positionNames[el.label] || el.label) : el.label}
                             </text>
                         </g>
                     );
@@ -4283,6 +4334,17 @@
                                     </div>
                                 )}
 
+                                {/* View Mode selector for WIZ skill mode - matches print output aspect ratio */}
+                                {mode === 'wiz-skill' && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 'bold' }}>View:</label>
+                                        <select value={fieldViewMode} onChange={(e) => setFieldViewMode(e.target.value)} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', color: '#1e293b', backgroundColor: fieldViewMode === 'wiz-card' ? '#dcfce7' : 'white' }}>
+                                            <option value="wiz-card">WIZ Card</option>
+                                            <option value="standard">Full Field</option>
+                                        </select>
+                                    </div>
+                                )}
+
                                 {mode.startsWith('wiz') && formations.length > 0 && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                         <label style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 'bold' }}>Formation:</label>
@@ -4328,9 +4390,33 @@
                                 )}
                             </div>
 
+                            <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 0.25rem' }}></div>
+
+                            {/* --- GROUP 3: FORMATION ACTIONS (RIGHT) --- */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={flipFormation}
+                                    title="Flip Formation (Left/Right)"
+                                    style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b', backgroundColor: 'white' }}
+                                >
+                                    <Icon name="RefreshCw" size={16} />
+                                    <span style={{ fontSize: '0.8rem' }}>Flip</span>
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={saveAsFormationTemplate}
+                                    title="Save as Formation Template"
+                                    style={{ padding: '0.4rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: 'white', background: '#0891b2' }}
+                                >
+                                    <Icon name="Layout" size={16} />
+                                    <span style={{ fontSize: '0.8rem' }}>Save As Formation</span>
+                                </button>
+                            </div>
+
                             <div style={{ flex: 1 }}></div>
 
-                            {/* --- GROUP 3: SYSTEM ACTIONS (RIGHT) --- */}
+                            {/* --- GROUP 4: SYSTEM ACTIONS (RIGHT) --- */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                 <div className="btn-group" style={{ display: 'flex', gap: '0.2rem' }}>
                                     <button className="btn btn-secondary" onClick={undo} disabled={historyIndex === 0} title="Undo" style={{ padding: '0.3rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#1e293b', backgroundColor: 'white' }}>
@@ -4389,8 +4475,8 @@
                                 ref={svgRef}
                                 width="100%"
                                 height="100%"
-                                viewBox="0 0 900 600"
-                                preserveAspectRatio="none"
+                                viewBox={fieldViewMode === 'wiz-card' ? '0 20 800 460' : '0 0 900 600'}
+                                preserveAspectRatio={fieldViewMode === 'wiz-card' ? 'xMidYMid meet' : 'none'}
                                 onMouseDown={handleMouseDown}
                                 onMouseMove={handleMouseMove}
                                 onMouseUp={handleMouseUp}
@@ -4614,6 +4700,32 @@
                                         })()}
                                     </g>
                                 )}
+
+                                {/* WIZ Card Boundary Guides - shown when in wiz-skill mode with Full Field view to indicate what will be visible on printed WIZ cards */}
+                                {mode === 'wiz-skill' && fieldViewMode === 'standard' && (
+                                    <g>
+                                        {/* Dimmed areas outside WIZ card visible bounds (y < 20 and y > 480) */}
+                                        <rect x="0" y="0" width="900" height="20" fill="rgba(0,0,0,0.15)" />
+                                        <rect x="0" y="480" width="900" height="120" fill="rgba(0,0,0,0.15)" />
+                                        <rect x="800" y="20" width="100" height="460" fill="rgba(0,0,0,0.15)" />
+
+                                        {/* Border showing exact WIZ card visible area (0-800 x, 20-480 y) */}
+                                        <rect
+                                            x="0"
+                                            y="20"
+                                            width="800"
+                                            height="460"
+                                            fill="none"
+                                            stroke="#22c55e"
+                                            strokeWidth="2"
+                                            strokeDasharray="8,4"
+                                        />
+
+                                        {/* Label for visible area */}
+                                        <text x="10" y="35" fontSize="10" fill="#22c55e" fontWeight="bold">WIZ Card Visible Area</text>
+                                    </g>
+                                )}
+
                                 {elements.map(el => renderElement(el))}
 
                                 {/* Selection Box */}
@@ -4733,7 +4845,7 @@
         };
 
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [], playBuckets = [], playCategories = [] }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [], playBuckets = [], playCategories = [], onAddFormation = () => { } }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
             const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'wiz-oline', 'wiz-skill', 'detailed'
@@ -5088,7 +5200,7 @@
                 }
             };
 
-            const renderDiagramPreview = (elements) => {
+            const renderDiagramPreview = (elements, useWizCardView = false) => {
                 if (!elements || elements.length === 0) return (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', gap: '0.5rem' }}>
                         <Icon name="Image" size={24} style={{ opacity: 0.5 }} />
@@ -5096,8 +5208,11 @@
                     </div>
                 );
 
+                // Use WIZ card viewBox (0 20 800 460) for skill diagrams to match print output
+                const viewBox = useWizCardView ? '0 20 800 460' : '0 0 900 600';
+
                 return (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid meet" style={{ background: 'white', borderRadius: '8px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" style={{ background: 'white', borderRadius: '8px' }}>
                         <g opacity="0.1">
                             <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
                             <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
@@ -5146,6 +5261,7 @@
                             wizLibrary={wizLibrary}
                             setWizLibrary={setWizLibrary}
                             positionNames={positionNames}
+                            onAddFormation={onAddFormation}
                         />
                     )}
 
@@ -5162,6 +5278,7 @@
                             wizLibrary={wizLibrary}
                             setWizLibrary={setWizLibrary}
                             positionNames={positionNames}
+                            onAddFormation={onAddFormation}
                         />
                     )}
 
@@ -5179,6 +5296,7 @@
                             wizLibrary={wizLibrary}
                             setWizLibrary={setWizLibrary}
                             positionNames={positionNames}
+                            onAddFormation={onAddFormation}
                         />
                     )}
 
@@ -5195,6 +5313,7 @@
                             wizLibrary={wizLibrary}
                             setWizLibrary={setWizLibrary}
                             positionNames={positionNames}
+                            onAddFormation={onAddFormation}
                         />
                     )}
 
@@ -5587,7 +5706,7 @@
                                     ) : (
                                         formData.wizSkillData && formData.wizSkillData.length > 0 ? (
                                             <div onClick={() => setActiveDiagramMode('wiz-skill')} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
-                                                {renderDiagramPreview(formData.wizSkillData)}
+                                                {renderDiagramPreview(formData.wizSkillData, true)}
                                             </div>
                                         ) : (
                                             <button type="button" className="btn btn-secondary" onClick={() => setActiveDiagramMode('wiz-skill')}>
@@ -8949,65 +9068,110 @@
                 // Determine which data to use based on type
                 let data = null;
                 if (type === 'skill' && (play.wizSkillData || play.rooskiSkillData)) {
-                    // wizSkillData is an array of elements, wrap it in the expected structure
                     data = { elements: play.wizSkillData || play.rooskiSkillData };
                 } else if (type === 'oline' && (play.wizOlineData || play.rooskiOlineData)) {
-                    // wizOlineData is an array of elements, wrap it in the expected structure
                     data = { elements: play.wizOlineData || play.rooskiOlineData };
                 } else if (play.diagramData) {
-                    // diagramData should already have the { elements: [...] } structure
                     data = play.diagramData;
                 }
 
                 if (!data || !data.elements || data.elements.length === 0) return null;
 
-                // Calculate bounding box for smart crop
-                const bounds = calculateDiagramBounds(data.elements);
-                // Determine target aspect ratio (use 1:1 for square cells)
-                const targetRatio = 1; // Can be adjusted to 4:3 if needed
-                const sourceRatio = bounds.width / bounds.height;
+                // Fixed viewBox for consistent field representation
+                // Cell aspect ratio on 5x3 card with 4x4 grid is ~1.75:1
+                // Using 800x460 to match this ratio and fill cells better
+                const fieldWidth = 800;
+                const fieldHeight = 460;
+                const viewBoxX = 0;
+                const viewBoxY = 20; // Slight offset to show more of the LOS area
 
-                // Adjust viewBox dimensions to maintain aspect ratio
-                let viewBoxWidth = bounds.width;
-                let viewBoxHeight = bounds.height;
-
-                if (sourceRatio > targetRatio) {
-                    // Wider than target, expand height
-                    viewBoxHeight = bounds.width / targetRatio;
-                } else {
-                    // Taller than target, expand width
-                    viewBoxWidth = bounds.height * targetRatio;
-                }
-
-                // Center the content in the new viewBox
-                const viewBoxX = bounds.minX - (viewBoxWidth - bounds.width) / 2;
-                const viewBoxY = bounds.minY - (viewBoxHeight - bounds.height) / 2;
+                // Define colors for route lines
+                const routeColors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#f97316', '#06b6d4', '#ec4899'];
 
                 return (
                     <svg
-                        viewBox={`${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
+                        viewBox={`${viewBoxX} ${viewBoxY} ${fieldWidth} ${fieldHeight}`}
                         width="100%"
                         height="100%"
-                        style={{ display: 'block' }}
+                        style={{ display: 'block', background: 'white', flex: 1, minHeight: 0, minWidth: 0 }}
                         preserveAspectRatio="xMidYMid meet"
                     >
+                        {/* Arrow markers for each color */}
+                        <defs>
+                            {routeColors.map(color => (
+                                <marker
+                                    key={color}
+                                    id={`wiz-arrow-${color.replace('#', '')}`}
+                                    markerWidth="10"
+                                    markerHeight="10"
+                                    refX="9"
+                                    refY="3"
+                                    orient="auto"
+                                    markerUnits="strokeWidth"
+                                >
+                                    <path d="M0,0 L0,6 L9,3 z" fill={color} />
+                                </marker>
+                            ))}
+                            <marker id="wiz-arrow-000000" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#000000" />
+                            </marker>
+                        </defs>
+
+                        {/* Field background - white */}
+                        <rect x={viewBoxX} y={viewBoxY} width={fieldWidth} height={fieldHeight} fill="white" />
+
+                        {/* Yard lines on LEFT side - 5, 10, 15 going UP from bottom */}
+                        {/* LOS is at bottom (y=450), each 5 yards = ~100px up */}
+                        <g stroke="#c4a052" strokeWidth="2" fill="none">
+                            {/* Hash marks at TOP (orange/gold) */}
+                            <line x1="250" y1="20" x2="250" y2="50" />
+                            <line x1="550" y1="20" x2="550" y2="50" />
+                        </g>
+                        <g fill="#888" fontSize="14" fontWeight="bold">
+                            {/* Yard numbers on left - positioned from bottom going up */}
+                            <text x="15" y="365">5</text>
+                            <text x="10" y="265">10</text>
+                            <text x="10" y="165">15</text>
+                        </g>
+                        {/* Faint yard lines across field */}
+                        <g stroke="#ddd" strokeWidth="1">
+                            <line x1="35" y1="350" x2={fieldWidth - 20} y2="350" />
+                            <line x1="35" y1="250" x2={fieldWidth - 20} y2="250" />
+                            <line x1="35" y1="150" x2={fieldWidth - 20} y2="150" />
+                        </g>
+
+                        {/* Render diagram elements */}
                         {data.elements && data.elements.map(el => {
                             if (el.type === 'player') {
                                 const { x, y } = el.points[0];
-                                const size = 30;
+                                const size = el.shape === 'text-only' ? 0 : 28;
                                 const isRect = el.shape === 'square';
+                                const isTextOnly = el.shape === 'text-only';
+                                const fontSize = isTextOnly ? (el.fontSize ? Math.min(el.fontSize * 0.25, 40) : 24) : 14;
+
                                 return (
                                     <g key={el.id}>
-                                        {isRect ? (
-                                            <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="2" />
+                                        {!isTextOnly && (isRect ? (
+                                            <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="3" />
                                         ) : (
-                                            <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="2" />
-                                        )}
-                                        <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
+                                            <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="3" />
+                                        ))}
+                                        <text
+                                            x={x}
+                                            y={y}
+                                            dy={isTextOnly ? "0.35em" : "0.35em"}
+                                            textAnchor="middle"
+                                            fontSize={fontSize}
+                                            fontWeight="bold"
+                                            fill={el.color}
+                                        >
+                                            {el.label}
+                                        </text>
                                     </g>
                                 );
                             }
 
+                            // Route/line rendering
                             let d = '';
                             if (el.style === 'zigzag') {
                                 d = getZigZagPath(el.points);
@@ -9017,34 +9181,35 @@
 
                             let markerEnd = undefined;
                             let tBlock = null;
+                            const colorHex = (el.color || '#000000').replace('#', '');
 
                             if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
-                                markerEnd = `url(#arrowhead-${el.color})`;
+                                markerEnd = `url(#wiz-arrow-${colorHex})`;
                             } else if (el.endType === 't') {
                                 const end = el.points[el.points.length - 1];
                                 const prev = el.points[el.points.length - 2] || el.points[0];
                                 const dx = end.x - prev.x;
                                 const dy = end.y - prev.y;
                                 const len = Math.hypot(dx, dy) || 1;
-                                const perpX = (-dy / len) * 15;
-                                const perpY = (dx / len) * 15;
+                                const perpX = (-dy / len) * 12;
+                                const perpY = (dx / len) * 12;
                                 tBlock = (
                                     <line
                                         x1={end.x - perpX} y1={end.y - perpY}
                                         x2={end.x + perpX} y2={end.y + perpY}
                                         stroke={el.color}
-                                        strokeWidth="4"
+                                        strokeWidth="5"
                                     />
                                 );
                             } else if (el.endType === 'dot') {
                                 const end = el.points[el.points.length - 1];
                                 tBlock = (
-                                    <circle cx={end.x} cy={end.y} r="6" fill={el.color} />
+                                    <circle cx={end.x} cy={end.y} r="5" fill={el.color} />
                                 );
                             } else if (el.endType === 'none') {
                                 markerEnd = undefined;
                             } else if (el.type === 'arrow') {
-                                markerEnd = `url(#arrowhead-${el.color})`;
+                                markerEnd = `url(#wiz-arrow-${colorHex})`;
                             }
 
                             return (
@@ -9052,9 +9217,9 @@
                                     <path
                                         d={d}
                                         stroke={el.color}
-                                        strokeWidth="4"
+                                        strokeWidth="5"
                                         fill="none"
-                                        strokeDasharray={el.style === 'dashed' ? "10,5" : "none"}
+                                        strokeDasharray={el.style === 'dashed' ? "8,4" : "none"}
                                         markerEnd={markerEnd}
                                     />
                                     {tBlock}
@@ -9143,33 +9308,35 @@
                                                 <div style={{
                                                     flex: 1,
                                                     display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
+                                                    alignItems: 'stretch',
+                                                    justifyContent: 'stretch',
                                                     overflow: 'hidden',
-                                                    minHeight: 0
+                                                    minHeight: 0,
+                                                    background: 'white'
                                                 }}>
                                                     {displayPlay && renderPlayThumbnail(displayPlay, viewType)}
                                                 </div>
 
-                                                {/* Bottom row: Coordinate (left) | Play Name (right) */}
+                                                {/* Bottom row: Coordinate (left) | Play Name (right) - compact like the reference */}
                                                 <div style={{
                                                     display: 'flex',
-                                                    borderTop: '1px solid #ccc',
-                                                    height: '18px',
-                                                    minHeight: '18px',
-                                                    maxHeight: '18px'
+                                                    borderTop: '1px solid black',
+                                                    height: '14px',
+                                                    minHeight: '14px',
+                                                    maxHeight: '14px',
+                                                    background: 'white'
                                                 }}>
                                                     {/* Coordinate cell */}
                                                     <div style={{
-                                                        width: '35px',
-                                                        minWidth: '35px',
+                                                        width: '28px',
+                                                        minWidth: '28px',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         fontSize: '8pt',
                                                         fontWeight: 'bold',
                                                         color: '#000',
-                                                        borderRight: '1px solid #ccc',
+                                                        borderRight: '1px solid black',
                                                         background: 'white'
                                                     }}>
                                                         {slot}
@@ -9180,14 +9347,16 @@
                                                         flex: 1,
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '7pt',
-                                                        padding: '0 2px',
-                                                        textAlign: 'center',
+                                                        justifyContent: 'flex-start',
+                                                        fontSize: '6pt',
+                                                        fontWeight: 'bold',
+                                                        padding: '0 3px',
+                                                        textAlign: 'left',
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
                                                         whiteSpace: 'nowrap',
-                                                        background: 'white'
+                                                        background: 'white',
+                                                        color: '#000'
                                                     }}>
                                                         {displayPlay ? displayPlay.name : ''}
                                                     </div>
@@ -24849,7 +25018,7 @@
                     const slots = getSlotsForCard(selectedCardForPrint);
                     const opponent = card.opp || card.opponent || '';
 
-                    // Helper: Render Play Thumbnail for Print
+                    // Helper: Render Play Thumbnail for Print (WIZ Grid style)
                     const renderPlayThumbnail = (play, type = 'standard') => {
                         if (!play) return null;
 
@@ -24864,31 +25033,63 @@
 
                         if (!data || !data.elements || data.elements.length === 0) return null;
 
-                        // Print Optimization: Larger sizes for small physical area
-                        const PRINT_SCALE_MODIFIER = 1.5;
+                        // Fixed viewBox matching WIZ grid cell proportions
+                        const fieldWidth = 800;
+                        const fieldHeight = 460;
+                        const viewBoxX = 0;
+                        const viewBoxY = 20;
+
+                        const routeColors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#f97316', '#06b6d4', '#ec4899'];
 
                         return (
-                            <svg viewBox="0 0 900 600" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
-                                <g opacity="0.1">
-                                    <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="4" />
-                                    <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="4" />
-                                    <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="8" />
-                                    <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="4" />
-                                    <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="4" />
+                            <svg viewBox={`${viewBoxX} ${viewBoxY} ${fieldWidth} ${fieldHeight}`} width="100%" height="100%" style={{ display: 'block', background: 'white', flex: 1 }} preserveAspectRatio="xMidYMid meet">
+                                {/* Arrow markers */}
+                                <defs>
+                                    {routeColors.map(color => (
+                                        <marker key={color} id={`print-arrow-${color.replace('#', '')}`} markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                            <path d="M0,0 L0,6 L9,3 z" fill={color} />
+                                        </marker>
+                                    ))}
+                                    <marker id="print-arrow-000000" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                        <path d="M0,0 L0,6 L9,3 z" fill="#000000" />
+                                    </marker>
+                                </defs>
+
+                                {/* Field background */}
+                                <rect x={viewBoxX} y={viewBoxY} width={fieldWidth} height={fieldHeight} fill="white" />
+
+                                {/* Yard lines - LEFT side, 5/10/15 going UP from bottom */}
+                                <g stroke="#c4a052" strokeWidth="2">
+                                    <line x1="250" y1="40" x2="250" y2="65" />
+                                    <line x1="550" y1="40" x2="550" y2="65" />
                                 </g>
+                                <g fill="#888" fontSize="12" fontWeight="bold">
+                                    <text x="12" y="365">5</text>
+                                    <text x="8" y="265">10</text>
+                                    <text x="8" y="165">15</text>
+                                </g>
+                                <g stroke="#ddd" strokeWidth="1">
+                                    <line x1="30" y1="350" x2={fieldWidth - 15} y2="350" />
+                                    <line x1="30" y1="250" x2={fieldWidth - 15} y2="250" />
+                                    <line x1="30" y1="150" x2={fieldWidth - 15} y2="150" />
+                                </g>
+
                                 {data.elements.map(el => {
                                     if (el.type === 'player') {
                                         const { x, y } = el.points[0];
-                                        const size = 50; // Larger for print legibility
+                                        const size = el.shape === 'text-only' ? 0 : 28;
                                         const isRect = el.shape === 'square';
+                                        const isTextOnly = el.shape === 'text-only';
+                                        const fontSize = isTextOnly ? (el.fontSize ? Math.min(el.fontSize * 0.25, 40) : 24) : 14;
+
                                         return (
                                             <g key={el.id}>
-                                                {isRect ? (
-                                                    <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="6" />
+                                                {!isTextOnly && (isRect ? (
+                                                    <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="3" />
                                                 ) : (
-                                                    <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="6" />
-                                                )}
-                                                <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="40" fontWeight="bold" fill={el.color}>{el.label}</text>
+                                                    <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="3" />
+                                                ))}
+                                                <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize={fontSize} fontWeight="bold" fill={el.color}>{el.label}</text>
                                             </g>
                                         );
                                     }
@@ -24902,28 +25103,29 @@
 
                                     let markerEnd = undefined;
                                     let tBlock = null;
+                                    const colorHex = (el.color || '#000000').replace('#', '');
 
                                     if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
-                                        markerEnd = `url(#arrowhead-${el.color})`;
+                                        markerEnd = `url(#print-arrow-${colorHex})`;
                                     } else if (el.endType === 't') {
                                         const end = el.points[el.points.length - 1];
                                         const prev = el.points[el.points.length - 2] || el.points[0];
                                         const dx = end.x - prev.x;
                                         const dy = end.y - prev.y;
                                         const len = Math.hypot(dx, dy) || 1;
-                                        const perpX = (-dy / len) * 15;
-                                        const perpY = (dx / len) * 15;
-                                        tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={el.color} strokeWidth="8" />;
+                                        const perpX = (-dy / len) * 12;
+                                        const perpY = (dx / len) * 12;
+                                        tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={el.color} strokeWidth="5" />;
                                     } else if (el.endType === 'dot') {
                                         const end = el.points[el.points.length - 1];
-                                        tBlock = <circle cx={end.x} cy={end.y} r="10" fill={el.color} />;
+                                        tBlock = <circle cx={end.x} cy={end.y} r="5" fill={el.color} />;
                                     } else if (el.type === 'arrow') {
-                                        markerEnd = `url(#arrowhead-${el.color})`;
+                                        markerEnd = `url(#print-arrow-${colorHex})`;
                                     }
 
                                     return (
                                         <g key={el.id}>
-                                            <path d={d} stroke={el.color} strokeWidth="8" fill="none" strokeDasharray={el.style === 'dashed' ? "10,5" : "none"} markerEnd={markerEnd} />
+                                            <path d={d} stroke={el.color} strokeWidth="5" fill="none" strokeDasharray={el.style === 'dashed' ? "8,4" : "none"} markerEnd={markerEnd} />
                                             {tBlock}
                                         </g>
                                     );
@@ -24991,14 +25193,14 @@
                                                         flexDirection: 'column',
                                                         overflow: 'hidden'
                                                     }}>
-                                                        {/* Diagram Area */}
-                                                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '1px' }}>
+                                                        {/* Diagram Area - fill the cell */}
+                                                        <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', overflow: 'hidden', background: 'white' }}>
                                                             {displayPlay && renderPlayThumbnail(displayPlay, viewType)}
                                                         </div>
-                                                        {/* Info Row */}
-                                                        <div style={{ display: 'flex', borderTop: '1px solid #ccc', height: '14px', minHeight: '14px', fontSize: '8px' }}>
-                                                            <div style={{ width: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #ccc', fontWeight: 'bold' }}>{slot}</div>
-                                                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', paddingLeft: '2px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                                        {/* Info Row - compact like the reference */}
+                                                        <div style={{ display: 'flex', borderTop: '1px solid black', height: '12px', minHeight: '12px', maxHeight: '12px', fontSize: '7px', background: 'white' }}>
+                                                            <div style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid black', fontWeight: 'bold', color: '#000' }}>{slot}</div>
+                                                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', paddingLeft: '2px', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: 'bold', color: '#000' }}>
                                                                 {displayPlay ? (displayPlay.wizName || displayPlay.name) : ''}
                                                             </div>
                                                         </div>
@@ -40327,6 +40529,7 @@
                         positionNames={positionNames}
                         playBuckets={playBuckets}
                         playCategories={playCategories}
+                        onAddFormation={handleAddFormation}
                     />
                 )
             }
@@ -42642,6 +42845,7 @@
                                         drills={drills}
                                         playCategories={playCategories}
                                         playBuckets={playBuckets}
+                                        onAddFormation={handleAddFormation}
                                     />
                                 )
                             }

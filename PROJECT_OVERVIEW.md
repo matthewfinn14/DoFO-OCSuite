@@ -42,7 +42,9 @@
 - **Formation Manager** - Define and customize offensive/defensive/ST formations
 - **Install Manager** - Manage weekly play installations
 - **Game Plan Builder** - Create offensive game plans with call sheets
-- **Wristband Builder** - Generate printable wristbands (traditional, modular, diagram styles)
+- **Wristband Builder** - Generate printable wristbands (traditional, modular, WIZ/diagram styles)
+  - **WIZ Grid** - Dynamic 4x4 visual grids with smart-cropping diagrams
+  - **Configurable Sizes** - Support for 3x5" and 4x6" standard card sizes
 - **Smart Call Sheet** - Situation-aware play calling interface
 - **Play Call Simulator** - Practice play-calling scenarios
 
@@ -140,7 +142,9 @@ schools/
 **Play Object**:
 - `id`, `name`, `formation`, `concept`
 - `tags[]` - Situational tags
-- `diagram` - SVG or image data
+- `diagramData` - Excalidraw-style JSON for detailed diagrams
+- `wizOlineData` - Specialized O-Line specific visual data
+- `wizSkillData` - Specialized Skill position visual data
 - `personnel`, `protection`, `route`
 
 **Player Object**:
@@ -175,7 +179,9 @@ schools/
 - Custom print stylesheets with `@media print`
 - Print preview modals
 - Landscape/portrait page layouts
-- Wristband printing (5x3" cards, 2x2 grid per page)
+- Wristband printing (5x3" or 6x4" cards, 2x2 grid per page)
+- **Smart Crop** - Automatic diagram bounding box calculation to maximize visual area in small cells
+- **Field Rendering** - Consistent visual background with light green field and grid markers
 
 ### Responsive Design
 - Mobile-first approach for player/staff apps
@@ -192,6 +198,11 @@ schools/
 - Enhanced wristband builder with modular card support
 - Implemented practice plan notes modal with staff grid
 - Added hash presets for practice script builder
+- **WIZ Improvements**:
+  - Implemented **Smart Crop** for all play diagrams to maximize legibility in small cells
+  - Added configurable **Card Sizes** (3x5 and 4x6) for wristbands
+  - Standardized **WIZ Visual Style** with consistent field backgrounds and bold rendering
+  - Updated WIZ grid layouts for improved data density and readability
 
 ### Known Issues
 - Large file size (50K lines) makes debugging challenging
