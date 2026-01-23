@@ -25672,27 +25672,28 @@
 
                 const categories = (playCategories || []).map(cat => {
                     const families = (playBuckets || []).filter(b => b.categoryId === cat.id).map(bucket => {
-                        const bucketPlays = (bucket.plays || [])
-                            .map(pid => filteredMap[pid])
-                            .filter(Boolean)
-                            .sort((a, b) => a.name.localeCompare(b.name));
+                        // Find plays assigned to this category and family label
+                        const bucketPlays = Object.values(filteredMap).filter(p =>
+                            p.bucketId === cat.id && p.conceptFamily === bucket.label
+                        ).sort((a, b) => a.name.localeCompare(b.name));
+
                         return { ...bucket, plays: bucketPlays };
-                    }).filter(f => f.plays.length > 0);
+                    }).filter(f => searchTerm ? f.plays.length > 0 : true);
 
                     const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
                     return { ...cat, families, totalPlays };
-                }).filter(c => c.totalPlays > 0);
+                }).filter(c => searchTerm ? c.totalPlays > 0 : true);
 
-                // Find unassigned plays
-                const assignedPlayIds = new Set();
-                (playBuckets || []).forEach(b => {
-                    if (b.plays) b.plays.forEach(pid => assignedPlayIds.add(pid));
-                });
+                // Find unassigned plays (those not matching a category/family combination)
+                const unassignedPlays = Object.values(filteredMap).filter(p => {
+                    if (!p.bucketId || !p.conceptFamily) return true;
+                    // Also unassigned if its bucketId or conceptFamily doesn't exist in setup
+                    const catExists = (playCategories || []).some(cat => cat.id === p.bucketId);
+                    const bucketExists = (playBuckets || []).some(b => b.categoryId === p.bucketId && b.label === p.conceptFamily);
+                    return !catExists || !bucketExists;
+                }).sort((a, b) => a.name.localeCompare(b.name));
 
-                const unassignedPlays = Object.values(filteredMap).filter(p => !assignedPlayIds.has(p.id))
-                    .sort((a, b) => a.name.localeCompare(b.name));
-
-                if (unassignedPlays.length > 0) {
+                if (unassignedPlays.length > 0 || !searchTerm) {
                     categories.push({
                         id: 'unassigned',
                         label: 'Unassigned',
