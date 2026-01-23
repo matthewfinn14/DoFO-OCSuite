@@ -25707,7 +25707,8 @@
             }, [plays, playCategories, playBuckets, searchTerm]);
 
             const installData = useMemo(() => {
-                const installedPlays = (plays || []).filter(p => !p.archived && (playUsage[p.id]?.total || 0) > 0);
+                const installList = currentWeek?.installList || [];
+                const installedPlays = (plays || []).filter(p => !p.archived && installList.includes(p.id));
                 const query = searchTerm.toLowerCase();
 
                 // Map of filtered plays for quick lookup
@@ -25728,11 +25729,11 @@
                         ).sort((a, b) => a.name.localeCompare(b.name));
 
                         return { ...bucket, plays: bucketPlays };
-                    }).filter(f => f.plays.length > 0);
+                    }).filter(f => searchTerm ? f.plays.length > 0 : true);
 
                     const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
                     return { ...cat, families, totalPlays };
-                }).filter(c => c.totalPlays > 0);
+                }).filter(c => searchTerm ? c.totalPlays > 0 : true);
 
                 // Find unassigned plays that are installed
                 const unassignedPlays = Object.values(filteredMap).filter(p => {
@@ -25742,7 +25743,7 @@
                     return !catExists || !bucketExists;
                 }).sort((a, b) => a.name.localeCompare(b.name));
 
-                if (unassignedPlays.length > 0) {
+                if (unassignedPlays.length > 0 || !searchTerm) {
                     categories.push({
                         id: 'unassigned-install',
                         label: 'Uncategorized',
@@ -25753,7 +25754,7 @@
                 }
 
                 return categories;
-            }, [plays, playCategories, playBuckets, playUsage, searchTerm]);
+            }, [plays, playCategories, playBuckets, currentWeek, searchTerm]);
 
             const handleDragStart = (e, play) => {
                 e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id, name: play.name })); // Pass name too just in case
