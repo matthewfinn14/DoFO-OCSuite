@@ -11384,7 +11384,11 @@
 
                 let itemsToAdd = [];
 
-                // 1. Check Matrix Formation
+                if (Array.isArray(sectionId)) {
+                    // Direct play IDs passed
+                    itemsToAdd = sectionId.map(id => plays.find(p => p.id === id)).filter(Boolean);
+                } else {
+                    // 1. Check Matrix Formation
                 const matrixFormation = gamePlanLayouts?.MATRIX?.formations?.find(f => f.id === sectionId);
                 if (matrixFormation) {
                     const playIds = new Set();
@@ -11445,6 +11449,7 @@
                         return plays.find(p => p.id === pid);
                     }).filter(Boolean);
                 }
+            }
 
                 if (itemsToAdd.length === 0) return;
 
@@ -26078,7 +26083,34 @@
 
                                     {isCatExpanded && (
                                         <div style={{ marginLeft: '8px', borderLeft: `2px solid ${category.color || '#3b82f6'}`, paddingLeft: '6px', paddingTop: '4px' }}>
-                                            {category.families.map(family => {
+                                            {category.totalPlays > 0 && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const allPlayIds = category.families.flatMap(f => f.plays.map(p => p.id));
+                                                            onAddSection(allPlayIds);
+                                                        }}
+                                                        style={{
+                                                            width: '100%',
+                                                            marginBottom: '8px',
+                                                            fontSize: '0.7rem',
+                                                            padding: '6px',
+                                                            background: 'white',
+                                                            color: '#1e293b',
+                                                            border: `1px solid ${category.color || '#3b82f6'}`,
+                                                            borderRadius: '4px',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '4px'
+                                                        }}
+                                                    >
+                                                        <Icon name="PlusCircle" size={14} /> Add all to script ({category.totalPlays})
+                                                    </button>
+                                                )}
+                                                {category.families.map(family => {
                                                 const isFamExpanded = expandedSections[`fam-install-${family.id}`];
                                                 return (
                                                     <div key={family.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
@@ -26094,7 +26126,34 @@
                                                         </div>
                                                         {isFamExpanded && (
                                                             <div style={{ padding: '4px 8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                                                {family.plays.map(renderRow)}
+                                                                {family.plays.length > 0 && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                const familyPlayIds = family.plays.map(p => p.id);
+                                                                                onAddSection(familyPlayIds);
+                                                                            }}
+                                                                            style={{
+                                                                                width: '100%',
+                                                                                marginBottom: '6px',
+                                                                                fontSize: '0.65rem',
+                                                                                padding: '4px',
+                                                                                background: '#f1f5f9',
+                                                                                color: '#1e293b',
+                                                                                border: '1px solid #cbd5e1',
+                                                                                borderRadius: '4px',
+                                                                                fontWeight: '700',
+                                                                                cursor: 'pointer',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                gap: '4px'
+                                                                            }}
+                                                                        >
+                                                                            <Icon name="Plus" size={12} /> Add all to script ({family.plays.length})
+                                                                        </button>
+                                                                    )}
+                                                                    {family.plays.map(renderRow)}
                                                             </div>
                                                         )}
                                                     </div>
@@ -26317,7 +26376,34 @@
 
                                                     {isCatExpanded && (
                                                         <div style={{ marginLeft: '8px', borderLeft: `2px solid ${category.color || '#3b82f6'}`, paddingLeft: '6px', paddingTop: '4px' }}>
-                                                            {category.families.map(family => {
+                                                            {category.totalPlays > 0 && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const allPlayIds = category.families.flatMap(f => f.plays.map(p => p.id));
+                                                            onAddSection(allPlayIds);
+                                                        }}
+                                                        style={{
+                                                            width: '100%',
+                                                            marginBottom: '8px',
+                                                            fontSize: '0.7rem',
+                                                            padding: '6px',
+                                                            background: 'white',
+                                                            color: '#1e293b',
+                                                            border: `1px solid ${category.color || '#3b82f6'}`,
+                                                            borderRadius: '4px',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '4px'
+                                                        }}
+                                                    >
+                                                        <Icon name="PlusCircle" size={14} /> Add all to script ({category.totalPlays})
+                                                    </button>
+                                                )}
+                                                {category.families.map(family => {
                                                                 const isFamExpanded = expandedSections[`fam-usage-${family.id}`];
                                                                 return (
                                                                     <div key={family.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
@@ -26333,7 +26419,34 @@
                                                                         </div>
                                                                         {isFamExpanded && (
                                                                             <div style={{ padding: '4px 8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                                                                {family.plays.map(renderRow)}
+                                                                                {family.plays.length > 0 && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                const familyPlayIds = family.plays.map(p => p.id);
+                                                                                onAddSection(familyPlayIds);
+                                                                            }}
+                                                                            style={{
+                                                                                width: '100%',
+                                                                                marginBottom: '6px',
+                                                                                fontSize: '0.65rem',
+                                                                                padding: '4px',
+                                                                                background: '#f1f5f9',
+                                                                                color: '#1e293b',
+                                                                                border: '1px solid #cbd5e1',
+                                                                                borderRadius: '4px',
+                                                                                fontWeight: '700',
+                                                                                cursor: 'pointer',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                gap: '4px'
+                                                                            }}
+                                                                        >
+                                                                            <Icon name="Plus" size={12} /> Add all to script ({family.plays.length})
+                                                                        </button>
+                                                                    )}
+                                                                    {family.plays.map(renderRow)}
                                                                             </div>
                                                                         )}
                                                                     </div>
