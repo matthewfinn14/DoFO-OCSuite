@@ -25706,6 +25706,55 @@
                 return categories;
             }, [plays, playCategories, playBuckets, searchTerm]);
 
+            const installData = useMemo(() => {
+                const installedPlays = (plays || []).filter(p => !p.archived && (playUsage[p.id]?.total || 0) > 0);
+                const query = searchTerm.toLowerCase();
+
+                // Map of filtered plays for quick lookup
+                const filteredMap = {};
+                installedPlays.forEach(p => {
+                    if (!searchTerm ||
+                        p.name.toLowerCase().includes(query) ||
+                        p.formation?.toLowerCase().includes(query) ||
+                        p.concept?.toLowerCase().includes(query)) {
+                        filteredMap[p.id] = p;
+                    }
+                });
+
+                const categories = (playCategories || []).map(cat => {
+                    const families = (playBuckets || []).filter(b => b.categoryId === cat.id).map(bucket => {
+                        const bucketPlays = Object.values(filteredMap).filter(p =>
+                            p.bucketId === cat.id && p.conceptFamily === bucket.label
+                        ).sort((a, b) => a.name.localeCompare(b.name));
+
+                        return { ...bucket, plays: bucketPlays };
+                    }).filter(f => f.plays.length > 0);
+
+                    const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
+                    return { ...cat, families, totalPlays };
+                }).filter(c => c.totalPlays > 0);
+
+                // Find unassigned plays that are installed
+                const unassignedPlays = Object.values(filteredMap).filter(p => {
+                    if (!p.bucketId || !p.conceptFamily) return true;
+                    const catExists = (playCategories || []).some(cat => cat.id === p.bucketId);
+                    const bucketExists = (playBuckets || []).some(b => b.categoryId === p.bucketId && b.label === p.conceptFamily);
+                    return !catExists || !bucketExists;
+                }).sort((a, b) => a.name.localeCompare(b.name));
+
+                if (unassignedPlays.length > 0) {
+                    categories.push({
+                        id: 'unassigned-install',
+                        label: 'Uncategorized',
+                        color: '#64748b',
+                        families: [{ id: 'unassigned-install-family', label: 'Other Installed Plays', plays: unassignedPlays }],
+                        totalPlays: unassignedPlays.length
+                    });
+                }
+
+                return categories;
+            }, [plays, playCategories, playBuckets, playUsage, searchTerm]);
+
             const handleDragStart = (e, play) => {
                 e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id, name: play.name })); // Pass name too just in case
                 e.dataTransfer.effectAllowed = 'copy';
@@ -25978,9 +26027,13 @@
             const renderInstallContent = () => {
                 if (!playCategories || !playBuckets) return <div style={{ padding: '1rem', color: '#64748b' }}>No Categories or Play Families found.</div>;
 
-                // Pre-filter: Check if there are any installed plays at all
-                const hasInstalledPlays = (plays || []).some(p => (playUsage[p.id]?.total || 0) > 0);
-                if (!hasInstalledPlays) return <div style={{ padding: '1rem', color: '#64748b', fontStyle: 'italic' }}>No plays installed this week.</div>;
+                if (installData.length === 0) {
+                    return (
+                        <div style={{ padding: '1rem', color: '#64748b', fontStyle: 'italic' }}>
+                            {searchTerm ? "No installed plays matching search." : "No plays installed this week."}
+                        </div>
+                    );
+                }
 
                 return (
                     <div style={{ padding: '0 0.75rem 0.75rem', overflowY: 'auto', flex: 1 }}>
@@ -25996,91 +26049,51 @@
                             </div>
                         </div>
 
-                        {/* Render Categories as Headers with Play Families nested */}
-                        {(playCategories || []).map(category => {
-                            // Get all play families for this category
-                            const familiesInCategory = (playBuckets || []).filter(bucket => bucket.categoryId === category.id);
-
-                            // Calculate available bucket/items for this category after filtering for INSTALL (usage > 0)
-                            const visibleFamilies = familiesInCategory.map(bucket => {
-                                const installedItems = (bucket.plays || []).map(pid => plays.find(p => p.id === pid)).filter(Boolean).filter(p => (playUsage[p.id]?.total || 0) > 0);
-                                return { ...bucket, installedItems };
-                            }).filter(b => b.installedItems.length > 0);
-
-                            if (visibleFamilies.length === 0) return null;
-
-                            // Calculate total installed plays in this category
-                            const totalPlaysInCategory = visibleFamilies.reduce((sum, family) => sum + family.installedItems.length, 0);
-
-                            const isCategoryExpanded = expandedSections[`category-${category.id}`];
-
+                        {installData.map(category => {
+                            const isCatExpanded = expandedSections[`cat-install-${category.id}`];
                             return (
                                 <div key={category.id} style={{ marginBottom: '8px' }}>
-                                    {/* Category Header */}
                                     <div
-                                        onClick={() => toggleSection(`category-${category.id}`)}
+                                        onClick={() => toggleSection(`cat-install-${category.id}`)}
                                         style={{
-                                            padding: '10px',
+                                            padding: '8px 10px',
                                             background: category.color || '#3b82f6',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'space-between',
                                             borderRadius: '4px',
-                                            marginBottom: '4px'
+                                            marginBottom: '2px'
                                         }}
                                     >
-                                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'white', textTransform: 'uppercase' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'white', textTransform: 'uppercase' }}>
                                             {category.label}
                                         </span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.7rem', color: 'white' }}>{totalPlaysInCategory} plays</span>
-                                            <Icon name={isCategoryExpanded ? "ChevronDown" : "ChevronRight"} size={16} color="white" />
+                                            <span style={{ fontSize: '0.65rem', color: 'white', opacity: 0.9 }}>{category.totalPlays}</span>
+                                            <Icon name={isCatExpanded ? "ChevronDown" : "ChevronRight"} size={14} color="white" />
                                         </div>
                                     </div>
 
-                                    {/* Play Families within this Category */}
-                                    {isCategoryExpanded && (
-                                        <div style={{ marginLeft: '12px', borderLeft: `3px solid ${category.color || '#3b82f6'}`, paddingLeft: '8px' }}>
-                                            {visibleFamilies.map(bucket => {
-                                                const items = bucket.installedItems; // Prepared above
-                                                const isFamilyExpanded = expandedSections[bucket.id];
-
+                                    {isCatExpanded && (
+                                        <div style={{ marginLeft: '8px', borderLeft: `2px solid ${category.color || '#3b82f6'}`, paddingLeft: '6px', paddingTop: '4px' }}>
+                                            {category.families.map(family => {
+                                                const isFamExpanded = expandedSections[`fam-install-${family.id}`];
                                                 return (
-                                                    <div key={bucket.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                                    <div key={family.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
                                                         <div
-                                                            onClick={() => toggleSection(bucket.id)}
-                                                            style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                                            onClick={() => toggleSection(`fam-install-${family.id}`)}
+                                                            style={{ padding: '6px 8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                                                         >
-                                                            <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1e293b' }}>{bucket.label || bucket.name}</span>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
-                                                                <Icon name={isFamilyExpanded ? "ChevronDown" : "ChevronRight"} size={12} color="#64748b" />
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#1e293b' }}>{family.label || family.name}</span>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{family.plays.length}</span>
+                                                                <Icon name={isFamExpanded ? "ChevronDown" : "ChevronRight"} size={12} color="#64748b" />
                                                             </div>
                                                         </div>
-                                                        {isFamilyExpanded && (
-                                                            <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        onAddSection(bucket.id);
-                                                                    }}
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        marginBottom: '8px',
-                                                                        fontSize: '0.75rem',
-                                                                        padding: '6px',
-                                                                        background: '#f1f5f9',
-                                                                        color: '#000000',
-                                                                        border: '1px solid #cbd5e1',
-                                                                        borderRadius: '4px',
-                                                                        fontWeight: '700',
-                                                                        cursor: 'pointer'
-                                                                    }}
-                                                                >
-                                                                    + Add All
-                                                                </button>
-                                                                {items.map(renderRow)}
+                                                        {isFamExpanded && (
+                                                            <div style={{ padding: '4px 8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                                                                {family.plays.map(renderRow)}
                                                             </div>
                                                         )}
                                                     </div>
