@@ -19093,12 +19093,16 @@
                                         </div>
                                     ));
                                 } else {
-                                    // Fallback to default spread formation
+                                    // Fallback to default spread formation - aligned to LOS (y=50)
                                     const defaultPositions = [
-                                        { label: 'LT', x: 35, y: 52 }, { label: 'LG', x: 42, y: 52 }, { label: 'C', x: 50, y: 52 },
-                                        { label: 'RG', x: 58, y: 52 }, { label: 'RT', x: 65, y: 52 }, { label: 'QB', x: 50, y: 58 },
-                                        { label: 'RB', x: 50, y: 65 }, { label: 'X', x: 10, y: 52 }, { label: 'Z', x: 90, y: 52 },
-                                        { label: 'A', x: 70, y: 56 }, { label: 'Y', x: 30, y: 56 }
+                                        // OL on the LOS
+                                        { label: 'LT', x: 35, y: 50 }, { label: 'LG', x: 42, y: 50 }, { label: 'C', x: 50, y: 50 },
+                                        { label: 'RG', x: 58, y: 50 }, { label: 'RT', x: 65, y: 50 },
+                                        // Receivers on the LOS
+                                        { label: 'X', x: 10, y: 50 }, { label: 'Z', x: 90, y: 50 },
+                                        { label: 'Y', x: 72, y: 50 }, { label: 'A', x: 28, y: 50 },
+                                        // Backfield behind LOS
+                                        { label: 'QB', x: 50, y: 56 }, { label: 'RB', x: 50, y: 64 }
                                     ];
                                     return defaultPositions.map((pos, idx) => (
                                         <div key={`off-${idx}`} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: '24px', height: '24px', borderRadius: '50%', background: '#3b82f6', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 'bold', color: '#fff', pointerEvents: 'none', userSelect: 'none' }}>
@@ -19301,11 +19305,16 @@
                         { label: 'R5', x: 55, y: 40 }, { label: 'R4', x: 60, y: 40 }, { label: 'R3', x: 70, y: 40 }, { label: 'R2', x: 80, y: 40 }, { label: 'R1', x: 90, y: 40 }
                     ];
                 } else {
+                    // Align all players at or near the LOS (y=50) for easier positioning
                     defaultPositions = [
-                        { label: 'LT', x: 35, y: 52 }, { label: 'LG', x: 42, y: 52 }, { label: 'C', x: 50, y: 52 },
-                        { label: 'RG', x: 58, y: 52 }, { label: 'RT', x: 65, y: 52 }, { label: 'QB', x: 50, y: 58 },
-                        { label: 'RB', x: 50, y: 65 }, { label: 'X', x: 10, y: 52 }, { label: 'Z', x: 90, y: 52 },
-                        { label: 'A', x: 70, y: 56 }, { label: 'Y', x: 30, y: 56 }
+                        // OL on the LOS
+                        { label: 'LT', x: 35, y: 50 }, { label: 'LG', x: 42, y: 50 }, { label: 'C', x: 50, y: 50 },
+                        { label: 'RG', x: 58, y: 50 }, { label: 'RT', x: 65, y: 50 },
+                        // Receivers on the LOS
+                        { label: 'X', x: 10, y: 50 }, { label: 'Z', x: 90, y: 50 },
+                        { label: 'Y', x: 72, y: 50 }, { label: 'A', x: 28, y: 50 },
+                        // Backfield behind LOS
+                        { label: 'QB', x: 50, y: 56 }, { label: 'RB', x: 50, y: 64 }
                     ];
                 }
 

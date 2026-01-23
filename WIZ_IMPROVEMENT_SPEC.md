@@ -297,23 +297,31 @@ fontSize: "16"  // May need to adjust
 - WIZ grid cells display with 800x460 viewBox (1.74:1 ratio)
 - Users drew on larger canvas than visible in final output
 - Elements near edges were cropped in WIZ wristband display
+- White space on sides of canvas in WIZ Card mode
 
 **Changes Made**:
 1. **Added `fieldViewMode` state** - Tracks whether editor is in "WIZ Card" (800x460) or "Full Field" (900x600) view
 2. **Auto-select WIZ Card view** - When `mode === 'wiz-skill'`, editor defaults to WIZ Card view
 3. **Added View dropdown** - Users can switch between "WIZ Card" and "Full Field" views in wiz-skill mode
-4. **Dynamic SVG viewBox** - Editor canvas switches between `0 20 800 460` (WIZ Card) and `0 0 900 600` (Full Field)
-5. **Visual boundary guides** - When in Full Field view, dimmed overlay shows what will be cropped in print
-6. **Updated default formation** - WIZ skill formation now positioned within visible area (LOS at y=400)
-7. **Preview consistency** - `renderDiagramPreview` for wizSkillData now uses WIZ Card viewBox
+4. **Dynamic SVG viewBox** - Editor canvas switches between `0 60 800 460` (WIZ Card) and `0 0 900 600` (Full Field)
+5. **Aspect ratio container** - Inner div enforces 800/460 aspect ratio, eliminates white space on sides
+6. **ViewBox shifted** - Changed from y=20 to y=60 (2 yards less upfield, 2 more backfield visible)
+7. **Visual boundary guides** - When in Full Field view, dimmed overlay shows what will be cropped (y=60-520)
+8. **Updated default formation** - WIZ skill formation positioned within visible area (LOS at y=400)
+9. **OL text size reduced** - From 40px to 24px to match skill player icon proportions
+10. **Preview consistency** - `renderDiagramPreview` for wizSkillData now uses WIZ Card viewBox
 
 **Key Locations**:
 - `fieldViewMode` state: line ~3457
 - View dropdown: line ~4330
-- SVG viewBox: line ~4473
-- Boundary guides: after line 4697
+- SVG viewBox & aspect ratio container: line ~4473
+- Boundary guides: after line 4723
 - Default formation: line ~3321
 - `renderDiagramPreview`: line ~5203
+
+### Bug Fixes (2026-01-23)
+- **FormationManager props**: Fixed missing `onAddFormation`, `onUpdateFormation`, `onDeleteFormation` props (was incorrectly passing `onUpdateFormations`)
+- **Default formation alignment**: New formations in FormationManager now align all players to LOS (y=50) for easier positioning
 
 ---
 
@@ -361,19 +369,31 @@ fontSize: "16"  // May need to adjust
 - `handleAddFormation()` - App-level handler that saves to state/localStorage (line ~39022)
 - UI buttons in PlayDiagramEditor toolbar (line ~4383)
 
-**What Was Just Done (2026-01-23 - Phase 6)**:
+**What Was Just Done (2026-01-23 - Phase 6 + Bug Fixes)**:
 1. **Aspect Ratio Refactor COMPLETE**: WIZ Skill Editor now matches print output
    - Added `fieldViewMode` state that defaults to "wiz-card" for wiz-skill mode
    - Added "View" dropdown to switch between WIZ Card (800x460) and Full Field (900x600)
-   - Editor SVG dynamically switches viewBox based on mode
-   - Added visual boundary guides when in Full Field view showing crop area
-   - Repositioned default wiz-skill formation (LOS at y=400) to fit within visible bounds
-   - Updated `renderDiagramPreview` to use WIZ Card viewBox for skill diagram previews
+   - Inner container with `aspect-ratio: 800/460` eliminates white space on sides
+   - ViewBox shifted from y=20 to y=60 (shows ~13 yards upfield, ~6 yards backfield)
+   - Visual boundary guides show crop area (y=60-520) when in Full Field view
+   - OL text size reduced from 40px to 24px to match skill player icon size
+   - OL spacing tightened from 50px to 40px
+
+2. **FormationManager Bug Fix**:
+   - Fixed `onUpdateFormation is not a function` error
+   - Now passes correct handler props: `onAddFormation`, `onUpdateFormation`, `onDeleteFormation`
+
+3. **Default Formation Alignment**:
+   - New formations in FormationManager now align all players to LOS (y=50)
+   - OL, receivers on the line; QB/RB slightly behind
+
+**Uncommitted Changes**:
+- Default formation alignment to LOS (needs commit)
 
 **Start Here**:
-- Test WIZ skill editor aspect ratio changes (open a play, edit WIZ skill diagram)
-- Verify the View dropdown appears and switches between WIZ Card and Full Field
-- Test that formations and routes drawn fit within the WIZ Card visible area
+- Commit remaining changes
+- Test formation save in FormationManager
+- Test WIZ skill editor - verify no white space on sides
 - Move on to Phase 4: O-Line Protection Library
 
 ---
