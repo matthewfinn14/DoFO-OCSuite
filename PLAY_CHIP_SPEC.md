@@ -16,6 +16,19 @@
 - [x] Standardized modal across: Install Manager, Game Planner Sidebar, Offensive Game Plan
 - [x] Removed old renderSituationAssignmentModal
 - [x] **Separated Quick List from Script Rows** - plays in script rows don't auto-add to Quick List
+- [x] **FZDnD play cards right-click** - opens PlayDetailsModal from play cards in FZDnD view
+- [x] **PracticeScriptTable component** - reusable script table with standardized columns (Hash, Dn, Dist, Situation, Play Call, Defense, Notes, Act)
+- [x] **PlayChip in scripts** - Play Call renders as PlayChip when linked (right-click → PlayDetailsModal)
+- [x] **PracticeScriptTable enhanced** - supports all Practice Scripts features:
+  - Column visibility toggles
+  - Down as dropdown (1-4)
+  - Situation dropdown for 3rd down (S/M/L/XL)
+  - YardLine column for Take-Off segments
+  - Notes as button (opens modal)
+  - Smart row insert with hash patterns and presets
+  - Confirm dialog on delete
+  - Segment header with time/type/duration
+- [x] **Practice Scripts page** - now uses PracticeScriptTable component (~340 lines removed)
 
 ### Data Model
 ```
