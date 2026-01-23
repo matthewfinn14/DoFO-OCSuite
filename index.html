@@ -6590,6 +6590,33 @@
             const play = plays.find(p => p.id === playId);
             if (!play) return null;
 
+            // Local state for immediate visual feedback on situation assignments
+            const [localAssignedIds, setLocalAssignedIds] = useState(() => new Set(assignedIds));
+
+            // Sync with prop when it changes (e.g., modal reopens with different play)
+            useEffect(() => {
+                setLocalAssignedIds(new Set(assignedIds));
+            }, [playId]);
+
+            // Handle situation assignment with immediate visual feedback
+            const handleSituationClick = (box) => {
+                if (!onAssignSituation) return;
+
+                // Toggle local state immediately for visual feedback
+                setLocalAssignedIds(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(box.setId)) {
+                        newSet.delete(box.setId);
+                    } else {
+                        newSet.add(box.setId);
+                    }
+                    return newSet;
+                });
+
+                // Call the actual handler to persist the change
+                onAssignSituation(playId, box);
+            };
+
             const isNew = (newInstallIds || []).includes(playId);
             const isPriority = play.priority || false;
             const isWiz = !!(play.isWiz || play.isRooski);
@@ -6872,25 +6899,25 @@
                                         </div>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                             {relevantBoxes.map((box, bIdx) => {
-                                                const isCheck = assignedIds.has(box.setId);
+                                                const isCheck = localAssignedIds.has(box.setId);
                                                 // Determine active color based on box config or fallbacks
                                                 const activeBorderColor = box.color || '#3b82f6';
 
                                                 return (
                                                     <button
                                                         key={bIdx}
-                                                        onClick={() => onAssignSituation && onAssignSituation(playId, box)}
+                                                        onClick={() => handleSituationClick(box)}
                                                         style={{
                                                             padding: '6px 10px',
                                                             borderRadius: '6px',
                                                             cursor: 'pointer',
                                                             fontSize: '0.8rem',
                                                             fontWeight: isCheck ? '600' : '500',
-                                                            border: isCheck ? `1px solid ${activeBorderColor}` : '1px solid #e2e8f0',
-                                                            background: isCheck ? '#fff' : 'white',
-                                                            color: isCheck ? '#0f172a' : '#64748b',
-                                                            boxShadow: isCheck ? `inset 0 0 0 1px ${activeBorderColor}` : 'none', // Faux border width increase
-                                                            transition: 'all 0.1s ease',
+                                                            border: isCheck ? `2px solid ${activeBorderColor}` : '1px solid #e2e8f0',
+                                                            background: isCheck ? `${activeBorderColor}15` : 'white',
+                                                            color: isCheck ? activeBorderColor : '#64748b',
+                                                            boxShadow: isCheck ? `0 0 0 1px ${activeBorderColor}40` : 'none',
+                                                            transition: 'all 0.15s ease',
                                                             position: 'relative',
                                                             overflow: 'hidden'
                                                         }}
@@ -23743,9 +23770,11 @@
                 let newAssignedIds;
 
                 if (isAssigned) {
+                    // Remove play (toggle off)
                     newAssignedIds = currentAssigned.filter(id => id !== playId);
                 } else {
-                    newAssignedIds = [...currentAssigned, playId];
+                    // Add play - use Set to prevent duplicates from rapid clicks
+                    newAssignedIds = [...new Set([...currentAssigned, playId])];
                 }
 
                 if (existingItem) {
@@ -28044,9 +28073,11 @@
                 let newAssignedIds;
 
                 if (isAssigned) {
+                    // Remove play (toggle off)
                     newAssignedIds = currentAssigned.filter(id => id !== playId);
                 } else {
-                    newAssignedIds = [...currentAssigned, playId];
+                    // Add play - use Set to prevent duplicates from rapid clicks
+                    newAssignedIds = [...new Set([...currentAssigned, playId])];
                 }
 
                 if (existingItem) {
@@ -28078,8 +28109,15 @@
                         if (!box.setId) return;
 
                         const isScript = box.type === 'script';
-                        const collection = isScript ? (gamePlan?.miniScripts || {}) : (gamePlan?.sets || {});
-                        const data = collection[box.setId];
+                        const collection = isScript ? (gamePlan?.miniScripts || []) : (gamePlan?.sets || []);
+
+                        // Handle both array and object formats
+                        let data;
+                        if (Array.isArray(collection)) {
+                            data = collection.find(item => item.id === box.setId);
+                        } else {
+                            data = collection[box.setId];
+                        }
 
                         // Check if play is assigned
                         if (data?.assignedPlayIds?.includes(playId)) {
