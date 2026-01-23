@@ -25605,7 +25605,7 @@
         function GamePlannerSideMenu({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection, onUpdatePlay, onUpdateGamePlan, currentWeek }) {
             const [searchTerm, setSearchTerm] = useState('');
             const [quickAddValue, setQuickAddValue] = useState('');
-            const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, buckets
+            const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, install
             const [expandedSections, setExpandedSections] = useState({});
             const [situationModalPlayId, setSituationModalPlayId] = useState(null);
 
@@ -26094,125 +26094,7 @@
                 );
             };
 
-            const renderBucketsContent = () => {
-                if (!playCategories || !playBuckets) return <div style={{ padding: '1rem', color: '#64748b' }}>No Categories or Play Families found.</div>;
 
-                return (
-                    <div style={{ padding: '0 0.75rem 0.75rem', overflowY: 'auto', flex: 1 }}>
-                        {/* Header Row */}
-                        <div style={{ display: 'flex', alignItems: 'center', paddingBottom: '4px', marginRight: '10px', marginTop: '8px' }}>
-                            <div style={{ flex: 1 }}></div>
-                            <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
-                                {['M', 'T', 'W', 'TH', 'F'].map(day => (
-                                    <div key={day} style={{ width: '18px', textAlign: 'center', fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b' }}>
-                                        {day}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Render Categories as Headers with Play Families nested */}
-                        {(playCategories || []).map(category => {
-                            // Get all play families for this category
-                            const familiesInCategory = (playBuckets || []).filter(bucket => bucket.categoryId === category.id);
-
-                            // Calculate total plays in this category
-                            const totalPlaysInCategory = familiesInCategory.reduce((sum, family) => {
-                                return sum + (family.plays || []).length;
-                            }, 0);
-
-                            const isCategoryExpanded = expandedSections[`category-${category.id}`];
-
-                            return (
-                                <div key={category.id} style={{ marginBottom: '8px' }}>
-                                    {/* Category Header */}
-                                    <div
-                                        onClick={() => toggleSection(`category-${category.id}`)}
-                                        style={{
-                                            padding: '10px',
-                                            background: category.color || '#3b82f6',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            borderRadius: '4px',
-                                            marginBottom: '4px'
-                                        }}
-                                    >
-                                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'white', textTransform: 'uppercase' }}>
-                                            {category.label}
-                                        </span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.7rem', color: 'white' }}>{totalPlaysInCategory} plays</span>
-                                            <Icon name={isCategoryExpanded ? "ChevronDown" : "ChevronRight"} size={16} color="white" />
-                                        </div>
-                                    </div>
-
-                                    {/* Play Families within this Category */}
-                                    {isCategoryExpanded && (
-                                        <div style={{ marginLeft: '12px', borderLeft: `3px solid ${category.color || '#3b82f6'}`, paddingLeft: '8px' }}>
-                                            {familiesInCategory.length > 0 ? (
-                                                familiesInCategory.map(bucket => {
-                                                    const items = (bucket.plays || []).map(pid => plays.find(p => p.id === pid)).filter(Boolean);
-                                                    const isFamilyExpanded = expandedSections[bucket.id];
-
-                                                    return (
-                                                        <div key={bucket.id} style={{ marginBottom: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                                                            <div
-                                                                onClick={() => toggleSection(bucket.id)}
-                                                                style={{ padding: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                                                            >
-                                                                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1e293b' }}>{bucket.label || bucket.name}</span>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{items.length}</span>
-                                                                    <Icon name={isFamilyExpanded ? "ChevronDown" : "ChevronRight"} size={12} color="#64748b" />
-                                                                </div>
-                                                            </div>
-                                                            {isFamilyExpanded && (
-                                                                <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                                                    {items.length > 0 ? (
-                                                                        <>
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    onAddSection(bucket.id);
-                                                                                }}
-                                                                                style={{
-                                                                                    width: '100%',
-                                                                                    marginBottom: '8px',
-                                                                                    fontSize: '0.75rem',
-                                                                                    padding: '6px',
-                                                                                    background: '#f1f5f9',
-                                                                                    color: '#000000',
-                                                                                    border: '1px solid #cbd5e1',
-                                                                                    borderRadius: '4px',
-                                                                                    fontWeight: '700',
-                                                                                    cursor: 'pointer'
-                                                                                }}
-                                                                            >
-                                                                                + Add All
-                                                                            </button>
-                                                                            {items.map(renderRow)}
-                                                                        </>
-                                                                    ) : (
-                                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px' }}>No plays in family.</div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })
-                                            ) : (
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '8px' }}>No play families in this category.</div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                );
-            };
 
             return (
                 <div style={{
@@ -26332,8 +26214,8 @@
 
                         {/* Tabs */}
                         <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
-                            {['Play Usage', 'Game Plan', 'Buckets', 'Install'].map(tab => {
-                                const key = tab === 'Play Usage' ? 'usage' : tab === 'Game Plan' ? 'gameplan' : 'buckets';
+                            {['Play Usage', 'Game Plan', 'Install'].map(tab => {
+                                const key = tab === 'Play Usage' ? 'usage' : tab === 'Game Plan' ? 'gameplan' : 'install';
                                 const isActive = activeTab === key;
                                 return (
                                     <div
@@ -26458,7 +26340,7 @@
 
                         {activeTab === 'gameplan' && renderGamePlanContent()}
 
-                        {activeTab === 'buckets' && renderBucketsContent()}
+
                         {activeTab === 'install' && renderInstallContent()}
                     </div>
 
