@@ -34966,6 +34966,7 @@
             const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
             const [inviteData, setInviteData] = useState(null); // NEW: Invite State
             const [accessRequestStatus, setAccessRequestStatus] = useState({ checked: false, status: null, data: null }); // 'pending' | 'approved' | 'rejected' | null
+            const [pendingAccessRequests, setPendingAccessRequests] = useState(0); // Count of pending requests for admin badge
             const [isViewingAll, setIsViewingAll] = useState(false);
             const [selectedCharts, setSelectedCharts] = useState(DEPTH_CHART_TYPES.map(t => t.id));
 
@@ -35779,6 +35780,21 @@
                 }
                 return () => unsubscribe();
             }, [authUser]);
+
+            // Fetch pending access requests count for admin notification badge
+            useEffect(() => {
+                if (!isSiteAdmin || !window.db) return;
+
+                const unsubscribe = window.db.collection('access_requests')
+                    .where('status', '==', 'pending')
+                    .onSnapshot((snapshot) => {
+                        setPendingAccessRequests(snapshot.size);
+                    }, (error) => {
+                        console.error("Error fetching pending requests:", error);
+                    });
+
+                return () => unsubscribe();
+            }, [isSiteAdmin]);
 
             // Ensure permissions structure integrity on load (if new roles added later)
             useEffect(() => {
@@ -39266,10 +39282,32 @@
                                         <button
                                             className={`nav-item ${view === 'settings' ? 'active' : ''}`}
                                             onClick={() => setView('settings')}
-                                            style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem' }}
+                                            style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem', position: 'relative' }}
                                         >
                                             <Icon name="Settings" size={16} />
                                             {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Settings</span>}
+                                            {/* Admin notification badge for pending access requests */}
+                                            {isSiteAdmin && pendingAccessRequests > 0 && (
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    top: sidebarCollapsed ? '2px' : '50%',
+                                                    right: sidebarCollapsed ? '2px' : '8px',
+                                                    transform: sidebarCollapsed ? 'none' : 'translateY(-50%)',
+                                                    background: '#ef4444',
+                                                    color: 'white',
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 'bold',
+                                                    minWidth: '18px',
+                                                    height: '18px',
+                                                    borderRadius: '9px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    padding: '0 4px'
+                                                }}>
+                                                    {pendingAccessRequests}
+                                                </span>
+                                            )}
                                         </button>
                                     )}
                                     {currentUser && currentUser.roles && currentUser.roles.includes('Head Coach') && (
