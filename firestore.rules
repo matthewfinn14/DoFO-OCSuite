@@ -40,9 +40,20 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // Invites: Used to invite other coaches. 
+    // Invites: Used to invite other coaches.
     match /invites/{email} {
       allow read, write: if request.auth != null;
+    }
+
+    // Access Requests: For new users requesting access
+    match /access_requests/{email} {
+      // Users can create/read their own request (doc ID = lowercase email)
+      allow create: if request.auth != null && request.auth.token.email.lower() == email;
+      allow read: if request.auth != null && request.auth.token.email.lower() == email;
+
+      // Admins can read/write all requests
+      allow read, write: if request.auth != null &&
+        request.auth.token.email in ['admin@digitaldofo.com', 'matthewfinn14@gmail.com'];
     }
 
     // Config: App configuration (billing, access control)
