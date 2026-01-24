@@ -36637,6 +36637,7 @@
                 if (gamePlanLayouts?.CALL_SHEET) {
                     let changed = false;
                     const sections = gamePlanLayouts.CALL_SHEET.sections;
+                    if (!sections || !Array.isArray(sections)) return;
                     // Check Scripts (index 0)
                     if (sections[0] && sections[0].cols !== 4) {
                         const newSections = [...sections];
