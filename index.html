@@ -6550,7 +6550,7 @@
 
             // Flags
             const isPriority = resolvedPlay.priority;
-            const isWiz = resolvedPlay.isWiz || resolvedPlay.isRooski;
+            const isWiz = resolvedPlay.isWiz;
             const isMiniScript = resolvedPlay.isMiniScript;
 
             // Drag handlers
@@ -7444,7 +7444,7 @@
 
             const isNew = (newInstallIds || []).includes(playId);
             const isPriority = play.priority || false;
-            const isWiz = !!(play.isWiz || play.isRooski);
+            const isWiz = !!(play.isWiz);
             const isMiniScript = !!play.isMiniScript;
 
             // Toggle handlers
@@ -7594,7 +7594,7 @@
                                                 if (!card) continue;
                                                 const cardNum = parseInt(key.replace('card', ''));
 
-                                                if (card.type && (card.type === 'rooski' || card.type === 'wiz')) {
+                                                if (card.type && (card.type === 'wiz')) {
                                                     for (let i = 1; i <= 16; i++) {
                                                         if (val === `${cardNum}${String(i).padStart(2, '0')}`) isBlocked = true;
                                                     }
@@ -7949,11 +7949,11 @@
 
                 const updates = [];
 
-                if (card.type === 'rooski' || card.type === 'wiz') {
+                if (card.type === 'wiz') {
                     const maxWiz = startSlot + 15;
                     const maxStandard = startSlot + 47; // Standard 48 slots
 
-                    // Identify ghosts: plays assigned to > maxRooski but within standard range
+                    // Identify ghosts: plays assigned to > maxWiz but within standard range
                     plays.forEach(p => {
                         if (!p.wristbandSlot) return;
                         const slotStr = p.wristbandSlot.toString();
@@ -8130,7 +8130,7 @@
                     }
                 } else {
                     const startSlot = selectedCardId === 'card1' ? 101 : (selectedCardId === 'card2' ? 201 : (selectedCardId === 'card3' ? 301 : (selectedCardId === 'card4' ? 401 : (selectedCardId === 'card5' ? 501 : 601))));
-                    const maxSlots = (card.layout === 'wiz' || card.layout === 'rooski') ? 16 : 48;
+                    const maxSlots = (card.layout === 'wiz') ? 16 : 48;
                     for (let i = 0; i < maxSlots; i++) {
                         const slot = startSlot + i;
                         if (!slotMap[slot]) {
@@ -8255,7 +8255,7 @@
                 if (startSlot > 0) {
                     const isWiz = newType === 'wiz';
                     const isMini = newType === 'mini-scripts';
-                    const isWizType = newType === 'wiz' || newType === 'rooski';
+                    const isWizType = newType === 'wiz';
                     const cardMin = startSlot;
                     const cardMax = startSlot + 99;
                     const wizMax = startSlot + 15;
@@ -9613,7 +9613,7 @@
                     return slots;
                 }
 
-                if (card && (card.type === 'rooski' || card.type === 'wiz')) {
+                if (card && (card.type === 'wiz')) {
                     // Wiz uses 16 slots: X01-X16 where X is the series number
                     const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : (cardId === 'card3' ? 3 : (cardId === 'card4' ? 4 : (cardId === 'card5' ? 5 : 6))));
                     const slots = [];
@@ -10093,7 +10093,7 @@
                                         </select>
                                     </div>
                                 )}
-                                {(activeCard.type === 'rooski' || activeCard.type === 'wiz') && (
+                                {(activeCard.type === 'wiz') && (
                                     <>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>View:</label>
@@ -10189,7 +10189,7 @@
                                         <span style={{ fontWeight: 'bold' }}>{selectedCardId === 'card1' ? '100s' : (selectedCardId === 'card2' ? '200s' : (selectedCardId === 'card3' ? '300s' : (selectedCardId === 'card4' ? '400s' : (selectedCardId === 'card5' ? '500s' : '600s'))))} (v{activeCard.iter || '1'})</span>
                                     </div>
                                     */}
-                                    {activeCard.type === 'rooski' || activeCard.type === 'wiz' ? (
+                                    {activeCard.type === 'wiz' ? (
                                         <div style={{
                                             width: '100%',
                                             aspectRatio: '5 / 3',
@@ -10232,7 +10232,7 @@
                                 ))}
                             </div>
                         </div>
-                    ) : activeCard && (activeCard.type === 'rooski' || activeCard.type === 'wiz') ? (
+                    ) : activeCard && (activeCard.type === 'wiz') ? (
                         <>
                             {/* Skill Version - Page 1 */}
                             <div className="wristband-print-container" style={{ display: 'none', pageBreakAfter: 'always' }}>
@@ -23559,448 +23559,6 @@
 
 
 
-
-
-        // Master Playbook View Component
-        const MasterPlaybookView = ({ plays, onUpdatePlay, onDeletePlay, onQuickAddPlay, playSyntax = [], week, onUpdateWeek }) => {
-            const renderPlayThumbnail = (play, type = 'standard') => {
-                if (!play) return null;
-
-                let elements = null;
-                // Try to get diagram elements from any available source
-                if (play.wizSkillData && Array.isArray(play.wizSkillData) && play.wizSkillData.length > 0) {
-                    elements = play.wizSkillData;
-                } else if (play.rooskiSkillData && Array.isArray(play.rooskiSkillData) && play.rooskiSkillData.length > 0) {
-                    elements = play.rooskiSkillData;
-                } else if (play.wizOlineData && Array.isArray(play.wizOlineData) && play.wizOlineData.length > 0) {
-                    elements = play.wizOlineData;
-                } else if (play.diagramData) {
-                    // diagramData can be { elements: [...] } or just [...] or { appState, elements }
-                    if (Array.isArray(play.diagramData) && play.diagramData.length > 0) {
-                        elements = play.diagramData;
-                    } else if (play.diagramData.elements && Array.isArray(play.diagramData.elements) && play.diagramData.elements.length > 0) {
-                        elements = play.diagramData.elements;
-                    }
-                }
-
-                // Also check for excalidraw-style data which might be nested differently
-                if (!elements && play.diagramData && typeof play.diagramData === 'object') {
-                    // Log for debugging
-                    console.log('Play diagram data structure:', play.name, Object.keys(play.diagramData));
-                }
-
-                if (!elements || elements.length === 0) return null;
-
-                const COLORS = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'];
-
-                return (
-                    <svg viewBox="0 60 800 460" width="100%" height="100%" style={{ display: 'block', background: '#f0fdf4' }} preserveAspectRatio="xMidYMid meet">
-                        <defs>
-                            {COLORS.map(c => (
-                                <marker key={c} id={`mp-arrow-${c.replace('#', '')}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
-                                    <polygon points="0 0, 6 2, 0 4" fill={c} />
-                                </marker>
-                            ))}
-                        </defs>
-                        <g opacity="0.15">
-                            <line x1="0" y1="150" x2="800" y2="150" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="250" x2="800" y2="250" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="350" x2="800" y2="350" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="400" x2="800" y2="400" stroke="#000" strokeWidth="3" />
-                            <line x1="0" y1="450" x2="800" y2="450" stroke="#000" strokeWidth="2" />
-                        </g>
-                        {elements.map((el, idx) => {
-                            if (el.type === 'player' && el.points && el.points[0]) {
-                                const { x, y } = el.points[0];
-                                const isTextOnly = el.shape === 'text-only';
-                                const fontSize = el.fontSize || 24;
-
-                                if (isTextOnly) {
-                                    return (
-                                        <text key={el.id || idx} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={fontSize} fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
-                                    );
-                                }
-
-                                const size = 28;
-                                const isRect = el.shape === 'square';
-                                return (
-                                    <g key={el.id || idx}>
-                                        {isRect ? (
-                                            <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color || '#000'} strokeWidth="4" />
-                                        ) : (
-                                            <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color || '#000'} strokeWidth="4" />
-                                        )}
-                                        <text x={x} y={y + 2} textAnchor="middle" dominantBaseline="middle" fontSize="16" fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
-                                    </g>
-                                );
-                            }
-
-                            if (!el.points || el.points.length < 2) return null;
-
-                            let d = '';
-                            if (el.style === 'zigzag' && typeof getZigZagPath === 'function') {
-                                d = getZigZagPath(el.points);
-                            } else {
-                                d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-                            }
-
-                            const color = el.color || '#000';
-                            const markerId = `mp-arrow-${color.replace('#', '')}`;
-                            let markerEnd = undefined;
-                            let tBlock = null;
-
-                            if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
-                                markerEnd = `url(#${markerId})`;
-                            } else if (el.endType === 't') {
-                                const points = el.points;
-                                const end = points[points.length - 1];
-                                const prev = points[points.length - 2] || points[0];
-                                const dx = end.x - prev.x;
-                                const dy = end.y - prev.y;
-                                const len = Math.hypot(dx, dy) || 1;
-                                const perpX = (-dy / len) * 15;
-                                const perpY = (dx / len) * 15;
-                                tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={color} strokeWidth="4" />;
-                            } else if (el.endType === 'dot') {
-                                const end = el.points[el.points.length - 1];
-                                tBlock = <circle cx={end.x} cy={end.y} r="6" fill={color} />;
-                            }
-
-                            return (
-                                <g key={el.id || idx}>
-                                    <path d={d} stroke={color} strokeWidth={el.strokeWidth || 5} fill="none" strokeDasharray={el.style === 'dashed' ? "10,5" : "none"} markerEnd={markerEnd} />
-                                    {tBlock}
-                                </g>
-                            );
-                        })}
-                    </svg>
-                );
-            };
-
-            const [searchTerm, setSearchTerm] = useState('');
-            const [isBatchImportOpen, setIsBatchImportOpen] = useState(false);
-            const [importData, setImportData] = useState('');
-            const [parsedImport, setParsedImport] = useState([]);
-            const [columnMapping, setColumnMapping] = useState({});
-
-            // Batch Import Logic
-            const handleParseImport = () => {
-                if (!importData.trim()) return;
-                const rows = importData.split('\n').filter(r => r.trim());
-                if (rows.length === 0) return;
-
-                const firstRow = rows[0];
-                const delimiter = firstRow.includes('\t') ? '\t' : (firstRow.includes(',') ? ',' : ' ');
-
-                const parsed = rows.map(row => {
-                    return row.split(delimiter).map(cell => cell.trim());
-                });
-
-                setParsedImport(parsed);
-                setColumnMapping({});
-            };
-
-            const handleBatchCreate = (addToInstall = false) => {
-                const newPlays = parsedImport.map(row => {
-                    let playNameParts = [];
-                    let formation = '';
-                    let type = '';
-
-                    Object.entries(columnMapping).forEach(([colIdx, fieldId]) => {
-                        const value = row[parseInt(colIdx)];
-                        if (!value) return;
-
-                        if (fieldId === 'name_override') {
-                            playNameParts = [value];
-                        } else if (fieldId === 'formation') {
-                            formation = value;
-                        } else if (fieldId === 'type') {
-                            type = value;
-                        } else {
-                            const field = playSyntax.find(f => f.id === fieldId);
-                            if (field) {
-                                playNameParts.push(value);
-                            }
-                        }
-                    });
-
-                    const finalName = playNameParts.join(' ').trim() || row[0];
-                    return { name: finalName, formation, type: type || '' };
-                });
-
-                newPlays.forEach(playData => {
-                    const newPlay = onQuickAddPlay(playData.name);
-                    if (newPlay && playData.formation) {
-                        onUpdatePlay(newPlay.id, { formation: playData.formation, type: playData.type });
-                    }
-                    if (addToInstall && newPlay && week) {
-                        const installList = week.installList || [];
-                        if (!installList.includes(newPlay.id)) {
-                            onUpdateWeek(week.id, 'installList', [...installList, newPlay.id]);
-                        }
-                    }
-                });
-
-                setIsBatchImportOpen(false);
-                setParsedImport([]);
-                setImportData('');
-                setColumnMapping({});
-            };
-
-            const COLORS = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'];
-            const PREVIEW_DEFS = (
-                <svg style={{ display: 'none' }}>
-                    <defs>
-                        {COLORS.map(c => (
-                            <marker key={c} id={`arrowhead-${c}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
-                                <polygon points="0 0, 6 2, 0 4" fill={c} />
-                            </marker>
-                        ))}
-                    </defs>
-                </svg>
-            );
-
-            // Real-time search filtering
-            const filteredPlays = plays.filter(p => {
-                if (!searchTerm) return true;
-                const search = searchTerm.toLowerCase();
-                return p.name.toLowerCase().includes(search) ||
-                    (p.formation && p.formation.toLowerCase().includes(search));
-            });
-
-            const handleAddToInstall = (playId) => {
-                if (!week) return;
-                const installList = week.installList || [];
-                if (!installList.includes(playId)) {
-                    onUpdateWeek(week.id, 'installList', [...installList, playId]);
-                }
-            };
-
-            return (
-                <>
-                    {PREVIEW_DEFS}
-                    <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <h1 style={{ margin: 0 }}>Master Playbook</h1>
-                                <p style={{ margin: '0.5rem 0 0 0', opacity: 0.7 }}>Manage all plays in your offensive system</p>
-                            </div>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => setIsBatchImportOpen(true)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                            >
-                                <Icon name="Download" size={16} /> Batch Add Plays
-                            </button>
-                        </div>
-
-                        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                            <input
-                                type="text"
-                                className="form-input"
-                                placeholder="Search plays as you type..."
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                                style={{ width: '100%', maxWidth: '500px' }}
-                            />
-                            {searchTerm && (
-                                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                    Showing {filteredPlays.length} of {plays.length} plays
-                                </p>
-                            )}
-                        </div>
-
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-                            {filteredPlays.length === 0 && searchTerm && (
-                                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-                                    <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No plays found matching "{searchTerm}"</p>
-                                    <p style={{ fontSize: '0.9rem' }}>Try a different search term or create a new play</p>
-                                </div>
-                            )}
-                            {filteredPlays.length === 0 && !searchTerm && (
-                                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-                                    <p style={{ fontSize: '1.1rem' }}>No plays in your playbook yet</p>
-                                    <p style={{ fontSize: '0.9rem' }}>Click "Batch Add Plays" to get started</p>
-                                </div>
-                            )}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                                {filteredPlays.map(play => {
-                                    const thumbnail = renderPlayThumbnail(play, 'skill');
-                                    return (
-                                    <div key={play.id} className="card" style={{ padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'var(--shadow-sm)' }}>
-                                        {/* Diagram Preview Area */}
-                                        <div style={{
-                                            width: '100%',
-                                            height: '220px',
-                                            background: thumbnail ? '#ffffff' : '#f3f4f6',
-                                            borderBottom: '1px solid var(--border)',
-                                            position: 'relative',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                            {thumbnail || (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.5rem', color: '#6b7280' }}>
-                                                    <span style={{ fontSize: '2rem' }}>📷</span>
-                                                    <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>No Diagram</span>
-                                                </div>
-                                            )}
-                                            {/* Priority Star Overlay */}
-                                            {play.priority && (
-                                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'white', borderRadius: '50%', padding: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                                    <Icon name="Star" size={16} style={{ fill: '#eab308', color: '#eab308' }} />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Card Content */}
-                                        <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', lineHeight: '1.3' }}>{getPlayDisplayName(play)}</h3>
-                                                {play.type && (
-                                                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', marginLeft: '0.5rem', whiteSpace: 'nowrap' }}>
-                                                        {play.type}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                                                {play.formation || <span style={{ opacity: 0.5 }}>No formation</span>}
-                                            </div>
-
-                                            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    {week && (
-                                                        <button
-                                                            className="btn btn-secondary"
-                                                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                                                            onClick={() => handleAddToInstall(play.id)}
-                                                        >
-                                                            <Icon name="Plus" size={14} /> Add to Install
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        className="btn-ghost"
-                                                        style={{ padding: '0.4rem', color: '#ef4444' }}
-                                                        onClick={() => onDeletePlay && onDeletePlay(play.id)}
-                                                    >
-                                                        <Icon name="Trash2" size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Batch Import Modal */}
-                    {isBatchImportOpen && (
-                        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <div style={{ background: 'white', borderRadius: '8px', width: '800px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <h2>Batch Add Plays</h2>
-                                    <button className="btn-ghost" onClick={() => { setIsBatchImportOpen(false); setParsedImport([]); setImportData(''); }}>
-                                        <Icon name="X" />
-                                    </button>
-                                </div>
-
-                                {!parsedImport.length ? (
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <p style={{ marginBottom: '1rem', color: '#666' }}>Paste your spreadsheet data below. We'll automatically detect columns (Name, Formation, etc.).</p>
-                                        <textarea
-                                            className="form-input"
-                                            style={{ flex: 1, minHeight: '300px', fontFamily: 'monospace', fontSize: '0.9rem' }}
-                                            placeholder={`Name\tFormation\tType\nPower Right\tI-Right\tRun\nSpider 2 Y Banana\tSingleback\tPass`}
-                                            value={importData}
-                                            onChange={e => setImportData(e.target.value)}
-                                        />
-                                        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                            <button className="btn btn-secondary" onClick={() => setIsBatchImportOpen(false)}>Cancel</button>
-                                            <button className="btn btn-primary" disabled={!importData.trim()} onClick={handleParseImport}>
-                                                Parse Data
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                        <div style={{ marginBottom: '1rem', padding: '0.5rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px' }}>
-                                            <strong>Map Columns:</strong> Assign each column to a Play Syntax field.
-                                        </div>
-
-                                        <div style={{ overflow: 'auto', flex: 1, border: '1px solid #ddd', borderRadius: '4px' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                                <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 10 }}>
-                                                    <tr>
-                                                        {parsedImport[0].map((_, colIndex) => (
-                                                            <th key={colIndex} style={{ padding: '0.5rem', borderBottom: '2px solid #ddd', textAlign: 'left', minWidth: '150px' }}>
-                                                                <select
-                                                                    className="form-select"
-                                                                    style={{ width: '100%', fontSize: '0.8rem' }}
-                                                                    value={columnMapping[String(colIndex)] || ''}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        if (!val) {
-                                                                            const newMap = { ...columnMapping };
-                                                                            delete newMap[String(colIndex)];
-                                                                            setColumnMapping(newMap);
-                                                                            return;
-                                                                        }
-                                                                        setColumnMapping(prev => ({ ...prev, [String(colIndex)]: val }));
-                                                                    }}
-                                                                >
-                                                                    <option value="">- Ignore -</option>
-                                                                    <optgroup label="Core Fields">
-                                                                        <option value="name_override">Full Play Name</option>
-                                                                        <option value="formation">Formation</option>
-                                                                        <option value="type">Type (Run/Pass)</option>
-                                                                    </optgroup>
-                                                                    <optgroup label="Play Syntax">
-                                                                        {playSyntax.map(field => (
-                                                                            <option key={field.id} value={field.id}>{field.name}</option>
-                                                                        ))}
-                                                                    </optgroup>
-                                                                </select>
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {parsedImport.slice(0, 50).map((row, rIndex) => (
-                                                        <tr key={rIndex} style={{ borderBottom: '1px solid #eee' }}>
-                                                            {row.map((cell, cIndex) => (
-                                                                <td key={cIndex} style={{ padding: '0.5rem' }}>{cell}</td>
-                                                            ))}
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <button className="btn btn-secondary" onClick={() => setParsedImport([])}>Back to Paste</button>
-                                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                                <button className="btn btn-secondary" onClick={() => handleBatchCreate(false)}>
-                                                    Import {parsedImport.length} Plays
-                                                </button>
-                                                {week && (
-                                                    <button className="btn btn-primary" onClick={() => handleBatchCreate(true)}>
-                                                        Import & Add to Install
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </>
-            );
-        };
-
         // 1. Install Manager Component
         const InstallManagerView = ({
             plays,
@@ -24483,7 +24041,7 @@
                 const slots = [];
                 Object.keys(wbSettings).filter(k => k.startsWith('card')).forEach(cardKey => {
                     const card = wbSettings[cardKey];
-                    if (card.type === 'rooski') {
+                    if (card.type === 'wiz') {
                         const series = cardKey.replace('card', '');
                         for (let i = 1; i <= 16; i++) slots.push(`${series}${String(i).padStart(2, '0')}`);
                     } else {
@@ -25254,7 +24812,7 @@
                                 {availableCards.map(cardId => {
                                     const card = wbSettings[cardId];
                                     const cardNumber = cardId.replace('card', '');
-                                    const cardTypeLabel = card && (card.type === 'wiz' || card.type === 'rooski') ? 'WIZ' : card && card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL';
+                                    const cardTypeLabel = card && (card.type === 'wiz') ? 'WIZ' : card && card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL';
                                     const opponent = card.opp || card.opponent || 'No Opponent';
 
                                     return (
@@ -25318,7 +24876,7 @@
                     // Get slots for this card
                     const getSlotsForCard = (cardId) => {
                         const cardData = wbSettings[cardId];
-                        if (cardData.type === 'wiz' || cardData.type === 'rooski') {
+                        if (cardData.type === 'wiz') {
                             const series = cardId === 'card1' ? 1 : (cardId === 'card2' ? 2 : (cardId === 'card3' ? 3 : (cardId === 'card4' ? 4 : (cardId === 'card5' ? 5 : 6))));
                             const slots = [];
                             for (let i = 1; i <= 16; i++) {
@@ -25461,7 +25019,7 @@
 
                     // Render the appropriate card type
                     let cardContent = null;
-                    if (card.type === 'wiz' || card.type === 'rooski') {
+                    if (card.type === 'wiz') {
                         // Wiz Rendering Logic adapted for Print
                         // 4x4 Grid for 3x5 card
                         const rows = [];
@@ -25849,7 +25407,7 @@
                                         <label style={{ fontSize: '0.9rem', opacity: 0.8 }}>Header Title:</label>
                                         <input
                                             type="text"
-                                            value={card.customHeader !== undefined ? card.customHeader : ((card.type === 'wiz' || card.type === 'rooski') ? 'WIZ' : (card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL'))}
+                                            value={card.customHeader !== undefined ? card.customHeader : ((card.type === 'wiz') ? 'WIZ' : (card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL'))}
                                             onChange={(e) => {
                                                 const newHeader = e.target.value;
                                                 setWbSettings(prev => ({
@@ -27079,7 +26637,7 @@
                     if (!card) continue;
                     const cardNum = parseInt(key.replace('card', ''));
 
-                    if (card.type && (card.type === 'wiz' || card.type === 'rooski')) {
+                    if (card.type && (card.type === 'wiz')) {
                         // Wiz: Series X, 01-16
                         for (let i = 1; i <= 16; i++) {
                             slots.push(`${cardNum}${String(i).padStart(2, '0')}`);
@@ -27350,7 +26908,7 @@
                     const cardNum = parseInt(key.replace('card', ''));
 
                     // Check if this slot belongs to this card
-                    if (card.type && (card.type === 'wiz' || card.type === 'rooski')) {
+                    if (card.type && (card.type === 'wiz')) {
                         // Wiz cards: X01-X16 format
                         const slotPattern = new RegExp(`^${cardNum}(0[1-9]|1[0-6])$`);
                         if (slotPattern.test(slot)) {
@@ -27844,7 +27402,7 @@
                                                             if (wbSettings.enabledSections && wbSettings.enabledSections[key] === false) continue;
 
                                                             const cardNum = parseInt(key.replace('card', ''));
-                                                            if (card.type && (card.type === 'wiz' || card.type === 'rooski')) {
+                                                            if (card.type && (card.type === 'wiz')) {
                                                                 for (let i = 1; i <= 16; i++) if (val === `${cardNum}${String(i).padStart(2, '0')}`) isValid = true;
                                                             } else {
                                                                 const start = cardNum * 100 + 1;
@@ -29242,7 +28800,7 @@
                                                 if (!card) continue;
                                                 const cardNum = parseInt(key.replace('card', ''));
 
-                                                if (card.type && (card.type === 'rooski' || card.type === 'wiz')) {
+                                                if (card.type && (card.type === 'wiz')) {
                                                     for (let i = 1; i <= 16; i++) {
                                                         if (slot === `${cardNum}${String(i).padStart(2, '0')}`) isBlocked = true;
                                                     }
@@ -29304,7 +28862,7 @@
                                                     if (!card) continue;
                                                     const cardNum = parseInt(key.replace('card', ''));
 
-                                                    if (card.type && (card.type === 'rooski' || card.type === 'wiz')) {
+                                                    if (card.type && (card.type === 'wiz')) {
                                                         for (let i = 1; i <= 16; i++) {
                                                             if (String(slot) === `${cardNum}${String(i).padStart(2, '0')}`) isBlocked = true;
                                                         }
@@ -30815,7 +30373,7 @@
                         if (!card) continue;
                         const cardNum = parseInt(key.replace('card', ''));
 
-                        if (card.type && (card.type === 'rooski' || card.type === 'wiz')) {
+                        if (card.type && (card.type === 'wiz')) {
                             for (let i = 1; i <= 16; i++) {
                                 if (slot === `${cardNum}${String(i).padStart(2, '0')}`) isBlocked = true;
                             }
@@ -32378,7 +31936,7 @@
                             if (!card) continue;
                             const cardNum = parseInt(key.replace('card', ''));
 
-                            if (card.type && (card.type === 'rooski' || card.type === 'wiz')) {
+                            if (card.type && (card.type === 'wiz')) {
                                 for (let i = 1; i <= 16; i++) {
                                     if (val === `${cardNum}${String(i).padStart(2, '0')}`) isBlocked = true;
                                 }
@@ -37912,7 +37470,7 @@
                 suffix = 'W';
             }
             // Check for Wiz card (Legacy fallback)
-            else if ((play.isWiz || play.isRooski) && play.wristbandSlot) {
+            else if ((play.isWiz) && play.wristbandSlot) {
                 suffix = 'W';
             }
             // Traditional wristband - NO SUFFIX ON NAME
@@ -37923,7 +37481,7 @@
         const getWristbandLabel = (play) => {
             if (!play || !play.wristbandSlot) return null;
             let suffix = 'T'; // Default Traditional
-            if (play.isWiz || play.isRooski) suffix = 'W';
+            if (play.isWiz) suffix = 'W';
             else if (play.isMiniScript) {
                 // Logic for MiniScript suffix if needed, or rely on slot content
                 const first = play.wristbandSlot.charAt(0).toUpperCase();
@@ -39253,9 +38811,9 @@
                 return saved ? JSON.parse(saved) : {};
             });
 
-            // Initialize Wiz Library from LocalStorage (or Rooski legacy)
+            // Initialize Wiz Library from LocalStorage (with legacy fallback)
             const [wizLibrary, setWizLibrary] = useState(() => {
-                const saved = localStorage.getItem('wiz_ol_library') || localStorage.getItem('rooski_ol_library');
+                const saved = localStorage.getItem('wiz_ol_library') || localStorage.getItem('rooski_ol_library'); // Legacy fallback
                 return saved ? JSON.parse(saved) : [];
             });
 
@@ -39366,7 +38924,6 @@
 
             useEffect(() => {
                 localStorage.setItem('wiz_ol_library', JSON.stringify(wizLibrary));
-                localStorage.setItem('rooski_ol_library', JSON.stringify(wizLibrary)); // Legacy backup
                 if (authUser) syncToFirestore(authUser.uid, 'wizLib', wizLibrary);
             }, [wizLibrary]);
 
