@@ -18436,36 +18436,14 @@
 
         // REMOVED: TestingRecords (~1,047 lines) - check git history
 
-        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isSiteAdmin = false, currentSchoolId }) => {
+        // Site Admin Panel - Only accessible to site admins
+        const SiteAdminPanel = () => {
+            const { currentUser } = useAuth();
+            const [activeTab, setActiveTab] = useState('schools'); // 'schools' | 'requests' | 'templates'
 
-
-            const handleImageUpload = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        onUpdateLogo(reader.result);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-            const { currentUser, logout } = useAuth(); // Get current user from auth context
-
-            // --- ADMIN SECURITY ---
-            // Only these emails can see the "Access Control" tab
-            const ADMIN_EMAILS = [
-                'admin@digitaldofo.com',
-                'matthewfinn14@gmail.com'
-            ];
-
-            // Use prop if available (from global sync), otherwise fallback to hardcoded
-            const isAdmin = isSiteAdmin || (currentUser && ADMIN_EMAILS.includes(currentUser.email.toLowerCase()));
-
-
-            const [activeTab, setActiveTab] = useState('general'); // 'general' | 'access' | 'members' | 'billing'
-            const [accessConfig, setAccessConfig] = useState({ inviteRequired: false, allowedEmails: [] });
-            const [accessLoading, setAccessLoading] = useState(false);
-            const [newEmail, setNewEmail] = useState('');
+            // Schools Overview State
+            const [allSchools, setAllSchools] = useState([]);
+            const [schoolsLoading, setSchoolsLoading] = useState(false);
 
             // Global Templates State
             const [globalTemplates, setGlobalTemplates] = useState([]);
@@ -18480,22 +18458,15 @@
                 data: {}
             });
 
-            // Schools Overview State (for Site Admin)
-            const [allSchools, setAllSchools] = useState([]);
-            const [schoolsLoading, setSchoolsLoading] = useState(false);
-
-            // Fetch all schools for admin overview
+            // Fetch all schools
             useEffect(() => {
-                if (!isAdmin || !window.db || activeTab !== 'access') return;
-
+                if (!window.db || activeTab !== 'schools') return;
                 setSchoolsLoading(true);
-                // Don't use orderBy since older schools may not have createdAt
                 const unsubscribe = window.db.collection('schools')
                     .onSnapshot(async (snapshot) => {
                         const schoolsData = [];
                         for (const doc of snapshot.docs) {
                             const school = { id: doc.id, ...doc.data() };
-                            // Fetch member count
                             try {
                                 const membersSnap = await window.db.collection('schools').doc(doc.id).collection('roster').get();
                                 school.memberCount = membersSnap.size;
@@ -18510,9 +18481,405 @@
                         console.error("Error fetching schools:", error);
                         setSchoolsLoading(false);
                     });
-
                 return () => unsubscribe();
-            }, [isAdmin, activeTab]);
+            }, [activeTab]);
+
+            // Fetch global templates
+            useEffect(() => {
+                if (!window.db || activeTab !== 'templates') return;
+                setTemplatesLoading(true);
+                const unsubscribe = window.db.collection('global_templates')
+                    .orderBy('createdAt', 'desc')
+                    .onSnapshot((snapshot) => {
+                        setGlobalTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                        setTemplatesLoading(false);
+                    }, () => setTemplatesLoading(false));
+                return () => unsubscribe();
+            }, [activeTab]);
+
+            const handleCreateTemplate = () => {
+                setEditingTemplate(null);
+                setTemplateForm({ type: 'practice_plan', name: '', description: '', category: '', data: {} });
+                setShowTemplateModal(true);
+            };
+
+            const handleEditTemplate = (template) => {
+                setEditingTemplate(template);
+                setTemplateForm({
+                    type: template.type,
+                    name: template.name,
+                    description: template.description || '',
+                    category: template.category || '',
+                    data: template.data || {}
+                });
+                setShowTemplateModal(true);
+            };
+
+            const handleSaveTemplate = async () => {
+                if (!templateForm.name.trim()) {
+                    alert('Please enter a template name');
+                    return;
+                }
+                try {
+                    const templateData = {
+                        ...templateForm,
+                        updatedAt: new Date().toISOString(),
+                        updatedBy: currentUser?.email
+                    };
+                    if (editingTemplate) {
+                        await window.db.collection('global_templates').doc(editingTemplate.id).update(templateData);
+                    } else {
+                        templateData.createdAt = new Date().toISOString();
+                        templateData.createdBy = currentUser?.email;
+                        await window.db.collection('global_templates').add(templateData);
+                    }
+                    setShowTemplateModal(false);
+                } catch (err) {
+                    console.error("Error saving template:", err);
+                    alert("Error saving template: " + err.message);
+                }
+            };
+
+            const handleDeleteTemplate = async (templateId) => {
+                if (!window.confirm('Are you sure you want to delete this template?')) return;
+                try {
+                    await window.db.collection('global_templates').doc(templateId).delete();
+                } catch (err) {
+                    console.error("Error deleting template:", err);
+                    alert("Error deleting template: " + err.message);
+                }
+            };
+
+            return (
+                <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <h2>Site Admin</h2>
+                        <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-panel)', padding: '0.25rem', borderRadius: '8px' }}>
+                            <button className="btn" style={{ backgroundColor: activeTab === 'schools' ? 'var(--accent)' : 'transparent', color: activeTab === 'schools' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('schools')}>Schools & Users</button>
+                            <button className="btn" style={{ backgroundColor: activeTab === 'requests' ? 'var(--accent)' : 'transparent', color: activeTab === 'requests' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('requests')}>Access Requests</button>
+                            <button className="btn" style={{ backgroundColor: activeTab === 'templates' ? 'var(--accent)' : 'transparent', color: activeTab === 'templates' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('templates')}>Global Templates</button>
+                        </div>
+                    </div>
+
+                    {/* SCHOOLS & USERS TAB */}
+                    {activeTab === 'schools' && (
+                        <div className="animation-fade-in card">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <div>
+                                    <h3>Schools & Users</h3>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                        Overview of all schools and their status.
+                                    </p>
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                        {allSchools.length} school{allSchools.length !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {schoolsLoading ? (
+                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                    Loading schools...
+                                </div>
+                            ) : allSchools.length === 0 ? (
+                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic', background: 'var(--surface)', borderRadius: '8px' }}>
+                                    No schools created yet.
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {allSchools.map(school => {
+                                        const billing = school.billing || {};
+                                        const plan = billing.plan || 'free';
+                                        const trialEnds = billing.trialEndsAt ? new Date(billing.trialEndsAt) : null;
+                                        const isTrialActive = trialEnds && trialEnds > new Date();
+                                        const isTrialExpired = trialEnds && trialEnds <= new Date();
+
+                                        let statusColor = '#64748b';
+                                        let statusText = 'Free';
+                                        if (plan === 'premium') {
+                                            statusColor = '#22c55e';
+                                            statusText = 'Premium';
+                                        } else if (plan === 'trial' || isTrialActive) {
+                                            statusColor = '#0ea5e9';
+                                            statusText = `Trial (${trialEnds ? Math.ceil((trialEnds - new Date()) / (1000 * 60 * 60 * 24)) : '?'}d left)`;
+                                        } else if (isTrialExpired) {
+                                            statusColor = '#ef4444';
+                                            statusText = 'Trial Expired';
+                                        }
+
+                                        return (
+                                            <div key={school.id} style={{
+                                                padding: '1rem',
+                                                background: 'var(--surface)',
+                                                borderRadius: '8px',
+                                                borderLeft: `4px solid ${statusColor}`
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.25rem' }}>
+                                                            {school.name || 'Unnamed School'}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                            {school.mascot && <span>{school.mascot} • </span>}
+                                                            {school.zipCode && <span>ZIP: {school.zipCode}</span>}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                                                            <span>ID: {school.id}</span>
+                                                            {school.createdAt && <span> • Created: {new Date(school.createdAt).toLocaleDateString()}</span>}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <span style={{
+                                                            display: 'inline-block',
+                                                            padding: '0.25rem 0.75rem',
+                                                            background: `${statusColor}20`,
+                                                            color: statusColor,
+                                                            borderRadius: '12px',
+                                                            fontSize: '0.8rem',
+                                                            fontWeight: '600'
+                                                        }}>
+                                                            {statusText}
+                                                        </span>
+                                                        {school.memberCount !== undefined && (
+                                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                                                                {school.memberCount} roster member{school.memberCount !== 1 ? 's' : ''}
+                                                            </div>
+                                                        )}
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!window.confirm(`Are you sure you want to delete "${school.name || school.id}"?\n\nThis will permanently delete all data for this school including roster, plays, and practice plans.`)) {
+                                                                    return;
+                                                                }
+                                                                try {
+                                                                    await window.db.collection('schools').doc(school.id).delete();
+                                                                    alert('School deleted successfully.');
+                                                                } catch (err) {
+                                                                    console.error('Error deleting school:', err);
+                                                                    alert('Error deleting school: ' + err.message);
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                marginTop: '0.5rem',
+                                                                padding: '0.25rem 0.5rem',
+                                                                fontSize: '0.75rem',
+                                                                background: 'transparent',
+                                                                border: '1px solid #ef4444',
+                                                                color: '#ef4444',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Delete School
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {school.memberList && school.memberList.length > 0 && (() => {
+                                                    const uniqueMembers = [];
+                                                    const seenEmails = new Set();
+                                                    for (const member of school.memberList) {
+                                                        if (member.email && !seenEmails.has(member.email.toLowerCase())) {
+                                                            seenEmails.add(member.email.toLowerCase());
+                                                            uniqueMembers.push(member);
+                                                        }
+                                                    }
+                                                    if (uniqueMembers.length === 0) return null;
+                                                    return (
+                                                        <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>COACHES:</div>
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                                {uniqueMembers.map((member, idx) => (
+                                                                    <span key={idx} style={{
+                                                                        fontSize: '0.8rem',
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        background: 'rgba(255,255,255,0.05)',
+                                                                        borderRadius: '4px',
+                                                                        color: 'var(--text-primary)'
+                                                                    }}>
+                                                                        {member.email}
+                                                                        <span style={{ color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>
+                                                                            ({member.role || 'member'})
+                                                                        </span>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ACCESS REQUESTS TAB */}
+                    {activeTab === 'requests' && (
+                        <div className="animation-fade-in card">
+                            <AccessRequestsAdmin currentUser={currentUser} />
+                        </div>
+                    )}
+
+                    {/* GLOBAL TEMPLATES TAB */}
+                    {activeTab === 'templates' && (
+                        <div className="animation-fade-in card">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <div>
+                                    <h3>Global Templates</h3>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                        Create and manage templates available to all schools.
+                                    </p>
+                                </div>
+                                <button className="btn btn-primary" onClick={handleCreateTemplate}>
+                                    + Create Template
+                                </button>
+                            </div>
+
+                            {templatesLoading ? (
+                                <p>Loading templates...</p>
+                            ) : globalTemplates.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                    No global templates yet. Create one to get started!
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {globalTemplates.map(template => (
+                                        <div key={template.id} style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            padding: '1rem', background: 'var(--surface)', borderRadius: '8px',
+                                            borderLeft: `4px solid ${template.type === 'practice_plan' ? '#10b981' : template.type === 'calendar_event' ? '#3b82f6' : '#f59e0b'}`
+                                        }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{template.name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                    {template.type === 'practice_plan' ? 'Practice Plan' : template.type === 'calendar_event' ? 'Calendar Event' : 'Task List'}
+                                                    {template.category && ` - ${template.category}`}
+                                                    {template.description && ` - ${template.description}`}
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button className="btn" onClick={() => handleEditTemplate(template)}>Edit</button>
+                                                <button className="btn" style={{ color: '#ef4444' }} onClick={() => handleDeleteTemplate(template.id)}>Delete</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* TEMPLATE MODAL */}
+                    {showTemplateModal && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', zIndex: 9999
+                        }} onClick={() => setShowTemplateModal(false)}>
+                            <div style={{
+                                background: 'var(--bg-panel)', padding: '2rem', borderRadius: '12px',
+                                maxWidth: '600px', width: '90%', maxHeight: '80vh', overflow: 'auto'
+                            }} onClick={(e) => e.stopPropagation()}>
+                                <h2>{editingTemplate ? 'Edit Template' : 'Create Template'}</h2>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+                                    <div>
+                                        <label className="form-label">Template Type</label>
+                                        <select
+                                            className="form-select"
+                                            value={templateForm.type}
+                                            onChange={(e) => setTemplateForm({ ...templateForm, type: e.target.value, data: {} })}
+                                            disabled={!!editingTemplate}
+                                        >
+                                            <option value="practice_plan">Practice Plan</option>
+                                            <option value="calendar_event">Calendar Event</option>
+                                            <option value="task_list">Task List</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Template Name *</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={templateForm.name}
+                                            onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                                            placeholder="e.g. Monday - Base Install"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Description</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={templateForm.description}
+                                            onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })}
+                                            placeholder="Optional description"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Category</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={templateForm.category}
+                                            onChange={(e) => setTemplateForm({ ...templateForm, category: e.target.value })}
+                                            placeholder="e.g. Weekly, Game Week, Offseason"
+                                        />
+                                    </div>
+                                    <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                                            <strong>Template Data:</strong> {templateForm.type === 'practice_plan' ? 'Define practice segments in JSON format' : templateForm.type === 'calendar_event' ? 'Define program events and tasks' : 'Define task list items'}
+                                        </p>
+                                        <textarea
+                                            className="form-input"
+                                            value={JSON.stringify(templateForm.data, null, 2)}
+                                            onChange={(e) => {
+                                                try {
+                                                    const parsed = JSON.parse(e.target.value);
+                                                    setTemplateForm({ ...templateForm, data: parsed });
+                                                } catch (err) {
+                                                    // Invalid JSON
+                                                }
+                                            }}
+                                            rows={10}
+                                            style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+                                            placeholder={templateForm.type === 'practice_plan'
+                                                ? '{\n  "segments": [\n    {"type": "Team O", "duration": 15, "situation": "Base Downs", "hasScript": true}\n  ]\n}'
+                                                : templateForm.type === 'calendar_event'
+                                                    ? '{\n  "program": ["Event 1", "Event 2"],\n  "tasks": []\n}'
+                                                    : '{\n  "tasks": [\n    {"task": "Task name", "assignTo": ["Role"]}\n  ]\n}'
+                                            }
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                                        <button className="btn" onClick={() => setShowTemplateModal(false)}>Cancel</button>
+                                        <button className="btn btn-primary" onClick={handleSaveTemplate}>
+                                            {editingTemplate ? 'Update' : 'Create'} Template
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isAdmin = false, currentSchoolId }) => {
+
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        onUpdateLogo(reader.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            const { currentUser, logout } = useAuth();
+
+            const [activeTab, setActiveTab] = useState('general'); // 'general' | 'members' | 'billing'
 
             // Cloud Migration State REMOVED
 
@@ -18561,213 +18928,6 @@
                     setMigrationError(err.message);
                     setMigrationStatus('error');
                 }
-            };
-
-
-
-            // Expanded Categories State for Access Control/Features
-            const [expandedCategories, setExpandedCategories] = useState({
-                gameWeek: true,
-                programManagement: true,
-                football101: true,
-                playerDevelopment: true
-            });
-
-            const toggleCategory = (key) => {
-                setExpandedCategories(prev => ({
-                    ...prev,
-                    [key]: !prev[key]
-                }));
-            };
-
-            // Load Access Config when tab is opened
-            useEffect(() => {
-                if (activeTab === 'access') {
-                    const loadAccess = async () => {
-                        setAccessLoading(true);
-                        try {
-                            const doc = await window.db.collection('config').doc('access').get();
-                            if (doc.exists) {
-                                setAccessConfig(doc.data());
-                            }
-                        } catch (err) {
-                            console.error("Error loading access config:", err);
-                        }
-                        setAccessLoading(false);
-                    };
-                    loadAccess();
-
-                    // Also load global templates for Site Admin
-                    const loadTemplates = async () => {
-                        setTemplatesLoading(true);
-                        try {
-                            const snapshot = await window.db.collection('global_templates').get();
-                            const templates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            setGlobalTemplates(templates);
-                        } catch (err) {
-                            console.error("Error loading templates:", err);
-                        }
-                        setTemplatesLoading(false);
-                    };
-                    loadTemplates();
-                }
-            }, [activeTab]);
-
-            // Template CRUD Functions
-            const handleCreateTemplate = () => {
-                setEditingTemplate(null);
-                setTemplateForm({
-                    type: 'practice_plan',
-                    name: '',
-                    description: '',
-                    category: '',
-                    data: {}
-                });
-                setShowTemplateModal(true);
-            };
-
-            const handleEditTemplate = (template) => {
-                setEditingTemplate(template);
-                setTemplateForm({
-                    type: template.type,
-                    name: template.name,
-                    description: template.description || '',
-                    category: template.category || '',
-                    data: template.data || {}
-                });
-                setShowTemplateModal(true);
-            };
-
-            const handleSaveTemplate = async () => {
-                if (!templateForm.name.trim()) {
-                    alert('Template name is required');
-                    return;
-                }
-
-                setTemplatesLoading(true);
-                try {
-                    const templateData = {
-                        ...templateForm,
-                        updatedAt: new Date().toISOString(),
-                        createdBy: currentUser.uid
-                    };
-
-                    if (editingTemplate) {
-                        // Update existing
-                        await window.db.collection('global_templates').doc(editingTemplate.id).update(templateData);
-                    } else {
-                        // Create new
-                        templateData.createdAt = new Date().toISOString();
-                        await window.db.collection('global_templates').add(templateData);
-                    }
-
-                    // Reload templates
-                    setGlobalTemplates(templates);
-
-                    setShowTemplateModal(false);
-                } catch (err) {
-                    console.error("Error saving template:", err);
-                    alert("Failed to save template: " + err.message);
-                }
-                setTemplatesLoading(false);
-            };
-
-            const handleDeleteTemplate = async (templateId) => {
-                if (!confirm('Are you sure you want to delete this template? This cannot be undone.')) return;
-
-                setTemplatesLoading(true);
-                try {
-                    await window.db.collection('global_templates').doc(templateId).delete();
-                    setGlobalTemplates(globalTemplates.filter(t => t.id !== templateId));
-                } catch (err) {
-                    console.error("Error deleting template:", err);
-                    alert("Failed to delete template: " + err.message);
-                }
-                setTemplatesLoading(false);
-            };
-
-            const updateAccessConfig = async (newData) => {
-                setAccessLoading(true);
-                try {
-                    await window.db.collection('config').doc('access').set(newData, { merge: true });
-                    setAccessConfig(newData);
-                } catch (err) {
-                    console.error("Error saving access config:", err);
-                    alert("Failed to save changes: " + err.message);
-                }
-                setAccessLoading(false);
-            };
-
-            const handleToggleInvite = () => {
-                updateAccessConfig({ ...accessConfig, inviteRequired: !accessConfig.inviteRequired });
-            };
-
-            const handleAddEmail = () => {
-                if (!newEmail || !newEmail.includes('@')) return;
-                const current = accessConfig.allowedEmails || [];
-                if (current.includes(newEmail)) return;
-                updateAccessConfig({ ...accessConfig, allowedEmails: [...current, newEmail] });
-                setNewEmail('');
-            };
-
-            const handleRemoveEmail = (emailToRemove) => {
-                const current = accessConfig.allowedEmails || [];
-                updateAccessConfig({ ...accessConfig, allowedEmails: current.filter(e => e !== emailToRemove) });
-            };
-
-            const handleTogglePayingAdmin = (email) => {
-                const currentPaying = accessConfig.payingAdmins || [];
-                let newPaying;
-                if (currentPaying.includes(email)) {
-                    newPaying = currentPaying.filter(e => e !== email);
-                } else {
-                    newPaying = [...currentPaying, email];
-                }
-
-                // If removing paying admin, also remove school association? Maybe keep it for history, 
-                // but let's just update the list for now.
-                updateAccessConfig({ ...accessConfig, payingAdmins: newPaying });
-            };
-
-            const handleTogglePersonalAccount = (email) => {
-                const currentPersonal = accessConfig.personalAccounts || [];
-                let newPersonal;
-                if (currentPersonal.includes(email)) {
-                    newPersonal = currentPersonal.filter(e => e !== email);
-                } else {
-                    newPersonal = [...currentPersonal, email];
-                }
-                // Determine mutual exclusivity? 
-                // If Personal, remove from Paying (School) Admin?
-                // Logic: A user could be both technically, but usually they are distinct.
-                // Let's enforce exclusivity for clarity.
-                let updates = { personalAccounts: newPersonal };
-                if (newPersonal.includes(email)) {
-                    // Remove from Paying Admins if added to Personal
-                    const currentPaying = accessConfig.payingAdmins || [];
-                    if (currentPaying.includes(email)) {
-                        updates.payingAdmins = currentPaying.filter(e => e !== email);
-                    }
-                }
-
-                updateAccessConfig({ ...accessConfig, ...updates });
-            };
-
-            const handleSchoolIdChange = (email, newSchoolId) => {
-                const currentUserSchools = accessConfig.userSchools || {};
-                const updatedSchools = { ...currentUserSchools, [email]: newSchoolId };
-                updateAccessConfig({ ...accessConfig, userSchools: updatedSchools });
-            };
-
-            const handleToggleSiteAdmin = (email) => {
-                const currentSiteAdmins = accessConfig.siteAdmins || [];
-                let newSiteAdmins;
-                if (currentSiteAdmins.includes(email)) {
-                    newSiteAdmins = currentSiteAdmins.filter(e => e !== email);
-                } else {
-                    newSiteAdmins = [...currentSiteAdmins, email];
-                }
-                updateAccessConfig({ ...accessConfig, siteAdmins: newSiteAdmins });
             };
 
             // --- BILLING & LICENSING ---
@@ -19047,14 +19207,8 @@
                             {currentSchoolId && (
                                 <button className="btn" style={{ backgroundColor: activeTab === 'members' ? 'var(--accent)' : 'transparent', color: activeTab === 'members' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('members')}>Members</button>
                             )}
-                            {isAdmin && (
-                                <button className="btn" style={{ backgroundColor: activeTab === 'access' ? 'var(--accent)' : 'transparent', color: activeTab === 'access' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('access')}>Site Admin</button>
-                            )}
                             {(isAdmin || members.find(m => m.uid === currentUser.uid)?.role === 'admin') && (
                                 <button className="btn" style={{ backgroundColor: activeTab === 'billing' ? 'var(--accent)' : 'transparent', color: activeTab === 'billing' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('billing')}>Billing</button>
-                            )}
-                            {isAdmin && (
-                                <button className="btn" style={{ backgroundColor: activeTab === 'requests' ? 'var(--accent)' : 'transparent', color: activeTab === 'requests' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('requests')}>Access Requests</button>
                             )}
                         </div>
                     </div>
@@ -19103,208 +19257,6 @@
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    )}
-
-                    {activeTab === 'access' && isAdmin && (
-                        <div className="animation-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                            {/* SCHOOLS & USERS OVERVIEW */}
-                            <div className="card">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <div>
-                                        <h3>Schools & Users</h3>
-                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                            Overview of all schools and their status.
-                                        </p>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                            {allSchools.length} school{allSchools.length !== 1 ? 's' : ''}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {schoolsLoading ? (
-                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        Loading schools...
-                                    </div>
-                                ) : allSchools.length === 0 ? (
-                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic', background: 'var(--surface)', borderRadius: '8px' }}>
-                                        No schools created yet.
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                        {allSchools.map(school => {
-                                            const billing = school.billing || {};
-                                            const plan = billing.plan || 'free';
-                                            const trialEnds = billing.trialEndsAt ? new Date(billing.trialEndsAt) : null;
-                                            const isTrialActive = trialEnds && trialEnds > new Date();
-                                            const isTrialExpired = trialEnds && trialEnds <= new Date();
-
-                                            let statusColor = '#64748b'; // gray for free
-                                            let statusText = 'Free';
-                                            if (plan === 'premium') {
-                                                statusColor = '#22c55e';
-                                                statusText = 'Premium';
-                                            } else if (plan === 'trial' || isTrialActive) {
-                                                statusColor = '#0ea5e9';
-                                                statusText = `Trial (${trialEnds ? Math.ceil((trialEnds - new Date()) / (1000 * 60 * 60 * 24)) : '?'}d left)`;
-                                            } else if (isTrialExpired) {
-                                                statusColor = '#ef4444';
-                                                statusText = 'Trial Expired';
-                                            }
-
-                                            return (
-                                                <div key={school.id} style={{
-                                                    padding: '1rem',
-                                                    background: 'var(--surface)',
-                                                    borderRadius: '8px',
-                                                    borderLeft: `4px solid ${statusColor}`
-                                                }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                        <div>
-                                                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.25rem' }}>
-                                                                {school.name || 'Unnamed School'}
-                                                            </div>
-                                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                                                {school.mascot && <span>{school.mascot} • </span>}
-                                                                {school.zipCode && <span>ZIP: {school.zipCode}</span>}
-                                                            </div>
-                                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                                                                <span>ID: {school.id}</span>
-                                                                {school.createdAt && <span> • Created: {new Date(school.createdAt).toLocaleDateString()}</span>}
-                                                            </div>
-                                                        </div>
-                                                        <div style={{ textAlign: 'right' }}>
-                                                            <span style={{
-                                                                display: 'inline-block',
-                                                                padding: '0.25rem 0.75rem',
-                                                                background: `${statusColor}20`,
-                                                                color: statusColor,
-                                                                borderRadius: '12px',
-                                                                fontSize: '0.8rem',
-                                                                fontWeight: '600'
-                                                            }}>
-                                                                {statusText}
-                                                            </span>
-                                                            {school.memberCount !== undefined && (
-                                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                                                                    {school.memberCount} roster member{school.memberCount !== 1 ? 's' : ''}
-                                                                </div>
-                                                            )}
-                                                            <button
-                                                                onClick={async () => {
-                                                                    if (!window.confirm(`Are you sure you want to delete "${school.name || school.id}"?\n\nThis will permanently delete all data for this school including roster, plays, and practice plans.`)) {
-                                                                        return;
-                                                                    }
-                                                                    try {
-                                                                        await window.db.collection('schools').doc(school.id).delete();
-                                                                        alert('School deleted successfully.');
-                                                                    } catch (err) {
-                                                                        console.error('Error deleting school:', err);
-                                                                        alert('Error deleting school: ' + err.message);
-                                                                    }
-                                                                }}
-                                                                style={{
-                                                                    marginTop: '0.5rem',
-                                                                    padding: '0.25rem 0.5rem',
-                                                                    fontSize: '0.75rem',
-                                                                    background: 'transparent',
-                                                                    border: '1px solid #ef4444',
-                                                                    color: '#ef4444',
-                                                                    borderRadius: '4px',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                            >
-                                                                Delete School
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    {school.memberList && school.memberList.length > 0 && (() => {
-                                                        // Deduplicate by email
-                                                        const uniqueMembers = [];
-                                                        const seenEmails = new Set();
-                                                        for (const member of school.memberList) {
-                                                            if (member.email && !seenEmails.has(member.email.toLowerCase())) {
-                                                                seenEmails.add(member.email.toLowerCase());
-                                                                uniqueMembers.push(member);
-                                                            }
-                                                        }
-                                                        if (uniqueMembers.length === 0) return null;
-                                                        return (
-                                                            <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>COACHES:</div>
-                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                                    {uniqueMembers.map((member, idx) => (
-                                                                        <span key={idx} style={{
-                                                                            fontSize: '0.8rem',
-                                                                            padding: '0.25rem 0.5rem',
-                                                                            background: 'rgba(255,255,255,0.05)',
-                                                                            borderRadius: '4px',
-                                                                            color: 'var(--text-primary)'
-                                                                        }}>
-                                                                            {member.email}
-                                                                            <span style={{ color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>
-                                                                                ({member.role || 'member'})
-                                                                            </span>
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* GLOBAL TEMPLATES SECTION */}
-                            <div className="card">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <div>
-                                        <h3>Global Templates</h3>
-                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                            Create and manage templates available to all schools.
-                                        </p>
-                                    </div>
-                                    <button className="btn btn-primary" onClick={handleCreateTemplate}>
-                                        + Create Template
-                                    </button>
-                                </div>
-
-                                {templatesLoading ? (
-                                    <p>Loading templates...</p>
-                                ) : globalTemplates.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                        No global templates yet. Create one to get started!
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {globalTemplates.map(template => (
-                                            <div key={template.id} style={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                padding: '1rem', background: 'var(--surface)', borderRadius: '8px',
-                                                borderLeft: `4px solid ${template.type === 'practice_plan' ? '#10b981' : template.type === 'calendar_event' ? '#3b82f6' : '#f59e0b'}`
-                                            }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{template.name}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                                        {template.type === 'practice_plan' ? '🏈 Practice Plan' : template.type === 'calendar_event' ? '📅 Calendar Event' : '✅ Task List'}
-                                                        {template.category && ` • ${template.category}`}
-                                                        {template.description && ` • ${template.description}`}
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button className="btn" onClick={() => handleEditTemplate(template)}>Edit</button>
-                                                    <button className="btn" style={{ color: '#ef4444' }} onClick={() => handleDeleteTemplate(template.id)}>Delete</button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
                         </div>
                     )}
 
@@ -19560,110 +19512,6 @@
                         </div>
                     )}
 
-                    {/* ACCESS REQUESTS TAB */}
-                    {activeTab === 'requests' && isAdmin && (
-                        <div className="animation-fade-in card">
-                            <AccessRequestsAdmin currentUser={currentUser} />
-                        </div>
-                    )}
-
-                    {/* TEMPLATE MODAL */}
-                    {showTemplateModal && (
-                        <div style={{
-                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', zIndex: 9999
-                        }} onClick={() => setShowTemplateModal(false)}>
-                            <div style={{
-                                background: 'var(--bg-panel)', padding: '2rem', borderRadius: '12px',
-                                maxWidth: '600px', width: '90%', maxHeight: '80vh', overflow: 'auto'
-                            }} onClick={(e) => e.stopPropagation()}>
-                                <h2>{editingTemplate ? 'Edit Template' : 'Create Template'}</h2>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
-                                    <div>
-                                        <label className="form-label">Template Type</label>
-                                        <select
-                                            className="form-select"
-                                            value={templateForm.type}
-                                            onChange={(e) => setTemplateForm({ ...templateForm, type: e.target.value, data: {} })}
-                                            disabled={!!editingTemplate}
-                                        >
-                                            <option value="practice_plan">🏈 Practice Plan</option>
-                                            <option value="calendar_event">📅 Calendar Event</option>
-                                            <option value="task_list">✅ Task List</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="form-label">Template Name *</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={templateForm.name}
-                                            onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
-                                            placeholder="e.g. Monday - Base Install"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="form-label">Description</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={templateForm.description}
-                                            onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })}
-                                            placeholder="Optional description"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="form-label">Category</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={templateForm.category}
-                                            onChange={(e) => setTemplateForm({ ...templateForm, category: e.target.value })}
-                                            placeholder="e.g. Weekly, Game Week, Offseason"
-                                        />
-                                    </div>
-
-                                    <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
-                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                                            <strong>Template Data:</strong> {templateForm.type === 'practice_plan' ? 'Define practice segments in JSON format' : templateForm.type === 'calendar_event' ? 'Define program events and tasks' : 'Define task list items'}
-                                        </p>
-                                        <textarea
-                                            className="form-input"
-                                            value={JSON.stringify(templateForm.data, null, 2)}
-                                            onChange={(e) => {
-                                                try {
-                                                    const parsed = JSON.parse(e.target.value);
-                                                    setTemplateForm({ ...templateForm, data: parsed });
-                                                } catch (err) {
-                                                    // Invalid JSON, just update the raw value
-                                                }
-                                            }}
-                                            rows={10}
-                                            style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-                                            placeholder={templateForm.type === 'practice_plan'
-                                                ? '{\n  "segments": [\n    {"type": "Team O", "duration": 15, "situation": "Base Downs", "hasScript": true}\n  ]\n}'
-                                                : templateForm.type === 'calendar_event'
-                                                    ? '{\n  "program": ["Event 1", "Event 2"],\n  "tasks": []\n}'
-                                                    : '{\n  "tasks": [\n    {"task": "Task name", "assignTo": ["Role"]}\n  ]\n}'
-                                            }
-                                        />
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                                        <button className="btn" onClick={() => setShowTemplateModal(false)}>Cancel</button>
-                                        <button className="btn btn-primary" onClick={handleSaveTemplate}>
-                                            {editingTemplate ? 'Update' : 'Create'} Template
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         };
@@ -35043,6 +34891,15 @@
                 const checkSchoolInit = async () => {
                     if (!authUser) return;
 
+                    // ADMIN BYPASS: admin@digitaldofo.com skips ALL school setup (admin-only mode)
+                    // This must be at the very top before any other checks
+                    if (authUser.email.toLowerCase() === 'admin@digitaldofo.com') {
+                        console.log("DEBUG: admin@digitaldofo.com detected. Bypassing ALL school setup - admin-only mode.");
+                        setAccessRequestStatus({ checked: true, status: 'admin', data: { isAdmin: true } });
+                        setSchoolSetupData({ showWizard: false, schoolId: null });
+                        return;
+                    }
+
                     try {
                         // 1. CHECK FOR PENDING INVITES
                         console.log("Checking for invites for:", authUser.email);
@@ -35133,10 +34990,9 @@
                         // If no invites, no domain match, and no legacy school ID, check access request status
                         console.log("DEBUG: inviteData=", inviteData, "schoolId=", schoolId);
 
-                        // ADMIN BYPASS: Super admins skip access request entirely and go straight to school creation
-                        const ADMIN_BYPASS_EMAILS = ['matthewfinn14@gmail.com', 'admin@digitaldofo.com'];
-                        if (ADMIN_BYPASS_EMAILS.includes(authUser.email.toLowerCase()) && !inviteData && !schoolId) {
-                            console.log("DEBUG: Admin email detected. Bypassing access request, showing school wizard.");
+                        // matthewfinn14@gmail.com gets wizard to create template schools (admin bypass handled earlier)
+                        if (authUser.email.toLowerCase() === 'matthewfinn14@gmail.com' && !inviteData && !schoolId) {
+                            console.log("DEBUG: matthewfinn14@gmail.com detected. Showing school wizard for template creation.");
                             const newSchoolId = 'school_' + Date.now();
                             setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
                             return;
@@ -39320,12 +39176,23 @@
                                         <button
                                             className={`nav-item ${view === 'settings' ? 'active' : ''}`}
                                             onClick={() => setView('settings')}
-                                            style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem', position: 'relative' }}
+                                            style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem' }}
                                         >
                                             <Icon name="Settings" size={16} />
                                             {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Settings</span>}
-                                            {/* Admin notification badge for pending access requests */}
-                                            {isSiteAdmin && pendingAccessRequests > 0 && (
+                                        </button>
+                                    )}
+                                    {/* Site Admin - only visible to site admins */}
+                                    {isSiteAdmin && (
+                                        <button
+                                            className={`nav-item ${view === 'admin' ? 'active' : ''}`}
+                                            onClick={() => setView('admin')}
+                                            style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem', position: 'relative' }}
+                                        >
+                                            <Icon name="Shield" size={16} />
+                                            {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Site Admin</span>}
+                                            {/* Notification badge for pending access requests */}
+                                            {pendingAccessRequests > 0 && (
                                                 <span style={{
                                                     position: 'absolute',
                                                     top: sidebarCollapsed ? '2px' : '50%',
@@ -40215,6 +40082,9 @@
                                     />
                                 )
                             }
+
+                            {/* Site Admin Panel - only for site admins */}
+                            {view === 'admin' && isSiteAdmin && <SiteAdminPanel />}
 
                             {/* REMOVED: pressbox view */}
 
