@@ -5976,6 +5976,7 @@
             return (
                 <div
                     className={`play-card ${isSelected ? 'selected' : ''}`}
+                    data-play-id={play.id}
                     onClick={(e) => {
                         // If quick edit exists, use it. Otherwise fallback to edit.
                         if (onQuickEdit) {
@@ -40646,18 +40647,24 @@
                     return [];
                 }
                 return plays.filter(play => {
+                    // Search term filter (name or formation)
+                    const search = (searchTerm || '').toLowerCase().trim();
+                    const matchSearch = !search ||
+                        (play.name && play.name.toLowerCase().includes(search)) ||
+                        (play.formation && play.formation.toLowerCase().includes(search));
+
                     const matchFormation = !playbookFilters.formation || play.formation === playbookFilters.formation;
                     const matchPlayCategory = !playbookFilters.playCategory || play.playCategory === playbookFilters.playCategory;
                     const matchBucketId = !playbookFilters.bucketId || play.bucketId === playbookFilters.bucketId;
-                    const matchTag = !playbookFilters.tag || play.tags.includes(playbookFilters.tag) || play.tag1 === playbookFilters.tag || play.tag2 === playbookFilters.tag;
+                    const matchTag = !playbookFilters.tag || (play.tags || []).includes(playbookFilters.tag) || play.tag1 === playbookFilters.tag || play.tag2 === playbookFilters.tag;
 
                     // Situation filter checks against specific categories
-                    const matchSituation = !playbookFilters.situation || play.tags.includes(playbookFilters.situation) ||
-                        (TAG_CATEGORIES["Situation"] && TAG_CATEGORIES["Situation"].includes(playbookFilters.situation) && play.tags.includes(playbookFilters.situation)) ||
-                        (TAG_CATEGORIES["Field Position"] && TAG_CATEGORIES["Field Position"].includes(playbookFilters.situation) && play.tags.includes(playbookFilters.situation)) ||
-                        (TAG_CATEGORIES["Down & Distance"] && TAG_CATEGORIES["Down & Distance"].includes(playbookFilters.situation) && play.tags.includes(playbookFilters.situation));
+                    const matchSituation = !playbookFilters.situation || (play.tags || []).includes(playbookFilters.situation) ||
+                        (TAG_CATEGORIES["Situation"] && TAG_CATEGORIES["Situation"].includes(playbookFilters.situation) && (play.tags || []).includes(playbookFilters.situation)) ||
+                        (TAG_CATEGORIES["Field Position"] && TAG_CATEGORIES["Field Position"].includes(playbookFilters.situation) && (play.tags || []).includes(playbookFilters.situation)) ||
+                        (TAG_CATEGORIES["Down & Distance"] && TAG_CATEGORIES["Down & Distance"].includes(playbookFilters.situation) && (play.tags || []).includes(playbookFilters.situation));
 
-                    return matchFormation && matchPlayCategory && matchBucketId && matchTag && matchSituation;
+                    return matchSearch && matchFormation && matchPlayCategory && matchBucketId && matchTag && matchSituation;
                 });
             };
 
@@ -43207,7 +43214,7 @@
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                     <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Search Plays</label>
                                                     <div style={{ position: 'relative' }}>
-                                                        <Icon name="Search" size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                                        <Icon name="Search" size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
                                                         <input
                                                             className="form-input"
                                                             placeholder="Name or formation..."
@@ -43215,6 +43222,57 @@
                                                             onChange={e => setSearchTerm(e.target.value)}
                                                             style={{ paddingLeft: '2.25rem', width: '100%' }}
                                                         />
+                                                        {searchTerm && searchTerm.length >= 2 && (() => {
+                                                            const search = searchTerm.toLowerCase();
+                                                            const suggestions = plays
+                                                                .filter(p => p.name.toLowerCase().includes(search) || (p.formation && p.formation.toLowerCase().includes(search)))
+                                                                .slice(0, 8);
+                                                            if (suggestions.length === 0) return null;
+                                                            return (
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    top: '100%',
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    background: 'var(--bg-panel)',
+                                                                    border: '1px solid var(--border)',
+                                                                    borderRadius: '0 0 6px 6px',
+                                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                                    zIndex: 100,
+                                                                    maxHeight: '300px',
+                                                                    overflowY: 'auto'
+                                                                }}>
+                                                                    {suggestions.map(play => (
+                                                                        <div
+                                                                            key={play.id}
+                                                                            onClick={() => {
+                                                                                setSearchTerm(play.name);
+                                                                                // Scroll to the play card
+                                                                                setTimeout(() => {
+                                                                                    const card = document.querySelector(`[data-play-id="${play.id}"]`);
+                                                                                    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                                }, 100);
+                                                                            }}
+                                                                            style={{
+                                                                                padding: '0.6rem 0.75rem',
+                                                                                cursor: 'pointer',
+                                                                                borderBottom: '1px solid var(--border)',
+                                                                                display: 'flex',
+                                                                                justifyContent: 'space-between',
+                                                                                alignItems: 'center'
+                                                                            }}
+                                                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                                        >
+                                                                            <span style={{ fontWeight: '500' }}>{play.name}</span>
+                                                                            {play.formation && (
+                                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>{play.formation}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </div>
 
