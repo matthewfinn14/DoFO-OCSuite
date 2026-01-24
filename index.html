@@ -1982,21 +1982,13 @@
             }
         };
 
+        // Built-in tag categories (minimal set - users can add custom categories)
         const TAG_CATEGORIES = {
-            "Field Position": ["Backed Up", "Coming Out", "Open Field", "Fringe", "Red Zone", "Gold Zone", "Goal Line", "2-PT"],
-            "Down & Distance": [
-                "1st & 10", "Normal Down",
-                "2nd & XL", "2nd & Long", "2nd & Med", "2nd & Short",
-                "3rd & XL", "3rd & Long", "3rd & Med", "3rd & Short",
-                "4th & XL", "4th & Long", "4th & Med", "4th & Short"
-            ],
-            "Situation": ["2 Min", "4 Min", "End of Game", "Possession", "Opening Script", "Tank Play", "Test Play", "Setup Play"],
             "Coverage Beaters": ["MOFO (Middle Open)", "MOFC (Middle Closed)", "Man Beater", "Zone Beater"],
-            "Front Beaters": ["Odd Beater", "Even Beater", "Pressure Beater"],
             "Motion": [
                 "Down motion",
                 "THRU MO from 1x3 to 2x2",
-                "THRU mo from 2x2 to 3x1",
+                "THRU MO from 2x2 to 3x1",
                 "Orbit MO from 1x3 to 2x2",
                 "Orbit MO from 2x2 to 3x1",
                 "RB push motion",
@@ -2005,23 +1997,7 @@
                 "YO-YO"
             ],
             "Primary Target": ["X", "A", "Z", "Y", "B", "Q", "F"],
-
-            // Merged Call Sheet Tags
-            "Play Type": [
-                "Tank Runs",
-                "Perimeter Runs",
-                "FLOW RPOS",
-                "FIT RPOS",
-                "Quick",
-                "Intermediate",
-                "PAP",
-                "MOVEMENT",
-                "Deep",
-                "GADGET"
-            ],
-
-            "Action Types": ["Strong Run", "Weak Run", "Quick Game", "Drop Back", "Screen", "Gadget"],
-            "Base Type": ["Run", "Pass", "RPO", "Gadget"]
+            "Action Types": ["Strong Run", "Weak Run", "Quick Game", "Drop Back", "Screen", "Gadget"]
         };
 
         const HASH_PREFERENCES = ["Left", "Right", "Middle", "Any"];
@@ -3213,25 +3189,147 @@
             );
         };
 
-        const TagSelector = ({ selectedTags, onToggle }) => {
+        const TagSelector = ({ selectedTags, onToggle, customTagCategories = [], onUpdateCustomCategories }) => {
+            const [isAddingCategory, setIsAddingCategory] = useState(false);
+            const [newCategoryName, setNewCategoryName] = useState('');
+            const [editingCategory, setEditingCategory] = useState(null);
+            const [newTagInput, setNewTagInput] = useState('');
+
+            const handleAddCategory = () => {
+                if (!newCategoryName.trim() || !onUpdateCustomCategories) return;
+                const newCat = {
+                    id: `custom_${Date.now()}`,
+                    name: newCategoryName.trim(),
+                    tags: []
+                };
+                onUpdateCustomCategories([...customTagCategories, newCat]);
+                setNewCategoryName('');
+                setIsAddingCategory(false);
+                setEditingCategory(newCat.id);
+            };
+
+            const handleAddTag = (categoryId) => {
+                if (!newTagInput.trim() || !onUpdateCustomCategories) return;
+                onUpdateCustomCategories(customTagCategories.map(cat =>
+                    cat.id === categoryId
+                        ? { ...cat, tags: [...cat.tags, newTagInput.trim()] }
+                        : cat
+                ));
+                setNewTagInput('');
+            };
+
+            const handleDeleteTag = (categoryId, tagToDelete) => {
+                if (!onUpdateCustomCategories) return;
+                onUpdateCustomCategories(customTagCategories.map(cat =>
+                    cat.id === categoryId
+                        ? { ...cat, tags: cat.tags.filter(t => t !== tagToDelete) }
+                        : cat
+                ));
+            };
+
+            const handleDeleteCategory = (categoryId) => {
+                if (!onUpdateCustomCategories) return;
+                if (window.confirm('Delete this category and all its tags?')) {
+                    onUpdateCustomCategories(customTagCategories.filter(cat => cat.id !== categoryId));
+                    if (editingCategory === categoryId) setEditingCategory(null);
+                }
+            };
+
+            // Combine built-in and custom categories
+            const allCategories = [
+                ...Object.entries(TAG_CATEGORIES).map(([name, tags]) => ({ id: name, name, tags, isBuiltIn: true })),
+                ...customTagCategories.map(cat => ({ ...cat, isBuiltIn: false }))
+            ];
+
             return (
                 <div className="space-y-4">
-                    {Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
-                        <div key={category} className="tags-section">
-                            <div className="tags-category-title">{category}</div>
+                    {allCategories.map(category => (
+                        <div key={category.id} className="tags-section" style={{ position: 'relative' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <div className="tags-category-title" style={{ margin: 0 }}>{category.name}</div>
+                                {!category.isBuiltIn && onUpdateCustomCategories && (
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            className="btn-ghost"
+                                            style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                            onClick={() => setEditingCategory(editingCategory === category.id ? null : category.id)}
+                                        >
+                                            {editingCategory === category.id ? 'Done' : 'Edit'}
+                                        </button>
+                                        <button
+                                            className="btn-ghost"
+                                            style={{ padding: '2px 6px', fontSize: '0.7rem', color: '#ef4444' }}
+                                            onClick={() => handleDeleteCategory(category.id)}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             <div className="tags-grid">
-                                {(tags || []).map(tag => (
+                                {(category.tags || []).map(tag => (
                                     <div
                                         key={tag}
                                         className={`tag-chip ${selectedTags.includes(tag) ? 'selected' : ''}`}
                                         onClick={() => onToggle(tag)}
+                                        style={{ position: 'relative' }}
                                     >
                                         {tag}
+                                        {editingCategory === category.id && !category.isBuiltIn && (
+                                            <span
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteTag(category.id, tag); }}
+                                                style={{ marginLeft: '4px', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}
+                                            >×</span>
+                                        )}
                                     </div>
                                 ))}
+                                {editingCategory === category.id && !category.isBuiltIn && (
+                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="New tag..."
+                                            value={newTagInput}
+                                            onChange={e => setNewTagInput(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleAddTag(category.id)}
+                                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', width: '120px' }}
+                                        />
+                                        <button className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => handleAddTag(category.id)}>+</button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
+
+                    {/* Add Custom Category */}
+                    {onUpdateCustomCategories && (
+                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px dashed var(--border)' }}>
+                            {isAddingCategory ? (
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Category name..."
+                                        value={newCategoryName}
+                                        onChange={e => setNewCategoryName(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
+                                        style={{ flex: 1, padding: '0.4rem 0.75rem' }}
+                                        autoFocus
+                                    />
+                                    <button className="btn btn-primary" style={{ padding: '0.4rem 0.75rem' }} onClick={handleAddCategory}>Add</button>
+                                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.75rem' }} onClick={() => { setIsAddingCategory(false); setNewCategoryName(''); }}>Cancel</button>
+                                </div>
+                            ) : (
+                                <button
+                                    className="btn btn-secondary"
+                                    style={{ width: '100%', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                    onClick={() => setIsAddingCategory(true)}
+                                >
+                                    <Icon name="Plus" size={14} /> Add Custom Category
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -4873,7 +4971,7 @@
         };
 
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [], playBuckets = [], playCategories = [], onAddFormation = () => { }, passProtections = [], setPassProtections = () => { }, runBlocking = [], setRunBlocking = () => { } }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [], playBuckets = [], playCategories = [], onAddFormation = () => { }, passProtections = [], setPassProtections = () => { }, runBlocking = [], setRunBlocking = () => { }, customTagCategories = [], setCustomTagCategories }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
             const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'wiz-oline', 'wiz-skill', 'detailed'
@@ -5941,6 +6039,40 @@
 
                         <div className="form-group" style={{ marginTop: '1.5rem', background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
                             <label className="form-label" style={{ marginBottom: '1rem' }}>Situational Tags (or drag tags here)</label>
+
+                            {/* Show Bucket/Family from PlayDetailsModal */}
+                            {formData.bucketId && (() => {
+                                const bucket = playBuckets.find(b => b.id === formData.bucketId);
+                                if (!bucket) return null;
+                                const category = playCategories.find(c => c.id === bucket.categoryId);
+                                return (
+                                    <div style={{
+                                        marginBottom: '1rem',
+                                        padding: '0.75rem 1rem',
+                                        background: 'var(--bg-alt)',
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--border)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '0.85rem'
+                                    }}>
+                                        <span style={{ color: 'var(--text-muted)' }}>Game Plan Assignment:</span>
+                                        {category && <span style={{ fontWeight: '500' }}>{category.name}</span>}
+                                        {category && <span style={{ color: 'var(--text-muted)' }}>/</span>}
+                                        <span style={{
+                                            background: bucket.color || 'var(--accent)',
+                                            color: '#fff',
+                                            padding: '2px 8px',
+                                            borderRadius: '4px',
+                                            fontWeight: '500'
+                                        }}>
+                                            {bucket.name}
+                                        </span>
+                                    </div>
+                                );
+                            })()}
+
                             <div
                                 onDrop={(e) => {
                                     e.preventDefault();
@@ -5958,13 +6090,18 @@
                                     borderRadius: '8px', padding: draggedComponent ? '0.5rem' : '0', transition: 'all 0.2s'
                                 }}
                             >
-                                <TagSelector selectedTags={formData.tags} onToggle={toggleTag} />
+                                <TagSelector
+                                    selectedTags={formData.tags}
+                                    onToggle={toggleTag}
+                                    customTagCategories={customTagCategories}
+                                    onUpdateCustomCategories={setCustomTagCategories}
+                                />
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', paddingBottom: '2rem' }}>
                             <button type="submit" className="btn btn-primary">Save Play</button>
-                            <button type="button" onClick={() => setIsEditing(false)} className="btn btn-secondary">Cancel</button>
+                            <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>
                         </div>
                     </form >
                 </div >
@@ -7800,7 +7937,7 @@
             return false;
         };
 
-        const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [], onQuickAddPlay, formations = [], onAddFormation, wizLibrary = [], setWizLibrary, positionNames = {}, passProtections = [], setPassProtections, runBlocking = [], setRunBlocking }) => {
+        const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [], onQuickAddPlay, formations = [], onAddFormation, wizLibrary = [], setWizLibrary, positionNames = {}, passProtections = [], setPassProtections, runBlocking = [], setRunBlocking, addToNextSlotRef }) => {
             const { currentUser } = useAuth();
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
@@ -8145,6 +8282,25 @@
                     assignPlayToSlot(play, availableSlot, selectedCardId);
                 }
             };
+
+            // Register "add to next slot" handler for sidebar
+            useEffect(() => {
+                if (addToNextSlotRef) {
+                    addToNextSlotRef.current = (playId, play) => {
+                        if (play) {
+                            handleAutoAssign(play);
+                        } else {
+                            const foundPlay = plays.find(p => p.id === playId);
+                            if (foundPlay) {
+                                handleAutoAssign(foundPlay);
+                            }
+                        }
+                    };
+                }
+                return () => {
+                    if (addToNextSlotRef) addToNextSlotRef.current = null;
+                };
+            }, [addToNextSlotRef, plays, wbSettings, selectedCardId, slotMap]);
 
             const handleAssignSlot = (slot) => {
                 if (!selectedPlayId) return;
@@ -11150,7 +11306,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, drills, teamLogo }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, drills, teamLogo, addToNextSlotRef }) => {
             console.log('PracticeScriptBuilder debug:', { currentWeek, teamLogo });
             const { openPlayDetails } = usePlayDetailsModal();
 
@@ -11199,6 +11355,56 @@
                     if (closeSideMenuRef) closeSideMenuRef.current = null;
                 };
             }, [closeSideMenuRef]);
+
+            // Register "add to next slot" handler for sidebar
+            useEffect(() => {
+                if (addToNextSlotRef) {
+                    addToNextSlotRef.current = (playId, play) => {
+                        // Get current day's plan
+                        const dayPlan = Array.isArray(plans)
+                            ? plans.find(p => p.day === selectedDay)
+                            : plans[selectedDay];
+                        if (!dayPlan) return;
+
+                        // Find selected segment or first segment with script
+                        let targetSegment = null;
+                        if (selectedSegmentId) {
+                            targetSegment = (dayPlan.segments || []).find(s => s.id === selectedSegmentId);
+                        }
+                        if (!targetSegment) {
+                            targetSegment = (dayPlan.segments || []).find(s => s.hasScript && s.script);
+                        }
+                        if (!targetSegment || !targetSegment.script) return;
+
+                        // Find the first empty row (play field is empty)
+                        const emptyRowIndex = targetSegment.script.findIndex(row => !row.play || row.play.trim() === '');
+                        if (emptyRowIndex === -1) return; // No empty slots
+
+                        // Update the row with the play
+                        const updatedScript = [...targetSegment.script];
+                        updatedScript[emptyRowIndex] = {
+                            ...updatedScript[emptyRowIndex],
+                            play: play?.name || playId
+                        };
+
+                        const updatedSegment = { ...targetSegment, script: updatedScript };
+                        const updatedSegments = (dayPlan.segments || []).map(s =>
+                            s.id === targetSegment.id ? updatedSegment : s
+                        );
+                        const updatedPlan = { ...dayPlan, segments: updatedSegments };
+
+                        if (Array.isArray(plans)) {
+                            const updatedPlans = plans.map(p => p.day === selectedDay ? updatedPlan : p);
+                            onUpdatePlans(updatedPlans);
+                        } else {
+                            onUpdatePlans({ ...plans, [selectedDay]: updatedPlan });
+                        }
+                    };
+                }
+                return () => {
+                    if (addToNextSlotRef) addToNextSlotRef.current = null;
+                };
+            }, [addToNextSlotRef, plans, selectedDay, selectedSegmentId, onUpdatePlans]);
 
             console.log('PracticeScriptBuilder render. notesModalSegmentId:', notesModalSegmentId);
 
@@ -25693,12 +25899,49 @@
             );
         };
 
-        function GamePlannerSideMenu({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection, onUpdatePlay, onUpdateGamePlan, currentWeek }) {
+        function GamePlannerSideMenu({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection, onUpdatePlay, onUpdateGamePlan, currentWeek, onNavigate, onAddToNextSlot }) {
             const [searchTerm, setSearchTerm] = useState('');
             const [quickAddValue, setQuickAddValue] = useState('');
             const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, install
             const [expandedSections, setExpandedSections] = useState({});
             const [situationModalPlayId, setSituationModalPlayId] = useState(null);
+            const [quickAddInputs, setQuickAddInputs] = useState({}); // { bucketId: 'input value' }
+
+            // Quick Add: Create play if not exists, then assign to bucket
+            const handleQuickAddToBucket = (inputValue, bucketId) => {
+                if (!inputValue.trim()) return;
+
+                const playName = inputValue.trim().toUpperCase();
+                let existingPlay = plays.find(p => p.name.toLowerCase() === playName.toLowerCase());
+
+                if (!existingPlay && onQuickAddPlay) {
+                    // Create new play
+                    const newPlay = {
+                        id: `play_${Date.now()}`,
+                        name: playName,
+                        bucketId: bucketId,
+                        formation: '',
+                        tags: []
+                    };
+                    onQuickAddPlay(newPlay);
+                    existingPlay = newPlay;
+                } else if (existingPlay && onUpdatePlay) {
+                    // Update existing play to have this bucket
+                    onUpdatePlay(existingPlay.id, { bucketId: bucketId });
+                }
+
+                // Add to install list if we have currentWeek
+                if (currentWeek && existingPlay) {
+                    const installList = [...(currentWeek.installList || [])];
+                    if (!installList.includes(existingPlay.id)) {
+                        installList.push(existingPlay.id);
+                        onUpdateGamePlan && onUpdateGamePlan({ ...gamePlan, installList });
+                    }
+                }
+
+                // Clear the input
+                setQuickAddInputs(prev => ({ ...prev, [bucketId]: '' }));
+            };
 
             const toggleSection = (id) => {
                 setExpandedSections(prev => ({
@@ -25899,6 +26142,45 @@
                         style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.8rem', cursor: 'default' }}
                         onDoubleClick={() => setSituationModalPlayId(play.id)}
                     >
+                        {/* Add to next slot button */}
+                        {onAddToNextSlot && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddToNextSlot(play.id, play);
+                                }}
+                                title="Add to next blank slot"
+                                style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: 'transparent',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    marginRight: '6px',
+                                    color: '#64748b',
+                                    fontSize: '1rem',
+                                    fontWeight: 'bold',
+                                    padding: 0,
+                                    flexShrink: 0
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.background = '#3b82f6';
+                                    e.target.style.color = 'white';
+                                    e.target.style.borderColor = '#3b82f6';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.background = 'transparent';
+                                    e.target.style.color = '#64748b';
+                                    e.target.style.borderColor = '#cbd5e1';
+                                }}
+                            >
+                                +
+                            </button>
+                        )}
                         <div
                             draggable
                             onDragStart={(e) => handleDragStart(e, play)}
@@ -26030,6 +26312,45 @@
                                             </div>
                                             {isExpanded && (
                                                 <div style={{ padding: '8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                                                    {/* Quick Add Input */}
+                                                    <input
+                                                        type="text"
+                                                        placeholder="+ Quick add play..."
+                                                        value={quickAddInputs[box.setId] || ''}
+                                                        onChange={(e) => setQuickAddInputs(prev => ({ ...prev, [box.setId]: e.target.value }))}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && e.target.value.trim()) {
+                                                                const playName = e.target.value.trim().toUpperCase();
+                                                                let existingPlay = plays.find(p => p.name.toLowerCase() === playName.toLowerCase());
+                                                                if (!existingPlay && onQuickAddPlay) {
+                                                                    existingPlay = { id: `play_${Date.now()}`, name: playName, formation: '', tags: [] };
+                                                                    onQuickAddPlay(existingPlay);
+                                                                }
+                                                                if (existingPlay) {
+                                                                    // Add to this box's set
+                                                                    const sets = { ...(gamePlan?.sets || {}) };
+                                                                    if (!sets[box.setId]) sets[box.setId] = { id: box.setId, playIds: [] };
+                                                                    if (!sets[box.setId].playIds.includes(existingPlay.id)) {
+                                                                        sets[box.setId].playIds = [...sets[box.setId].playIds, existingPlay.id];
+                                                                        onUpdateGamePlan && onUpdateGamePlan({ ...gamePlan, sets });
+                                                                    }
+                                                                }
+                                                                setQuickAddInputs(prev => ({ ...prev, [box.setId]: '' }));
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '6px 8px',
+                                                            marginBottom: '8px',
+                                                            fontSize: '0.7rem',
+                                                            border: '1px dashed #cbd5e1',
+                                                            borderRadius: '4px',
+                                                            background: '#f8fafc',
+                                                            outline: 'none'
+                                                        }}
+                                                        onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                                                        onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                                                    />
                                                     {items.length > 0 ? (
                                                         <>
                                                             <button
@@ -26052,7 +26373,7 @@
                                                             {items.map(renderRow)}
                                                         </>
                                                     ) : (
-                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px' }}>No plays found.</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px' }}>No plays yet. Type above to add.</div>
                                                     )}
                                                 </div>
                                             )}
@@ -26212,6 +26533,32 @@
                                                         </div>
                                                         {isFamExpanded && (
                                                             <div style={{ padding: '4px 8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+                                                                {/* Quick Add Input */}
+                                                                <div style={{ marginBottom: '6px' }}>
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="+ Quick add play..."
+                                                                        value={quickAddInputs[family.id] || ''}
+                                                                        onChange={(e) => setQuickAddInputs(prev => ({ ...prev, [family.id]: e.target.value }))}
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                handleQuickAddToBucket(e.target.value, family.id);
+                                                                            }
+                                                                        }}
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            padding: '6px 8px',
+                                                                            fontSize: '0.7rem',
+                                                                            border: '1px dashed #cbd5e1',
+                                                                            borderRadius: '4px',
+                                                                            background: '#f8fafc',
+                                                                            color: '#1e293b',
+                                                                            outline: 'none'
+                                                                        }}
+                                                                        onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                                                                        onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                                                                    />
+                                                                </div>
                                                                 {family.plays.length > 0 && (
                                                                         <button
                                                                             onClick={(e) => {
@@ -26269,34 +26616,91 @@
                     position: 'relative' // For absolute handle
                 }}>
 
-                    <div
+                    <button
                         onClick={() => onToggle(!isOpen)}
-                        title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+                        title={isOpen ? "Collapse Playbook" : "Expand Playbook"}
                         style={{
                             position: 'absolute',
-                            left: '-24px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            width: '24px',
-                            height: '48px',
-                            background: 'white',
-                            border: '1px solid var(--border)',
-                            borderRight: 'none',
-                            borderTopLeftRadius: '8px',
-                            borderBottomLeftRadius: '8px',
+                            left: '-32px',
+                            top: '12px',
+                            width: '32px',
+                            height: '32px',
+                            background: 'rgba(56, 189, 248, 0.1)',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            borderRadius: '4px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             zIndex: 10,
-                            boxShadow: '-2px 0 5px rgba(0,0,0,0.05)'
+                            color: 'var(--accent)',
+                            fontSize: '1rem',
+                            fontWeight: 'bold'
                         }}
                     >
-                        <Icon name={isOpen ? "ChevronRight" : "ChevronLeft"} size={16} color="#64748b" />
-                    </div>
+                        {isOpen ? '→' : '←'}
+                    </button>
 
 
                     <div style={{ width: '360px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                        {/* Quick Navigation Links */}
+                        {onNavigate && (
+                            <div style={{
+                                padding: '8px 12px',
+                                borderBottom: '1px solid #1e293b',
+                                display: 'flex',
+                                gap: '8px',
+                                background: '#0f172a'
+                            }}>
+                                <button
+                                    onClick={() => onNavigate('setup')}
+                                    style={{
+                                        flex: 1,
+                                        padding: '6px 10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        background: 'rgba(59, 130, 246, 0.2)',
+                                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                                        borderRadius: '6px',
+                                        color: '#93c5fd',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.target.style.background = 'rgba(59, 130, 246, 0.3)'}
+                                    onMouseOut={(e) => e.target.style.background = 'rgba(59, 130, 246, 0.2)'}
+                                >
+                                    <Icon name="Settings" size={14} /> Setup
+                                </button>
+                                <button
+                                    onClick={() => onNavigate('playbook')}
+                                    style={{
+                                        flex: 1,
+                                        padding: '6px 10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        background: 'rgba(34, 197, 94, 0.2)',
+                                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                                        borderRadius: '6px',
+                                        color: '#86efac',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.target.style.background = 'rgba(34, 197, 94, 0.3)'}
+                                    onMouseOut={(e) => e.target.style.background = 'rgba(34, 197, 94, 0.2)'}
+                                >
+                                    <Icon name="BookOpen" size={14} /> Master Playbook
+                                </button>
+                            </div>
+                        )}
+
                         {/* Header with Close Button */}
                         <div style={{
                             padding: '1rem',
@@ -26335,7 +26739,7 @@
                             </button>
                         </div>
 
-                        {/* THIS WEEK Counter */}
+                        {/* Week Indicator & Stats */}
                         {weekStats && (
                             <div style={{
                                 padding: '0.75rem',
@@ -26346,7 +26750,9 @@
                                 background: '#f8fafc',
                                 gap: '6px'
                             }}>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>THIS WEEK</div>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    {currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : 'No Week Selected'}
+                                </div>
                                 <div style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -26374,8 +26780,8 @@
 
                         {/* Tabs */}
                         <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
-                            {['Play Usage', 'Game Plan', 'Install'].map(tab => {
-                                const key = tab === 'Play Usage' ? 'usage' : tab === 'Game Plan' ? 'gameplan' : 'install';
+                            {['Full Playbook', 'Game Plan', 'Install'].map(tab => {
+                                const key = tab === 'Full Playbook' ? 'usage' : tab === 'Game Plan' ? 'gameplan' : 'install';
                                 const isActive = activeTab === key;
                                 return (
                                     <div
@@ -26462,7 +26868,7 @@
 
                                                     {isCatExpanded && (
                                                         <div style={{ marginLeft: '8px', borderLeft: `2px solid ${category.color || '#3b82f6'}`, paddingLeft: '6px', paddingTop: '4px' }}>
-                                                            {category.totalPlays > 0 && (
+                                                            {category.totalPlays > 0 && category.id !== 'unassigned' && (
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -26505,7 +26911,7 @@
                                                                         </div>
                                                                         {isFamExpanded && (
                                                                             <div style={{ padding: '4px 8px', borderTop: '1px solid #e2e8f0', background: 'white' }}>
-                                                                                {family.plays.length > 0 && (
+                                                                                {family.plays.length > 0 && category.id !== 'unassigned' && (
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
@@ -26531,6 +26937,31 @@
                                                                         >
                                                                             <Icon name="Plus" size={12} /> Add all to script ({family.plays.length})
                                                                         </button>
+                                                                    )}
+                                                                    {/* Quick Add to this family (hide for unassigned) */}
+                                                                    {category.id !== 'unassigned' && (
+                                                                    <div style={{ marginBottom: '6px' }}>
+                                                                        <input
+                                                                            placeholder="+ Add play to family..."
+                                                                            value={quickAddInputs[`usage-${family.id}`] || ''}
+                                                                            onChange={e => setQuickAddInputs(prev => ({ ...prev, [`usage-${family.id}`]: e.target.value.toUpperCase() }))}
+                                                                            onKeyDown={e => {
+                                                                                if (e.key === 'Enter' && quickAddInputs[`usage-${family.id}`]) {
+                                                                                    handleQuickAddToBucket(quickAddInputs[`usage-${family.id}`], family.id);
+                                                                                    setQuickAddInputs(prev => ({ ...prev, [`usage-${family.id}`]: '' }));
+                                                                                }
+                                                                            }}
+                                                                            onClick={e => e.stopPropagation()}
+                                                                            style={{
+                                                                                width: '100%',
+                                                                                padding: '4px 8px',
+                                                                                fontSize: '0.7rem',
+                                                                                border: '1px dashed #cbd5e1',
+                                                                                borderRadius: '4px',
+                                                                                background: '#fafafa'
+                                                                            }}
+                                                                        />
+                                                                    </div>
                                                                     )}
                                                                     {family.plays.map(renderRow)}
                                                                             </div>
@@ -26579,7 +27010,7 @@
 
 
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef }) => {
             const { openPlayDetails } = usePlayDetailsModal();
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
@@ -26611,6 +27042,32 @@
                     setShowSideMenu(false);
                 }
             }, [appSidebarCollapsed, showSideMenu]);
+
+            // Register "add to next slot" handler for sidebar
+            useEffect(() => {
+                if (addToNextSlotRef) {
+                    addToNextSlotRef.current = (playId, play) => {
+                        // Add play to the selected set's quicklist, or first available set
+                        const targetSetId = selectedSetId || (gamePlanLayouts?.CALL_SHEET?.sections?.[0]?.boxes?.[0]?.setId);
+                        if (!targetSetId) return;
+
+                        const sets = { ...(gamePlan?.sets || {}) };
+                        if (!sets[targetSetId]) {
+                            sets[targetSetId] = { id: targetSetId, playIds: [] };
+                        }
+                        if (!sets[targetSetId].playIds) {
+                            sets[targetSetId].playIds = [];
+                        }
+                        if (!sets[targetSetId].playIds.includes(playId)) {
+                            sets[targetSetId].playIds = [...sets[targetSetId].playIds, playId];
+                            onUpdateGamePlan({ ...gamePlan, sets });
+                        }
+                    };
+                }
+                return () => {
+                    if (addToNextSlotRef) addToNextSlotRef.current = null;
+                };
+            }, [addToNextSlotRef, selectedSetId, gamePlan, gamePlanLayouts, onUpdateGamePlan]);
 
             // For Wristband Autocomplete
             const [showWristband, setShowWristband] = useState(true);
@@ -39999,6 +40456,11 @@
             const [playCategories, setPlayCategories] = useLocalStorage('oc-dashboard-play-categories', []);
             const [playBuckets, setPlayBuckets] = useLocalStorage('oc-dashboard-play-buckets', DEFAULT_PLAY_BUCKETS);
 
+            // Custom Tag Categories - users can define their own tag groups for play analysis
+            const [customTagCategories, setCustomTagCategories] = useLocalStorage('oc-dashboard-custom-tag-categories', [
+                // Example structure: { id: 'cat_123', name: 'My Category', tags: ['Tag 1', 'Tag 2'] }
+            ]);
+
             // Ensure default buckets exist (Run, Pass, Screen)
             useEffect(() => {
                 if (!playBuckets || playBuckets.length === 0) {
@@ -40063,6 +40525,15 @@
 
             const [gamePlanLayouts, setGamePlanLayouts] = useLocalStorage('gamePlanLayouts', GAME_PLAN_LAYOUTS);
             const [layoutVersions, setLayoutVersions] = useLocalStorage('gamePlanLayoutVersions', {});
+
+            // Global Playbook Sidebar State (persistent across all views)
+            const [globalSidebarOpen, setGlobalSidebarOpen] = useLocalStorage('oc-global-sidebar-open', false);
+
+            // Ref for "add to next slot" callback - views can register their handler
+            const addToNextSlotRef = React.useRef(null);
+
+            // Setup Page Tab State (Offense/Defense/Special Teams)
+            const [setupPhase, setSetupPhase] = useLocalStorage('oc-setup-phase', 'OFFENSE');
 
             const saveLayoutVersion = (name) => {
                 if (!name) return;
@@ -40429,6 +40900,8 @@
                         setPassProtections={setPassProtections}
                         runBlocking={runBlocking}
                         setRunBlocking={setRunBlocking}
+                        customTagCategories={customTagCategories}
+                        setCustomTagCategories={setCustomTagCategories}
                     />
                 )
             }
@@ -42603,8 +43076,8 @@
                                             {visibleFeatures.gameWeek?.enabled && (
                                                 <CollapsibleCategory title={`${activeYear || 'MASTER'} OFFENSE`} icon="Zap" defaultOpen={false}>
                                                     {visibleFeatures.gameWeek?.items?.offenseSetup && (
-                                                        <button className={`nav-item ${view === 'offense-setup' ? 'active' : ''}`} onClick={() => setView('offense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Offense Setup
+                                                        <button className={`nav-item ${(view === 'setup' || view === 'offense-setup') && setupPhase === 'OFFENSE' ? 'active' : ''}`} onClick={() => { setSetupPhase('OFFENSE'); setView('setup'); }} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Setup
                                                         </button>
                                                     )}
                                                     {visibleFeatures.gameWeek?.items?.playbook && (
@@ -42640,8 +43113,8 @@
                                             {visibleFeatures.gameWeek?.enabled && (
                                                 <CollapsibleCategory title={`${activeYear || 'MASTER'} DEFENSE`} icon="Shield" defaultOpen={false}>
                                                     {visibleFeatures.gameWeek?.items?.defenseSetup && (
-                                                        <button className={`nav-item ${view === 'defense-setup' ? 'active' : ''}`} onClick={() => setView('defense-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Defense Setup
+                                                        <button className={`nav-item ${(view === 'setup' || view === 'defense-setup') && setupPhase === 'DEFENSE' ? 'active' : ''}`} onClick={() => { setSetupPhase('DEFENSE'); setView('setup'); }} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Setup
                                                         </button>
                                                     )}
 
@@ -42674,8 +43147,8 @@
                                             {visibleFeatures.gameWeek?.enabled && (
                                                 <CollapsibleCategory title={`${activeYear || 'MASTER'} SPECIAL TEAMS`} icon="Compass" defaultOpen={false}>
                                                     {visibleFeatures.gameWeek?.items?.stSetup && (
-                                                        <button className={`nav-item ${view === 'st-setup' ? 'active' : ''}`} onClick={() => setView('st-setup')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Special Teams Setup
+                                                        <button className={`nav-item ${(view === 'setup' || view === 'st-setup') && setupPhase === 'SPECIAL_TEAMS' ? 'active' : ''}`} onClick={() => { setSetupPhase('SPECIAL_TEAMS'); setView('setup'); }} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                            <Icon name="Settings" size={16} style={{ marginRight: '8px' }} /> Setup
                                                         </button>
                                                     )}
 
@@ -42809,7 +43282,7 @@
                             </nav>
                         </div >
 
-                        <main className="main-content">
+                        <main className="main-content" style={{ marginRight: globalSidebarOpen ? '384px' : '24px', transition: 'margin-right 0.3s ease-in-out' }}>
                             {view === 'staff-meeting' && (
                                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
                                     {/* Header */}
@@ -43066,9 +43539,67 @@
 
 
 
-                            {view === 'offense-setup' && renderSetup('OFFENSE')}
-                            {view === 'defense-setup' && renderSetup('DEFENSE')}
-                            {view === 'st-setup' && renderSetup('SPECIAL_TEAMS')}
+                            {/* Unified Setup View with Phase Tabs */}
+                            {(view === 'setup' || view === 'offense-setup' || view === 'defense-setup' || view === 'st-setup') && (
+                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    {/* Phase Tabs */}
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '4px',
+                                        padding: '1rem 2rem 0 2rem',
+                                        background: 'var(--bg-alt)',
+                                        borderBottom: '1px solid var(--border)'
+                                    }}>
+                                        {[
+                                            { key: 'OFFENSE', label: 'Offense', icon: 'Zap' },
+                                            { key: 'DEFENSE', label: 'Defense', icon: 'Shield' },
+                                            { key: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Target' }
+                                        ].map(tab => {
+                                            const isActive = setupPhase === tab.key ||
+                                                (view === 'offense-setup' && tab.key === 'OFFENSE') ||
+                                                (view === 'defense-setup' && tab.key === 'DEFENSE') ||
+                                                (view === 'st-setup' && tab.key === 'SPECIAL_TEAMS');
+                                            return (
+                                                <button
+                                                    key={tab.key}
+                                                    onClick={() => {
+                                                        setSetupPhase(tab.key);
+                                                        if (view !== 'setup') setView('setup');
+                                                    }}
+                                                    style={{
+                                                        padding: '12px 24px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        background: isActive ? 'var(--bg-main)' : 'transparent',
+                                                        border: isActive ? '1px solid var(--border)' : '1px solid transparent',
+                                                        borderBottom: isActive ? '1px solid var(--bg-main)' : '1px solid transparent',
+                                                        borderRadius: '8px 8px 0 0',
+                                                        marginBottom: '-1px',
+                                                        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                        fontWeight: isActive ? '700' : '500',
+                                                        fontSize: '0.9rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    <Icon name={tab.icon} size={18} />
+                                                    {tab.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {/* Setup Content */}
+                                    <div style={{ flex: 1, overflow: 'auto' }}>
+                                        {renderSetup(
+                                            view === 'offense-setup' ? 'OFFENSE' :
+                                            view === 'defense-setup' ? 'DEFENSE' :
+                                            view === 'st-setup' ? 'SPECIAL_TEAMS' :
+                                            setupPhase
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {
                                 view === 'new-play' && (
@@ -43092,6 +43623,8 @@
                                         setPassProtections={setPassProtections}
                                         runBlocking={runBlocking}
                                         setRunBlocking={setRunBlocking}
+                                        customTagCategories={customTagCategories}
+                                        setCustomTagCategories={setCustomTagCategories}
                                     />
                                 )
                             }
@@ -43126,6 +43659,7 @@
                                 playBuckets={playBuckets}
                                 setAppSidebarCollapsed={setSidebarCollapsed}
                                 appSidebarCollapsed={sidebarCollapsed}
+                                addToNextSlotRef={addToNextSlotRef}
                             />}
 
                             {
@@ -43542,7 +44076,7 @@
                                     </div>
                                 </div>
                             )}
-                            {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} currentWeek={currentWeek} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} onUpdateWeek={handleUpdateWeek} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} playCategories={playCategories} onQuickAddPlay={handleQuickAddPlay} formations={formations} onAddFormation={handleAddFormation} wizLibrary={wizLibrary} setWizLibrary={setWizLibrary} positionNames={positionNames} passProtections={passProtections} setPassProtections={setPassProtections} runBlocking={runBlocking} setRunBlocking={setRunBlocking} />}
+                            {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} currentWeek={currentWeek} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} onUpdateWeek={handleUpdateWeek} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} playCategories={playCategories} onQuickAddPlay={handleQuickAddPlay} formations={formations} onAddFormation={handleAddFormation} wizLibrary={wizLibrary} setWizLibrary={setWizLibrary} positionNames={positionNames} passProtections={passProtections} setPassProtections={setPassProtections} runBlocking={runBlocking} setRunBlocking={setRunBlocking} addToNextSlotRef={addToNextSlotRef} />}
 
 
                             {
@@ -43606,6 +44140,7 @@
                                     teamLogo={teamLogo}
                                     currentWeek={currentWeek}
                                     onQuickAddPlay={handleQuickAddPlay}
+                                    addToNextSlotRef={addToNextSlotRef}
                                 />
                             )}
                             {view === 'pregame' && (
@@ -43656,6 +44191,7 @@
                                     drills={drills}
                                     teamLogo={teamLogo}
                                     currentWeek={currentWeek}
+                                    addToNextSlotRef={addToNextSlotRef}
                                 />
                             )}
                             {view === 'coach-app' && <PracticeCoachApp roster={roster} plans={currentWeek.practicePlans || {}} plays={plays} drills={drills} weeks={weeks} currentWeek={currentWeek} />}
@@ -43815,6 +44351,88 @@
                                 onClose={closePlayDetails}
                             />
                         )}
+
+                        {/* Global Playbook Sidebar (Persistent across all views) */}
+                        <div style={{
+                            position: 'fixed',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            zIndex: 100,
+                            overflow: 'visible'
+                        }}>
+                            <GamePlannerSideMenu
+                                isOpen={globalSidebarOpen}
+                                onToggle={setGlobalSidebarOpen}
+                                plays={plays}
+                                practicePlans={currentWeek?.practicePlans || {}}
+                                onQuickAddPlay={handleQuickAddPlay}
+                                weekStats={(() => {
+                                    // Calculate week stats for sidebar
+                                    const gamePlan = currentWeek?.offensiveGamePlan || {};
+                                    const allGamePlanPlayIds = new Set();
+                                    Object.values(gamePlan?.sets || {}).forEach(set => {
+                                        (set.playIds || []).forEach(item => {
+                                            const id = typeof item === 'object' ? item.id : item;
+                                            if (id) allGamePlanPlayIds.add(id);
+                                        });
+                                    });
+                                    Object.values(gamePlan?.miniScripts || {}).forEach(script => {
+                                        (script.playIds || []).forEach(item => {
+                                            const id = typeof item === 'object' ? item.id : item;
+                                            if (id) allGamePlanPlayIds.add(id);
+                                        });
+                                    });
+                                    const uniquePlaysCount = allGamePlanPlayIds.size;
+
+                                    // Total script slots
+                                    let totalScriptSlots = 0;
+                                    const plansList = Array.isArray(currentWeek?.practicePlans)
+                                        ? currentWeek.practicePlans
+                                        : Object.values(currentWeek?.practicePlans || {});
+                                    plansList.forEach(plan => {
+                                        (plan.segments || []).forEach(seg => {
+                                            if (seg.hasScript && seg.script) {
+                                                totalScriptSlots += seg.script.length;
+                                            }
+                                        });
+                                    });
+
+                                    return {
+                                        uniquePlaysCount,
+                                        newPlaysCount: 0, // Simplified for global view
+                                        totalScriptSlots
+                                    };
+                                })()}
+                                gamePlan={currentWeek?.offensiveGamePlan || {}}
+                                gamePlanLayouts={gamePlanLayouts}
+                                playBuckets={playBuckets}
+                                playCategories={playCategories}
+                                onAddSection={(playId, section) => {
+                                    // Add play to game plan section
+                                    const gamePlan = { ...(currentWeek?.offensiveGamePlan || {}) };
+                                    const sets = { ...gamePlan.sets };
+                                    if (!sets[section.setId]) {
+                                        sets[section.setId] = { id: section.setId, playIds: [] };
+                                    }
+                                    if (!sets[section.setId].playIds.includes(playId)) {
+                                        sets[section.setId].playIds = [...sets[section.setId].playIds, playId];
+                                    }
+                                    gamePlan.sets = sets;
+                                    handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', gamePlan);
+                                }}
+                                onUpdatePlay={handleUpdatePlay}
+                                onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek?.id, 'offensiveGamePlan', updated)}
+                                currentWeek={currentWeek}
+                                onNavigate={setView}
+                                onAddToNextSlot={(playId, play) => {
+                                    // Call the registered handler from the current view
+                                    if (addToNextSlotRef.current) {
+                                        addToNextSlotRef.current(playId, play);
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
                 </PlayDetailsModalContext.Provider>
             );

@@ -34,6 +34,15 @@
   - Game Plan tab: Call Sheet boxes and Matrix formations
   - Install tab: category-level and family-level buttons
 - [x] **Sidebar toggle closes right menu** - left sidebar arrow closes right-side play menu when expanding
+- [x] **Custom Tag Categories** - users can create their own tag categories for analytics
+  - Add/edit/delete custom categories
+  - Add/delete tags within custom categories
+  - Persisted via localStorage
+- [x] **Simplified TAG_CATEGORIES** - removed unused categories (Field Position, Down & Distance, Situation, Front Beaters, Play Type, Base Type)
+  - Remaining: Coverage Beaters, Motion, Primary Target, Action Types
+- [x] **PlayDetailsModal integration in TagSelector** - shows bucket/family assignment in Play Editor
+  - "Game Plan Assignment" indicator above tag chips
+  - Shows category name and bucket with color
 
 ### Data Model
 ```
@@ -54,10 +63,9 @@ I'm continuing work on the PlayChip component system for DoFO-OCSuite.
 Reference: PLAY_CHIP_SPEC.md
 
 Last session completed:
-- PracticeScriptTable reusable component (removed ~340 lines of duplicate code)
-- PlayChip rendering in script tables (right-click → PlayDetailsModal)
-- Add All to Script buttons in all 3 tabs (Play Usage, Game Plan, Install)
-- Sidebar toggle closes right-side play menu when expanding
+- Custom tag categories for play analytics (users can create their own)
+- Simplified built-in TAG_CATEGORIES (removed redundant ones)
+- PlayDetailsModal integration: shows bucket/family assignment in TagSelector section
 
 Next priorities (ask me which to tackle):
 1. Integrate PlayChipInput into existing views (Wristband Builder, Smart Call Sheet, Master Playbook)
