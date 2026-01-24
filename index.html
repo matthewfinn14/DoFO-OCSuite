@@ -18485,8 +18485,8 @@
                 if (!isAdmin || !window.db || activeTab !== 'access') return;
 
                 setSchoolsLoading(true);
+                // Don't use orderBy since older schools may not have createdAt
                 const unsubscribe = window.db.collection('schools')
-                    .orderBy('createdAt', 'desc')
                     .onSnapshot(async (snapshot) => {
                         const schoolsData = [];
                         for (const doc of snapshot.docs) {

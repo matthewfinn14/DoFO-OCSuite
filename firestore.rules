@@ -8,6 +8,10 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)/memberships/$(schoolId));
     }
 
+    function isSiteAdmin() {
+      return request.auth.token.email in ['admin@digitaldofo.com', 'matthewfinn14@gmail.com'];
+    }
+
     // --- USERS ---
     // Strictly private. Only the user can access their own profile.
     match /users/{userId} {
@@ -23,13 +27,17 @@ service cloud.firestore {
     match /schools/{schoolId} {
       // Creation: Any auth user can create a new school.
       allow create: if request.auth != null;
-      
-      // Read/Update/Delete: Must be a member of the school.
-      allow read, update, delete: if request.auth != null && isMemberOf(schoolId);
+
+      // Read: Site admins can read all schools, others must be members
+      allow read: if request.auth != null && (isSiteAdmin() || isMemberOf(schoolId));
+
+      // Update/Delete: Must be a member of the school.
+      allow update, delete: if request.auth != null && isMemberOf(schoolId);
 
       // Subcollections (roster, plays, practice_plans, etc.)
       match /{allChildren=**} {
-        allow read, write: if request.auth != null && isMemberOf(schoolId);
+        allow read: if request.auth != null && (isSiteAdmin() || isMemberOf(schoolId));
+        allow write: if request.auth != null && isMemberOf(schoolId);
       }
     }
 
