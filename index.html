@@ -35030,16 +35030,20 @@
                         }
 
                         // 1b. CHECK FOR CLAIMED DOMAINS (Auto-Join)
-                        const emailDomain = authUser.email.split('@')[1];
-                        if (emailDomain) {
+                        // Skip public email domains - only match custom/school domains
+                        const PUBLIC_EMAIL_DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'mail.com', 'protonmail.com'];
+                        const emailDomain = authUser.email.split('@')[1]?.toLowerCase();
+                        if (emailDomain && !PUBLIC_EMAIL_DOMAINS.includes(emailDomain)) {
+                            console.log("DEBUG: Checking domain match for:", emailDomain);
                             const domainQuery = await window.db.collection('schools')
-                                .where('domains', 'array-contains', emailDomain.toLowerCase())
+                                .where('domains', 'array-contains', emailDomain)
                                 .limit(1)
                                 .get();
 
                             if (!domainQuery.empty) {
                                 const sDoc = domainQuery.docs[0];
                                 const sData = sDoc.data();
+                                console.log("DEBUG: Found domain match for school:", sData.name);
                                 // Check if already a member
                                 const memCheck = await window.db.collection('users').doc(authUser.uid).collection('memberships').doc(sDoc.id).get();
                                 if (!memCheck.exists) {
@@ -35052,6 +35056,8 @@
                                     return;
                                 }
                             }
+                        } else {
+                            console.log("DEBUG: Skipping domain match for public email domain:", emailDomain);
                         }
 
                         // 1c. PRIMARY SETUP CHECK: DO I HAVE A MEMBERSHIP?
@@ -35096,8 +35102,9 @@
 
                         // 3. CHECK FOR ZERO MEMBERSHIPS (Orphaned User -> Check Access Request)
                         // If no invites, no domain match, and no legacy school ID, check access request status
+                        console.log("DEBUG: inviteData=", inviteData, "schoolId=", schoolId);
                         if (!inviteData && !schoolId) {
-                            console.log("User has no memberships. Checking access request status...");
+                            console.log("DEBUG: User has no memberships. Checking access request status...");
 
                             // Check for existing access request
                             try {
@@ -35161,10 +35168,26 @@
                             if (schoolDoc.exists && !schoolDoc.data().initialized) {
                                 console.log("School not initialized, showing wizard.");
                                 setSchoolSetupData({ showWizard: true, schoolId: schoolId });
+                                return;
                             }
                         }
+
+                        // FALLBACK: If we reach here with a schoolId but no valid setup, require access request
+                        // This catches edge cases where legacy config has stale data
+                        if (schoolId && !isPaying) {
+                            console.log("DEBUG: Has legacy schoolId but not paying. Requiring access request.");
+                            setAccessRequestStatus({ checked: true, status: null, data: null });
+                            return;
+                        }
+
+                        // Mark as checked even if nothing matched (should rarely happen)
+                        console.log("DEBUG: No setup conditions matched. Marking as checked.");
+                        setAccessRequestStatus({ checked: true, status: null, data: null });
+
                     } catch (err) {
                         console.error("Error checking school init:", err);
+                        // On error, show access request form as fallback
+                        setAccessRequestStatus({ checked: true, status: null, data: null });
                     }
                 };
                 checkSchoolInit();
@@ -38688,9 +38711,27 @@
 
             // LOADING STATE: Wait for access check to complete before showing anything
             // This prevents users from seeing the main app before access is verified
-            // Only show loading for users without an existing school (new users)
+            // Check if localStorage data belongs to current user (prevents cross-account data leakage)
+            const storedUserId = localStorage.getItem('hc_user_id');
             const hasExistingSchool = localStorage.getItem('hc_school_id');
-            if (!accessRequestStatus.checked && !schoolSetupData.showWizard && !hasExistingSchool) {
+            const isCurrentUserData = storedUserId === authUser.uid;
+
+            // If localStorage belongs to a different user, clear it
+            if (hasExistingSchool && !isCurrentUserData) {
+                console.log("DEBUG: Clearing stale localStorage from different user");
+                localStorage.removeItem('hc_school_id');
+                localStorage.removeItem('hc_school_name');
+                localStorage.removeItem('hc_user_id');
+                localStorage.removeItem('dofo_trial_expires');
+                localStorage.removeItem('dofo_trial_days');
+            }
+
+            // Store current user ID for future checks
+            if (!storedUserId || storedUserId !== authUser.uid) {
+                localStorage.setItem('hc_user_id', authUser.uid);
+            }
+
+            if (!accessRequestStatus.checked && !schoolSetupData.showWizard && !isCurrentUserData) {
                 return (
                     <div style={{
                         height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
