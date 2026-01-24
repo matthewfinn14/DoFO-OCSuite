@@ -12436,47 +12436,6 @@
                                     updateSegment={updateSegment}
                                 />
                             )}
-                            {showSideMenu && (
-                                <GamePlannerSideMenu
-                                    plays={plays}
-                                    practicePlans={plans}
-                                    isOpen={showSideMenu}
-                                    onToggle={() => setShowSideMenu(!showSideMenu)}
-                                    weekStats={typeof weeks !== 'undefined' && currentWeek ? weeks.find(w => w.id === currentWeek.id) : null}
-                                    gamePlan={gamePlan}
-                                    gamePlanLayouts={gamePlanLayouts}
-                                    playBuckets={typeof playBuckets !== 'undefined' ? playBuckets : []}
-                                    playCategories={typeof playCategories !== 'undefined' ? playCategories : []}
-                                    onUpdatePlay={onUpdatePlay}
-                                    onUpdateGamePlan={onUpdateGamePlan}
-                                    currentWeek={currentWeek}
-                                    onQuickAddPlay={(play) => {
-                                        // Quick add logic for script mode (might need to infer segment?)
-                                        // In script mode, all segments are visible.
-                                        // But typically user selects a segment to edit?
-                                        // Script view here seems to just LIST segments.
-                                        // If there is no 'selectedSegmentId' in this mode, Quick Add might not work directly unless we select a segment.
-                                        // However, the props are required.
-                                        if (selectedSegmentId && selectedSegmentId !== 'WARMUP') {
-                                            const seg = plan.segments.find(s => s.id === selectedSegmentId);
-                                            if (seg) {
-                                                const newItem = {
-                                                    id: Date.now().toString(),
-                                                    playId: play.id,
-                                                    playName: play.name,
-                                                    concept: play.conceptFamily || '',
-                                                    situation: seg.situation || '',
-                                                    hash: '',
-                                                    notes: ''
-                                                };
-                                                const currentScript = Array.isArray(seg.script) ? seg.script : [];
-                                                const newScript = [...currentScript, newItem];
-                                                updateSegment(seg.id, 'script', newScript);
-                                            }
-                                        }
-                                    }}
-                                />
-                            )}
                         </div>
                     </div>
                 );
@@ -13732,39 +13691,6 @@
                                 </div>
                             ))}
                         </div>
-                        {/* Right: Scripts Sidebar */}
-                        <GamePlannerSideMenu
-                            plays={plays}
-                            practicePlans={plans}
-                            isOpen={showSideMenu}
-                            onToggle={() => setShowSideMenu(!showSideMenu)}
-                            weekStats={typeof weeks !== 'undefined' && currentWeek ? weeks.find(w => w.id === currentWeek.id) : null}
-                            gamePlan={gamePlan}
-                            gamePlanLayouts={gamePlanLayouts}
-                            playBuckets={typeof playBuckets !== 'undefined' ? playBuckets : []}
-                            playCategories={typeof playCategories !== 'undefined' ? playCategories : []}
-                            onUpdatePlay={onUpdatePlay}
-                            currentWeek={currentWeek}
-                            onQuickAddPlay={(play) => {
-                                if (selectedSegmentId && selectedSegmentId !== 'WARMUP') {
-                                    const seg = plan.segments.find(s => s.id === selectedSegmentId);
-                                    if (seg) {
-                                        const newItem = {
-                                            id: Date.now().toString(),
-                                            playId: play.id,
-                                            playName: play.name,
-                                            concept: play.conceptFamily || '',
-                                            situation: seg.situation || '',
-                                            hash: '',
-                                            notes: ''
-                                        };
-                                        const currentScript = Array.isArray(seg.script) ? seg.script : [];
-                                        const newScript = [...currentScript, newItem];
-                                        updateSegment(seg.id, 'script', newScript);
-                                    }
-                                }
-                            }}
-                        />
                     </div>
 
                     {/* Script View Modal */}
@@ -13981,21 +13907,6 @@
                                             );
                                         })()}
                                     </div>
-                                    <GamePlannerSideMenu
-                                        plays={plays}
-                                        practicePlans={plans}
-                                        onQuickAddPlay={onQuickAddPlay}
-                                        isOpen={showSideMenu}
-                                        onToggle={() => setShowSideMenu(!showSideMenu)}
-                                        weekStats={weekStats}
-                                        gamePlan={gamePlan}
-                                        gamePlanLayouts={gamePlanLayouts}
-                                        playBuckets={playBuckets}
-                                        playCategories={playCategories}
-                                        onAddSection={handleAddSection}
-                                        onUpdatePlay={onUpdatePlay}
-                                        currentWeek={currentWeek}
-                                    />
                                 </div>
                             </div>
                         </div>
@@ -33407,27 +33318,8 @@
                             {viewMode === 'priority' && renderPriorityPlays()}
                             {viewMode === 'staples' && renderStaples()}
                         </div>
-                        <div className="no-print">
-                            <GamePlannerSideMenu
-                                plays={plays}
-                                practicePlans={practicePlans}
-                                onQuickAddPlay={onQuickAddPlay}
-                                isOpen={showSideMenu}
-                                onToggle={handleToggleSideMenu}
-                                weekStats={weekStats}
-                                gamePlan={gamePlan}
-                                gamePlanLayouts={gamePlanLayouts}
-                                playBuckets={playBuckets}
-                                playCategories={playCategories}
-                                onAddSection={(newLayouts) => onUpdateLayouts(newLayouts)}
-                                onUpdatePlay={onUpdatePlay}
-                                onUpdateGamePlan={onUpdateGamePlan}
-                                currentWeek={currentWeek}
-                            />
-                        </div>
                     </div>
 
-                    {/* Play Selector Modal */}
                     {/* Play Selector Modal */}
                     {renderPlaySelector()}
                     {renderSectionConfigurationModal()}
@@ -37954,211 +37846,500 @@
             return play.wristbandSlot + suffix;
         };
 
-        const PracticeReportView = ({ weeks, plays, playSyntax = [], parsePlayName }) => {
-            const [selectedWeekIds, setSelectedWeekIds] = useState(['all']); // 'all' or array of IDs
-            const [filterTerm, setFilterTerm] = useState('');
+        const PracticeReportView = ({ weeks, plays, playSyntax = [], parsePlayName, currentWeek, playCategories = [], playBuckets = [], onUpdatePlans, onNavigate }) => {
+            const [selectedWeekId, setSelectedWeekId] = useState(currentWeek?.id || weeks[0]?.id);
+            const [addToScriptModal, setAddToScriptModal] = useState(null); // { playId, playName }
+            const [modalDay, setModalDay] = useState('Monday');
+            const [modalSegmentId, setModalSegmentId] = useState(null);
+            const [expandedCategories, setExpandedCategories] = useState({});
 
-            // Helper to get selected weeks
-            const getSelectedWeeks = () => {
-                if (selectedWeekIds.includes('all')) return weeks;
-                return weeks.filter(w => selectedWeekIds.includes(w.id));
-            };
+            // Get selected week
+            const selectedWeek = weeks.find(w => w.id === selectedWeekId) || currentWeek || weeks[0];
 
-            // Aggregation Logic
-            const reportData = useMemo(() => {
-                const activeWeeks = getSelectedWeeks();
-                const data = {
-                    totalPlays: 0,
-                    byPlayName: {}, // { name: count }
-                    byFormation: {},
-                    byTag: {},
-                    syntaxBreakdown: {} // { fieldId: { value: count } }
-                };
+            // Coverage Analysis
+            const coverageData = useMemo(() => {
+                if (!selectedWeek) return null;
 
-                // Initialize syntax breakdown
-                playSyntax.forEach(field => {
-                    data.syntaxBreakdown[field.id] = {};
+                // 1. Get all game plan play IDs
+                const gamePlanPlayIds = new Set();
+                const gamePlan = selectedWeek.offensiveGamePlan || {};
+
+                // Handle both array and object formats for sets
+                const sets = Array.isArray(gamePlan.sets) ? gamePlan.sets : Object.values(gamePlan.sets || {});
+                sets.forEach(set => {
+                    (set.playIds || set.assignedPlayIds || []).forEach(id => {
+                        const playId = typeof id === 'object' ? id.id : id;
+                        if (playId && playId !== 'GAP') gamePlanPlayIds.add(playId);
+                    });
                 });
 
-                activeWeeks.forEach(week => {
-                    if (!Array.isArray(week.practicePlans)) return;
-                    week.practicePlans.forEach(plan => {
-                        if (!plan.segments) return;
-                        plan.segments.forEach(seg => {
-                            if (seg.items) {
-                                seg.items.forEach(item => {
-                                    // Detect if item is likely a play script item
-                                    const rawName = item.playName || item.text || item.name || '';
-                                    if (!rawName) return;
+                // Also check miniScripts
+                const miniScripts = Array.isArray(gamePlan.miniScripts) ? gamePlan.miniScripts : Object.values(gamePlan.miniScripts || {});
+                miniScripts.forEach(ms => {
+                    (ms.playIds || ms.assignedPlayIds || []).forEach(id => {
+                        const playId = typeof id === 'object' ? id.id : id;
+                        if (playId && playId !== 'GAP') gamePlanPlayIds.add(playId);
+                    });
+                });
 
-                                    data.totalPlays++;
+                // 2. Count reps per play from this week's practice scripts
+                const weekReps = {};
+                const practicePlans = selectedWeek.practicePlans || {};
+                const daysData = Array.isArray(practicePlans) ? practicePlans : Object.values(practicePlans);
 
-                                    // 1. Play Name Count
-                                    data.byPlayName[rawName] = (data.byPlayName[rawName] || 0) + 1;
-
-                                    // 2. Syntax Breakdown
-                                    let playParts = {};
-
-                                    // Strategy A: Use Play ID lookup
-                                    if (item.playId && plays) {
-                                        const masterPlay = plays.find(p => p.id === item.playId);
-                                        if (masterPlay && masterPlay.syntaxValues) {
-                                            playParts = masterPlay.syntaxValues;
-                                        }
-                                    }
-
-                                    // Strategy B: Fallback to Parser (if empty parts)
-                                    if (Object.keys(playParts).length === 0) {
-                                        // Use parsePlayName (L4400)
-                                        const parsed = parsePlayName(rawName);
-                                        // Map hardcoded results to syntax fields if possible
-                                        if (parsed.formations.length) playParts['formation'] = parsed.formations[0];
-                                    }
-
-                                    // Count parts
-                                    playSyntax.forEach(field => {
-                                        const val = playParts[field.id];
-                                        if (val) {
-                                            if (!data.syntaxBreakdown[field.id]) data.syntaxBreakdown[field.id] = {};
-                                            data.syntaxBreakdown[field.id][val] = (data.syntaxBreakdown[field.id][val] || 0) + 1;
-
-                                            // Special buckets for top-level stats
-                                            if (field.label.toLowerCase().includes('formation')) {
-                                                data.byFormation[val] = (data.byFormation[val] || 0) + 1;
-                                            }
-                                        }
-                                    });
-                                });
+                daysData.forEach(day => {
+                    (day.segments || []).forEach(seg => {
+                        (seg.script || []).forEach(row => {
+                            if (row.playId) {
+                                weekReps[row.playId] = (weekReps[row.playId] || 0) + 1;
+                            } else if (row.play) {
+                                // Try to find play by name
+                                const matchedPlay = plays.find(p => p.name === row.play);
+                                if (matchedPlay) {
+                                    weekReps[matchedPlay.id] = (weekReps[matchedPlay.id] || 0) + 1;
+                                }
                             }
                         });
                     });
                 });
 
-                return data;
-            }, [selectedWeekIds, weeks, plays, playSyntax]);
+                // 3. Count season-wide reps (historical - all previous weeks)
+                const seasonReps = {};
+                weeks.filter(w => (w.weekNumber || 0) < (selectedWeek.weekNumber || 999)).forEach(prevWeek => {
+                    const prevPlans = prevWeek.practicePlans || {};
+                    const prevDays = Array.isArray(prevPlans) ? prevPlans : Object.values(prevPlans);
+
+                    prevDays.forEach(day => {
+                        (day.segments || []).forEach(seg => {
+                            (seg.script || []).forEach(row => {
+                                if (row.playId) {
+                                    seasonReps[row.playId] = (seasonReps[row.playId] || 0) + 1;
+                                }
+                            });
+                        });
+                    });
+                });
+
+                // 4. Categorize plays
+                const needsAttention = [];
+                const lowReps = [];
+                const adequate = [];
+                const notOnGamePlan = [];
+
+                gamePlanPlayIds.forEach(playId => {
+                    const play = plays.find(p => p.id === playId);
+                    if (!play) return;
+
+                    const reps = weekReps[playId] || 0;
+                    const historicalReps = seasonReps[playId] || 0;
+                    const isNewInstall = (selectedWeek.newInstallIds || []).includes(playId);
+                    const category = playCategories.find(c => c.id === play.categoryId);
+                    const bucket = playBuckets.find(b => b.id === play.bucketId);
+
+                    const item = { play, reps, historicalReps, isNewInstall, category, bucket };
+
+                    if (reps === 0) needsAttention.push(item);
+                    else if (reps < 3) lowReps.push(item);
+                    else adequate.push(item);
+                });
+
+                // Find plays practiced but not on game plan
+                Object.keys(weekReps).forEach(playId => {
+                    if (!gamePlanPlayIds.has(playId)) {
+                        const play = plays.find(p => p.id === playId);
+                        if (play) {
+                            const category = playCategories.find(c => c.id === play.categoryId);
+                            const bucket = playBuckets.find(b => b.id === play.bucketId);
+                            notOnGamePlan.push({
+                                play,
+                                reps: weekReps[playId],
+                                historicalReps: seasonReps[playId] || 0,
+                                category,
+                                bucket
+                            });
+                        }
+                    }
+                });
+
+                // 5. Group by category for breakdown view
+                const byCategory = {};
+                playCategories.forEach(cat => {
+                    byCategory[cat.id] = { ...cat, totalPlays: 0, coveredPlays: 0, totalReps: 0, buckets: {} };
+                });
+                byCategory['unassigned'] = { id: 'unassigned', label: 'Unassigned', color: '#64748b', totalPlays: 0, coveredPlays: 0, totalReps: 0, buckets: {} };
+
+                gamePlanPlayIds.forEach(playId => {
+                    const play = plays.find(p => p.id === playId);
+                    if (!play) return;
+
+                    const catId = play.categoryId || 'unassigned';
+                    const bucketId = play.bucketId || 'other';
+                    const reps = weekReps[playId] || 0;
+
+                    if (!byCategory[catId]) byCategory[catId] = byCategory['unassigned'];
+                    if (!byCategory[catId].buckets[bucketId]) {
+                        const bucket = playBuckets.find(b => b.id === bucketId);
+                        byCategory[catId].buckets[bucketId] = { id: bucketId, label: bucket?.label || 'Other', plays: [], totalReps: 0 };
+                    }
+
+                    byCategory[catId].buckets[bucketId].plays.push({ play, reps });
+                    byCategory[catId].buckets[bucketId].totalReps += reps;
+                    byCategory[catId].totalPlays++;
+                    byCategory[catId].totalReps += reps;
+                    if (reps > 0) byCategory[catId].coveredPlays++;
+                });
+
+                const practicedFromGamePlan = Object.keys(weekReps).filter(id => gamePlanPlayIds.has(id)).length;
+
+                return {
+                    gamePlanCount: gamePlanPlayIds.size,
+                    practicedCount: practicedFromGamePlan,
+                    coveragePercent: gamePlanPlayIds.size > 0 ? Math.round((practicedFromGamePlan / gamePlanPlayIds.size) * 100) : 0,
+                    needsAttention,
+                    lowReps,
+                    adequate,
+                    notOnGamePlan,
+                    byCategory,
+                    totalWeekReps: Object.values(weekReps).reduce((a, b) => a + b, 0)
+                };
+            }, [selectedWeekId, selectedWeek, weeks, plays, playCategories, playBuckets]);
+
+            // Get available segments for Add to Script modal
+            const getAvailableSegments = (day) => {
+                const plans = selectedWeek?.practicePlans || {};
+                const dayPlan = Array.isArray(plans) ? plans.find(p => p.day === day) : plans[day];
+                if (!dayPlan) return [];
+                return (dayPlan.segments || []).filter(s => s.hasScript);
+            };
+
+            // Handle Add to Script
+            const handleAddToScript = () => {
+                if (!addToScriptModal || !modalSegmentId || !onUpdatePlans) return;
+
+                const plans = { ...(selectedWeek?.practicePlans || {}) };
+                const dayPlan = Array.isArray(plans) ? plans.find(p => p.day === modalDay) : plans[modalDay];
+                if (!dayPlan) return;
+
+                const segmentIndex = (dayPlan.segments || []).findIndex(s => s.id === modalSegmentId);
+                if (segmentIndex === -1) return;
+
+                const segment = dayPlan.segments[segmentIndex];
+                const script = [...(segment.script || [])];
+
+                // Find first empty slot
+                const emptyIndex = script.findIndex(row => !row.play && !row.playId);
+                if (emptyIndex === -1) {
+                    alert('No empty slots available in this segment');
+                    return;
+                }
+
+                const play = plays.find(p => p.id === addToScriptModal.playId);
+                script[emptyIndex] = { ...script[emptyIndex], play: play?.name || '', playId: addToScriptModal.playId };
+
+                const updatedSegments = [...dayPlan.segments];
+                updatedSegments[segmentIndex] = { ...segment, script };
+
+                if (Array.isArray(plans)) {
+                    const dayIndex = plans.findIndex(p => p.day === modalDay);
+                    plans[dayIndex] = { ...dayPlan, segments: updatedSegments };
+                } else {
+                    plans[modalDay] = { ...dayPlan, segments: updatedSegments };
+                }
+
+                onUpdatePlans(plans);
+                setAddToScriptModal(null);
+            };
+
+            // Play row renderer
+            const renderPlayRow = (item, showAddButton = true) => (
+                <div key={item.play.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0.5rem 0.75rem',
+                    borderBottom: '1px solid var(--border)',
+                    gap: '0.5rem'
+                }}>
+                    <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: item.reps === 0 ? '#ef4444' : item.reps < 3 ? '#f59e0b' : '#10b981',
+                        flexShrink: 0
+                    }} />
+                    <div style={{ flex: 1, fontWeight: '500', fontSize: '0.9rem' }}>{item.play.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', minWidth: '70px' }}>
+                        {item.category?.label || item.bucket?.label || '-'}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', minWidth: '50px', textAlign: 'center', color: item.reps === 0 ? '#ef4444' : item.reps < 3 ? '#f59e0b' : '#10b981' }}>
+                        {item.reps} rep{item.reps !== 1 ? 's' : ''}
+                    </div>
+                    {item.isNewInstall && (
+                        <span style={{ fontSize: '0.65rem', background: '#fbbf24', color: '#000', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>NEW</span>
+                    )}
+                    {item.historicalReps > 0 && (
+                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Season: {item.historicalReps}</span>
+                    )}
+                    {showAddButton && onUpdatePlans && (
+                        <button
+                            onClick={() => setAddToScriptModal({ playId: item.play.id, playName: item.play.name })}
+                            style={{
+                                padding: '4px 8px',
+                                fontSize: '0.7rem',
+                                background: '#3b82f6',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            + Add
+                        </button>
+                    )}
+                </div>
+            );
+
+            if (!coverageData) return <div style={{ padding: '2rem' }}>Loading...</div>;
 
             return (
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem', overflow: 'hidden' }}>
-                    {/* Header & Filters */}
-                    <div className="card" style={{ padding: '1.5rem' }}>
+                    {/* Header */}
+                    <div className="card" style={{ padding: '1rem 1.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                             <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icon name="FileBarChart" size={24} />
-                                Practice Reps Report
+                                <Icon name="ClipboardCheck" size={24} />
+                                Practice Coverage Report
                             </h2>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <select
                                     className="form-input"
-                                    value={selectedWeekIds.includes('all') ? 'all' : selectedWeekIds[0]} // Simplified for single select UI, but logic supports multi
-                                    onChange={(e) => setSelectedWeekIds(e.target.value === 'all' ? ['all'] : [e.target.value])}
+                                    value={selectedWeekId}
+                                    onChange={(e) => setSelectedWeekId(e.target.value)}
+                                    style={{ minWidth: '180px' }}
                                 >
-                                    <option value="all">All Weeks</option>
                                     {weeks.map(w => (
-                                        <option key={w.id} value={w.id}>{w.name}</option>
+                                        <option key={w.id} value={w.id}>
+                                            {w.name}{w.opponent ? ` vs. ${w.opponent}` : ''}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
                         </div>
 
                         {/* Summary Stats */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-                            <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Total Reps</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{reportData.totalPlays}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                            <div style={{ background: '#3b82f6', padding: '1rem', borderRadius: '8px', color: 'white' }}>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>Game Plan</div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{coverageData.gamePlanCount}</div>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>plays</div>
+                            </div>
+                            <div style={{ background: '#10b981', padding: '1rem', borderRadius: '8px', color: 'white' }}>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>Practiced</div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{coverageData.practicedCount}</div>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>plays covered</div>
                             </div>
                             <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Unique Plays</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{Object.keys(reportData.byPlayName).length}</div>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Coverage</div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{coverageData.coveragePercent}%</div>
+                                <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', marginTop: '4px' }}>
+                                    <div style={{ height: '100%', width: `${coverageData.coveragePercent}%`, background: coverageData.coveragePercent >= 90 ? '#10b981' : coverageData.coveragePercent >= 70 ? '#f59e0b' : '#ef4444', borderRadius: '3px' }} />
+                                </div>
+                            </div>
+                            <div style={{ background: coverageData.needsAttention.length > 0 ? '#fef2f2' : '#f0fdf4', padding: '1rem', borderRadius: '8px', border: `1px solid ${coverageData.needsAttention.length > 0 ? '#fecaca' : '#bbf7d0'}` }}>
+                                <div style={{ fontSize: '0.8rem', color: coverageData.needsAttention.length > 0 ? '#dc2626' : '#16a34a' }}>Needs Work</div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: coverageData.needsAttention.length > 0 ? '#dc2626' : '#16a34a' }}>{coverageData.needsAttention.length}</div>
+                                <div style={{ fontSize: '0.75rem', color: coverageData.needsAttention.length > 0 ? '#dc2626' : '#16a34a' }}>plays w/ 0 reps</div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Report Body */}
-                    <div style={{ display: 'flex', gap: '1rem', flex: 1, overflow: 'hidden' }}>
-                        {/* Column 1: Syntax Breakdown */}
-                        <div className="card" style={{ width: '300px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                            <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold' }}>By Concept / Tag</div>
-                            <div style={{ overflowY: 'auto', padding: '1rem' }}>
-                                {playSyntax.map(field => {
-                                    const counts = reportData.syntaxBreakdown[field.id] || {};
-                                    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-                                    if (sorted.length === 0) return null;
+                    {/* Main Content */}
+                    <div style={{ flex: 1, display: 'flex', gap: '1rem', overflow: 'hidden' }}>
+                        {/* Left Column - Alerts */}
+                        <div style={{ width: '50%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
+                            {/* Needs Attention */}
+                            {coverageData.needsAttention.length > 0 && (
+                                <div className="card" style={{ flex: coverageData.lowReps.length > 0 ? 1 : 2, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', background: '#fef2f2', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="AlertTriangle" size={18} color="#dc2626" />
+                                        <span style={{ fontWeight: 'bold', color: '#dc2626' }}>NEEDS ATTENTION</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#dc2626' }}>({coverageData.needsAttention.length} plays with 0 reps)</span>
+                                    </div>
+                                    <div style={{ overflowY: 'auto', flex: 1 }}>
+                                        {coverageData.needsAttention.map(item => renderPlayRow(item))}
+                                    </div>
+                                </div>
+                            )}
 
-                                    return (
-                                        <div key={field.id} style={{ marginBottom: '1.5rem' }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '0.5rem' }}>
-                                                {field.label}
-                                            </div>
-                                            {sorted.map(([val, count]) => (
-                                                <div key={val} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                                                    <span>{val}</span>
-                                                    <span style={{ fontWeight: 'bold', background: 'rgba(0,0,0,0.05)', padding: '0 6px', borderRadius: '4px' }}>{count}</span>
+                            {/* Low Reps */}
+                            {coverageData.lowReps.length > 0 && (
+                                <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', background: '#fffbeb', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="AlertCircle" size={18} color="#d97706" />
+                                        <span style={{ fontWeight: 'bold', color: '#d97706' }}>LOW REPS</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#d97706' }}>(1-2 reps, standard is 3)</span>
+                                    </div>
+                                    <div style={{ overflowY: 'auto', flex: 1 }}>
+                                        {coverageData.lowReps.map(item => renderPlayRow(item))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* All Good State */}
+                            {coverageData.needsAttention.length === 0 && coverageData.lowReps.length === 0 && (
+                                <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                                    <Icon name="CheckCircle" size={48} color="#10b981" />
+                                    <div style={{ marginTop: '1rem', fontSize: '1.1rem', fontWeight: 'bold', color: '#10b981' }}>Great Coverage!</div>
+                                    <div style={{ color: '#64748b' }}>All game plan plays have adequate reps.</div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right Column - Category Breakdown & Not on Game Plan */}
+                        <div style={{ width: '50%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
+                            {/* Category Breakdown */}
+                            <div className="card" style={{ flex: 2, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold' }}>
+                                    By Category
+                                </div>
+                                <div style={{ overflowY: 'auto', flex: 1, padding: '0.5rem' }}>
+                                    {Object.values(coverageData.byCategory).filter(cat => cat.totalPlays > 0).map(cat => (
+                                        <div key={cat.id} style={{ marginBottom: '0.5rem', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                            <div
+                                                onClick={() => setExpandedCategories(prev => ({ ...prev, [cat.id]: !prev[cat.id] }))}
+                                                style={{
+                                                    padding: '0.6rem 0.75rem',
+                                                    background: cat.color || '#64748b',
+                                                    color: 'white',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.8rem' }}>{cat.label}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    <span style={{ fontSize: '0.75rem' }}>{cat.coveredPlays}/{cat.totalPlays} covered</span>
+                                                    <span style={{ fontSize: '0.75rem' }}>{cat.totalReps} reps</span>
+                                                    <Icon name={expandedCategories[cat.id] ? "ChevronDown" : "ChevronRight"} size={16} color="white" />
                                                 </div>
-                                            ))}
+                                            </div>
+                                            {expandedCategories[cat.id] && (
+                                                <div style={{ background: '#f8fafc' }}>
+                                                    {Object.values(cat.buckets).map(bucket => (
+                                                        <div key={bucket.id} style={{ padding: '0.4rem 0.75rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', fontSize: '0.85rem' }}>
+                                                            <span style={{
+                                                                width: '8px',
+                                                                height: '8px',
+                                                                borderRadius: '50%',
+                                                                background: bucket.totalReps === 0 ? '#ef4444' : bucket.totalReps < bucket.plays.length * 3 ? '#f59e0b' : '#10b981',
+                                                                marginRight: '8px'
+                                                            }} />
+                                                            <span style={{ flex: 1 }}>{bucket.label}</span>
+                                                            <span style={{ color: '#64748b', marginRight: '8px' }}>{bucket.plays.length} play{bucket.plays.length !== 1 ? 's' : ''}</span>
+                                                            <span style={{ fontWeight: 'bold', color: bucket.totalReps === 0 ? '#ef4444' : bucket.totalReps < bucket.plays.length * 3 ? '#f59e0b' : '#10b981' }}>
+                                                                {bucket.totalReps} reps
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Not on Game Plan */}
+                            {coverageData.notOnGamePlan.length > 0 && (
+                                <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', background: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="FileQuestion" size={18} color="#64748b" />
+                                        <span style={{ fontWeight: 'bold', color: '#64748b' }}>NOT ON GAME PLAN</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>(practiced but not in game plan)</span>
+                                    </div>
+                                    <div style={{ overflowY: 'auto', flex: 1 }}>
+                                        {coverageData.notOnGamePlan.map(item => renderPlayRow(item, false))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Add to Script Modal */}
+                    {addToScriptModal && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                            <div className="card" style={{ width: '400px', padding: '1.5rem' }}>
+                                <h3 style={{ margin: '0 0 1rem 0' }}>Add "{addToScriptModal.playName}" to Script</h3>
+
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.9rem' }}>Day</label>
+                                    <select
+                                        className="form-input"
+                                        value={modalDay}
+                                        onChange={(e) => {
+                                            setModalDay(e.target.value);
+                                            setModalSegmentId(null);
+                                        }}
+                                        style={{ width: '100%' }}
+                                    >
+                                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                                            <option key={day} value={day}>{day}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.9rem' }}>Segment</label>
+                                    <select
+                                        className="form-input"
+                                        value={modalSegmentId || ''}
+                                        onChange={(e) => setModalSegmentId(e.target.value)}
+                                        style={{ width: '100%' }}
+                                    >
+                                        <option value="">Select segment...</option>
+                                        {getAvailableSegments(modalDay).map(seg => (
+                                            <option key={seg.id} value={seg.id}>{seg.type || seg.name || 'Segment'}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {modalSegmentId && (() => {
+                                    const segments = getAvailableSegments(modalDay);
+                                    const seg = segments.find(s => s.id === modalSegmentId);
+                                    const emptySlots = (seg?.script || []).filter(r => !r.play && !r.playId).length;
+                                    return (
+                                        <div style={{ padding: '0.75rem', background: '#f0fdf4', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem', color: '#16a34a' }}>
+                                            {emptySlots > 0 ? `${emptySlots} empty slot${emptySlots !== 1 ? 's' : ''} available` : 'No empty slots - play will be added to a new row'}
                                         </div>
                                     );
-                                })}
+                                })()}
+
+                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                    <button
+                                        onClick={() => setAddToScriptModal(null)}
+                                        style={{ padding: '0.5rem 1rem', background: '#e2e8f0', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleAddToScript}
+                                        disabled={!modalSegmentId}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            background: modalSegmentId ? '#3b82f6' : '#94a3b8',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: modalSegmentId ? 'pointer' : 'not-allowed',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        Add to Script
+                                    </button>
+                                </div>
                             </div>
                         </div>
-
-                        {/* Column 2: Play List */}
-                        <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                            <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontWeight: 'bold' }}>Play Volume</span>
-                                <input
-                                    className="form-input"
-                                    placeholder="Search..."
-                                    value={filterTerm}
-                                    onChange={e => setFilterTerm(e.target.value)}
-                                    style={{ width: '200px', fontSize: '0.9rem', padding: '0.4rem' }}
-                                />
-                            </div>
-                            <div style={{ overflowY: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--background)' }}>
-                                            <th style={{ textAlign: 'left', padding: '0.75rem', position: 'sticky', top: 0, background: 'var(--background)' }}>Play Call</th>
-                                            {playSyntax.map(f => (
-                                                <th key={f.id} style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.8rem', position: 'sticky', top: 0, background: 'var(--background)' }}>{f.label}</th>
-                                            ))}
-                                            <th style={{ textAlign: 'center', padding: '0.75rem', width: '60px', position: 'sticky', top: 0, background: 'var(--background)' }}>Reps</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.entries(reportData.byPlayName)
-                                            .sort((a, b) => b[1] - a[1])
-                                            .filter(([name]) => name.toLowerCase().includes(filterTerm.toLowerCase()))
-                                            .map(([name, count]) => {
-                                                // Try to resolve play parts for display row (just grab from Master if possible, otherwise parsed)
-                                                let displayParts = {};
-                                                // Find ANY play with this name?
-                                                let matchedPlay = plays ? plays.find(p => p.name === name) : null;
-                                                if (matchedPlay && matchedPlay.syntaxValues) {
-                                                    displayParts = matchedPlay.syntaxValues;
-                                                } else {
-                                                    // Fallback parse
-                                                    const p = parsePlayName(name);
-                                                    if (p.formations.length) displayParts['formation'] = p.formations[0];
-                                                }
-
-                                                return (
-                                                    <tr key={name} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                        <td style={{ padding: '0.75rem', fontWeight: '500' }}>{name}</td>
-                                                        {playSyntax.map(f => (
-                                                            <td key={f.id} style={{ padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                                                {displayParts[f.id] || '-'}
-                                                            </td>
-                                                        ))}
-                                                        <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 'bold' }}>{count}</td>
-                                                    </tr>
-                                                );
-                                            })
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    )}
                 </div>
             );
         };
@@ -43630,7 +43811,17 @@
                             }
 
                             {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={currentWeek.wristbands || wbSettings} drills={drills} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} defaultWbSettings={getGlobalWbSettings()} defaultDepthChart={getGlobalDepthCharts()} defaultZonePhilosophies={getGlobalZonePhilosophies()} playCategories={playCategories} playBuckets={playBuckets} />}
-                            {view === 'practice-report' && <PracticeReportView weeks={weeks} plays={plays} playSyntax={playSyntax} parsePlayName={parsePlayName} />}
+                            {view === 'practice-report' && <PracticeReportView
+                                weeks={weeks}
+                                plays={plays}
+                                playSyntax={playSyntax}
+                                parsePlayName={parsePlayName}
+                                currentWeek={currentWeek}
+                                playCategories={playCategories}
+                                playBuckets={playBuckets}
+                                onUpdatePlans={(updated) => handleUpdateWeek(currentWeek.id, 'practicePlans', updated)}
+                                onNavigate={setView}
+                            />}
                             {view === 'game-plan' && <OffensiveGamePlan
                                 plays={plays}
                                 weekDate={currentWeek.date}
