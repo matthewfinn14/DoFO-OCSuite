@@ -1628,44 +1628,40 @@
         };
 
         const LoginScreen = () => {
-            const { login, loginWithGoogle } = useAuth(); // We need to expose signup from context or define it here if context is limited
-            // NOTE: useAuth returns { login, loginWithGoogle, ... }. We need to extend it or just use window.auth directly in component for now.
+            const { login, loginWithGoogle } = useAuth();
 
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [error, setError] = useState('');
             const [loading, setLoading] = useState(false);
-            const [loginMode, setLoginMode] = useState('coach'); // 'coach' or 'player'
-            const [isSignUp, setIsSignUp] = useState(false); // NEW: Toggle between Login and Signup
+            const [mode, setMode] = useState('login'); // 'login' or 'request'
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setError('');
                 setLoading(true);
                 try {
-                    if (isSignUp) {
-                        // CREATE NEW ACCOUNT
-                        localStorage.setItem('user_type', loginMode);
+                    if (mode === 'request') {
+                        // Create account - they'll be routed to AccessRequestForm after
                         await window.auth.createUserWithEmailAndPassword(email, password);
                     } else {
-                        // LOG IN EXISTING ACCOUNT
-                        await login(email, password, loginMode);
+                        // Log in existing account
+                        await login(email, password, 'coach');
                     }
                 } catch (err) {
-                    setError('Failed to ' + (isSignUp ? 'sign up: ' : 'log in: ') + err.message);
+                    setError(err.message);
                     setLoading(false);
                 }
             };
 
-            const handleGoogleLogin = async () => {
+            const handleGoogleAuth = async () => {
                 setError('');
                 setLoading(true);
                 try {
-                    await loginWithGoogle(loginMode);
+                    await loginWithGoogle('coach');
                 } catch (err) {
-                    console.error("Login Error:", err);
-                    alert("Login Error: " + err.message);
-                    setError('Failed to log in with Google: ' + err.message);
+                    console.error("Auth Error:", err);
+                    setError(err.message);
                     setLoading(false);
                 }
             };
@@ -1676,58 +1672,61 @@
                     background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
                 }}>
                     <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                        {/* Login Mode Toggle */}
+                        {/* Mode Toggle */}
                         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: '#0f172a', padding: '0.25rem', borderRadius: '8px' }}>
                             <button
-                                onClick={() => setLoginMode('coach')}
+                                onClick={() => setMode('login')}
                                 style={{
                                     flex: 1,
                                     padding: '0.75rem',
                                     borderRadius: '6px',
                                     border: 'none',
-                                    background: loginMode === 'coach' ? '#0ea5e9' : 'transparent',
+                                    background: mode === 'login' ? '#0ea5e9' : 'transparent',
                                     color: 'white',
-                                    fontWeight: loginMode === 'coach' ? 'bold' : 'normal',
+                                    fontWeight: mode === 'login' ? 'bold' : 'normal',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                Coach
+                                Sign In
                             </button>
                             <button
-                                onClick={() => setLoginMode('player')}
+                                onClick={() => setMode('request')}
                                 style={{
                                     flex: 1,
                                     padding: '0.75rem',
                                     borderRadius: '6px',
                                     border: 'none',
-                                    background: loginMode === 'player' ? '#10b981' : 'transparent',
+                                    background: mode === 'request' ? '#10b981' : 'transparent',
                                     color: 'white',
-                                    fontWeight: loginMode === 'player' ? 'bold' : 'normal',
+                                    fontWeight: mode === 'request' ? 'bold' : 'normal',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                Player
+                                Request Access
                             </button>
                         </div>
 
-                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', textAlign: 'center', color: loginMode === 'coach' ? '#38bdf8' : '#34d399' }}>
-                            {loginMode === 'coach' ? 'Coach Login' : 'Player Login'}
+                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', color: '#38bdf8' }}>
+                            {mode === 'login' ? 'Welcome Back' : 'Get Started with DoFO'}
                         </h1>
+                        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                            {mode === 'login' ? 'Sign in to your existing account' : 'Create an account to request access'}
+                        </p>
+
                         {error && <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
+
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>
-                                    {loginMode === 'coach' ? 'Email' : 'Player Email'}
-                                </label>
+                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>Email</label>
                                 <input
                                     type="email"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #475569', background: '#0f172a', color: 'white' }}
-                                    placeholder={loginMode === 'coach' ? 'coach@team.com' : 'player@team.com'}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #475569', background: '#0f172a', color: 'white', boxSizing: 'border-box' }}
+                                    placeholder="coach@school.edu"
                                 />
                             </div>
                             <div>
@@ -1737,7 +1736,7 @@
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #475569', background: '#0f172a', color: 'white' }}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #475569', background: '#0f172a', color: 'white', boxSizing: 'border-box' }}
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -1745,24 +1744,14 @@
                                 type="submit"
                                 disabled={loading}
                                 style={{
-                                    marginTop: '1rem', padding: '0.75rem', borderRadius: '6px', border: 'none',
-                                    background: loading ? '#475569' : (loginMode === 'coach' ? '#0ea5e9' : '#10b981'),
+                                    marginTop: '0.5rem', padding: '0.75rem', borderRadius: '6px', border: 'none',
+                                    background: loading ? '#475569' : (mode === 'login' ? '#0ea5e9' : '#10b981'),
                                     color: 'white', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
                             >
-                                {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
+                                {loading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Continue')}
                             </button>
                         </form>
-
-
-                        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                            <button
-                                onClick={() => setIsSignUp(!isSignUp)}
-                                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.9rem', cursor: 'pointer', textDecoration: 'underline' }}
-                            >
-                                {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
-                            </button>
-                        </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
                             <div style={{ flex: 1, height: '1px', background: '#475569' }}></div>
@@ -1771,7 +1760,7 @@
                         </div>
 
                         <button
-                            onClick={handleGoogleLogin}
+                            onClick={handleGoogleAuth}
                             disabled={loading}
                             style={{
                                 width: '100%',
@@ -1788,57 +1777,17 @@
                                 gap: '0.5rem'
                             }}
                         >
-                            {isSignUp ? 'Sign up with Google' : 'Sign in with Google'}
+                            {mode === 'login' ? 'Sign in with Google' : 'Continue with Google'}
                         </button>
 
-                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #334155' }}>
-                            <button
-                                onClick={async () => {
-                                    setError('');
-                                    setLoading(true);
-                                    try {
-                                        const timestamp = Date.now();
-                                        const demoEmail = `demo_${timestamp}@test.com`;
-                                        const demoPassword = `demo${timestamp}`;
-                                        await window.auth.createUserWithEmailAndPassword(demoEmail, demoPassword);
-                                        localStorage.setItem('is_demo_session', 'true');
-                                    } catch (err) {
-                                        console.error("Demo Error:", err);
-                                        setError('Demo failed: ' + err.message);
-                                        setLoading(false);
-                                    }
-                                }}
-                                disabled={loading}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.75rem',
-                                    borderRadius: '6px',
-                                    border: '1px dashed #6366f1',
-                                    background: 'rgba(99, 102, 241, 0.1)',
-                                    color: '#818cf8',
-                                    fontWeight: 'bold',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <Icon name="Zap" size={16} />
-                                Test Drive (Demo Mode)
-                            </button>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', marginTop: '0.5rem' }}>
-                                Creates a temporary school that self-destructs on logout.
-                            </div>
-                        </div>
-
-                        {loginMode === 'player' && (
+                        {mode === 'request' && (
                             <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px', fontSize: '0.85rem', color: '#6ee7b7', textAlign: 'center' }}>
                                 <Icon name="Info" size={14} style={{ display: 'inline', marginRight: '0.5rem' }} />
-                                Contact your coach if you need login credentials
+                                After creating your account, you'll fill out a brief form and we'll review your request.
                             </div>
                         )}
-                        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+
+                        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
                             <button
                                 type="button"
                                 onClick={() => {
@@ -1847,9 +1796,9 @@
                                     alert("Local data cleared. Please refresh the page.");
                                     window.location.reload();
                                 }}
-                                style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer' }}
+                                style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.75rem', textDecoration: 'underline', cursor: 'pointer' }}
                             >
-                                Reset Application Data (Fix Stuck State)
+                                Reset Application Data
                             </button>
                         </div>
                     </div>
