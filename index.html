@@ -118,9 +118,17 @@
             display: none !important;
         }
 
+        .print-only {
+            display: none !important;
+        }
+
         @media print {
             .print-only-text {
                 display: block !important;
+            }
+
+            .print-only {
+                display: flex !important;
             }
 
             @page {
@@ -139,6 +147,7 @@
             /* Print Styles */
             /* Hide UI Chrome */
             .sidebar,
+            .play-bank-sidebar,
             .app-toolbar,
             .print-preview-header,
             .hide-on-print,
@@ -238,6 +247,19 @@
                 padding: 0 !important;
             }
 
+            /* Depth chart print view - ensure content visible */
+            .depth-chart-print-view > div {
+                position: relative !important;
+                height: auto !important;
+                width: 100% !important;
+            }
+
+            .depth-chart-print-view h1 {
+                display: block !important;
+                text-align: center !important;
+                margin-bottom: 10px !important;
+            }
+
             /* Hide controls and checkboxes during print */
             @media print {
 
@@ -300,17 +322,54 @@
                 break-before: auto !important;
                 page-break-after: auto !important;
                 break-after: auto !important;
-                /* Keep header with content */
-                break-inside: avoid !important;
-                -webkit-column-break-inside: avoid !important;
-                margin-bottom: 0.5rem !important;
+                /* Allow sections to break across pages */
+                break-inside: auto !important;
+                -webkit-column-break-inside: auto !important;
+                margin-bottom: 0.25rem !important;
             }
 
-            /* Multi-column layout for sheet view content */
+            /* Hide empty rows in print */
+            .print-hide-empty {
+                display: none !important;
+            }
+
+            /* Single column layout for sheet view - sections span full width */
             .print-preview-content>div {
-                column-count: 2 !important;
-                column-gap: 1rem !important;
-                column-fill: auto !important;
+                width: 100% !important;
+            }
+
+            /* Sections span full page width, allow natural flow */
+            .call-sheet-section {
+                break-inside: auto !important;
+                width: 100% !important;
+                margin-bottom: 0.25rem !important;
+            }
+
+            /* Allow text to wrap in grid cells for print */
+            .call-sheet-section div[style*="grid"]>div {
+                white-space: normal !important;
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+            }
+
+            /* Default portrait orientation */
+            @page {
+                size: portrait;
+                margin: 0.4in;
+            }
+
+            /* Landscape orientation when class is applied */
+            .print-landscape {
+                width: 100% !important;
+            }
+
+            @page landscape {
+                size: landscape;
+                margin: 0.4in;
+            }
+
+            .print-preview-content.print-landscape {
+                page: landscape;
             }
 
             /* Reduce font sizes and padding for density */
@@ -777,11 +836,55 @@
             /* Hide all non-print elements */
             .wristband-spreadsheet-container,
             .sidebar,
+            .play-bank-sidebar,
             button,
             .nav-item,
             .top-nav,
-            .main-content>*:not(.wristband-print-container) {
+            .main-content>*:not(.wristband-print-container):not(.depth-view-container):not(.depth-chart-print-section) {
                 display: none !important;
+            }
+
+            /* Ensure depth chart sections show in print */
+            .depth-chart-print-section {
+                display: block !important;
+                page-break-after: always !important;
+            }
+
+            /* Override for depth chart view - ensure all content visible */
+            .depth-view-container,
+            .depth-view-container *,
+            .depth-chart-print-section *,
+            .depth-chart-print-view,
+            .depth-chart-print-view * {
+                visibility: visible !important;
+            }
+
+            .depth-view-container {
+                display: block !important;
+                position: static !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            /* Single depth chart print - hide editing view, show PrintView portal */
+            .depth-chart-container {
+                display: none !important;
+            }
+
+            .print-only-portal {
+                display: block !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                background: white !important;
+                z-index: 99999 !important;
+            }
+
+            .print-only-portal .depth-chart-print-view {
+                display: block !important;
+                background: white !important;
+                padding: 20px !important;
             }
 
             /* Print Preview specific styles */
@@ -2387,6 +2490,7 @@
                 case "XCircle": return <svg {...commonProps}><circle cx="12" cy="12" r="10" /><line x1="15" x2="9" y1="9" y2="15" /><line x1="9" x2="15" y1="9" y2="15" /></svg>;
 
                 case "BarChart2": return <svg {...commonProps}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>;
+                case "Landmark": return <svg {...commonProps}><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7" /><line x1="3" x2="21" y1="7" y2="7" /></svg>;
 
                 default:
                     // Fallback to text (Emoji or just text)
@@ -17882,7 +17986,7 @@
             );
         };
 
-        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout, positionNames = {}, onUpdatePositionNames, depthStrings = {}, onUpdateDepthStrings, depthRowCounts = {}, onUpdateDepthRowCounts, customPositions = {}, hiddenPositions = {}, forcePrintView = false }) => {
+        const DepthChart = ({ roster, depthChart, onUpdateDepthChart, chartType = 'OFFENSE', savedLayout = {}, onUpdateLayout, onResetLayout, positionNames = {}, onUpdatePositionNames, depthStrings = {}, onUpdateDepthStrings, depthRowCounts = {}, onUpdateDepthRowCounts, customPositions = {}, hiddenPositions = {}, forcePrintView = false, teamLogo, currentWeek }) => {
             // Derive base type and squad level
             const formattedType = chartType || 'OFFENSE';
             const baseChartType = formattedType.replace(/^(V|JV|J2|SCOUT)_/, '');
@@ -18060,6 +18164,9 @@
                 setShowFatigueConfig(false);
             };
 
+            // Zoom/Scale for editing
+            const [editZoom, setEditZoom] = useLocalStorage('depthChartZoom', 1);
+
             // Print Logic
             const [isPrinting, setIsPrinting] = useState(false);
 
@@ -18071,12 +18178,41 @@
                 }, 500);
             };
 
-            const PrintView = () => (
-                <div className="depth-chart-print-view" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-                    <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>{squadName} {chartTitles[baseChartType] || chartTitles['OFFENSE']} - Depth Chart</h1>
-                    <div style={{ position: 'relative', height: '600px', border: '1px solid #ccc' }}>
+            const PrintView = () => {
+                const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
+                const opponentTitle = currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : '';
+
+                return (
+                <div className="depth-chart-print-view" style={{ padding: '20px', fontFamily: 'Arial, sans-serif', background: '#fff', color: '#000' }}>
+                    {/* Print Header with Logo, Week, Opponent */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '1rem',
+                        paddingBottom: '0.5rem',
+                        borderBottom: '2px solid black'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {teamLogo && (teamLogo.startsWith('http') || teamLogo.startsWith('data:')) ? (
+                                <img src={teamLogo} alt="Logo" style={{ height: '50px', width: 'auto' }} />
+                            ) : teamLogo ? (
+                                <span style={{ fontSize: '2rem' }}>{teamLogo}</span>
+                            ) : null}
+                            <div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'black' }}>
+                                    {weekTitle} {opponentTitle && `- ${opponentTitle}`}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right' }}>
+                            {new Date().toLocaleDateString()}
+                        </div>
+                    </div>
+                    <h1 style={{ textAlign: 'center', marginBottom: '20px', color: '#000' }}>{squadName} {chartTitles[baseChartType] || chartTitles['OFFENSE']} - Depth Chart</h1>
+                    <div style={{ position: 'relative', height: '600px', border: '2px solid #000', background: '#fff' }}>
                         {/* Field Lines */}
-                        <div style={{ position: 'absolute', top: '50px', left: 0, right: 0, height: '2px', background: '#ccc' }}></div>
+                        <div style={{ position: 'absolute', top: '50px', left: 0, right: 0, height: '2px', background: '#000' }}></div>
 
                         {positions.map(pos => (
                             <div
@@ -18087,19 +18223,20 @@
                                     top: `${pos.y}px`,
                                     width: '140px',
                                     transform: 'translateX(-50%)',
-                                    border: '1px solid #000',
+                                    border: '2px solid #000',
                                     padding: '5px',
                                     background: '#fff',
                                     borderRadius: '5px',
-                                    textAlign: 'center'
+                                    textAlign: 'center',
+                                    color: '#000'
                                 }}
                             >
-                                <div style={{ fontWeight: 'bold', borderBottom: '1px solid #ccc', marginBottom: '5px' }}>{pos.name}</div>
+                                <div style={{ fontWeight: 'bold', borderBottom: '2px solid #000', marginBottom: '5px', paddingBottom: '3px', color: '#000' }}>{pos.name}</div>
                                 {Array.from({ length: (depthRowCounts[pos.id] || 3) }).map((_, depth) => {
                                     const playerId = depthChart[pos.id]?.[depth];
                                     const player = getPlayer(playerId);
                                     return (
-                                        <div key={depth} style={{ fontSize: '12px', padding: '2px 0', borderBottom: '1px solid #eee' }}>
+                                        <div key={depth} style={{ fontSize: '12px', padding: '2px 0', borderBottom: '1px solid #000', color: '#000' }}>
                                             {player ? `#${player.number} ${player.name}` : '-'}
                                         </div>
                                     );
@@ -18109,6 +18246,7 @@
                     </div>
                 </div>
             );
+            };
 
             const handleMouseDown = (e, pos) => {
                 // Prevent drag if locked, clicking select, or editing
@@ -18215,6 +18353,26 @@
                                     <button className="btn btn-secondary" onClick={onResetLayout} title="Reset positions to default">Reset Layout</button>
                                 )}
                                 <button className="btn btn-secondary" onClick={handlePrint}>🖨️ Print</button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '1rem', padding: '0 12px', background: 'var(--surface)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Zoom</span>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => setEditZoom(Math.max(0.4, editZoom - 0.1))}
+                                        style={{ padding: '4px 8px', minWidth: '30px' }}
+                                    >−</button>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '600', minWidth: '45px', textAlign: 'center' }}>{Math.round(editZoom * 100)}%</span>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => setEditZoom(Math.min(1.5, editZoom + 0.1))}
+                                        style={{ padding: '4px 8px', minWidth: '30px' }}
+                                    >+</button>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => setEditZoom(1)}
+                                        style={{ padding: '4px 8px', fontSize: '0.7rem' }}
+                                        title="Reset to 100%"
+                                    >Reset</button>
+                                </div>
                             </div>
                         </div>
 
@@ -18229,11 +18387,38 @@
                             background: 'var(--surface)',
                             userSelect: 'none'
                         }}>
-                            {/* Field Background Hint */}
                             <div style={{
-                                position: 'absolute', top: '50px', left: '0', right: '0', height: '2px', background: 'var(--border)',
-                                display: 'flex', justifyContent: 'space-between', padding: '0 50px', minWidth: '1500px', pointerEvents: 'none'
-                            }}></div>
+                                transform: `scale(${editZoom})`,
+                                transformOrigin: 'top left',
+                                minWidth: `${1650 / editZoom}px`,
+                                minHeight: `${1300 / editZoom}px`
+                            }}>
+                            {/* Letter-sized Page Guide (scaled 1.5x for easier editing - prints at ~65% scale) */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '20px',
+                                left: '20px',
+                                width: '1584px',
+                                height: '1224px',
+                                border: '2px dashed rgba(100, 160, 255, 0.5)',
+                                borderRadius: '4px',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                pointerEvents: 'none',
+                                zIndex: 0
+                            }}>
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-24px',
+                                    left: '0',
+                                    fontSize: '0.7rem',
+                                    color: 'rgba(100, 160, 255, 0.7)',
+                                    fontWeight: '600',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em'
+                                }}>
+                                    📄 Page Guide (print at ~65% scale to fit letter size)
+                                </div>
+                            </div>
 
                             {positions.map(pos => {
                                 const isDragging = draggingId === pos.id;
@@ -18351,11 +18536,12 @@
                                     </div>
                                 );
                             })}
+                            </div>{/* end zoom wrapper */}
                         </div>
                     </div>
-                    {/* Print Portal */}
-                    {isPrinting && ReactDOM.createPortal(
-                        <div className="print-only-portal">
+                    {/* Print Portal - always rendered, hidden on screen, shown in print */}
+                    {ReactDOM.createPortal(
+                        <div className="print-only-portal depth-chart-single-print">
                             <PrintView />
                         </div>,
                         document.body
@@ -21345,28 +21531,32 @@
                 // Special handling for one_word in Strike 'Em Out view with category submenu
                 if (selectedSection === 'one_word') {
                     const setId = selectedOneWordCategory; // 'form_adj', 'motion', or 'tag'
-                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const foundSet = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === setId) : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId]) : null);
+                    const sectionPlayIds = foundSet?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
                 // Special handling for 2nd_xl with hash submenu
                 if (selectedSection === '2nd_xl') {
                     const setId = selected2ndXLHash === 'lh' ? '2nd_xl_lh' : '2nd_xl_rh';
-                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const foundSet = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === setId) : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId]) : null);
+                    const sectionPlayIds = foundSet?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
                 // Special handling for convert_short_med with distance submenu
                 if (selectedSection === 'convert_short_med') {
                     const setId = selectedConvertShortMed === 'short' ? '3rd_short' : '3rd_med';
-                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const foundSet = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === setId) : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId]) : null);
+                    const sectionPlayIds = foundSet?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
                 // Special handling for convert_long_xl with distance submenu
                 if (selectedSection === 'convert_long_xl') {
                     const setId = selectedConvertLongXL === 'long' ? '3rd_long' : '3rd_xl';
-                    const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
+                    const foundSet = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === setId) : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId]) : null);
+                    const sectionPlayIds = foundSet?.playIds || [];
                     return sectionPlayIds.map(id => plays.find(p => p.id === id)).filter(Boolean);
                 }
 
@@ -21385,10 +21575,11 @@
                     return plays.filter(p => p.formation && p.formation.includes(selectedSection));
                 }
 
-                const sectionPlayIds = (gamePlan?.sets || []).find(s => s.id === selectedSection)?.playIds || [];
+                const foundSetForSection = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === selectedSection) : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === selectedSection) || gamePlan.sets[selectedSection]) : null);
+                const sectionPlayIds = foundSetForSection?.playIds || [];
                 // Check mini scripts if not found in sets
                 if (sectionPlayIds.length === 0 && selectedSection.startsWith('ms_')) {
-                    const script = (gamePlan?.miniScripts || []).find(s => s.id === selectedSection);
+                    const script = Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts.find(s => s.id === selectedSection) : (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object' ? (Object.values(gamePlan.miniScripts).find(s => s.id === selectedSection) || gamePlan.miniScripts[selectedSection]) : null);
                     if (script) {
                         return script.playIds.map(item => {
                             const id = typeof item === 'object' ? item.id : item;
@@ -21565,7 +21756,8 @@
                                 }}>
                                     {(section.boxes || section.rows || []).map(cell => {
                                         const meta = { icon: 'Circle', ...cell }; // Fallback
-                                        const playCount = (gamePlan?.sets || []).find(s => s.id === cell.setId)?.playIds?.length || 0;
+                                        const foundCellSet = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === cell.setId) : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === cell.setId) || gamePlan.sets[cell.setId]) : null);
+                                        const playCount = foundCellSet?.playIds?.length || 0;
 
                                         return (
                                             <button
@@ -21806,7 +21998,7 @@
                                         padding: '0.5rem 1rem',
                                         borderRadius: '6px'
                                     }}>
-                                        {((gamePlan?.sets || []).find(s => s.id === 'player_touches')?.playIds?.length || 0)} {((gamePlan?.sets || []).find(s => s.id === 'player_touches')?.playIds?.length || 0) === 1 ? 'play' : 'plays'}
+                                        {(() => { const ptSet = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === 'player_touches') : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === 'player_touches') || gamePlan.sets['player_touches']) : null); const count = ptSet?.playIds?.length || 0; return `${count} ${count === 1 ? 'play' : 'plays'}`; })()}
                                     </div>
                                 </button>
                             </div>
@@ -22626,7 +22818,8 @@
                                                 </td>
                                                 {['base', 'convert', 'explosive'].map(category => {
                                                     const setId = `${selectedSection}_${down}_${category} `;
-                                                    const cellPlays = (gamePlan?.sets || []).find(s => s.id === setId)?.playIds || [];
+                                                    const foundCatSet = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === setId) : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId]) : null);
+                                                    const cellPlays = foundCatSet?.playIds || [];
                                                     const cellPlayObjects = cellPlays.map(item => {
                                                         if (typeof item === 'string') {
                                                             const play = plays.find(p => p.id === item);
@@ -25907,7 +26100,12 @@
                             layout.playTypes.forEach(pt => {
                                 layout.cols.forEach(col => {
                                     const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
-                                    const cellData = gamePlan?.sets?.find(s => s.id === setId);
+                                    let cellData = null;
+                                    if (Array.isArray(gamePlan?.sets)) {
+                                        cellData = gamePlan.sets.find(s => s.id === setId);
+                                    } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                                        cellData = Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
+                                    }
                                     if (cellData && cellData.assignedPlayIds) cellData.assignedPlayIds.forEach(id => playIds.add(id));
                                     else if (cellData && cellData.playIds) cellData.playIds.forEach(id => playIds.add(id));
                                 });
@@ -26443,7 +26641,7 @@
                                 gap: '6px'
                             }}>
                                 <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    {currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : 'No Week Selected'}
+                                    {currentWeek ? (currentWeek.opponent ? `vs. ${currentWeek.opponent}` : (currentWeek.name || `Week ${currentWeek.weekNumber || ''}`)) : 'No Week Selected'}
                                 </div>
                                 <div style={{
                                     display: 'flex',
@@ -26702,7 +26900,7 @@
 
 
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef, teamLogo }) => {
             const { openPlayDetails } = usePlayDetailsModal();
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
@@ -26720,6 +26918,9 @@
             // Side Menu State
             const [showSideMenu, setShowSideMenu] = useState(false);
 
+            // Box Editor Modal State (moved here for useEffect access)
+            const [editingBox, setEditingBox] = useState(null); // { sectionIdx, boxIdx, box }
+
             // Function to toggle side menu and collapse global sidebar
             const handleToggleSideMenu = (newState) => {
                 setShowSideMenu(newState);
@@ -26736,10 +26937,114 @@
             }, [appSidebarCollapsed, showSideMenu]);
 
             // Register "add to next slot" handler for sidebar
+            // Supports both single playId or array of playIds for batch additions
             useEffect(() => {
                 if (addToNextSlotRef) {
-                    addToNextSlotRef.current = (playId, play) => {
-                        // Add play to the selected set's quicklist, or first available set
+                    addToNextSlotRef.current = (playIdOrIds, play) => {
+                        // Support both single playId and array of playIds
+                        const playIds = Array.isArray(playIdOrIds) ? playIdOrIds : [playIdOrIds];
+
+                        // If a box is being edited in the modal, add to its script slots
+                        if (editingBox && gamePlanLayouts?.CALL_SHEET?.sections) {
+                            const { sectionIdx, boxIdx } = editingBox;
+                            const section = gamePlanLayouts.CALL_SHEET.sections[sectionIdx];
+                            if (section && section.boxes && section.boxes[boxIdx]) {
+                                const box = section.boxes[boxIdx];
+
+                                // Update layouts in a single update for all plays
+                                const newLayouts = JSON.parse(JSON.stringify(gamePlanLayouts));
+                                const targetBox = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+
+                                if (box.type === 'grid') {
+                                    // Grid box: add to assignedPlayIds
+                                    const cols = targetBox.gridColumns || 4;
+                                    const rowsCount = targetBox.gridRows || 5;
+                                    const totalSlots = cols * rowsCount;
+
+                                    if (!targetBox.assignedPlayIds) targetBox.assignedPlayIds = [];
+                                    while (targetBox.assignedPlayIds.length < totalSlots) {
+                                        targetBox.assignedPlayIds.push('GAP');
+                                    }
+
+                                    for (const pId of playIds) {
+                                        let added = false;
+                                        for (let i = 0; i < totalSlots; i++) {
+                                            if (!targetBox.assignedPlayIds[i] || targetBox.assignedPlayIds[i] === 'GAP') {
+                                                targetBox.assignedPlayIds[i] = pId;
+                                                added = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!added) break;
+                                    }
+                                } else {
+                                    // Script box: add to rows (left hash first, then right hash)
+                                    if (!targetBox.rows || targetBox.rows.length === 0) {
+                                        targetBox.rows = [{ id: Date.now(), label: '1', content: '', contentRight: '' }];
+                                    }
+
+                                    for (const pId of playIds) {
+                                        let added = false;
+
+                                        // Find first empty slot
+                                        for (let i = 0; i < targetBox.rows.length; i++) {
+                                            if (!targetBox.rows[i].content) {
+                                                targetBox.rows[i].content = pId;
+                                                added = true;
+                                                break;
+                                            }
+                                            if (!targetBox.rows[i].contentRight) {
+                                                targetBox.rows[i].contentRight = pId;
+                                                added = true;
+                                                break;
+                                            }
+                                        }
+
+                                        // If no empty slot, add new row
+                                        if (!added) {
+                                            targetBox.rows.push({
+                                                id: Date.now() + targetBox.rows.length,
+                                                label: (targetBox.rows.length + 1).toString(),
+                                                content: pId,
+                                                contentRight: ''
+                                            });
+                                        }
+                                    }
+                                }
+
+                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+
+                                // Also sync to game plan data model
+                                if (box.setId && onUpdateGamePlan && gamePlan) {
+                                    const allIds = [];
+                                    if (targetBox.assignedPlayIds) {
+                                        targetBox.assignedPlayIds.forEach(id => {
+                                            if (id && id !== 'GAP') allIds.push(id);
+                                        });
+                                    } else if (targetBox.rows) {
+                                        targetBox.rows.forEach(r => {
+                                            if (r.content) allIds.push(r.content);
+                                            if (r.contentRight) allIds.push(r.contentRight);
+                                        });
+                                    }
+
+                                    const collectionKey = box.type === 'script' ? 'miniScripts' : 'sets';
+                                    let collection = Array.isArray(gamePlan[collectionKey]) ? [...gamePlan[collectionKey]] : [];
+
+                                    const existingIndex = collection.findIndex(item => item.id === box.setId);
+                                    if (existingIndex >= 0) {
+                                        collection[existingIndex] = { ...collection[existingIndex], playIds: allIds };
+                                    } else {
+                                        collection.push({ id: box.setId, playIds: allIds, assignedPlayIds: [] });
+                                    }
+
+                                    onUpdateGamePlan({ ...gamePlan, [collectionKey]: collection });
+                                }
+                                return;
+                            }
+                        }
+
+                        // Fallback: Add plays to the selected set's quicklist, or first available set
                         const targetSetId = selectedSetId || (gamePlanLayouts?.CALL_SHEET?.sections?.[0]?.boxes?.[0]?.setId);
                         if (!targetSetId) return;
 
@@ -26750,8 +27055,15 @@
                         if (!sets[targetSetId].playIds) {
                             sets[targetSetId].playIds = [];
                         }
-                        if (!sets[targetSetId].playIds.includes(playId)) {
-                            sets[targetSetId].playIds = [...sets[targetSetId].playIds, playId];
+
+                        let changed = false;
+                        for (const pId of playIds) {
+                            if (!sets[targetSetId].playIds.includes(pId)) {
+                                sets[targetSetId].playIds = [...sets[targetSetId].playIds, pId];
+                                changed = true;
+                            }
+                        }
+                        if (changed) {
                             onUpdateGamePlan({ ...gamePlan, sets });
                         }
                     };
@@ -26759,7 +27071,7 @@
                 return () => {
                     if (addToNextSlotRef) addToNextSlotRef.current = null;
                 };
-            }, [addToNextSlotRef, selectedSetId, gamePlan, gamePlanLayouts, onUpdateGamePlan]);
+            }, [addToNextSlotRef, selectedSetId, gamePlan, gamePlanLayouts, onUpdateGamePlan, editingBox, onUpdateLayouts]);
 
             // For Wristband Autocomplete
             const [showWristband, setShowWristband] = useState(true);
@@ -26768,6 +27080,7 @@
             const [showPrintPreview, setShowPrintPreview] = useState(false); // Print Preview Toggle
             const [printPreviewTab, setPrintPreviewTab] = useState('staples'); // Selected tab for print preview
             const [printScale, setPrintScale] = useState(0.85); // Default to 85% for better fit
+            const [printOrientation, setPrintOrientation] = useState('portrait'); // portrait or landscape
 
             const effectiveBuckets = useMemo(() => {
                 if (playCategories && playCategories.length > 0) return playCategories;
@@ -27123,9 +27436,19 @@
 
             // Helper to get play objects for a set ID
             const getPlaysForSet = (setId) => {
-                let set = gamePlan?.sets?.find(s => s.id === setId);
+                let set = null;
+                // Handle sets as array or object
+                if (Array.isArray(gamePlan?.sets)) {
+                    set = gamePlan.sets.find(s => s.id === setId);
+                } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                    set = Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
+                }
                 if (!set && setId.startsWith('ms_')) {
-                    set = gamePlan?.miniScripts?.find(s => s.id === setId);
+                    if (Array.isArray(gamePlan?.miniScripts)) {
+                        set = gamePlan.miniScripts.find(s => s.id === setId);
+                    } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                        set = Object.values(gamePlan.miniScripts).find(s => s.id === setId) || gamePlan.miniScripts[setId];
+                    }
                 }
                 if (!set) return [];
                 return set.playIds.map((item, idx) => {
@@ -27158,11 +27481,21 @@
                 if (assignedIds && Array.isArray(assignedIds) && assignedIds.length > 0) {
                     rawIds = [...assignedIds];
                 } else {
-                    let set = gamePlan?.sets?.find(s => s.id === setId);
-                    if (!set && setId && setId.startsWith('ms_')) {
-                        set = gamePlan?.miniScripts?.find(s => s.id === setId);
+                    let set = null;
+                    // Handle sets as array or object
+                    if (Array.isArray(gamePlan?.sets)) {
+                        set = gamePlan.sets.find(s => s.id === setId);
+                    } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                        set = Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
                     }
-                    rawIds = set ? [...set.playIds] : [];
+                    if (!set && setId && setId.startsWith('ms_')) {
+                        if (Array.isArray(gamePlan?.miniScripts)) {
+                            set = gamePlan.miniScripts.find(s => s.id === setId);
+                        } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                            set = Object.values(gamePlan.miniScripts).find(s => s.id === setId) || gamePlan.miniScripts[setId];
+                        }
+                    }
+                    rawIds = set ? [...(set.playIds || [])] : [];
                 }
                 // Pad to 20
                 while (rawIds.length < limit) {
@@ -27198,11 +27531,21 @@
                     return;
                 }
 
-                let set = gamePlan?.sets?.find(s => s.id === setId);
-                if (!set && setId.startsWith('ms_')) {
-                    set = gamePlan?.miniScripts?.find(s => s.id === setId);
+                let set = null;
+                // Handle sets as array or object
+                if (Array.isArray(gamePlan?.sets)) {
+                    set = gamePlan.sets.find(s => s.id === setId);
+                } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                    set = Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
                 }
-                const rawIds = set ? [...set.playIds] : [];
+                if (!set && setId.startsWith('ms_')) {
+                    if (Array.isArray(gamePlan?.miniScripts)) {
+                        set = gamePlan.miniScripts.find(s => s.id === setId);
+                    } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                        set = Object.values(gamePlan.miniScripts).find(s => s.id === setId) || gamePlan.miniScripts[setId];
+                    }
+                }
+                const rawIds = set ? [...(set.playIds || [])] : [];
                 // Pad if needed
                 while (rawIds.length <= index) {
                     rawIds.push('GAP');
@@ -27216,7 +27559,12 @@
                     );
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
-                    const existingSet = gamePlan?.sets?.find(s => s.id === setId);
+                    let existingSet = null;
+                    if (Array.isArray(gamePlan?.sets)) {
+                        existingSet = gamePlan.sets.find(s => s.id === setId);
+                    } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                        existingSet = Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
+                    }
                     let newSets;
                     if (existingSet) {
                         newSets = (gamePlan?.sets || []).map(s => s.id === setId ? { ...s, playIds: rawIds } : s);
@@ -27237,11 +27585,21 @@
 
                 const currentGrid = getGridPlays(activeCellSetId);
                 // We need the raw IDs not objects to save
-                let set = gamePlan?.sets?.find(s => s.id === activeCellSetId);
-                if (!set && activeCellSetId.startsWith('ms_')) {
-                    set = gamePlan?.miniScripts?.find(s => s.id === activeCellSetId);
+                let set = null;
+                // Handle sets as array or object
+                if (Array.isArray(gamePlan?.sets)) {
+                    set = gamePlan.sets.find(s => s.id === activeCellSetId);
+                } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                    set = Object.values(gamePlan.sets).find(s => s.id === activeCellSetId) || gamePlan.sets[activeCellSetId];
                 }
-                const rawIds = set ? [...set.playIds] : [];
+                if (!set && activeCellSetId.startsWith('ms_')) {
+                    if (Array.isArray(gamePlan?.miniScripts)) {
+                        set = gamePlan.miniScripts.find(s => s.id === activeCellSetId);
+                    } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                        set = Object.values(gamePlan.miniScripts).find(s => s.id === activeCellSetId) || gamePlan.miniScripts[activeCellSetId];
+                    }
+                }
+                const rawIds = set ? [...(set.playIds || [])] : [];
                 // Pad local rawIds to ensure indices exist
                 while (rawIds.length <= Math.max(fromIndex, toIndex)) {
                     rawIds.push('GAP');
@@ -27261,7 +27619,12 @@
                     );
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
-                    const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
+                    let existingSet = null;
+                    if (Array.isArray(gamePlan?.sets)) {
+                        existingSet = gamePlan.sets.find(s => s.id === activeCellSetId);
+                    } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                        existingSet = Object.values(gamePlan.sets).find(s => s.id === activeCellSetId) || gamePlan.sets[activeCellSetId];
+                    }
                     let newSets;
                     if (existingSet) {
                         newSets = (gamePlan?.sets || []).map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
@@ -27280,11 +27643,21 @@
                     return;
                 }
 
-                let set = gamePlan?.sets?.find(s => s.id === activeCellSetId);
-                if (!set && activeCellSetId.startsWith('ms_')) {
-                    set = gamePlan?.miniScripts?.find(s => s.id === activeCellSetId);
+                let set = null;
+                // Handle sets as array or object
+                if (Array.isArray(gamePlan?.sets)) {
+                    set = gamePlan.sets.find(s => s.id === activeCellSetId);
+                } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                    set = Object.values(gamePlan.sets).find(s => s.id === activeCellSetId) || gamePlan.sets[activeCellSetId];
                 }
-                const rawIds = set ? [...set.playIds] : [];
+                if (!set && activeCellSetId.startsWith('ms_')) {
+                    if (Array.isArray(gamePlan?.miniScripts)) {
+                        set = gamePlan.miniScripts.find(s => s.id === activeCellSetId);
+                    } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                        set = Object.values(gamePlan.miniScripts).find(s => s.id === activeCellSetId) || gamePlan.miniScripts[activeCellSetId];
+                    }
+                }
+                const rawIds = set ? [...(set.playIds || [])] : [];
 
                 // Find first GAP or push
                 let insertIdx = rawIds.indexOf('GAP');
@@ -27305,7 +27678,12 @@
                     );
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
-                    const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
+                    let existingSet = null;
+                    if (Array.isArray(gamePlan?.sets)) {
+                        existingSet = gamePlan.sets.find(s => s.id === activeCellSetId);
+                    } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                        existingSet = Object.values(gamePlan.sets).find(s => s.id === activeCellSetId) || gamePlan.sets[activeCellSetId];
+                    }
                     let newSets;
                     if (existingSet) {
                         newSets = (gamePlan?.sets || []).map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
@@ -27317,11 +27695,21 @@
             }
 
             const handleGridRemove = (index) => {
-                let set = gamePlan?.sets?.find(s => s.id === activeCellSetId);
-                if (!set && activeCellSetId.startsWith('ms_')) {
-                    set = gamePlan?.miniScripts?.find(s => s.id === activeCellSetId);
+                let set = null;
+                // Handle sets as array or object
+                if (Array.isArray(gamePlan?.sets)) {
+                    set = gamePlan.sets.find(s => s.id === activeCellSetId);
+                } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                    set = Object.values(gamePlan.sets).find(s => s.id === activeCellSetId) || gamePlan.sets[activeCellSetId];
                 }
-                const rawIds = set ? [...set.playIds] : [];
+                if (!set && activeCellSetId && activeCellSetId.startsWith('ms_')) {
+                    if (Array.isArray(gamePlan?.miniScripts)) {
+                        set = gamePlan.miniScripts.find(s => s.id === activeCellSetId);
+                    } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                        set = Object.values(gamePlan.miniScripts).find(s => s.id === activeCellSetId) || gamePlan.miniScripts[activeCellSetId];
+                    }
+                }
+                const rawIds = set ? [...(set.playIds || [])] : [];
                 if (rawIds[index]) {
                     rawIds[index] = 'GAP';
                     // Save
@@ -27331,7 +27719,12 @@
                         );
                         onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                     } else {
-                        const existingSet = gamePlan?.sets?.find(s => s.id === activeCellSetId);
+                        let existingSet = null;
+                        if (Array.isArray(gamePlan?.sets)) {
+                            existingSet = gamePlan.sets.find(s => s.id === activeCellSetId);
+                        } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                            existingSet = Object.values(gamePlan.sets).find(s => s.id === activeCellSetId) || gamePlan.sets[activeCellSetId];
+                        }
                         let newSets;
                         if (existingSet) {
                             newSets = (gamePlan?.sets || []).map(s => s.id === activeCellSetId ? { ...s, playIds: rawIds } : s);
@@ -27346,28 +27739,77 @@
 
             // Helper to get the set object (or create if implicit)
             const getSet = (setId) => {
-                if (setId.startsWith('ms_')) {
-                    return gamePlan?.miniScripts?.find(s => s.id === setId);
+                if (setId && setId.startsWith('ms_')) {
+                    if (Array.isArray(gamePlan?.miniScripts)) {
+                        return gamePlan.miniScripts.find(s => s.id === setId);
+                    } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                        return Object.values(gamePlan.miniScripts).find(s => s.id === setId) || gamePlan.miniScripts[setId];
+                    }
+                    return null;
                 }
-                return gamePlan?.sets?.find(s => s.id === setId);
+                if (Array.isArray(gamePlan?.sets)) {
+                    return gamePlan.sets.find(s => s.id === setId);
+                } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                    return Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
+                }
+                return null;
             };
 
             const handleAddPlayToSet = (setId, playId) => {
                 if (setId.startsWith('ms_')) {
                     // Handle Mini Script Update
                     const newMiniScripts = (gamePlan?.miniScripts || []).map(s =>
-                        s.id === setId ? { ...s, playIds: [...s.playIds, playId] } : s
+                        s.id === setId ? { ...s, playIds: [...(s.playIds || []), playId] } : s
                     );
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
                     // Handle Standard Set Update
-                    const existingSet = gamePlan?.sets?.find(s => s.id === setId);
+                    let existingSet = null;
+                    if (Array.isArray(gamePlan?.sets)) {
+                        existingSet = gamePlan.sets.find(s => s.id === setId);
+                    } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                        existingSet = Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
+                    }
                     let newSets;
                     if (existingSet) {
-                        newSets = (gamePlan?.sets || []).map(s => s.id === setId ? { ...s, playIds: [...s.playIds, playId] } : s);
+                        newSets = (Array.isArray(gamePlan?.sets) ? gamePlan.sets : Object.values(gamePlan?.sets || {})).map(s => s.id === setId ? { ...s, playIds: [...(s.playIds || []), playId] } : s);
                     } else {
                         // Implicit creation for grid cells
-                        newSets = [...(gamePlan?.sets || []), { id: setId, name: setId, playIds: [playId] }];
+                        const currentSets = Array.isArray(gamePlan?.sets) ? gamePlan.sets : Object.values(gamePlan?.sets || {});
+                        newSets = [...currentSets, { id: setId, name: setId, playIds: [playId] }];
+                    }
+                    onUpdateGamePlan({ ...gamePlan, sets: newSets });
+                }
+            };
+
+            // Add play to Quick List (assignedPlayIds) - used when dragging from Play Bank
+            const handleAddToQuickList = (setId, playId) => {
+                if (setId.startsWith('ms_')) {
+                    // Handle Mini Script Update - add to assignedPlayIds (Quick List)
+                    let newMiniScripts = Array.isArray(gamePlan?.miniScripts) ? [...gamePlan.miniScripts] : [];
+                    const existingIdx = newMiniScripts.findIndex(s => s.id === setId);
+                    if (existingIdx >= 0) {
+                        const existing = newMiniScripts[existingIdx];
+                        // Don't add duplicates
+                        if (!(existing.assignedPlayIds || []).includes(playId)) {
+                            newMiniScripts[existingIdx] = { ...existing, assignedPlayIds: [...(existing.assignedPlayIds || []), playId] };
+                        }
+                    } else {
+                        newMiniScripts.push({ id: setId, name: setId, playIds: [], assignedPlayIds: [playId] });
+                    }
+                    onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
+                } else {
+                    // Handle Standard Set Update - add to assignedPlayIds (Quick List)
+                    let newSets = Array.isArray(gamePlan?.sets) ? [...gamePlan.sets] : Object.values(gamePlan?.sets || {});
+                    const existingIdx = newSets.findIndex(s => s.id === setId);
+                    if (existingIdx >= 0) {
+                        const existing = newSets[existingIdx];
+                        // Don't add duplicates
+                        if (!(existing.assignedPlayIds || []).includes(playId)) {
+                            newSets[existingIdx] = { ...existing, assignedPlayIds: [...(existing.assignedPlayIds || []), playId] };
+                        }
+                    } else {
+                        newSets = [...newSets, { id: setId, name: setId, playIds: [], assignedPlayIds: [playId] }];
                     }
                     onUpdateGamePlan({ ...gamePlan, sets: newSets });
                 }
@@ -27375,16 +27817,26 @@
 
             const handleRemovePlayFromSet = (setId, playId) => {
                 if (setId.startsWith('ms_')) {
-                    const existingScript = gamePlan?.miniScripts?.find(s => s.id === setId);
+                    let existingScript = null;
+                    if (Array.isArray(gamePlan?.miniScripts)) {
+                        existingScript = gamePlan.miniScripts.find(s => s.id === setId);
+                    } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                        existingScript = Object.values(gamePlan.miniScripts).find(s => s.id === setId) || gamePlan.miniScripts[setId];
+                    }
                     if (!existingScript) return;
-                    const newPlayIds = existingScript.playIds.filter(id => id !== playId);
-                    const newMiniScripts = (gamePlan?.miniScripts || []).map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                    const newPlayIds = (existingScript.playIds || []).filter(id => id !== playId);
+                    const newMiniScripts = (Array.isArray(gamePlan?.miniScripts) ? gamePlan.miniScripts : Object.values(gamePlan?.miniScripts || {})).map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                     onUpdateGamePlan({ ...gamePlan, miniScripts: newMiniScripts });
                 } else {
-                    const existingSet = gamePlan?.sets?.find(s => s.id === setId);
+                    let existingSet = null;
+                    if (Array.isArray(gamePlan?.sets)) {
+                        existingSet = gamePlan.sets.find(s => s.id === setId);
+                    } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                        existingSet = Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
+                    }
                     if (!existingSet) return;
-                    const newPlayIds = existingSet.playIds.filter(id => id !== playId);
-                    const newSets = (gamePlan?.sets || []).map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
+                    const newPlayIds = (existingSet.playIds || []).filter(id => id !== playId);
+                    const newSets = (Array.isArray(gamePlan?.sets) ? gamePlan.sets : Object.values(gamePlan?.sets || {})).map(s => s.id === setId ? { ...s, playIds: newPlayIds } : s);
                     onUpdateGamePlan({ ...gamePlan, sets: newSets });
                 }
             };
@@ -28425,19 +28877,16 @@
                         }}
                     >
                         {play ? (
-                            <div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', display: 'flex', alignItems: 'center' }}>
-                                <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{getPlayDisplayName(play)}</span>
-                                {play.staplesSlot && <span style={{ fontSize: '0.8em', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '3px', marginLeft: '4px', fontWeight: 'bold' }}>S:{play.staplesSlot}</span>}
-
+                            <div style={{ width: '100%', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0' }}>
+                                <span style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{getPlayDisplayName(play)}</span>
+                                {play.staplesSlot && <span style={{ fontSize: '0.6rem', background: '#fef3c7', color: '#b45309', padding: '1px 3px', borderRadius: '2px', fontWeight: 'bold', flexShrink: 0 }}>S:{play.staplesSlot}</span>}
                                 {renderWristbandInput && renderWristbandInput(play.id)}
-
                                 {!renderWristbandInput && play.wristbandSlot && (
-                                    <span style={{ fontSize: '0.8em', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '3px', marginLeft: '6px', fontWeight: 'bold' }}>
+                                    <span style={{ fontSize: '0.6rem', background: '#e0f2fe', color: '#0369a1', padding: '1px 3px', borderRadius: '2px', fontWeight: 'bold', flexShrink: 0 }}>
                                         {typeof getWristbandLabel === 'function' ? getWristbandLabel(play) : play.wristbandSlot + (play.isMiniScript || play.isWiz ? '' : 'T')}
                                     </span>
                                 )}
-
-                                {!isLocked && <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px', fontSize: '1.2em', lineHeight: '1' }} onClick={() => onUpdate(null)}>×</button>}
+                                {!isLocked && <button style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 2px', fontSize: '0.9em', lineHeight: '1', flexShrink: 0 }} onClick={() => onUpdate(null)}>×</button>}
                             </div>
                         ) : (
                             !isLocked && (
@@ -28895,8 +29344,6 @@
                 );
             };
 
-            const [editingBox, setEditingBox] = useState(null); // { sectionIdx, boxIdx }
-
             const renderBoxEditorModal = () => {
                 if (!editingBox) return null;
                 const { sectionIdx, boxIdx } = editingBox;
@@ -29055,12 +29502,12 @@
 
                 return (
                     <div style={{
-                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        position: 'fixed', top: 0, left: 0, right: '400px', bottom: 0,
                         backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }} onClick={() => setEditingBox(null)}>
                         <div style={{
-                            width: '95%', maxWidth: '1300px', maxHeight: '90vh',
+                            width: '95%', maxWidth: '1100px', maxHeight: '90vh',
                             background: 'white', borderRadius: '8px',
                             display: 'flex', flexDirection: 'column',
                             overflow: 'hidden'
@@ -29321,6 +29768,8 @@
                 const cols = box.gridColumns || 4;
                 const rowsCount = box.gridRows || 5;
                 const totalSlots = cols * rowsCount;
+                const gridTempos = box.gridTempos || {};
+                const protocolList = box.customTempos || PLAY_PROTOCOLS;
 
                 // Ensure headings match columns
                 let headings = box.gridHeadings || [];
@@ -29362,8 +29811,8 @@
                         )}
                         {isEditing && renderInteriorConfig(box, sectionIdx, boxIdx)}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: `50px repeat(${cols}, 1fr)`, gap: '0', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
-                            <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: `32px repeat(${cols}, 1fr)`, gap: '0', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '0.55rem', color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
                                 {isEditing ? (
                                     <input
                                         value={box.cornerLabel || ''}
@@ -29376,7 +29825,7 @@
                                 )}
                             </div>
                             {headings.map((h, hIdx) => (
-                                <div key={hIdx} style={{ textAlign: 'center', borderRight: hIdx < cols - 1 ? '1px solid #e2e8f0' : 'none', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', padding: '4px' }}>
+                                <div key={hIdx} style={{ textAlign: 'center', borderRight: hIdx < cols - 1 ? '1px solid #e2e8f0' : 'none', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', padding: '2px 4px' }}>
                                     {isEditing ? (
                                         <input
                                             value={h}
@@ -29385,10 +29834,10 @@
                                                 newHeadings[hIdx] = e.target.value;
                                                 updateLayout({ gridHeadings: newHeadings });
                                             }}
-                                            style={{ width: '100%', fontSize: '0.6rem', border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}
+                                            style={{ width: '100%', fontSize: '0.55rem', border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}
                                         />
                                     ) : (
-                                        <span style={{ fontSize: '0.6rem', fontWeight: 'bold', color: '#64748b' }}>{h}</span>
+                                        <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: '#64748b' }}>{h}</span>
                                     )}
                                 </div>
                             ))}
@@ -29398,9 +29847,9 @@
                                 <React.Fragment key={rIdx}>
                                     {/* Row Header */}
                                     <div style={{
-                                        fontSize: '0.6rem', color: '#94a3b8', fontWeight: 'bold',
+                                        fontSize: '0.55rem', color: '#94a3b8', fontWeight: 'bold',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        borderRight: '1px solid #e2e8f0', borderBottom: '1px dotted #e2e8f0', padding: '2px'
+                                        borderRight: '1px solid #e2e8f0', borderBottom: '1px dotted #e2e8f0', padding: '1px'
                                     }}>
                                         {isEditing ? (
                                             <input
@@ -29467,11 +29916,11 @@
 
                                         return (
                                             <div key={`${rIdx}-${cIdx}`} style={{
-                                                minHeight: '40px', // Increased height for better interaction
+                                                minHeight: '44px',
                                                 borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                                                 borderBottom: '1px dotted #e2e8f0',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                padding: '2px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                                                padding: '2px 4px',
                                                 background: play && play.type !== 'GAP' ? 'white' : 'transparent',
                                                 position: 'relative'
                                             }}>
@@ -29486,9 +29935,90 @@
                                             </div>
                                         );
                                     })}
+                                    {/* Tempo selector between rows (not after last row) */}
+                                    {rIdx < rowsCount - 1 && (() => {
+                                        const currentTempoId = gridTempos[rIdx] || 'REGULAR';
+                                        const currentTempo = protocolList.find(p => p.id === currentTempoId) || protocolList[0];
+                                        return (
+                                            <div style={{ gridColumn: `1 / span ${cols + 1}`, display: 'flex', justifyContent: 'center', padding: '2px 0' }}>
+                                                {isEditing ? (
+                                                    <select
+                                                        value={currentTempoId}
+                                                        onChange={(e) => {
+                                                            const newTempos = { ...gridTempos };
+                                                            newTempos[rIdx] = e.target.value;
+                                                            updateLayout({ gridTempos: newTempos });
+                                                        }}
+                                                        style={{
+                                                            fontSize: '0.6rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '10px',
+                                                            border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer',
+                                                            color: currentTempo?.color || '#64748b',
+                                                            appearance: 'none', textAlign: 'center', minWidth: '80px'
+                                                        }}
+                                                    >
+                                                        {protocolList.map(proto => (
+                                                            <option key={proto.id} value={proto.id}>{proto.label}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <div style={{
+                                                        fontSize: '0.55rem', fontWeight: 'bold', padding: '1px 12px', borderRadius: '8px',
+                                                        background: currentTempo?.color || '#64748b', color: 'white',
+                                                        textTransform: 'uppercase', letterSpacing: '0.5px'
+                                                    }}>
+                                                        {currentTempo?.label || 'Regular'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </React.Fragment>
                             ))}
                         </div>
+
+                        {/* Manage Grid Tempos */}
+                        {isEditing && (
+                            <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '12px', marginTop: '12px' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Manage Grid Tempos</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                                    {(box.customTempos || PLAY_PROTOCOLS).map((proto, pIdx) => (
+                                        <div key={proto.id || pIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                            <input type="color" value={proto.color} onChange={(e) => {
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                b.customTempos[pIdx] = { ...b.customTempos[pIdx], color: e.target.value };
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            }} style={{ width: '24px', height: '24px', border: 'none', padding: 0, background: 'none', cursor: 'pointer' }} />
+                                            <input value={proto.label} onChange={(e) => {
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                b.customTempos[pIdx] = { ...b.customTempos[pIdx], label: e.target.value };
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            }} style={{ flex: 1, border: 'none', background: 'transparent', fontWeight: 'bold', color: '#334155' }} />
+                                            <button onClick={() => {
+                                                const newLayouts = { ...gamePlanLayouts };
+                                                const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                                if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                                b.customTempos = b.customTempos.filter((_, i) => i !== pIdx);
+                                                if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            }} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}>X</button>
+                                        </div>
+                                    ))}
+                                    <input placeholder="Add tempo label..." onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.target.value) {
+                                            const newLayouts = { ...gamePlanLayouts };
+                                            const b = newLayouts.CALL_SHEET.sections[sectionIdx].boxes[boxIdx];
+                                            if (!b.customTempos) b.customTempos = [...PLAY_PROTOCOLS];
+                                            b.customTempos.push({ id: `custom_${Date.now()}`, label: e.target.value, color: '#3b82f6' });
+                                            if (onUpdateLayouts) onUpdateLayouts(newLayouts);
+                                            e.target.value = '';
+                                        }
+                                    }} style={{ padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.8rem' }} />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             };
@@ -30298,6 +30828,7 @@
 
             // spreadsheet editing state
             const [isSheetEditing, setIsSheetEditing] = useState(false);
+            const [playDragOverBox, setPlayDragOverBox] = useState(null); // { sectionIdx, boxIdx } - for visual feedback when dragging plays
 
             const handleAddSheetSection = () => {
                 const newSection = {
@@ -30368,8 +30899,29 @@
             };
 
             const handleSheetBoxDrop = (e, targetSectionIdx, targetBoxIdx) => {
-                if (!isSheetEditing || !draggedCell) return;
                 e.preventDefault();
+
+                // Check if this is a play being dropped from Play Bank
+                const playData = e.dataTransfer.getData('application/react-dnd');
+                if (playData) {
+                    try {
+                        const { playId } = JSON.parse(playData);
+                        if (playId) {
+                            // Get the target box's setId
+                            const targetBox = gamePlanLayouts?.CALL_SHEET?.sections?.[targetSectionIdx]?.boxes?.[targetBoxIdx];
+                            if (targetBox && targetBox.setId) {
+                                // Add to Quick List (assignedPlayIds), not to script rows (playIds)
+                                handleAddToQuickList(targetBox.setId, playId);
+                            }
+                            return;
+                        }
+                    } catch (err) {
+                        console.error('Error parsing play drop data:', err);
+                    }
+                }
+
+                // Otherwise, handle box reordering (edit mode only)
+                if (!isSheetEditing || !draggedCell) return;
 
                 // draggedCell contains { sectionIdx, boxIdx } from the start
                 // We need to move the box from source to target
@@ -30456,6 +31008,10 @@
             };
 
             const renderFZDnDView = () => {
+                // Build week title for print header
+                const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
+                const opponentTitle = currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : '';
+
                 const FZDND_ZONES = [
                     { id: 'openers', title: 'Openers vs.', color: '#fef08a', textColor: 'black', columns: ['1st & 10', '2nd & <5', '2nd & 5+', '3rd & <5', '3rd & 5+'] },
                     { id: 'black', title: 'Black Zone (Goalline to -10)', color: 'black', textColor: 'white' },
@@ -30555,7 +31111,35 @@
                 };
 
                 return (
-                    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                        {/* Print Header - Only visible when printing */}
+                        <div className="print-only" style={{
+                            display: 'none',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 20px',
+                            borderBottom: '2px solid black',
+                            background: 'white'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                {teamLogo && (teamLogo.startsWith('http') || teamLogo.startsWith('data:')) ? (
+                                    <img src={teamLogo} alt="Logo" style={{ height: '50px', width: 'auto' }} />
+                                ) : teamLogo ? (
+                                    <span style={{ fontSize: '2rem' }}>{teamLogo}</span>
+                                ) : null}
+                                <div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'black' }}>
+                                        {weekTitle} {opponentTitle && `- ${opponentTitle}`}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>
+                                        Field Zone Down & Distance
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right' }}>
+                                {new Date().toLocaleDateString()}
+                            </div>
+                        </div>
                         <div style={{ flex: 1, height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
                             {FZDND_ZONES.map((zone) => {
                                 const definedCols = zone.columns || ['1st and 10', '2nd and <5', '2nd and 5+', '3rd and <5', '3rd and 5+'];
@@ -30569,12 +31153,12 @@
                                 const customCols = (gamePlan?.customColumns || {})[zone.id] || {};
 
                                 return (
-                                    <div key={zone.id} className="fzdnd-zone-container" style={{ marginBottom: '0', border: '2px solid black' }}>
+                                    <div key={zone.id} className="fzdnd-zone-container" style={{ marginBottom: '0', border: '1px solid black' }}>
                                         {/* SPLIT HEADER: Title Left, Philosophy Right */}
                                         <div style={{
                                             display: 'grid',
                                             gridTemplateColumns: '1fr 1fr',
-                                            borderBottom: '2px solid black',
+                                            borderBottom: '1px solid black',
                                             background: zoneColor
                                         }}>
                                             {/* Zone Title - Left Side - Editable */}
@@ -30698,8 +31282,7 @@
                                                     {/* COLUMN HEADERS */}
                                                     <div className="fzdnd-header-row" style={{
                                                         display: 'grid',
-                                                        gridTemplateColumns: `40px repeat(${definedCols.length}, minmax(0, 1fr))`,
-                                                        borderBottom: '1px solid black'
+                                                        gridTemplateColumns: `40px repeat(${definedCols.length}, minmax(0, 1fr))`
                                                     }}>
                                                         <div style={{ borderRight: '1px solid black', borderBottom: '1px solid black' }}></div>
                                                         {definedCols.map((colName, cIdx) => (
@@ -30798,7 +31381,7 @@
                                                                     onClick={() => toggleFZDnDRow(zone.id, rowIdx)}
                                                                     style={{
                                                                         borderRight: '1px solid black',
-                                                                        borderBottom: '1px solid #e2e8f0',
+                                                                        borderBottom: '1px solid black',
                                                                         background: '#dbeafe',
                                                                         cursor: 'pointer',
                                                                         display: 'flex',
@@ -30815,7 +31398,7 @@
                                                                 {/* CELLS FOR EACH COLUMN */}
                                                                 {definedCols.map((_, cIdx) => {
                                                                     const setId = `fzdnd_${zone.id}_${cIdx}`;
-                                                                    const set = (gamePlan?.sets || []).find(s => s.id === setId);
+                                                                    const set = Array.isArray(gamePlan?.sets) ? gamePlan.sets.find(s => s.id === setId) : (gamePlan?.sets && typeof gamePlan.sets === 'object' ? (Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId]) : null);
                                                                     const playId = set?.playIds?.[rowIdx];
                                                                     const play = playId ? plays.find(p => p.id === playId) : null;
 
@@ -30825,7 +31408,7 @@
                                                                             className="fzdnd-cell"
                                                                             style={{
                                                                                 borderRight: cIdx < definedCols.length - 1 ? '1px solid black' : 'none',
-                                                                                borderBottom: '1px solid #e2e8f0',
+                                                                                borderBottom: '1px solid black',
                                                                                 background: play ? (play.priority ? '#fef08a' : (rowIdx % 2 === 0 ? 'white' : '#f8fafc')) : 'white',
                                                                                 padding: play ? '4px 6px' : '0',
                                                                                 minHeight: '32px',
@@ -31172,9 +31755,42 @@
                 );
             };
 
-            const renderSheetView = () => {
+            const renderSheetView = (isPrintMode = false) => {
+                // Build week title for print header
+                const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
+                const opponentTitle = currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : '';
+
                 return (
                     <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
+
+                        {/* Print Header - Only visible when printing */}
+                        <div className="print-only" style={{
+                            display: 'none',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '1rem',
+                            paddingBottom: '0.5rem',
+                            borderBottom: '2px solid black'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                {teamLogo && (teamLogo.startsWith('http') || teamLogo.startsWith('data:')) ? (
+                                    <img src={teamLogo} alt="Logo" style={{ height: '50px', width: 'auto' }} />
+                                ) : teamLogo ? (
+                                    <span style={{ fontSize: '2rem' }}>{teamLogo}</span>
+                                ) : null}
+                                <div>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'black' }}>
+                                        {weekTitle} {opponentTitle && `- ${opponentTitle}`}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>
+                                        Situations & Scripts
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right' }}>
+                                {new Date().toLocaleDateString()}
+                            </div>
+                        </div>
 
                         {/* Edit Toolbar */}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
@@ -31207,7 +31823,7 @@
                                 return (
                                     <div
                                         key={sIdx}
-                                        className="call-sheet-section"
+                                        className={`call-sheet-section${section.expandToFill ? ' expand-full-width' : ''}`}
                                         style={{ gridColumn: '1 / -1', breakInside: 'avoid', marginBottom: '0.5rem', border: isSheetEditing ? '1px dashed #3b82f6' : '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', background: 'white', display: 'flex', flexDirection: 'column' }}
                                         onDragOver={handleSheetSectionDragOver}
                                         onDrop={(e) => handleSheetSectionDrop(e, sIdx)}
@@ -31319,8 +31935,8 @@
                                                                         return rows.every(rowSlots => isGridRowEmpty(rowSlots));
                                                                     };
 
-                                                                    // Skip rendering completely empty grids (unless in edit mode)
-                                                                    if (!isSheetEditing && isGridEmpty(rows)) {
+                                                                    // Skip rendering completely empty grids in print mode
+                                                                    if (isPrintMode && isGridEmpty(rows)) {
                                                                         return null;
                                                                     }
 
@@ -31341,12 +31957,14 @@
                                                                                 </div>
                                                                             ))}
 
-                                                                            {/* Data Rows */}
+                                                                            {/* Data Rows - skip empty rows in print mode only */}
                                                                             {rows.map((rowSlots, rIdx) => {
                                                                                 const isEmpty = isGridRowEmpty(rowSlots);
+                                                                                // Skip rendering empty rows only in print mode
+                                                                                if (isEmpty && isPrintMode) return null;
                                                                                 return (
                                                                                     <React.Fragment key={rIdx}>
-                                                                                        <div className={isEmpty ? 'hidden-row' : ''} style={{
+                                                                                        <div style={{
                                                                                             padding: '2px', fontSize: '0.6rem', color: '#94a3b8', textAlign: 'right', fontWeight: 'bold',
                                                                                             display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '15px',
                                                                                             borderBottom: '1px dotted #f1f5f9'
@@ -31356,19 +31974,20 @@
                                                                                         {rowSlots.map((slot, cIdx) => {
                                                                                             const play = plays.find(p => p.id === slot.id);
                                                                                             return (
-                                                                                                <div key={cIdx} className={isEmpty ? 'hidden-row' : ''} style={{
-                                                                                                    fontSize: '0.65rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                                                                                                <div key={cIdx} style={{
+                                                                                                    fontSize: '0.6rem', overflow: 'hidden',
                                                                                                     background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
-                                                                                                    padding: '2px', minHeight: '16px', color: '#334155',
-                                                                                                    display: 'flex', alignItems: 'center',
+                                                                                                    padding: '2px', minHeight: '18px', color: '#334155',
+                                                                                                    display: 'flex', alignItems: 'center', flexWrap: 'wrap',
                                                                                                     borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
-                                                                                                    borderBottom: '1px dotted #e2e8f0'
+                                                                                                    borderBottom: '1px dotted #e2e8f0',
+                                                                                                    wordBreak: 'break-word'
                                                                                                 }} title={play ? play.name : ''}>
                                                                                                     {play ? (
-                                                                                                        <>
-                                                                                                            {getWristbandLabel(play) && <span style={{ marginRight: '3px', fontSize: '0.9em', fontWeight: 'bold', color: '#3b82f6' }}>{getWristbandLabel(play)}</span>}
-                                                                                                            {getPlayDisplayName(play)}
-                                                                                                        </>
+                                                                                                        <span style={{ display: 'inline', lineHeight: '1.2' }}>
+                                                                                                            <span style={{ fontWeight: '500' }}>{getPlayDisplayName(play)}</span>
+                                                                                                            {getWristbandLabel(play) && <span style={{ marginLeft: '3px', fontWeight: 'bold', color: '#3b82f6', fontSize: '0.85em' }}>{getWristbandLabel(play)}</span>}
+                                                                                                        </span>
                                                                                                     ) : (slot.type === 'GAP' ? '' : '-')}
                                                                                                 </div>
                                                                                             );
@@ -31380,23 +31999,36 @@
                                                                     );
                                                                 }
                                                                 if (box.type === 'script' && box.rows && box.rows.length > 0) {
+                                                                    // Filter to only non-empty rows for print mode
+                                                                    const rowsToRender = isPrintMode ? box.rows.filter(row => {
+                                                                        const playLeft = plays.find(p => p.id === row.content);
+                                                                        const playRight = plays.find(p => p.id === row.contentRight);
+                                                                        return playLeft || playRight;
+                                                                    }) : box.rows;
+
+                                                                    // If all rows are empty in print mode, return null
+                                                                    if (isPrintMode && rowsToRender.length === 0) {
+                                                                        return null;
+                                                                    }
+
                                                                     return (
                                                                         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: '0', rowGap: '0' }}>
-                                                                            {box.rows.map((row, rIdx) => {
+                                                                            {rowsToRender.map((row, rIdx) => {
                                                                                 const playLeft = plays.find(p => p.id === row.content);
                                                                                 const playRight = plays.find(p => p.id === row.contentRight);
                                                                                 return [
                                                                                     <div key={`${rIdx}-L`} style={{
                                                                                         display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
-                                                                                        borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
+                                                                                        borderBottom: '1px dotted #f1f5f9',
                                                                                         borderRight: '1px solid #e2e8f0', paddingRight: '4px',
-                                                                                        background: playLeft?.priority ? '#fef08a' : 'transparent'
+                                                                                        background: playLeft?.priority ? '#fef08a' : 'transparent',
+                                                                                        flexWrap: 'wrap'
                                                                                     }}>
-                                                                                        <span style={{ color: '#64748b', width: '20px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>{row.label || rIdx + 1}</span>
+                                                                                        <span style={{ color: '#64748b', width: '16px', textAlign: 'right', flexShrink: 0, fontWeight: 'bold', fontSize: '0.7rem' }}>{row.label || rIdx + 1}</span>
                                                                                         {playLeft ? (
-                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.65rem', wordBreak: 'break-word' }}>
                                                                                                 {playLeft.name}
-                                                                                                {getWristbandLabel(playLeft) && <span style={{ marginLeft: '4px', fontSize: '0.7em', color: '#3b82f6' }}>{getWristbandLabel(playLeft)}</span>}
+                                                                                                {getWristbandLabel(playLeft) && <span style={{ marginLeft: '3px', fontSize: '0.85em', color: '#3b82f6', fontWeight: 'bold' }}>{getWristbandLabel(playLeft)}</span>}
                                                                                             </span>
                                                                                         ) : (
                                                                                             <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
@@ -31404,14 +32036,15 @@
                                                                                     </div>,
                                                                                     <div key={`${rIdx}-R`} style={{
                                                                                         display: 'flex', gap: '4px', alignItems: 'baseline', lineHeight: '1.2',
-                                                                                        borderBottom: '1px dotted #f1f5f9', overflow: 'hidden',
+                                                                                        borderBottom: '1px dotted #f1f5f9',
                                                                                         paddingLeft: '4px',
-                                                                                        background: playRight?.priority ? '#fef08a' : 'transparent'
+                                                                                        background: playRight?.priority ? '#fef08a' : 'transparent',
+                                                                                        flexWrap: 'wrap'
                                                                                     }}>
                                                                                         {playRight ? (
-                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.65rem', wordBreak: 'break-word' }}>
                                                                                                 {playRight.name}
-                                                                                                {getWristbandLabel(playRight) && <span style={{ marginLeft: '4px', fontSize: '0.7em', color: '#3b82f6' }}>{getWristbandLabel(playRight)}</span>}
+                                                                                                {getWristbandLabel(playRight) && <span style={{ marginLeft: '3px', fontSize: '0.85em', color: '#3b82f6', fontWeight: 'bold' }}>{getWristbandLabel(playRight)}</span>}
                                                                                             </span>
                                                                                         ) : (
                                                                                             <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>
@@ -31424,7 +32057,8 @@
                                                                 }
                                                                 const playsInBox = getPlaysForSet(box.setId);
                                                                 if (playsInBox.length === 0) {
-                                                                    return <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
+                                                                    // In print mode, return null for empty boxes; otherwise show "Empty"
+                                                                    return isPrintMode ? null : <div style={{ color: '#cbd5e1', fontStyle: 'italic', paddingTop: '4px' }}>Empty</div>;
                                                                 }
                                                                 return (
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -31440,6 +32074,25 @@
                                                             };
                                                             const playsInBox = getPlaysForSet(box.setId);
 
+                                                            // Get quicklist count for badge display
+                                                            const getQuickListCount = (setId) => {
+                                                                let set = null;
+                                                                if (Array.isArray(gamePlan?.sets)) {
+                                                                    set = gamePlan.sets.find(s => s.id === setId);
+                                                                } else if (gamePlan?.sets && typeof gamePlan.sets === 'object') {
+                                                                    set = Object.values(gamePlan.sets).find(s => s.id === setId) || gamePlan.sets[setId];
+                                                                }
+                                                                if (!set && setId?.startsWith('ms_')) {
+                                                                    if (Array.isArray(gamePlan?.miniScripts)) {
+                                                                        set = gamePlan.miniScripts.find(s => s.id === setId);
+                                                                    } else if (gamePlan?.miniScripts && typeof gamePlan.miniScripts === 'object') {
+                                                                        set = Object.values(gamePlan.miniScripts).find(s => s.id === setId) || gamePlan.miniScripts[setId];
+                                                                    }
+                                                                }
+                                                                return set?.assignedPlayIds?.length || 0;
+                                                            };
+                                                            const quickListCount = getQuickListCount(box.setId);
+
                                                             return (
                                                                 <div
                                                                     key={bIdx}
@@ -31451,11 +32104,27 @@
                                                                         e.stopPropagation();
                                                                     }}
                                                                     onDragOver={(e) => {
-                                                                        if (!isSheetEditing) return;
                                                                         e.preventDefault();
-                                                                        e.dataTransfer.dropEffect = 'move';
+                                                                        // Accept both box reordering (edit mode) and play drops from Play Bank
+                                                                        e.dataTransfer.dropEffect = isSheetEditing ? 'move' : 'copy';
                                                                     }}
-                                                                    onDrop={(e) => handleSheetBoxDrop(e, sIdx, bIdx)}
+                                                                    onDragEnter={(e) => {
+                                                                        e.preventDefault();
+                                                                        // Track which box is being hovered for visual feedback
+                                                                        if (!isSheetEditing) {
+                                                                            setPlayDragOverBox({ sectionIdx: sIdx, boxIdx: bIdx });
+                                                                        }
+                                                                    }}
+                                                                    onDragLeave={(e) => {
+                                                                        // Only clear if we're leaving this specific box
+                                                                        if (playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx) {
+                                                                            setPlayDragOverBox(null);
+                                                                        }
+                                                                    }}
+                                                                    onDrop={(e) => {
+                                                                        setPlayDragOverBox(null);
+                                                                        handleSheetBoxDrop(e, sIdx, bIdx);
+                                                                    }}
                                                                     style={{
                                                                         flexGrow: section.expandToFill ? span : 0,
                                                                         flexBasis: section.expandToFill ? '0' : undefined,
@@ -31463,12 +32132,13 @@
                                                                         gridColumn: section.expandToFill ? 'auto' : `span ${span}`,
                                                                         borderBottom: !isSheetEditing && Math.floor(bIdx / 2) < Math.ceil(visibleBoxes.length / 2) - 1 ? '1px solid #cbd5e1' : 'none',
                                                                         borderRight: !isSheetEditing && bIdx % 2 === 0 ? '1px solid #cbd5e1' : 'none',
-                                                                        border: isSheetEditing ? '1px solid #e2e8f0' : undefined,
-                                                                        background: 'white',
-                                                                        minHeight: '120px',
+                                                                        border: isSheetEditing ? '1px solid #e2e8f0' : (playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx ? '2px dashed #3b82f6' : undefined),
+                                                                        background: playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx ? '#eff6ff' : 'white',
+                                                                        minHeight: isPrintMode ? 'auto' : '120px',
                                                                         cursor: isSheetEditing ? 'grab' : 'pointer',
                                                                         display: 'flex', flexDirection: 'column',
-                                                                        opacity: (draggedCell?.sectionIdx === sIdx && draggedCell?.boxIdx === bIdx) ? 0.5 : 1
+                                                                        opacity: (draggedCell?.sectionIdx === sIdx && draggedCell?.boxIdx === bIdx) ? 0.5 : 1,
+                                                                        transition: 'background 0.15s, border 0.15s'
                                                                     }}
                                                                     onClick={() => {
                                                                         if (!isSheetEditing) setEditingBox({ box, sectionIdx: sIdx, boxIdx: bIdx });
@@ -31492,12 +32162,12 @@
                                                                                 ×
                                                                             </div>
                                                                         ) : (
-                                                                            <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{playsInBox.length}</span>
+                                                                            <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{quickListCount}</span>
                                                                         )}
                                                                     </div>
 
                                                                     {/* Sheet Box Content */}
-                                                                    <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
+                                                                    <div style={{ padding: isPrintMode ? '2px' : '6px', fontSize: '0.7rem', flex: isPrintMode ? 'none' : 1 }}>
                                                                         {/* Row Expand Badge - only show on first box of each row */}
                                                                         {isFirstInRow && isSheetEditing && (
                                                                             <button
@@ -33079,7 +33749,12 @@
                             <button className={`btn ${viewMode === 'player-touches' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setViewMode('player-touches')} style={{ height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 PLAYER TOUCHES
                             </button>
-                            <button className="btn btn-secondary" onClick={() => window.print()} style={{ border: '2px solid var(--accent)', height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
+                            <button className="btn btn-secondary" onClick={() => {
+                                // Map current viewMode to print preview tab
+                                const tabMap = { 'sheet': 'sheet', 'matrix': 'matrix', 'fzdnd': 'fzdnd', 'priority': 'priority', 'staples': 'staples', 'player-touches': 'player-touches' };
+                                setPrintPreviewTab(tabMap[viewMode] || 'sheet');
+                                setShowPrintPreview(true);
+                            }} style={{ border: '2px solid var(--accent)', height: '52px', width: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2', fontSize: '0.75rem' }}>
                                 <Icon name="Printer" size={16} style={{ marginBottom: '4px' }} /> PRINT
                             </button>
                         </div>
@@ -33132,8 +33807,8 @@
                     {showImportModal && (
                         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
                             <div className="card" style={{ width: '400px', padding: '1.5rem', background: 'white' }}>
-                                <h3>Import Game Plan</h3>
-                                <p>Select a week to copy Game Plan & Call Sheet from. <strong>This will overwrite current data.</strong></p>
+                                <h3 style={{ color: '#1e293b', marginBottom: '0.5rem' }}>Import Game Plan</h3>
+                                <p style={{ color: '#475569', marginBottom: '1rem' }}>Select a week to copy Game Plan & Call Sheet from. <strong style={{ color: '#dc2626' }}>This will overwrite current data.</strong></p>
                                 <select
                                     className="form-select"
                                     value={importSourceWeekId}
@@ -33237,10 +33912,64 @@
                                         </select>
                                     </div>
 
+                                    {/* Orientation Toggle */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem', borderRadius: '6px' }}>
+                                        <button
+                                            onClick={() => setPrintOrientation('portrait')}
+                                            style={{
+                                                background: printOrientation === 'portrait' ? 'var(--primary)' : 'transparent',
+                                                color: printOrientation === 'portrait' ? 'white' : '#94a3b8',
+                                                border: 'none',
+                                                padding: '0.35rem 0.6rem',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                            title="Portrait orientation"
+                                        >
+                                            <span style={{ transform: 'rotate(0deg)', display: 'inline-block' }}>▯</span> Portrait
+                                        </button>
+                                        <button
+                                            onClick={() => setPrintOrientation('landscape')}
+                                            style={{
+                                                background: printOrientation === 'landscape' ? 'var(--primary)' : 'transparent',
+                                                color: printOrientation === 'landscape' ? 'white' : '#94a3b8',
+                                                border: 'none',
+                                                padding: '0.35rem 0.6rem',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                            title="Landscape orientation"
+                                        >
+                                            <span style={{ transform: 'rotate(90deg)', display: 'inline-block' }}>▯</span> Landscape
+                                        </button>
+                                    </div>
+
                                     {/* Print Button */}
                                     <button
                                         className="btn btn-primary"
-                                        onClick={() => window.print()}
+                                        onClick={() => {
+                                            // Inject orientation CSS before printing
+                                            const styleId = 'print-orientation-style';
+                                            let styleEl = document.getElementById(styleId);
+                                            if (!styleEl) {
+                                                styleEl = document.createElement('style');
+                                                styleEl.id = styleId;
+                                                document.head.appendChild(styleEl);
+                                            }
+                                            styleEl.textContent = `@page { size: ${printOrientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 0.4in; } @media print { .print-preview-content > div { width: 100% !important; min-height: auto !important; } }`;
+                                            // Small delay to ensure CSS is applied
+                                            setTimeout(() => window.print(), 50);
+                                        }}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -33248,9 +33977,10 @@
                                             padding: '0.5rem 1rem',
                                             boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                         }}
+                                        title={`Print in ${printOrientation} mode (confirm in print dialog)`}
                                     >
                                         <Icon name="Printer" size={16} />
-                                        <span>PRINT</span>
+                                        <span>PRINT ({printOrientation.charAt(0).toUpperCase() + printOrientation.slice(1)})</span>
                                     </button>
 
                                     {/* Close Button */}
@@ -33277,11 +34007,26 @@
 
 
                             {/* Print content area */}
-                            <div className="print-preview-content" style={{ flex: 1, overflow: 'auto', background: 'white', padding: '2rem' }}>
-                                <div style={{ zoom: printScale, transformOrigin: 'top left' }}>
+                            <div className={`print-preview-content ${printOrientation === 'landscape' ? 'print-landscape' : 'print-portrait'}`} style={{
+                                flex: 1,
+                                overflow: 'auto',
+                                background: '#e5e7eb',
+                                padding: '1rem',
+                                display: 'flex',
+                                justifyContent: 'center'
+                            }}>
+                                <div style={{
+                                    zoom: printScale,
+                                    transformOrigin: 'top center',
+                                    background: 'white',
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                                    padding: '0.5in',
+                                    width: printOrientation === 'landscape' ? '11in' : '8.5in',
+                                    minHeight: printOrientation === 'landscape' ? '8.5in' : '11in'
+                                }}>
                                     {printPreviewTab === 'staples' && renderStaples()}
                                     {printPreviewTab === 'priority' && renderPriorityPlays()}
-                                    {printPreviewTab === 'sheet' && renderSheetView()}
+                                    {printPreviewTab === 'sheet' && renderSheetView(true)}
                                     {printPreviewTab === 'matrix' && renderMatrix()}
                                     {printPreviewTab === 'fzdnd' && renderFZDnDView()}
                                     {printPreviewTab === 'player-touches' && renderPlayerTouches()}
@@ -37609,6 +38354,8 @@
             return play.name + suffix;
         };
 
+        // DISPLAY RULE: Wristband coordinates should ALWAYS appear to the RIGHT of the play name,
+        // never before/left of it. This applies throughout the entire app (grid views, print preview, etc.)
         const getWristbandLabel = (play) => {
             if (!play || !play.wristbandSlot) return null;
             let suffix = 'T'; // Default Traditional
@@ -43632,6 +44379,7 @@
                                 setAppSidebarCollapsed={setSidebarCollapsed}
                                 appSidebarCollapsed={sidebarCollapsed}
                                 addToNextSlotRef={addToNextSlotRef}
+                                teamLogo={teamLogo}
                             />}
 
                             {
@@ -44025,6 +44773,8 @@
                                                                 onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(chartTypeObj.id, id, x, y)}
                                                                 onResetLayout={() => handleResetDepthLayout(chartTypeObj.id)}
                                                                 forcePrintView={true}
+                                                                teamLogo={teamLogo}
+                                                                currentWeek={currentWeek}
                                                             />
                                                         </div>
                                                     ))}
@@ -44043,6 +44793,8 @@
                                                 savedLayout={depthChartLayouts[depthChartType] || {}}
                                                 onUpdateLayout={(id, x, y) => handleUpdateDepthLayout(depthChartType, id, x, y)}
                                                 onResetLayout={() => handleResetDepthLayout(depthChartType)}
+                                                teamLogo={teamLogo}
+                                                currentWeek={currentWeek}
                                             />
                                         )}
                                     </div>
@@ -44326,7 +45078,7 @@
                         )}
 
                         {/* Global Playbook Sidebar (Persistent across all views) */}
-                        <div style={{
+                        <div className="play-bank-sidebar" style={{
                             position: 'fixed',
                             right: 0,
                             top: 0,
@@ -44381,18 +45133,64 @@
                                 gamePlanLayouts={gamePlanLayouts}
                                 playBuckets={playBuckets}
                                 playCategories={playCategories}
-                                onAddSection={(playId, section) => {
-                                    // Add play to game plan section
-                                    const gamePlan = { ...(currentWeek?.offensiveGamePlan || {}) };
-                                    const sets = { ...gamePlan.sets };
-                                    if (!sets[section.setId]) {
-                                        sets[section.setId] = { id: section.setId, playIds: [] };
+                                onAddSection={(playIdsOrSetId, section) => {
+                                    // Handle various call patterns:
+                                    // 1. onAddSection(playIds[]) - add array of plays to currently editing box
+                                    // 2. onAddSection(setId) - add all plays from that set to currently editing box
+                                    // 3. onAddSection(playId, section) - add single play to specific section
+
+                                    if (!currentWeek) return;
+
+                                    // If it's an array of play IDs, pass directly to addToNextSlotRef (supports batch)
+                                    if (Array.isArray(playIdsOrSetId)) {
+                                        if (addToNextSlotRef.current) {
+                                            addToNextSlotRef.current(playIdsOrSetId);
+                                        }
+                                        return;
                                     }
-                                    if (!sets[section.setId].playIds.includes(playId)) {
-                                        sets[section.setId].playIds = [...sets[section.setId].playIds, playId];
+
+                                    // If section is provided, add single play to that section
+                                    if (section && section.setId) {
+                                        const gamePlan = { ...(currentWeek?.offensiveGamePlan || {}) };
+                                        const sets = { ...gamePlan.sets };
+                                        if (!sets[section.setId]) {
+                                            sets[section.setId] = { id: section.setId, playIds: [] };
+                                        }
+                                        if (!sets[section.setId].playIds.includes(playIdsOrSetId)) {
+                                            sets[section.setId].playIds = [...sets[section.setId].playIds, playIdsOrSetId];
+                                        }
+                                        gamePlan.sets = sets;
+                                        handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', gamePlan);
+                                        return;
                                     }
-                                    gamePlan.sets = sets;
-                                    handleUpdateWeek(currentWeek.id, 'offensiveGamePlan', gamePlan);
+
+                                    // Treat as setId - get all plays from that set and add them to editing box
+                                    const setId = playIdsOrSetId;
+                                    const gamePlan = currentWeek?.offensiveGamePlan || {};
+                                    let playIdsToAdd = [];
+
+                                    // Look up plays from the set
+                                    if (Array.isArray(gamePlan.sets)) {
+                                        const set = gamePlan.sets.find(s => s.id === setId);
+                                        if (set) playIdsToAdd = set.playIds || [];
+                                    } else if (gamePlan.sets && gamePlan.sets[setId]) {
+                                        playIdsToAdd = gamePlan.sets[setId].playIds || [];
+                                    }
+
+                                    // Also check miniScripts
+                                    if (playIdsToAdd.length === 0 && setId?.startsWith('ms_')) {
+                                        if (Array.isArray(gamePlan.miniScripts)) {
+                                            const ms = gamePlan.miniScripts.find(s => s.id === setId);
+                                            if (ms) playIdsToAdd = ms.playIds || [];
+                                        } else if (gamePlan.miniScripts && gamePlan.miniScripts[setId]) {
+                                            playIdsToAdd = gamePlan.miniScripts[setId].playIds || [];
+                                        }
+                                    }
+
+                                    // Pass all plays to addToNextSlotRef for batch addition
+                                    if (playIdsToAdd.length > 0 && addToNextSlotRef.current) {
+                                        addToNextSlotRef.current(playIdsToAdd);
+                                    }
                                 }}
                                 onUpdatePlay={handleUpdatePlay}
                                 onUpdateGamePlan={(updated) => handleUpdateWeek(currentWeek?.id, 'offensiveGamePlan', updated)}
