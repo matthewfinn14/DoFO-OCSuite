@@ -1135,6 +1135,12 @@
         // CACHE BUST: 2026-01-24-v2
         const { useState, useEffect, useRef, useContext, createContext, useMemo, useCallback } = React;
 
+        // Helper function to get display name for a play
+        const getPlayDisplayName = (play) => {
+            if (!play) return 'Unknown Play';
+            return play.name || play.title || play.playName || 'Unnamed Play';
+        };
+
         // --- FIRESTORE SYNC UTILITIES ---
         // HELPER: Clear all local app data
         // HELPER: Clear all local app data
@@ -1847,7 +1853,6 @@
                             mascot: mascot,
                             zipCode: zipCode,
                             accentColor: primaryColor, // Use primary as accent
-                            levels: levels,
                             offensePositions: offensePositions,
                             defensePositions: defensePositions,
                             activeYear: new Date().getFullYear().toString(),
@@ -34897,6 +34902,16 @@
                         console.log("DEBUG: admin@digitaldofo.com detected. Bypassing ALL school setup - admin-only mode.");
                         setAccessRequestStatus({ checked: true, status: 'admin', data: { isAdmin: true } });
                         setSchoolSetupData({ showWizard: false, schoolId: null });
+                        return;
+                    }
+
+                    // LOCAL TESTING BYPASS: Skip access request for @test.com emails or localhost
+                    const isLocalhost = window.location.hostname === 'localhost' || window.location.protocol === 'file:';
+                    const isTestEmail = authUser.email.toLowerCase().endsWith('@test.com');
+                    if (isLocalhost || isTestEmail) {
+                        console.log("DEBUG: Local testing detected. Bypassing access request - showing school wizard.");
+                        const newSchoolId = 'test_school_' + Date.now();
+                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
                         return;
                     }
 
