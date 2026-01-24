@@ -5240,41 +5240,68 @@
 
                 // Use WIZ card viewBox (0 60 800 460) for skill diagrams to match print output
                 const viewBox = useWizCardView ? '0 60 800 460' : '0 0 900 600';
+                const playerSize = 28;
 
                 return (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" style={{ background: 'white', borderRadius: '8px' }}>
-                        <g opacity="0.1">
-                            <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="4" />
-                            <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" style={{ background: '#f0fdf4', borderRadius: '8px' }}>
+                        {/* Arrow markers */}
+                        <defs>
+                            {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'].map(c => (
+                                <marker key={c} id={`preview-arrow-${c.replace('#', '')}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                                    <polygon points="0 0, 6 2, 0 4" fill={c} />
+                                </marker>
+                            ))}
+                        </defs>
+                        {/* Field lines */}
+                        <g opacity="0.15">
+                            <line x1="0" y1="150" x2="800" y2="150" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="250" x2="800" y2="250" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="350" x2="800" y2="350" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="400" x2="800" y2="400" stroke="#000" strokeWidth="3" />
+                            <line x1="0" y1="450" x2="800" y2="450" stroke="#000" strokeWidth="2" />
                         </g>
                         {elements.map((el, index) => {
-                            let d = '';
-                            if (el.type === 'free') {
-                                if (el.points && el.points.length) {
-                                    d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-                                }
-                            } else if (el.points && el.points.length >= 2) { // Determine if line-like
-                                const start = el.points[0];
-                                const end = el.points[el.points.length - 1];
-                                d = `M ${start.x},${start.y} L ${end.x},${end.y}`;
-                            } else {
-                                // Fallback for simple shapes/players if needed, or skip
-                            }
-
-                            // Render text for players/labels
+                            // Render players with circles
                             if (el.type === 'player' && el.points && el.points[0]) {
+                                const pt = el.points[0];
+                                const isTextOnly = el.shape === 'text-only';
+                                const fontSize = el.fontSize || 24;
+
+                                if (isTextOnly) {
+                                    return (
+                                        <text key={index} x={pt.x} y={pt.y} textAnchor="middle" dominantBaseline="middle" fontSize={fontSize} fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
+                                    );
+                                }
+
                                 return (
-                                    <text key={index} x={el.points[0].x} y={el.points[0].y} textAnchor="middle" dominantBaseline="middle" fontSize="24" fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
+                                    <g key={index}>
+                                        <circle cx={pt.x} cy={pt.y} r={playerSize} fill="white" stroke={el.color || '#000'} strokeWidth="4" />
+                                        <text x={pt.x} y={pt.y + 2} textAnchor="middle" dominantBaseline="middle" fontSize="18" fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
+                                    </g>
                                 );
                             }
-                            if (el.label && el.points && el.points[0]) {
-                                // Simple label logic if any
+
+                            // Render lines/routes
+                            if ((el.type === 'line' || el.type === 'poly' || el.type === 'free') && el.points && el.points.length >= 2) {
+                                const d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                                const color = el.color || '#000';
+                                const markerId = `preview-arrow-${color.replace('#', '')}`;
+                                const hasArrow = el.endType === 'arrow' || el.endType === undefined;
+
+                                return (
+                                    <path
+                                        key={index}
+                                        d={d}
+                                        stroke={color}
+                                        strokeWidth={el.strokeWidth || 5}
+                                        fill="none"
+                                        strokeDasharray={el.style === 'dashed' ? '10,5' : 'none'}
+                                        markerEnd={hasArrow ? `url(#${markerId})` : 'none'}
+                                    />
+                                );
                             }
 
-                            return <path key={index} d={d} stroke={el.color || '#000'} strokeWidth="4" fill="none" strokeDasharray={el.style === 'dashed' ? '10,5' : 'none'} />;
+                            return null;
                         })}
                     </svg>
                 );
@@ -23492,79 +23519,105 @@
                 if (!play) return null;
 
                 let data = null;
+                // Try to get diagram data based on type preference
                 if (type === 'skill' && (play.wizSkillData || play.rooskiSkillData)) {
                     data = { elements: play.wizSkillData || play.rooskiSkillData };
                 } else if (type === 'oline' && (play.wizOlineData || play.rooskiOlineData)) {
                     data = { elements: play.wizOlineData || play.rooskiOlineData };
-                } else if (play.diagramData) {
+                } else if (play.diagramData && play.diagramData.elements) {
                     data = play.diagramData;
+                } else if (play.wizSkillData) {
+                    // Fallback to any available WIZ data
+                    data = { elements: play.wizSkillData };
+                } else if (play.wizOlineData) {
+                    data = { elements: play.wizOlineData };
                 }
 
                 if (!data || !data.elements || data.elements.length === 0) return null;
 
+                const COLORS = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'];
+
                 return (
-                    <svg viewBox="0 0 900 600" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
-                        <g opacity="0.1">
-                            <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="30%" x2="100%" y2="30%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#000" strokeWidth="4" />
-                            <line x1="0" y1="70%" x2="100%" y2="70%" stroke="#000" strokeWidth="2" />
-                            <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
-                        </g >
-                        {
-                            data.elements && data.elements.map(el => {
-                                if (el.type === 'player') {
-                                    const { x, y } = el.points[0];
-                                    const size = 30;
-                                    const isRect = el.shape === 'square';
+                    <svg viewBox="0 60 800 460" width="100%" height="100%" style={{ display: 'block', background: '#f0fdf4' }} preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                            {COLORS.map(c => (
+                                <marker key={c} id={`mp-arrow-${c.replace('#', '')}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                                    <polygon points="0 0, 6 2, 0 4" fill={c} />
+                                </marker>
+                            ))}
+                        </defs>
+                        <g opacity="0.15">
+                            <line x1="0" y1="150" x2="800" y2="150" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="250" x2="800" y2="250" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="350" x2="800" y2="350" stroke="#000" strokeWidth="2" />
+                            <line x1="0" y1="400" x2="800" y2="400" stroke="#000" strokeWidth="3" />
+                            <line x1="0" y1="450" x2="800" y2="450" stroke="#000" strokeWidth="2" />
+                        </g>
+                        {data.elements && data.elements.map((el, idx) => {
+                            if (el.type === 'player' && el.points && el.points[0]) {
+                                const { x, y } = el.points[0];
+                                const isTextOnly = el.shape === 'text-only';
+                                const fontSize = el.fontSize || 24;
+
+                                if (isTextOnly) {
                                     return (
-                                        <g key={el.id}>
-                                            {isRect ? (
-                                                <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color} strokeWidth="2" />
-                                            ) : (
-                                                <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color} strokeWidth="2" />
-                                            )}
-                                            <text x={x} y={y} dy="0.35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
-                                        </g>
+                                        <text key={el.id || idx} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={fontSize} fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
                                     );
                                 }
 
-                                let d = '';
-                                if (el.style === 'zigzag') {
-                                    d = getZigZagPath(el.points);
-                                } else if (el.type === 'free' || el.points.length > 1) {
-                                    d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-                                }
-
-                                let markerEnd = undefined;
-                                let tBlock = null;
-
-                                if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
-                                    markerEnd = `url(#arrowhead-${el.color})`;
-                                } else if (el.endType === 't') {
-                                    const points = el.points;
-                                    const end = points[points.length - 1];
-                                    const prev = points[points.length - 2] || points[0];
-                                    const dx = end.x - prev.x;
-                                    const dy = end.y - prev.y;
-                                    const len = Math.hypot(dx, dy) || 1;
-                                    const perpX = (-dy / len) * 15;
-                                    const perpY = (dx / len) * 15;
-                                    tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={el.color} strokeWidth="4" />;
-                                } else if (el.endType === 'dot') {
-                                    const end = el.points[el.points.length - 1];
-                                    tBlock = <circle cx={end.x} cy={end.y} r="6" fill={el.color} />;
-                                }
-
+                                const size = 28;
+                                const isRect = el.shape === 'square';
                                 return (
-                                    <g key={el.id}>
-                                        <path d={d} stroke={el.color} strokeWidth="4" fill="none" strokeDasharray={el.style === 'dashed' ? "10,5" : "none"} markerEnd={markerEnd} />
-                                        {tBlock}
+                                    <g key={el.id || idx}>
+                                        {isRect ? (
+                                            <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="white" stroke={el.color || '#000'} strokeWidth="4" />
+                                        ) : (
+                                            <circle cx={x} cy={y} r={size / 2} fill="white" stroke={el.color || '#000'} strokeWidth="4" />
+                                        )}
+                                        <text x={x} y={y + 2} textAnchor="middle" dominantBaseline="middle" fontSize="16" fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
                                     </g>
                                 );
-                            })
-                        }
-                    </svg >
+                            }
+
+                            if (!el.points || el.points.length < 2) return null;
+
+                            let d = '';
+                            if (el.style === 'zigzag' && typeof getZigZagPath === 'function') {
+                                d = getZigZagPath(el.points);
+                            } else {
+                                d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                            }
+
+                            const color = el.color || '#000';
+                            const markerId = `mp-arrow-${color.replace('#', '')}`;
+                            let markerEnd = undefined;
+                            let tBlock = null;
+
+                            if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
+                                markerEnd = `url(#${markerId})`;
+                            } else if (el.endType === 't') {
+                                const points = el.points;
+                                const end = points[points.length - 1];
+                                const prev = points[points.length - 2] || points[0];
+                                const dx = end.x - prev.x;
+                                const dy = end.y - prev.y;
+                                const len = Math.hypot(dx, dy) || 1;
+                                const perpX = (-dy / len) * 15;
+                                const perpY = (dx / len) * 15;
+                                tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={color} strokeWidth="4" />;
+                            } else if (el.endType === 'dot') {
+                                const end = el.points[el.points.length - 1];
+                                tBlock = <circle cx={end.x} cy={end.y} r="6" fill={color} />;
+                            }
+
+                            return (
+                                <g key={el.id || idx}>
+                                    <path d={d} stroke={color} strokeWidth={el.strokeWidth || 5} fill="none" strokeDasharray={el.style === 'dashed' ? "10,5" : "none"} markerEnd={markerEnd} />
+                                    {tBlock}
+                                </g>
+                            );
+                        })}
+                    </svg>
                 );
             };
 
