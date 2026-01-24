@@ -11306,7 +11306,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, drills, teamLogo, addToNextSlotRef }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, drills, teamLogo, addToNextSlotRef, onNavigate }) => {
             console.log('PracticeScriptBuilder debug:', { currentWeek, teamLogo });
             const { openPlayDetails } = usePlayDetailsModal();
 
@@ -11315,15 +11315,11 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
             const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
-            const [showScriptView, setShowScriptView] = useState(false);
             const [showSideMenu, setShowSideMenu] = useState(false);
             const [editingScriptRow, setEditingScriptRow] = useState(null);
 
             const [isFullScreen, setIsFullScreen] = useState(false);
             const [scoutCardUrls, setScoutCardUrls] = useState({}); // Session-only storage for blob URLs { [segmentId]: string }
-            const [scriptTab, setScriptTab] = useState('gameplan');
-            const [scriptPlaySearch, setScriptPlaySearch] = useState('');
-            const [selectedGamePlanSection, setSelectedGamePlanSection] = useState(null);
             const [includePlayCards, setIncludePlayCards] = useState(false);
             const [customInputState, setCustomInputState] = useState(null); // { id: string, field: string }
             const [globalTemplates, setGlobalTemplates] = useState([]);
@@ -12989,8 +12985,7 @@
                                                         style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setSelectedSegmentId('WARMUP');
-                                                            setShowScriptView(true);
+                                                            if (onNavigate) onNavigate('practice-scripts');
                                                         }}
                                                     >
                                                         See Script
@@ -13394,8 +13389,7 @@
                                                                 style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    setSelectedSegmentId(seg.id);
-                                                                    setShowScriptView(true);
+                                                                    if (onNavigate) onNavigate('practice-scripts');
                                                                 }}
                                                             >
                                                                 See Script
@@ -13692,226 +13686,6 @@
                             ))}
                         </div>
                     </div>
-
-                    {/* Script View Modal */}
-                    {showScriptView && selectedSegmentId && (
-                        <div style={{
-                            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-                            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000,
-                            display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(2px)'
-                        }}
-                            onClick={() => setShowScriptView(false)}
-                        >
-                            <div style={{
-                                width: '95%', maxWidth: '1400px', height: '90vh',
-                                backgroundColor: 'var(--bg-panel)', borderRadius: 'var(--radius)',
-                                display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-                            }}
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {/* Modal Header */}
-                                <div style={{
-                                    padding: '1rem', borderBottom: '1px solid var(--border)',
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    backgroundColor: 'var(--bg-main)'
-                                }}>
-                                    <h3 style={{ margin: 0 }}>Scripting: {plan.segments.find(s => s.id === selectedSegmentId)?.type}</h3>
-                                    <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <button
-                                            className="btn btn-secondary"
-                                            onClick={() => setShowScriptView(false)}
-                                        >
-                                            Close
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Modal Content */}
-                                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
-                                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-                                        {(() => {
-                                            const activeSegment = plan.segments.find(s => s.id === selectedSegmentId);
-                                            if (!activeSegment) return <div>Segment not found</div>;
-
-                                            const preset = findPreset(activeSegment.type, activeSegment.situation);
-                                            const showYardLine = preset ? preset.useYardLine : activeSegment.type === 'Take-Off';
-
-                                            const updateScript = (newScript) => {
-                                                updateSegment(selectedSegmentId, 'script', newScript);
-                                            };
-
-
-
-                                            // Side Panel Helper Lists
-                                            // gpPlays and priorityPlays are now computed at component level to avoid Hook errors.
-                                            const handleAddFromSidePanel = (item, type) => {
-                                                const currentScript = [...(activeSegment.script || [])];
-
-                                                // Find the first empty slot
-                                                const emptyIndex = currentScript.findIndex(row => !row.playName && !row.playId);
-
-                                                if (emptyIndex !== -1) {
-                                                    // Fill existing slot
-                                                    if (type === 'situation') {
-                                                        currentScript[emptyIndex] = { ...currentScript[emptyIndex], situation: item };
-                                                    } else if (type === 'play') {
-                                                        currentScript[emptyIndex] = {
-                                                            ...currentScript[emptyIndex],
-                                                            playName: item.name,
-                                                            playId: item.id
-                                                        };
-                                                    }
-                                                } else {
-                                                    // Append new row with standardized structure
-                                                    const newItem = { hash: 'M', down: '', dist: '', situation: '', playName: '', playId: '', defense: '', notes: '' };
-
-                                                    if (type === 'situation') {
-                                                        newItem.situation = item;
-                                                    } else if (type === 'play') {
-                                                        newItem.playName = item.name;
-                                                        newItem.playId = item.id;
-                                                    }
-                                                    currentScript.push(newItem);
-                                                }
-
-                                                updateScript(currentScript);
-                                            };
-
-                                            const handleScriptDrop = (e, idx) => {
-                                                e.preventDefault();
-                                                try {
-                                                    const data = JSON.parse(e.dataTransfer.getData('application/react-dnd'));
-                                                    if (data && (data.playId || data.name)) {
-                                                        const newScript = [...activeSegment.script];
-                                                        if (idx >= 0 && idx < newScript.length) {
-                                                            newScript[idx] = {
-                                                                ...newScript[idx],
-                                                                playName: data.name || newScript[idx].playName,
-                                                                playId: data.playId || ''
-                                                            };
-                                                            updateScript(newScript);
-                                                        }
-                                                    }
-                                                } catch (err) {
-                                                    console.error("Drop failed", err);
-                                                }
-                                            };
-
-                                            // Helper to filter plays for the side panel
-                                            const getSidePanelItems = () => {
-                                                let items = [];
-                                                if (scriptTab === 'gameplan') {
-                                                    if (!selectedGamePlanSection) {
-                                                        // Return list of Sections from LAYOUTS
-                                                        // Items removed as requested
-                                                        return [];
-                                                    } else {
-                                                        // Return plays in selected section
-                                                        // Check if it's a Matrix Formation
-                                                        const matrixFormation = gamePlanLayouts?.MATRIX?.formations?.find(f => f.id === selectedGamePlanSection);
-
-                                                        if (matrixFormation) {
-                                                            // Aggregate plays from all cells in this formation row
-                                                            const playIds = new Set();
-                                                            const layout = gamePlanLayouts.MATRIX;
-
-                                                            layout.playTypes.forEach(pt => {
-                                                                layout.cols.forEach(col => {
-                                                                    const setId = `matrix_${matrixFormation.id}_${pt.id}_${col.id}`;
-                                                                    const cellData = gamePlan?.sets?.[setId];
-                                                                    if (cellData && cellData.assignedPlayIds) {
-                                                                        cellData.assignedPlayIds.forEach(id => playIds.add(id));
-                                                                    } else if (cellData && cellData.playIds) {
-                                                                        cellData.playIds.forEach(id => playIds.add(id));
-                                                                    }
-                                                                });
-                                                            });
-
-                                                            items = Array.from(playIds).map(id => plays.find(p => p.id === id)).filter(Boolean);
-
-                                                        } else {
-                                                            // Standard Set/Script Lookup
-                                                            // Standard Set/Script Lookup
-                                                            let setData = null;
-                                                            // Handle sets as Array (primary) or Object (fallback)
-                                                            if (gamePlan?.sets) {
-                                                                if (Array.isArray(gamePlan.sets)) {
-                                                                    setData = gamePlan.sets.find(s => s.id === selectedGamePlanSection);
-                                                                } else {
-                                                                    setData = gamePlan.sets[selectedGamePlanSection];
-                                                                }
-                                                            }
-                                                            // Fallback to miniScripts
-                                                            if (!setData && gamePlan?.miniScripts) {
-                                                                if (Array.isArray(gamePlan.miniScripts)) {
-                                                                    setData = gamePlan.miniScripts.find(s => s.id === selectedGamePlanSection);
-                                                                } else {
-                                                                    setData = gamePlan.miniScripts[selectedGamePlanSection];
-                                                                }
-                                                            }
-
-                                                            if (setData && (setData.assignedPlayIds || setData.playIds)) {
-                                                                const ids = setData.assignedPlayIds || setData.playIds || [];
-                                                                items = ids.map(item => {
-                                                                    // Handle both string IDs and object IDs (e.g. { id: '...', tempo: '...' })
-                                                                    const playId = (typeof item === 'object' && item !== null && item.id) ? item.id : item;
-                                                                    return plays.find(p => p.id === playId);
-                                                                }).filter(Boolean);
-                                                            }
-                                                        }
-                                                    }
-                                                } else if (scriptTab === 'bank') {
-                                                    items = plays;
-                                                } else if (scriptTab === 'situations') {
-                                                    // Return situations based on presets
-                                                    // Filter based on search
-                                                    let presets = scriptPresets.map(p => ({
-                                                        id: p.name,
-                                                        name: p.name,
-                                                        type: 'situation',
-                                                        details: p
-                                                    }));
-                                                    if (scriptPlaySearch) {
-                                                        const q = scriptPlaySearch.toLowerCase();
-                                                        presets = presets.filter(p => p.name.toLowerCase().includes(q));
-                                                    }
-                                                    return presets;
-                                                }
-
-                                                if (scriptPlaySearch) {
-                                                    const q = scriptPlaySearch.toLowerCase();
-                                                    items = items.filter(p =>
-                                                        p.name.toLowerCase().includes(q) ||
-                                                        (p.tags && p.tags.some(t => t.toLowerCase().includes(q)))
-                                                    );
-                                                }
-                                                return items.sort((a, b) => a.name.localeCompare(b.name));
-                                            };
-
-                                            return (
-                                                <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-                                                    {/* Left: Script Table */}
-                                                    <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
-                                                        <PracticeScriptTable
-                                                            script={activeSegment.script || []}
-                                                            onUpdateScript={updateScript}
-                                                            plays={plays}
-                                                            playCategories={playCategories}
-                                                            isLocked={isLocked}
-                                                        />
-                                                    </div>
-
-
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    )}
 
                     {/* Modals */}
                     {notesModalSegmentId && renderNotesModal()}
@@ -44339,6 +44113,7 @@
                                     currentWeek={currentWeek}
                                     onQuickAddPlay={handleQuickAddPlay}
                                     addToNextSlotRef={addToNextSlotRef}
+                                    onNavigate={setView}
                                 />
                             )}
                             {view === 'pregame' && (
