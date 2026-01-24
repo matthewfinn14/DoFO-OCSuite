@@ -11874,7 +11874,10 @@
             // Register "add to next slot" handler for sidebar
             useEffect(() => {
                 if (addToNextSlotRef) {
-                    addToNextSlotRef.current = (playId, play) => {
+                    addToNextSlotRef.current = (playIdOrIds, play) => {
+                        // Support both single play and array of play IDs
+                        const playIds = Array.isArray(playIdOrIds) ? playIdOrIds : [playIdOrIds];
+
                         // Get current day's plan
                         const dayPlan = Array.isArray(plans)
                             ? plans.find(p => p.day === selectedDay)
@@ -11891,16 +11894,29 @@
                         }
                         if (!targetSegment || !targetSegment.script) return;
 
-                        // Find the first empty row (play field is empty)
-                        const emptyRowIndex = targetSegment.script.findIndex(row => !row.play || row.play.trim() === '');
-                        if (emptyRowIndex === -1) return; // No empty slots
-
-                        // Update the row with the play
+                        // Add each play to consecutive empty slots
                         const updatedScript = [...targetSegment.script];
-                        updatedScript[emptyRowIndex] = {
-                            ...updatedScript[emptyRowIndex],
-                            play: play?.name || playId
-                        };
+                        let slotsAdded = 0;
+
+                        for (const playId of playIds) {
+                            // Find next empty row starting from where we left off
+                            const emptyRowIndex = updatedScript.findIndex((row, idx) =>
+                                idx >= slotsAdded && (!row.play || row.play.trim() === '')
+                            );
+                            if (emptyRowIndex === -1) break; // No more empty slots
+
+                            // Look up play name if we have a play ID
+                            const foundPlay = plays.find(p => p.id === playId);
+                            const playName = play?.name || foundPlay?.name || playId;
+
+                            updatedScript[emptyRowIndex] = {
+                                ...updatedScript[emptyRowIndex],
+                                play: playName
+                            };
+                            slotsAdded++;
+                        }
+
+                        if (slotsAdded === 0) return; // Nothing was added
 
                         const updatedSegment = { ...targetSegment, script: updatedScript };
                         const updatedSegments = (dayPlan.segments || []).map(s =>
@@ -11919,7 +11935,7 @@
                 return () => {
                     if (addToNextSlotRef) addToNextSlotRef.current = null;
                 };
-            }, [addToNextSlotRef, plans, selectedDay, selectedSegmentId, onUpdatePlans]);
+            }, [addToNextSlotRef, plans, plays, selectedDay, selectedSegmentId, onUpdatePlans]);
 
             console.log('PracticeScriptBuilder render. notesModalSegmentId:', notesModalSegmentId);
 
@@ -18930,8 +18946,15 @@
             const { currentUser, logout } = useAuth();
 
             const [activeTab, setActiveTab] = useState('general'); // 'general' | 'members' | 'billing'
+            const [expandedCategories, setExpandedCategories] = useState({});
 
-            // Cloud Migration State REMOVED
+            const toggleCategory = (key) => {
+                setExpandedCategories(prev => ({ ...prev, [key]: !prev[key] }));
+            };
+
+            // Cloud Migration State
+            const [migrationStatus, setMigrationStatus] = useState('idle');
+            const [migrationError, setMigrationError] = useState(null);
 
             const handleMigrateToCloud = async () => {
                 if (!currentUser) {
@@ -38877,37 +38900,41 @@
                             zIndex: 100, // Normal sidebar z-index
                             position: 'relative'
                         }}>
-                            <div style={{ marginBottom: '2rem', paddingLeft: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                {!sidebarCollapsed && (
-                                    <img src="dofo-logo-white.png" alt="DoFO" style={{ height: '55px', marginBottom: '0.5rem' }} />
-                                )}
-                                <button
-                                    onClick={() => {
-                                        const willExpand = sidebarCollapsed;
-                                        setSidebarCollapsed(!sidebarCollapsed);
-                                        // When expanding sidebar, close any open side menus
-                                        if (willExpand && closeSideMenuRef.current) {
-                                            closeSideMenuRef.current();
-                                        }
-                                    }}
-                                    style={{
-                                        background: 'rgba(56, 189, 248, 0.1)',
-                                        border: '1px solid rgba(56, 189, 248, 0.3)',
-                                        borderRadius: '4px',
-                                        padding: '0.5rem',
-                                        cursor: 'pointer',
-                                        color: 'var(--accent)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        marginLeft: sidebarCollapsed ? '0' : 'auto',
-                                        marginBottom: sidebarCollapsed ? '0' : '1rem'
-                                    }}
-                                    title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                                >
-                                    {sidebarCollapsed ? '→' : '←'}
-                                </button>
-                            </div>
+                            {/* Collapse button - absolutely positioned */}
+                            <button
+                                onClick={() => {
+                                    const willExpand = sidebarCollapsed;
+                                    setSidebarCollapsed(!sidebarCollapsed);
+                                    // When expanding sidebar, close any open side menus
+                                    if (willExpand && closeSideMenuRef.current) {
+                                        closeSideMenuRef.current();
+                                    }
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    top: '0.5rem',
+                                    right: '0.5rem',
+                                    background: 'rgba(56, 189, 248, 0.1)',
+                                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                                    borderRadius: '4px',
+                                    padding: '0.5rem',
+                                    cursor: 'pointer',
+                                    color: 'var(--accent)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10
+                                }}
+                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            >
+                                {sidebarCollapsed ? '→' : '←'}
+                            </button>
+                            {/* Logo - use dark version for light theme */}
+                            {!sidebarCollapsed && (
+                                <div style={{ marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+                                    <img src={theme === 'light' ? 'dofo-logo-dark.png' : 'dofo-logo-white.png'} alt="DoFO" style={{ height: '110px', marginLeft: '0px' }} />
+                                </div>
+                            )}
 
                             <div style={{ padding: sidebarCollapsed ? '0 0.25rem' : '0 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1rem' }}>
                                 {!sidebarCollapsed && (
