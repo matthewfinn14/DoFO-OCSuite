@@ -26527,26 +26527,38 @@
                     position: 'relative',
                     overflow: 'hidden'
                 }}>
-                    {/* Collapsed state: just show toggle */}
+                    {/* Collapsed state: toggle + vertical label */}
                     {!isOpen && (
-                        <button
+                        <div
                             onClick={() => onToggle(true)}
                             title="Expand Playbook"
                             style={{
                                 width: '40px',
-                                height: '40px',
-                                background: 'transparent',
+                                height: '100%',
+                                background: '#1e293b',
                                 border: 'none',
                                 cursor: 'pointer',
                                 display: 'flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#94a3b8',
-                                fontSize: '1.25rem'
+                                paddingTop: '8px',
+                                gap: '12px'
                             }}
                         >
-                            <Icon name="ChevronLeft" size={20} />
-                        </button>
+                            <Icon name="ChevronLeft" size={20} color="#94a3b8" />
+                            <span style={{
+                                writingMode: 'vertical-rl',
+                                textOrientation: 'mixed',
+                                transform: 'rotate(180deg)',
+                                fontSize: '0.7rem',
+                                fontWeight: '600',
+                                color: '#64748b',
+                                letterSpacing: '0.1em',
+                                textTransform: 'uppercase'
+                            }}>
+                                Playbook
+                            </span>
+                        </div>
                     )}
 
                     <div style={{ width: '360px', display: isOpen ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
