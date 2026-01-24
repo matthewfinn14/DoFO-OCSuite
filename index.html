@@ -1668,14 +1668,18 @@
 
             return (
                 <div style={{
-                    height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
                 }}>
+                    {/* Logo above the card */}
+                    <img
+                        src="dofo-logo-white.png"
+                        alt="DoFO - Plan Faster. Prepare Smarter. Win the Week."
+                        style={{ width: '320px', marginBottom: '2rem' }}
+                    />
+
                     <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                        <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', color: '#38bdf8' }}>
-                            {isRequestMode ? 'Request Access' : 'Welcome to DoFO'}
-                        </h1>
-                        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
                             {isRequestMode ? 'Create an account to get started' : 'Sign in to your account'}
                         </p>
 
