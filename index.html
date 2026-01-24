@@ -1575,7 +1575,7 @@
             });
 
             const planStatus = useMemo(() => {
-                const SITE_ADMINS = ['matthewfinn14@gmail.com'];
+                const SITE_ADMINS = ['matthewfinn14@gmail.com', 'admin@digitaldofo.com'];
                 if (currentUser && SITE_ADMINS.includes(currentUser.email.toLowerCase())) return 'ALL_ACCESS';
 
                 const plan = billingInfo.plan || 'free';
@@ -32320,7 +32320,7 @@
 
             // 1. Site Admin Bypass
             // Hardcoded for safety across entire app context
-            const SITE_ADMINS = ['matthewfinn14@gmail.com'];
+            const SITE_ADMINS = ['matthewfinn14@gmail.com', 'admin@digitaldofo.com'];
             if (user && user.email && SITE_ADMINS.includes(user.email.toLowerCase())) {
                 return 'ALL_ACCESS';
             }
@@ -35104,6 +35104,16 @@
                         // 3. CHECK FOR ZERO MEMBERSHIPS (Orphaned User -> Check Access Request)
                         // If no invites, no domain match, and no legacy school ID, check access request status
                         console.log("DEBUG: inviteData=", inviteData, "schoolId=", schoolId);
+
+                        // ADMIN BYPASS: Super admins skip access request entirely and go straight to school creation
+                        const ADMIN_BYPASS_EMAILS = ['matthewfinn14@gmail.com', 'admin@digitaldofo.com'];
+                        if (ADMIN_BYPASS_EMAILS.includes(authUser.email.toLowerCase()) && !inviteData && !schoolId) {
+                            console.log("DEBUG: Admin email detected. Bypassing access request, showing school wizard.");
+                            const newSchoolId = 'school_' + Date.now();
+                            setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                            return;
+                        }
+
                         if (!inviteData && !schoolId) {
                             console.log("DEBUG: User has no memberships. Checking access request status...");
 
@@ -35744,8 +35754,8 @@
 
 
             // --- SITE ADMIN LOGIC ---
-            // Hardcoded Safety Fallback
-            const SUPER_ADMIN_EMAIL = 'matthewfinn14@gmail.com';
+            // Hardcoded Safety Fallback - these emails always have admin access
+            const SUPER_ADMIN_EMAILS = ['matthewfinn14@gmail.com', 'admin@digitaldofo.com'];
 
             const [siteAdmins, setSiteAdmins] = useState([]);
             const [isSiteAdmin, setIsSiteAdmin] = useState(false);
@@ -35764,12 +35774,12 @@
 
                                     // Determine if current user is Site Admin
                                     const email = authUser.email.toLowerCase();
-                                    const isSuper = email === SUPER_ADMIN_EMAIL.toLowerCase();
+                                    const isSuper = SUPER_ADMIN_EMAILS.includes(email);
                                     const isListed = admins.includes(email);
                                     setIsSiteAdmin(isSuper || isListed);
                                 } else {
                                     // Fallback if doc doesn't exist yet
-                                    setIsSiteAdmin(authUser.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
+                                    setIsSiteAdmin(SUPER_ADMIN_EMAILS.includes(authUser.email.toLowerCase()));
                                 }
                             }, (error) => {
                                 console.error("Error fetching admin config:", error);
