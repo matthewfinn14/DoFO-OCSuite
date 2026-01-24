@@ -5240,17 +5240,21 @@
 
                 // Use WIZ card viewBox (0 60 800 460) for skill diagrams to match print output
                 const viewBox = useWizCardView ? '0 60 800 460' : '0 0 900 600';
-                const playerSize = 24;
+                const playerSize = useWizCardView ? 14 : 18;
 
                 return (
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" style={{ background: '#f8fdf8', borderRadius: '4px', border: '1px solid #e5e7eb' }}>
                         {/* Arrow markers */}
                         <defs>
-                            {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'].map(c => (
-                                <marker key={c} id={`preview-arrow-${c.replace('#', '')}`} markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                                    <polygon points="0 0, 8 3, 0 6" fill={c} />
-                                </marker>
-                            ))}
+                            {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'].map(c => {
+                                const markerSize = useWizCardView ? 5 : 8;
+                                const markerHeight = useWizCardView ? 4 : 6;
+                                return (
+                                    <marker key={c} id={`preview-arrow-${c.replace('#', '')}`} markerWidth={markerSize} markerHeight={markerHeight} refX={markerSize - 1} refY={markerHeight / 2} orient="auto">
+                                        <polygon points={`0 0, ${markerSize} ${markerHeight/2}, 0 ${markerHeight}`} fill={c} />
+                                    </marker>
+                                );
+                            })}
                         </defs>
                         {/* Field lines - adjusted for WIZ card viewBox (y: 60-520) */}
                         <g opacity="0.12">
@@ -5277,7 +5281,8 @@
                             if (el.type === 'player' && el.points && el.points[0]) {
                                 const pt = el.points[0];
                                 const isTextOnly = el.shape === 'text-only';
-                                const fontSize = el.fontSize ? Math.min(el.fontSize, 20) : 18;
+                                const baseFontSize = el.fontSize ? Math.min(el.fontSize, 20) : 18;
+                                const fontSize = useWizCardView ? Math.round(baseFontSize * 0.65) : baseFontSize;
 
                                 if (isTextOnly) {
                                     return (
@@ -5287,8 +5292,8 @@
 
                                 return (
                                     <g key={index}>
-                                        <circle cx={pt.x} cy={pt.y} r={playerSize} fill="white" stroke={el.color || '#000'} strokeWidth="3" />
-                                        <text x={pt.x} y={pt.y + 1} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
+                                        <circle cx={pt.x} cy={pt.y} r={playerSize} fill="white" stroke={el.color || '#000'} strokeWidth={useWizCardView ? 2 : 3} />
+                                        <text x={pt.x} y={pt.y + 1} textAnchor="middle" dominantBaseline="middle" fontSize={useWizCardView ? 10 : 14} fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
                                     </g>
                                 );
                             }
@@ -5305,7 +5310,7 @@
                                         key={index}
                                         d={d}
                                         stroke={color}
-                                        strokeWidth={el.strokeWidth || 4}
+                                        strokeWidth={useWizCardView ? Math.max(2, (el.strokeWidth || 4) * 0.6) : (el.strokeWidth || 4)}
                                         fill="none"
                                         strokeDasharray={el.style === 'dashed' ? '8,4' : 'none'}
                                         markerEnd={hasArrow ? `url(#${markerId})` : 'none'}
