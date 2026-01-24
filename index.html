@@ -40126,6 +40126,17 @@
 
             const [defenseTermLibrary, setDefenseTermLibrary] = useLocalStorage('oc-dashboard-term-library-defense', {});
             const [stTermLibrary, setStTermLibrary] = useLocalStorage('oc-dashboard-term-library-st', {});
+
+            // O-Line Schemes State (Pass Protections and Run Blocking)
+            const [passProtections, setPassProtections] = useLocalStorage('oc-dashboard-pass-protections', [
+                { id: 'brown', name: 'BROWN', slideDirection: 'right', manSide: 'left', callText: 'Slide R – Man L', notes: '' },
+                { id: 'gold', name: 'GOLD', slideDirection: 'left', manSide: 'right', callText: 'Slide L – Man R', notes: '' }
+            ]);
+            const [runBlocking, setRunBlocking] = useLocalStorage('oc-dashboard-run-blocking', [
+                { id: 'zone', name: 'ZONE', type: 'zone', callText: 'Zone blocking scheme', notes: '' },
+                { id: 'gap', name: 'GAP', type: 'gap', callText: 'Gap/Power blocking scheme', notes: '' }
+            ]);
+
             const [setupTab, setSetupTab] = useState('positions');
             const [setupCategory, setSetupCategory] = useState(null);
             const [selectedBucketCategory, setSelectedBucketCategory] = useState(null);
@@ -41459,6 +41470,25 @@
                                     <Icon name="FileText" size={16} /> Script Presets
                                 </button>
                             )}
+                            {isOffense && (
+                                <button
+                                    className={`btn-ghost`}
+                                    style={{
+                                        borderRadius: 0,
+                                        padding: '1rem 1.5rem',
+                                        borderBottom: setupTab === 'oline-schemes' ? '3px solid var(--accent)' : '3px solid transparent',
+                                        fontWeight: setupTab === 'oline-schemes' ? 'bold' : 'normal',
+                                        color: setupTab === 'oline-schemes' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                        background: 'transparent',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}
+                                    onClick={() => setSetupTab('oline-schemes')}
+                                >
+                                    <Icon name="Shield" size={16} /> O-Line Schemes
+                                </button>
+                            )}
                         </div>
 
                         <div style={{ padding: '1.5rem', flex: 1 }}>
@@ -42103,6 +42133,231 @@
                                     <ScriptPresetsManager />
                                 )
                             }
+
+                            {setupTab === 'oline-schemes' && (
+                                <div>
+                                    <h3 style={{ marginBottom: '1.5rem' }}>O-Line Schemes</h3>
+
+                                    {/* Pass Protections Section */}
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <div>
+                                                <h4 style={{ margin: 0 }}>Pass Protections</h4>
+                                                <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7, fontSize: '0.85rem' }}>Define your pass protection calls (e.g., BROWN, GOLD)</p>
+                                            </div>
+                                            <button className="btn btn-primary" onClick={() => {
+                                                const name = prompt("Protection Name (e.g., BROWN):");
+                                                if (name) {
+                                                    setPassProtections([...passProtections, {
+                                                        id: Date.now().toString(),
+                                                        name: name.toUpperCase(),
+                                                        slideDirection: 'right',
+                                                        manSide: 'left',
+                                                        callText: '',
+                                                        notes: ''
+                                                    }]);
+                                                }
+                                            }}>
+                                                <Icon name="Plus" size={16} style={{ marginRight: '6px' }} /> Add Protection
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+                                            {passProtections.map((prot, idx) => (
+                                                <div key={prot.id} className="card" style={{ padding: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={prot.name}
+                                                            onChange={(e) => {
+                                                                const updated = [...passProtections];
+                                                                updated[idx] = { ...prot, name: e.target.value.toUpperCase() };
+                                                                setPassProtections(updated);
+                                                            }}
+                                                            style={{ fontWeight: 'bold', fontSize: '1.1rem', background: 'transparent', border: 'none', color: 'var(--text-primary)', width: '120px' }}
+                                                        />
+                                                        <button
+                                                            className="btn btn-ghost btn-sm"
+                                                            onClick={() => {
+                                                                if (confirm(`Delete ${prot.name}?`)) {
+                                                                    setPassProtections(passProtections.filter(p => p.id !== prot.id));
+                                                                }
+                                                            }}
+                                                            style={{ color: '#ef4444' }}
+                                                        >
+                                                            <Icon name="Trash2" size={14} />
+                                                        </button>
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                                        <div>
+                                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Slide Direction</label>
+                                                            <select
+                                                                className="form-input"
+                                                                value={prot.slideDirection}
+                                                                onChange={(e) => {
+                                                                    const updated = [...passProtections];
+                                                                    updated[idx] = { ...prot, slideDirection: e.target.value };
+                                                                    setPassProtections(updated);
+                                                                }}
+                                                            >
+                                                                <option value="left">← Slide Left</option>
+                                                                <option value="right">Slide Right →</option>
+                                                                <option value="none">No Slide</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Man Side</label>
+                                                            <select
+                                                                className="form-input"
+                                                                value={prot.manSide}
+                                                                onChange={(e) => {
+                                                                    const updated = [...passProtections];
+                                                                    updated[idx] = { ...prot, manSide: e.target.value };
+                                                                    setPassProtections(updated);
+                                                                }}
+                                                            >
+                                                                <option value="left">Man Left</option>
+                                                                <option value="right">Man Right</option>
+                                                                <option value="none">N/A</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ marginBottom: '0.5rem' }}>
+                                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Call Text (shown on WIZ card)</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-input"
+                                                            value={prot.callText}
+                                                            onChange={(e) => {
+                                                                const updated = [...passProtections];
+                                                                updated[idx] = { ...prot, callText: e.target.value };
+                                                                setPassProtections(updated);
+                                                            }}
+                                                            placeholder="e.g., Slide R – Man L"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Notes</label>
+                                                        <textarea
+                                                            className="form-input"
+                                                            value={prot.notes}
+                                                            onChange={(e) => {
+                                                                const updated = [...passProtections];
+                                                                updated[idx] = { ...prot, notes: e.target.value };
+                                                                setPassProtections(updated);
+                                                            }}
+                                                            placeholder="Optional notes..."
+                                                            rows={2}
+                                                            style={{ resize: 'vertical' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Run Blocking Section */}
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <div>
+                                                <h4 style={{ margin: 0 }}>Run Blocking Schemes</h4>
+                                                <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7, fontSize: '0.85rem' }}>Define your run blocking schemes (e.g., Zone, Gap, Power)</p>
+                                            </div>
+                                            <button className="btn btn-primary" onClick={() => {
+                                                const name = prompt("Blocking Scheme Name (e.g., ZONE, POWER):");
+                                                if (name) {
+                                                    setRunBlocking([...runBlocking, {
+                                                        id: Date.now().toString(),
+                                                        name: name.toUpperCase(),
+                                                        type: 'zone',
+                                                        callText: '',
+                                                        notes: ''
+                                                    }]);
+                                                }
+                                            }}>
+                                                <Icon name="Plus" size={16} style={{ marginRight: '6px' }} /> Add Scheme
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+                                            {runBlocking.map((scheme, idx) => (
+                                                <div key={scheme.id} className="card" style={{ padding: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={scheme.name}
+                                                            onChange={(e) => {
+                                                                const updated = [...runBlocking];
+                                                                updated[idx] = { ...scheme, name: e.target.value.toUpperCase() };
+                                                                setRunBlocking(updated);
+                                                            }}
+                                                            style={{ fontWeight: 'bold', fontSize: '1.1rem', background: 'transparent', border: 'none', color: 'var(--text-primary)', width: '120px' }}
+                                                        />
+                                                        <button
+                                                            className="btn btn-ghost btn-sm"
+                                                            onClick={() => {
+                                                                if (confirm(`Delete ${scheme.name}?`)) {
+                                                                    setRunBlocking(runBlocking.filter(s => s.id !== scheme.id));
+                                                                }
+                                                            }}
+                                                            style={{ color: '#ef4444' }}
+                                                        >
+                                                            <Icon name="Trash2" size={14} />
+                                                        </button>
+                                                    </div>
+                                                    <div style={{ marginBottom: '0.75rem' }}>
+                                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Scheme Type</label>
+                                                        <select
+                                                            className="form-input"
+                                                            value={scheme.type}
+                                                            onChange={(e) => {
+                                                                const updated = [...runBlocking];
+                                                                updated[idx] = { ...scheme, type: e.target.value };
+                                                                setRunBlocking(updated);
+                                                            }}
+                                                        >
+                                                            <option value="zone">Zone</option>
+                                                            <option value="gap">Gap / Man</option>
+                                                            <option value="power">Power</option>
+                                                            <option value="counter">Counter</option>
+                                                            <option value="trap">Trap</option>
+                                                            <option value="iso">Iso</option>
+                                                            <option value="other">Other</option>
+                                                        </select>
+                                                    </div>
+                                                    <div style={{ marginBottom: '0.5rem' }}>
+                                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Call Text (shown on WIZ card)</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-input"
+                                                            value={scheme.callText}
+                                                            onChange={(e) => {
+                                                                const updated = [...runBlocking];
+                                                                updated[idx] = { ...scheme, callText: e.target.value };
+                                                                setRunBlocking(updated);
+                                                            }}
+                                                            placeholder="e.g., Inside Zone Left"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Notes</label>
+                                                        <textarea
+                                                            className="form-input"
+                                                            value={scheme.notes}
+                                                            onChange={(e) => {
+                                                                const updated = [...runBlocking];
+                                                                updated[idx] = { ...scheme, notes: e.target.value };
+                                                                setRunBlocking(updated);
+                                                            }}
+                                                            placeholder="Optional notes..."
+                                                            rows={2}
+                                                            style={{ resize: 'vertical' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div >
                     </div >
                 );
