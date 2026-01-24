@@ -1,6 +1,6 @@
 # WIZ Wristband System - Improvement Specification
 
-## Status: Active Development (2026-01-23) - Phases 1, 2, 5, 6 Completed
+## Status: Active Development (2026-01-23) - Phases 1, 2, 5, 6, 7 Completed
 
 This document serves as a shared reference for implementing improvements to the WIZ wristband diagramming and display system. It can be used across Claude Code and Google Antigravity sessions.
 
@@ -323,6 +323,31 @@ fontSize: "16"  // May need to adjust
 - **FormationManager props**: Fixed missing `onAddFormation`, `onUpdateFormation`, `onDeleteFormation` props (was incorrectly passing `onUpdateFormations`)
 - **Default formation alignment**: New formations in FormationManager now align all players to LOS (y=50) for easier positioning
 
+### Phase 7: Double-Click to Edit WIZ Diagrams - ✅ COMPLETED (2026-01-23)
+**Goal**: Allow users to quickly edit WIZ diagrams directly from the wristband grid
+
+**Problem Solved**:
+- Users had to navigate to play edit mode to modify WIZ diagrams
+- No visual indication when a WIZ cell had no diagram data
+- Cumbersome workflow for quick diagram edits
+
+**Changes Made**:
+1. **Added editing state to WristbandBuilder** - `editingWizPlay` and `editingWizType` track which play/view is being edited
+2. **Added double-click handler to WIZ grid cells** - Double-clicking a cell with a play opens the diagram editor
+3. **Added PlayDiagramEditor modal in WristbandBuilder** - Full diagram editor available directly from wristband view
+4. **Visual hint for empty diagrams** - Cells with plays but no diagram show "✏️ Double-click to draw"
+5. **Automatic save to library** - If O-Line diagram has associated scheme, saves updates to library automatically
+6. **New props passed to WristbandBuilder**: `formations`, `onAddFormation`, `wizLibrary`, `setWizLibrary`, `positionNames`, `passProtections`, `setPassProtections`, `runBlocking`, `setRunBlocking`
+
+**Key Locations**:
+- WristbandBuilder props: line ~7719
+- Editing state: line ~7735
+- Double-click handler: line ~9405
+- hasDiagram check: line ~9386
+- Empty diagram hint: line ~9449
+- PlayDiagramEditor modal: line ~9709
+- App WristbandBuilder call: line ~43789
+
 ---
 
 ## Session Handoff Notes
@@ -387,14 +412,23 @@ fontSize: "16"  // May need to adjust
    - New formations in FormationManager now align all players to LOS (y=50)
    - OL, receivers on the line; QB/RB slightly behind
 
+**What Was Just Done (2026-01-23 - Phase 7)**:
+1. **Double-Click to Edit WIZ Diagrams COMPLETE**:
+   - Added `editingWizPlay` and `editingWizType` state to WristbandBuilder
+   - Double-clicking any WIZ grid cell opens PlayDiagramEditor for that play
+   - Works for both Skill and O-Line views
+   - Empty cells (play assigned but no diagram) show "✏️ Double-click to draw" hint
+   - O-Line diagrams auto-save to library if scheme ID is set
+   - Full formations, positionNames, and library props passed through
+
 **Uncommitted Changes**:
-- Default formation alignment to LOS (needs commit)
+- Phase 7: Double-click to edit WIZ diagrams feature
 
 **Start Here**:
-- Commit remaining changes
-- Test formation save in FormationManager
-- Test WIZ skill editor - verify no white space on sides
-- Move on to Phase 4: O-Line Protection Library
+- Test double-click on WIZ cells with diagrams
+- Test double-click on WIZ cells without diagrams (should show hint)
+- Verify diagram saves correctly and updates wristband display
+- Continue to Phase 4: O-Line Protection Library enhancements
 
 ---
 

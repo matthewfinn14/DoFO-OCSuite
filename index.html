@@ -7716,7 +7716,7 @@
             return false;
         };
 
-        const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [], onQuickAddPlay }) => {
+        const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [], onQuickAddPlay, formations = [], onAddFormation, wizLibrary = [], setWizLibrary, positionNames = {}, passProtections = [], setPassProtections, runBlocking = [], setRunBlocking }) => {
             const { currentUser } = useAuth();
             const [selectedCardId, setSelectedCardId] = useState('card1'); // Default to Card 1
             const [sidebarMode, setSidebarMode] = useState('plays'); // 'plays' or 'scripts'
@@ -7728,6 +7728,10 @@
             const [quickAddSuggestions, setQuickAddSuggestions] = useState([]);
             const [selectedDay, setSelectedDay] = useState('Monday');
             const [staplesInputs, setStaplesInputs] = useState({}); // Track input values for Staples slots
+
+            // WIZ diagram editing state
+            const [editingWizPlay, setEditingWizPlay] = useState(null); // Play being edited
+            const [editingWizType, setEditingWizType] = useState(null); // 'skill' or 'oline'
 
             // Layout constants
             const rowHeight = 11;
@@ -9378,6 +9382,12 @@
                                         const displayPlay = play;
                                         const isClickable = selectedPlayId && !play;
 
+                                        // Check if this cell has diagram data for current view type
+                                        const hasDiagram = displayPlay && (
+                                            viewType === 'skill' ? (displayPlay.wizSkillData && displayPlay.wizSkillData.length > 0) :
+                                            viewType === 'oline' ? (displayPlay.wizOlineData && displayPlay.wizOlineData.length > 0) : false
+                                        );
+
                                         return (
                                             <div
                                                 key={slot}
@@ -9386,12 +9396,21 @@
                                                     borderRight: cIndex < 3 ? '1px solid black' : 'none',
                                                     display: 'flex',
                                                     flexDirection: 'column',
-                                                    cursor: isClickable ? 'pointer' : 'default',
+                                                    cursor: displayPlay ? 'pointer' : (isClickable ? 'pointer' : 'default'),
                                                     background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white',
                                                     overflow: 'hidden',
                                                     position: 'relative'
                                                 }}
                                                 onClick={() => handleAssignSlot(slot)}
+                                                onDoubleClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (displayPlay) {
+                                                        // Open diagram editor for this play
+                                                        setEditingWizPlay(displayPlay);
+                                                        setEditingWizType(viewType === 'skill' ? 'wiz-skill' : 'wiz-oline');
+                                                    }
+                                                }}
+                                                title={displayPlay ? `Double-click to edit ${viewType === 'skill' ? 'skill' : 'O-line'} diagram` : ''}
                                             >
                                                 {/* Clear button in top-right corner */}
                                                 {displayPlay && (
@@ -9426,7 +9445,25 @@
                                                     minHeight: 0,
                                                     background: 'white'
                                                 }}>
-                                                    {displayPlay && renderPlayThumbnail(displayPlay, viewType)}
+                                                    {displayPlay && hasDiagram && renderPlayThumbnail(displayPlay, viewType)}
+                                                    {displayPlay && !hasDiagram && (
+                                                        <div style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            flexDirection: 'column',
+                                                            color: '#999',
+                                                            fontSize: '7pt',
+                                                            textAlign: 'center',
+                                                            padding: '4px',
+                                                            background: '#f5f5f5'
+                                                        }}>
+                                                            <span style={{ fontSize: '16px', marginBottom: '2px' }}>✏️</span>
+                                                            <span>Double-click<br/>to draw</span>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Bottom row: Coordinate (left) | Play Name (right) - compact like the reference */}
@@ -9668,6 +9705,50 @@
 
             return (
                 <div style={{ display: 'flex', height: 'calc(100vh - 100px)', gap: '2rem' }}>
+                    {/* WIZ Diagram Editor Modal */}
+                    {editingWizPlay && editingWizType && (
+                        <PlayDiagramEditor
+                            initialData={editingWizType === 'wiz-skill'
+                                ? (editingWizPlay.wizSkillData ? { elements: editingWizPlay.wizSkillData } : null)
+                                : (editingWizPlay.wizOlineData ? { elements: editingWizPlay.wizOlineData } : null)
+                            }
+                            mode={editingWizType}
+                            formations={formations}
+                            onSave={(data) => {
+                                // Update the play with new diagram data
+                                const updates = editingWizType === 'wiz-skill'
+                                    ? { wizSkillData: data.elements }
+                                    : { wizOlineData: data.elements };
+                                onUpdatePlay({ ...editingWizPlay, ...updates });
+
+                                // If O-Line and scheme ID is set, offer to save to library
+                                if (editingWizType === 'wiz-oline' && editingWizPlay.olineSchemeId) {
+                                    const isProt = passProtections.some(p => p.id === editingWizPlay.olineSchemeId);
+                                    if (isProt && setPassProtections) {
+                                        setPassProtections(passProtections.map(p =>
+                                            p.id === editingWizPlay.olineSchemeId ? { ...p, diagramData: data.elements } : p
+                                        ));
+                                    } else if (setRunBlocking) {
+                                        setRunBlocking(runBlocking.map(b =>
+                                            b.id === editingWizPlay.olineSchemeId ? { ...b, diagramData: data.elements } : b
+                                        ));
+                                    }
+                                }
+
+                                setEditingWizPlay(null);
+                                setEditingWizType(null);
+                            }}
+                            onCancel={() => {
+                                setEditingWizPlay(null);
+                                setEditingWizType(null);
+                            }}
+                            wizLibrary={wizLibrary}
+                            setWizLibrary={setWizLibrary}
+                            positionNames={positionNames}
+                            onAddFormation={onAddFormation}
+                        />
+                    )}
+
                     {/* Left: Sidebar (Plays or Scripts) */}
                     <div style={{ width: '250px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
 
@@ -43723,7 +43804,7 @@
                                     </div>
                                 </div>
                             )}
-                            {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} currentWeek={currentWeek} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} onUpdateWeek={handleUpdateWeek} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} playCategories={playCategories} onQuickAddPlay={handleQuickAddPlay} />}
+                            {view === 'wristband' && <WristbandBuilder plays={plays} weeks={weeks} currentWeek={currentWeek} gamePlan={currentWeek.offensiveGamePlan} onUpdatePlay={handlePatchPlay} onUpdateWeek={handleUpdateWeek} wbSettings={currentWeek.wristbands || {}} setWbSettings={handleUpdateWristbands} onNavigate={setView} installList={currentWeek?.installList || []} seasonOpponent={currentWeek.opponent} playCategories={playCategories} onQuickAddPlay={handleQuickAddPlay} formations={formations} onAddFormation={handleAddFormation} wizLibrary={wizLibrary} setWizLibrary={setWizLibrary} positionNames={positionNames} passProtections={passProtections} setPassProtections={setPassProtections} runBlocking={runBlocking} setRunBlocking={setRunBlocking} />}
 
 
                             {
