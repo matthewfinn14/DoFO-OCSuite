@@ -40230,6 +40230,7 @@
             ]);
 
             const [setupTab, setSetupTab] = useState('positions');
+            const [editingOlineScheme, setEditingOlineScheme] = useState(null); // { id, type: 'protection' | 'blocking' }
             const [setupCategory, setSetupCategory] = useState(null);
             const [selectedBucketCategory, setSelectedBucketCategory] = useState(null);
             // Legacy: Keep playCategories for backward compatibility during transition
@@ -42346,6 +42347,39 @@
                                                             style={{ resize: 'vertical' }}
                                                         />
                                                     </div>
+                                                    {/* Diagram Preview & Edit */}
+                                                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Diagram</label>
+                                                            <button
+                                                                className="btn btn-secondary btn-sm"
+                                                                onClick={() => setEditingOlineScheme({ id: prot.id, type: 'protection' })}
+                                                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                                                            >
+                                                                <Icon name="Edit3" size={12} style={{ marginRight: '4px' }} />
+                                                                {prot.diagramData ? 'Edit' : 'Create'} Diagram
+                                                            </button>
+                                                        </div>
+                                                        {prot.diagramData && prot.diagramData.length > 0 ? (
+                                                            <div style={{ background: 'white', borderRadius: '4px', height: '80px', overflow: 'hidden' }}>
+                                                                <svg viewBox="0 0 900 600" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                                                                    {prot.diagramData.map((el, i) => {
+                                                                        if (el.type === 'player') {
+                                                                            const { x, y } = el.points[0];
+                                                                            return (
+                                                                                <text key={i} x={x} y={y} fontSize={el.fontSize || 40} fill={el.color || '#000'} textAnchor="middle" dominantBaseline="middle" fontWeight="bold">{el.label}</text>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    })}
+                                                                </svg>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ background: 'var(--bg-input)', borderRadius: '4px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                                                                No diagram yet
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -42448,10 +42482,70 @@
                                                             style={{ resize: 'vertical' }}
                                                         />
                                                     </div>
+                                                    {/* Diagram Preview & Edit */}
+                                                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Diagram</label>
+                                                            <button
+                                                                className="btn btn-secondary btn-sm"
+                                                                onClick={() => setEditingOlineScheme({ id: scheme.id, type: 'blocking' })}
+                                                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                                                            >
+                                                                <Icon name="Edit3" size={12} style={{ marginRight: '4px' }} />
+                                                                {scheme.diagramData ? 'Edit' : 'Create'} Diagram
+                                                            </button>
+                                                        </div>
+                                                        {scheme.diagramData && scheme.diagramData.length > 0 ? (
+                                                            <div style={{ background: 'white', borderRadius: '4px', height: '80px', overflow: 'hidden' }}>
+                                                                <svg viewBox="0 0 900 600" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                                                                    {scheme.diagramData.map((el, i) => {
+                                                                        if (el.type === 'player') {
+                                                                            const { x, y } = el.points[0];
+                                                                            return (
+                                                                                <text key={i} x={x} y={y} fontSize={el.fontSize || 40} fill={el.color || '#000'} textAnchor="middle" dominantBaseline="middle" fontWeight="bold">{el.label}</text>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    })}
+                                                                </svg>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ background: 'var(--bg-input)', borderRadius: '4px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                                                                No diagram yet
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
+
+                                    {/* Diagram Editor Modal */}
+                                    {editingOlineScheme && (
+                                        <PlayDiagramEditor
+                                            initialData={(() => {
+                                                const scheme = editingOlineScheme.type === 'protection'
+                                                    ? passProtections.find(p => p.id === editingOlineScheme.id)
+                                                    : runBlocking.find(b => b.id === editingOlineScheme.id);
+                                                return scheme?.diagramData ? { elements: scheme.diagramData } : null;
+                                            })()}
+                                            mode="wiz-oline"
+                                            onSave={(data) => {
+                                                if (editingOlineScheme.type === 'protection') {
+                                                    setPassProtections(passProtections.map(p =>
+                                                        p.id === editingOlineScheme.id ? { ...p, diagramData: data.elements } : p
+                                                    ));
+                                                } else {
+                                                    setRunBlocking(runBlocking.map(b =>
+                                                        b.id === editingOlineScheme.id ? { ...b, diagramData: data.elements } : b
+                                                    ));
+                                                }
+                                                setEditingOlineScheme(null);
+                                            }}
+                                            onCancel={() => setEditingOlineScheme(null)}
+                                            positionNames={positionNames}
+                                        />
+                                    )}
                                 </div>
                             )}
                         </div >
