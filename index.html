@@ -4865,7 +4865,7 @@
         };
 
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [], playBuckets = [], playCategories = [], onAddFormation = () => { } }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, playSyntax = [], termLibrary = {}, programLevels = ['Varsity', 'JV', 'JV2'], drills = [], playBuckets = [], playCategories = [], onAddFormation = () => { }, passProtections = [], setPassProtections = () => { }, runBlocking = [], setRunBlocking = () => { } }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
             const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'wiz-oline', 'wiz-skill', 'detailed'
@@ -4886,6 +4886,8 @@
                 diagramData: null, // New: Diagram elements
                 wizOlineData: null, // O-Line Wiz
                 wizOlineMode: 'diagram', // 'diagram' or 'image'
+                olineSchemeId: '', // Selected scheme from library
+                olineSchemeName: '', // Name of selected scheme
                 wizSkillData: null, // Skill Wiz
                 wizSkillMode: 'diagram', // 'diagram' or 'image'
                 wizSkillImage: null,
@@ -5291,7 +5293,45 @@
                             initialData={formData.wizOlineData ? { elements: formData.wizOlineData } : null}
                             mode="wiz-oline"
                             onSave={(data) => {
-                                setFormData({ ...formData, wizOlineData: data.elements });
+                                // Save to play
+                                setFormData(prev => ({ ...prev, wizOlineData: data.elements }));
+
+                                // Offer to save to library
+                                if (formData.olineSchemeId) {
+                                    // Update existing scheme
+                                    const isProt = passProtections.some(p => p.id === formData.olineSchemeId);
+                                    if (isProt) {
+                                        setPassProtections(passProtections.map(p =>
+                                            p.id === formData.olineSchemeId ? { ...p, diagramData: data.elements } : p
+                                        ));
+                                    } else {
+                                        setRunBlocking(runBlocking.map(b =>
+                                            b.id === formData.olineSchemeId ? { ...b, diagramData: data.elements } : b
+                                        ));
+                                    }
+                                } else {
+                                    // Offer to save as new scheme
+                                    const saveName = prompt("Save this diagram to O-Line library? Enter name (or Cancel to skip):");
+                                    if (saveName) {
+                                        const isPass = confirm("Is this a Pass Protection? (OK = Pass, Cancel = Run Blocking)");
+                                        const newScheme = {
+                                            id: Date.now().toString(),
+                                            name: saveName.toUpperCase(),
+                                            diagramData: data.elements,
+                                            slideDirection: 'right',
+                                            manSide: 'left',
+                                            type: 'zone',
+                                            callText: '',
+                                            notes: ''
+                                        };
+                                        if (isPass) {
+                                            setPassProtections([...passProtections, newScheme]);
+                                        } else {
+                                            setRunBlocking([...runBlocking, newScheme]);
+                                        }
+                                        setFormData(prev => ({ ...prev, olineSchemeId: newScheme.id, olineSchemeName: newScheme.name }));
+                                    }
+                                }
                                 setActiveDiagramMode(null);
                             }}
                             onCancel={() => setActiveDiagramMode(null)}
@@ -5645,7 +5685,7 @@
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
                             {/* Wiz O-Line Diagram */}
                             <div className="form-group" style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                     <label className="form-label" style={{ margin: 0, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <Icon name="Users" size={16} style={{ color: 'var(--accent)' }} />
                                         Wiz O-Line Diagram
@@ -5655,6 +5695,58 @@
                                         <button type="button" onClick={() => setFormData(prev => ({ ...prev, wizOlineMode: 'upload' }))} style={{ background: 'none', border: 'none', color: formData.wizOlineMode === 'upload' ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: formData.wizOlineMode === 'upload' ? 'bold' : 'normal', cursor: 'pointer' }}>Upload</button>
                                     </div>
                                 </div>
+
+                                {/* Scheme Selector */}
+                                {(formData.wizOlineMode || 'diagram') === 'diagram' && (
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                        <select
+                                            className="form-input"
+                                            value={formData.olineSchemeId || ''}
+                                            onChange={(e) => {
+                                                const schemeId = e.target.value;
+                                                if (!schemeId) {
+                                                    setFormData(prev => ({ ...prev, olineSchemeId: '', olineSchemeName: '' }));
+                                                    return;
+                                                }
+                                                // Find scheme in either protections or blocking
+                                                const prot = passProtections.find(p => p.id === schemeId);
+                                                const block = runBlocking.find(b => b.id === schemeId);
+                                                const scheme = prot || block;
+                                                if (scheme) {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        olineSchemeId: scheme.id,
+                                                        olineSchemeName: scheme.name,
+                                                        wizOlineData: scheme.diagramData || prev.wizOlineData
+                                                    }));
+                                                }
+                                            }}
+                                            style={{ fontSize: '0.85rem' }}
+                                        >
+                                            <option value="">-- Select Scheme or Create New --</option>
+                                            {passProtections.length > 0 && (
+                                                <optgroup label="Pass Protections">
+                                                    {passProtections.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                                    ))}
+                                                </optgroup>
+                                            )}
+                                            {runBlocking.length > 0 && (
+                                                <optgroup label="Run Blocking">
+                                                    {runBlocking.map(b => (
+                                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                                    ))}
+                                                </optgroup>
+                                            )}
+                                        </select>
+                                        {formData.olineSchemeName && (
+                                            <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                Selected: <strong>{formData.olineSchemeName}</strong>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div style={{ minHeight: '150px', background: 'var(--bg-input)', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', position: 'relative' }}>
                                     {formData.wizOlineMode === 'upload' ? (
                                         formData.image ? (
@@ -40570,6 +40662,10 @@
                         playBuckets={playBuckets}
                         playCategories={playCategories}
                         onAddFormation={handleAddFormation}
+                        passProtections={passProtections}
+                        setPassProtections={setPassProtections}
+                        runBlocking={runBlocking}
+                        setRunBlocking={setRunBlocking}
                     />
                 )
             }
@@ -43130,6 +43226,10 @@
                                         playCategories={playCategories}
                                         playBuckets={playBuckets}
                                         onAddFormation={handleAddFormation}
+                                        passProtections={passProtections}
+                                        setPassProtections={setPassProtections}
+                                        runBlocking={runBlocking}
+                                        setRunBlocking={setRunBlocking}
                                     />
                                 )
                             }
