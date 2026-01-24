@@ -3916,9 +3916,6 @@
             const [isDrawing, setIsDrawing] = useState(false);
             const [currentPath, setCurrentPath] = useState(null);
 
-            // Drag State
-            const [draggedId, setDraggedId] = useState(null);
-
             // Ref for SVG container to get coordinates
             const svgRef = useRef(null);
 
@@ -4072,7 +4069,6 @@
                 // Start Drag
                 setIsDraggingElements(true);
                 setLastMousePos(getPoint(e));
-                setDraggedId(elId); // Keep for legacy check or visual ref if needed
             };
 
             const handleMouseMove = (e) => {
@@ -4182,7 +4178,6 @@
                 // Finish Dragging
                 if (isDraggingElements) {
                     setIsDraggingElements(false);
-                    setDraggedId(null);
                     updateElements(elements); // Commit history
                     return;
                 }
@@ -14351,7 +14346,6 @@
                 varsity: true, jv: false, jv2: false
             });
             const [isEditing, setIsEditing] = useState(null);
-            const [viewProfileId, setViewProfileId] = useState(null);
             const [showArchived, setShowArchived] = useState(false);
             const [showImportHelp, setShowImportHelp] = useState(false);
             const fileInputRef = useRef(null);
@@ -14538,9 +14532,6 @@
 
 
             const positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'OT', 'OG', 'C', 'DE', 'DT', 'LB', 'CB', 'S', 'K', 'P', 'LS']; // Expanded primary list
-            // Filter by Staff ID / Current User Roles
-            // In Person-Centric view, we show tasks assigned to ANY of the user's roles.
-            // const [selectedRole, setSelectedRole] = useState('ALL'); // Deprecated role selector
             const years = ['Fr', 'So', 'Jr', 'Sr'];
 
             const OFFENSE_TAGS = ['QB', 'RB', 'WR', 'TE', 'OL'];
@@ -26996,7 +26987,6 @@
             const [assignmentModalState, setAssignmentModalState] = useState(null); // { playId, x, y }
             const [showImportModal, setShowImportModal] = useState(false);
             const [importSourceWeekId, setImportSourceWeekId] = useState('');
-            // const [isSideMenuOpen, setIsSideMenuOpen] = useState(false); // Removed in favor of showSideMenu
 
             const [viewMode, setViewMode] = useState('sheet'); // 'sheet', 'matrix', 'list'
             const [selectedSetId, setSelectedSetId] = useState(null);
@@ -39684,19 +39674,6 @@
             useAutoSync(authUser, 'depth_charts', depthCharts);
 
             // Migration Effect
-            useEffect(() => {
-                const MIGRATION_KEY = 'program_records_migrated_v1';
-                // Check for specific user email to load legacy data once
-                if (authUser && authUser.email === 'mfinn@roland-story.k12.ia.us') {
-                    const hasMigrated = localStorage.getItem(MIGRATION_KEY);
-                    if (!hasMigrated && typeof LEGACY_PROGRAM_RECORDS !== 'undefined') {
-                        console.log("Migrating legacy program records for mfinn...");
-                        setProgramRecords(LEGACY_PROGRAM_RECORDS);
-                        localStorage.setItem(MIGRATION_KEY, 'true');
-                    }
-                }
-            }, [authUser, setProgramRecords]);
-
             useEffect(() => {
                 const checkSchoolInit = async () => {
                     if (!authUser) return;
