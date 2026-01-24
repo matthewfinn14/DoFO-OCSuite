@@ -103,10 +103,10 @@
 
         console.log("Firebase Initialized:", firebase.app().name);
 
-        // Check for file:// protocol
-        if (window.location.protocol === 'file:') {
-            alert("⚠️ CRITICAL ERROR: Google Sign-In does NOT work when opening the file directly (file://). You MUST serve this file using a local web server (e.g., 'npx serve' or VS Code Live Server).");
-        }
+        // Check for file:// protocol (disabled for local dev - bypass handles this)
+        // if (window.location.protocol === 'file:') {
+        //     alert("⚠️ CRITICAL ERROR: Google Sign-In does NOT work when opening the file directly (file://). You MUST serve this file using a local web server (e.g., 'npx serve' or VS Code Live Server).");
+        // }
     </script>
 
     <style>
@@ -1413,11 +1413,50 @@
         // --- AUTHENTICATION ---
         const AuthContext = createContext();
 
+        // LOCAL DEV PASSWORD - change this to whatever you want
+        const LOCAL_DEV_PASSWORD = 'dofo';
+
         const AuthProvider = ({ children }) => {
             const [currentUser, setCurrentUser] = useState(null);
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
+                // LOCAL FILE:// DEV BYPASS
+                if (window.location.protocol === 'file:') {
+                    const devSession = sessionStorage.getItem('local_dev_auth');
+                    if (devSession === 'authenticated') {
+                        // Already authenticated this session
+                        const mockUser = {
+                            uid: 'local_dev_user',
+                            email: 'localdev@test.com',
+                            displayName: 'Local Dev Admin',
+                            photoURL: null
+                        };
+                        setCurrentUser(mockUser);
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Prompt for password
+                    const pwd = prompt('Local Dev Password:');
+                    if (pwd === LOCAL_DEV_PASSWORD) {
+                        sessionStorage.setItem('local_dev_auth', 'authenticated');
+                        const mockUser = {
+                            uid: 'local_dev_user',
+                            email: 'localdev@test.com',
+                            displayName: 'Local Dev Admin',
+                            photoURL: null
+                        };
+                        setCurrentUser(mockUser);
+                        setLoading(false);
+                        return;
+                    } else {
+                        alert('Incorrect password');
+                        setLoading(false);
+                        return;
+                    }
+                }
+
                 const unsubscribe = window.auth.onAuthStateChanged(async (user) => {
                     if (user) {
                         try {
@@ -8393,6 +8432,12 @@
             if (pName.includes(normalizedFormation)) return true;
 
             return false;
+        };
+
+        // Helper to format wristband slot labels
+        const getWristbandLabel = (play) => {
+            if (!play.wristbandSlot) return '';
+            return play.wristbandSlot + (play.isMiniScript || play.isWiz ? '' : 'T');
         };
 
         const WristbandBuilder = ({ plays, weeks, currentWeek, gamePlan, onUpdatePlay, onUpdateWeek, wbSettings, setWbSettings, onNavigate, installList = [], seasonOpponent, playCategories = [], onQuickAddPlay, formations = [], onAddFormation, wizLibrary = [], setWizLibrary, positionNames = {}, passProtections = [], setPassProtections, runBlocking = [], setRunBlocking, addToNextSlotRef }) => {
@@ -23085,7 +23130,7 @@
 
 
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef, teamLogo }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, drills = [], newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef, teamLogo, positionNames = {}, customPositions = {}, hiddenPositions = {} }) => {
             const { openPlayDetails } = usePlayDetailsModal();
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
@@ -24631,21 +24676,43 @@
 
             const renderPlayerTouches = () => {
                 const allActivePlays = getAllActivePlays();
-                const targets = TAG_CATEGORIES["Primary Target"] || [];
+
+                // Build positions list from Offense Setup
+                const defaultOffensePositions = [
+                    { key: 'X' }, { key: 'Z' }, { key: 'A' }, { key: 'Y' },
+                    { key: 'QB' }, { key: 'RB' },
+                    { key: 'LT' }, { key: 'LG' }, { key: 'C' }, { key: 'RG' }, { key: 'RT' }
+                ];
+
+                // Filter out hidden positions
+                const visibleDefaults = defaultOffensePositions.filter(
+                    p => !(hiddenPositions['OFFENSE'] || []).includes(p.key)
+                );
+
+                // Append custom positions
+                const allPositions = [...visibleDefaults, ...(customPositions['OFFENSE'] || [])];
+
                 return (
                     <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', paddingRight: '1rem', background: 'white', padding: '1rem', borderRadius: '8px' }}>
                         <div style={{ marginBottom: '1.5rem', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
                             <div style={{ background: '#f8fafc', padding: '0.5rem 1rem', borderBottom: '1px solid #ddd', fontWeight: 'bold', color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase' }}>
                                 Player Touches Summary
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${targets.length}, 1fr)`, divideX: '1px solid #eee' }}>
-                                {targets.map((target, idx) => {
-                                    const targetPlays = allActivePlays.filter(p => (p.tags || []).includes(target) || p.primaryTarget === target || p.tag1 === target || p.tag2 === target);
+                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${allPositions.length}, 1fr)`, divideX: '1px solid #eee' }}>
+                                {allPositions.map((pos, idx) => {
+                                    const posKey = pos.key;
+                                    const targetPlays = allActivePlays.filter(p =>
+                                        (p.tags || []).includes(posKey) ||
+                                        p.primaryTarget === posKey ||
+                                        p.tag1 === posKey ||
+                                        p.tag2 === posKey
+                                    );
+                                    const displayLabel = positionNames[posKey] || posKey;
 
                                     return (
-                                        <div key={target} style={{ borderRight: idx < targets.length - 1 ? '1px solid #eee' : 'none' }}>
+                                        <div key={posKey} style={{ borderRight: idx < allPositions.length - 1 ? '1px solid #eee' : 'none' }}>
                                             <div style={{ background: '#f1f5f9', padding: '0.25rem', textAlign: 'center', fontWeight: 'bold', fontSize: '0.9rem', borderBottom: '1px solid #eee' }}>
-                                                {target} <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginLeft: '4px' }}>({targetPlays.length})</span>
+                                                {displayLabel} <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginLeft: '4px' }}>({targetPlays.length})</span>
                                             </div>
                                             <div style={{ padding: '0.5rem', maxHeight: '600px', overflowY: 'auto' }}>
                                                 {targetPlays.length > 0 ? (
@@ -34905,13 +34972,13 @@
                         return;
                     }
 
-                    // LOCAL TESTING BYPASS: Skip access request for @test.com emails or localhost
+                    // LOCAL TESTING BYPASS: Skip access request AND wizard for @test.com emails or localhost
                     const isLocalhost = window.location.hostname === 'localhost' || window.location.protocol === 'file:';
                     const isTestEmail = authUser.email.toLowerCase().endsWith('@test.com');
                     if (isLocalhost || isTestEmail) {
-                        console.log("DEBUG: Local testing detected. Bypassing access request - showing school wizard.");
+                        console.log("DEBUG: Local testing detected. Bypassing access request and wizard.");
                         const newSchoolId = 'test_school_' + Date.now();
-                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                        setSchoolSetupData({ showWizard: false, schoolId: newSchoolId });
                         return;
                     }
 
@@ -39652,6 +39719,9 @@
                                 appSidebarCollapsed={sidebarCollapsed}
                                 addToNextSlotRef={addToNextSlotRef}
                                 teamLogo={teamLogo}
+                                positionNames={positionNames}
+                                customPositions={customPositions}
+                                hiddenPositions={hiddenPositions}
                             />}
 
                             {
