@@ -31,8 +31,8 @@ service cloud.firestore {
       // Read: Site admins can read all schools, others must be members
       allow read: if request.auth != null && (isSiteAdmin() || isMemberOf(schoolId));
 
-      // Update/Delete: Must be a member of the school.
-      allow update, delete: if request.auth != null && isMemberOf(schoolId);
+      // Update/Delete: Site admins or members of the school
+      allow update, delete: if request.auth != null && (isSiteAdmin() || isMemberOf(schoolId));
 
       // Subcollections (roster, plays, practice_plans, etc.)
       match /{allChildren=**} {
