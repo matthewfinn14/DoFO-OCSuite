@@ -35115,6 +35115,11 @@
                                         }
                                         // Approved and not expired - show wizard to create school
                                         console.log("Access approved. Showing school creation wizard.");
+                                        // Store trial info for banner display
+                                        if (requestData.accessExpiresAt) {
+                                            localStorage.setItem('dofo_trial_expires', requestData.accessExpiresAt);
+                                            localStorage.setItem('dofo_trial_days', requestData.trialDays || '7');
+                                        }
                                         const newSchoolId = 'school_' + Date.now();
                                         setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
                                         return;
@@ -38681,6 +38686,24 @@
 
             if (!authUser) return <LoginScreen />;
 
+            // LOADING STATE: Wait for access check to complete before showing anything
+            // This prevents users from seeing the main app before access is verified
+            // Only show loading for users without an existing school (new users)
+            const hasExistingSchool = localStorage.getItem('hc_school_id');
+            if (!accessRequestStatus.checked && !schoolSetupData.showWizard && !hasExistingSchool) {
+                return (
+                    <div style={{
+                        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>Loading...</div>
+                            <div style={{ color: '#94a3b8' }}>Verifying access...</div>
+                        </div>
+                    </div>
+                );
+            }
+
             // ACCESS REQUEST GATE: Show appropriate screen based on request status
             if (accessRequestStatus.checked && !schoolSetupData.showWizard) {
                 // No request yet - show form
@@ -38774,6 +38797,44 @@
                                 />
                             </div>
                         )}
+
+                        {/* Trial Banner */}
+                        {(() => {
+                            const trialExpires = localStorage.getItem('dofo_trial_expires');
+                            if (!trialExpires) return null;
+                            const expiresDate = new Date(trialExpires);
+                            const now = new Date();
+                            if (expiresDate <= now) return null; // Trial expired, don't show banner
+                            const daysLeft = Math.ceil((expiresDate - now) / (1000 * 60 * 60 * 24));
+                            const trialDays = localStorage.getItem('dofo_trial_days') || '7';
+                            return (
+                                <div style={{
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    background: 'linear-gradient(90deg, #0ea5e9, #10b981)',
+                                    color: 'white',
+                                    padding: '0.5rem 1rem',
+                                    textAlign: 'center',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '500',
+                                    zIndex: 9999,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '1rem'
+                                }}>
+                                    <span>
+                                        🎉 Welcome! You're on a {trialDays}-day free trial.
+                                        {daysLeft === 1 ? ' Expires tomorrow!' : ` ${daysLeft} days remaining.`}
+                                    </span>
+                                    <span style={{ opacity: 0.9, fontSize: '0.8rem' }}>
+                                        Expires: {expiresDate.toLocaleDateString()}
+                                    </span>
+                                </div>
+                            );
+                        })()}
 
 
                         <div className="sidebar" style={{
