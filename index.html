@@ -6024,85 +6024,116 @@
                         <Icon name="Edit2" size={14} />
                     </div>
 
-                    {
-                        play.image ? (
-                            <img src={play.image} className="play-image" alt={play.name} />
-                        ) : (
-                            <div className="play-diagram" style={{ height: '180px', background: 'white' }}>
-                                <svg viewBox="0 0 900 600" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
-                                    <g opacity="0.1">
-                                        <line x1="0" y1="10%" x2="100%" y2="10%" stroke="#000" strokeWidth="2" />
-                                        <line x1="0" y1="90%" x2="100%" y2="90%" stroke="#000" strokeWidth="2" />
+                    {(() => {
+                        // Get diagram elements from any available source
+                        let elements = null;
+                        if (play.wizSkillData && Array.isArray(play.wizSkillData) && play.wizSkillData.length > 0) {
+                            elements = play.wizSkillData;
+                        } else if (play.rooskiSkillData && Array.isArray(play.rooskiSkillData) && play.rooskiSkillData.length > 0) {
+                            elements = play.rooskiSkillData;
+                        } else if (play.wizOlineData && Array.isArray(play.wizOlineData) && play.wizOlineData.length > 0) {
+                            elements = play.wizOlineData;
+                        } else if (play.diagramData) {
+                            if (Array.isArray(play.diagramData) && play.diagramData.length > 0) {
+                                elements = play.diagramData;
+                            } else if (play.diagramData.elements && Array.isArray(play.diagramData.elements) && play.diagramData.elements.length > 0) {
+                                elements = play.diagramData.elements;
+                            }
+                        }
+
+                        if (play.image) {
+                            return <img src={play.image} className="play-image" alt={play.name} />;
+                        }
+
+                        return (
+                            <div className="play-diagram" style={{ height: '180px', background: elements ? '#f0fdf4' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {elements ? (
+                                <svg viewBox="0 60 800 460" width="100%" height="100%" style={{ display: 'block' }} preserveAspectRatio="xMidYMid meet">
+                                    <defs>
+                                        {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'].map(c => (
+                                            <marker key={c} id={`pc-arrow-${c.replace('#', '')}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                                                <polygon points="0 0, 6 2, 0 4" fill={c} />
+                                            </marker>
+                                        ))}
+                                    </defs>
+                                    <g opacity="0.15">
+                                        <line x1="0" y1="150" x2="800" y2="150" stroke="#000" strokeWidth="2" />
+                                        <line x1="0" y1="250" x2="800" y2="250" stroke="#000" strokeWidth="2" />
+                                        <line x1="0" y1="350" x2="800" y2="350" stroke="#000" strokeWidth="2" />
+                                        <line x1="0" y1="400" x2="800" y2="400" stroke="#000" strokeWidth="3" />
+                                        <line x1="0" y1="450" x2="800" y2="450" stroke="#000" strokeWidth="2" />
                                     </g>
-                                    {play.diagramData && play.diagramData.elements && play.diagramData.elements.map(el => {
-                                        if (el.type === 'player') {
-                                            const size = 16;
-                                            const x = el.points[0].x;
-                                            const y = el.points[0].y;
+                                    {elements.map((el, idx) => {
+                                        if (el.type === 'player' && el.points && el.points[0]) {
+                                            const { x, y } = el.points[0];
+                                            const isTextOnly = el.shape === 'text-only';
+                                            const fontSize = el.fontSize || 14;
+
+                                            if (isTextOnly) {
+                                                return <text key={el.id || idx} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={fontSize} fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>;
+                                            }
+
+                                            const size = 14;
+                                            const isRect = el.shape === 'square';
                                             return (
-                                                <g key={el.id}>
-                                                    <circle cx={x} cy={y} r={size} fill="white" stroke={el.color} strokeWidth="2" />
-                                                    <text x={x} y={y} dy=".35em" textAnchor="middle" fontSize="16" fontWeight="bold" fill={el.color}>{el.label}</text>
+                                                <g key={el.id || idx}>
+                                                    {isRect ? (
+                                                        <rect x={x - size} y={y - size} width={size * 2} height={size * 2} fill="white" stroke={el.color || '#000'} strokeWidth="2" />
+                                                    ) : (
+                                                        <circle cx={x} cy={y} r={size} fill="white" stroke={el.color || '#000'} strokeWidth="2" />
+                                                    )}
+                                                    <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="middle" fontSize="10" fontWeight="bold" fill={el.color || '#000'}>{el.label}</text>
                                                 </g>
                                             );
                                         }
+
+                                        if (!el.points || el.points.length < 2) return null;
+
                                         let d = '';
-                                        if (el.style === 'zigzag') {
+                                        if (el.style === 'zigzag' && typeof getZigZagPath === 'function') {
                                             d = getZigZagPath(el.points);
-                                        } else if (el.type === 'free' || el.points.length > 1) {
+                                        } else {
                                             d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
                                         }
 
+                                        const color = el.color || '#000';
+                                        const markerId = `pc-arrow-${color.replace('#', '')}`;
                                         let markerEnd = undefined;
                                         let tBlock = null;
 
                                         if (el.endType === 'arrow' || (!el.endType && el.type !== 'free')) {
-                                            markerEnd = `url(#arrowhead-${el.color})`;
+                                            markerEnd = `url(#${markerId})`;
                                         } else if (el.endType === 't') {
                                             const end = el.points[el.points.length - 1];
                                             const prev = el.points[el.points.length - 2] || el.points[0];
                                             const dx = end.x - prev.x;
                                             const dy = end.y - prev.y;
                                             const len = Math.hypot(dx, dy) || 1;
-                                            const perpX = (-dy / len) * 15;
-                                            const perpY = (dx / len) * 15;
-                                            tBlock = (
-                                                <line
-                                                    x1={end.x - perpX} y1={end.y - perpY}
-                                                    x2={end.x + perpX} y2={end.y + perpY}
-                                                    stroke={el.color}
-                                                    strokeWidth="4"
-                                                />
-                                            );
+                                            const perpX = (-dy / len) * 12;
+                                            const perpY = (dx / len) * 12;
+                                            tBlock = <line x1={end.x - perpX} y1={end.y - perpY} x2={end.x + perpX} y2={end.y + perpY} stroke={color} strokeWidth="3" />;
                                         } else if (el.endType === 'dot') {
                                             const end = el.points[el.points.length - 1];
-                                            tBlock = (
-                                                <circle cx={end.x} cy={end.y} r="6" fill={el.color} />
-                                            );
-                                        } else if (el.endType === 'none') {
-                                            markerEnd = undefined;
-                                        } else if (el.type !== 'free') {
-                                            markerEnd = `url(#arrowhead-${el.color})`;
+                                            tBlock = <circle cx={end.x} cy={end.y} r="5" fill={color} />;
                                         }
 
                                         return (
-                                            <g key={el.id}>
-                                                <path
-                                                    d={d}
-                                                    stroke={el.color}
-                                                    strokeWidth="4"
-                                                    fill="none"
-                                                    style={el.style === 'dashed' ? { strokeDasharray: '10,10' } : {}}
-                                                    markerEnd={markerEnd}
-                                                />
+                                            <g key={el.id || idx}>
+                                                <path d={d} stroke={color} strokeWidth="3" fill="none" strokeDasharray={el.style === 'dashed' ? '8,4' : 'none'} markerEnd={markerEnd} />
                                                 {tBlock}
                                             </g>
                                         );
                                     })}
                                 </svg>
+                                ) : (
+                                    <div style={{ color: '#9ca3af', textAlign: 'center' }}>
+                                        <span style={{ fontSize: '1.5rem' }}>📷</span>
+                                        <div style={{ fontSize: '0.8rem', fontWeight: '500', marginTop: '0.25rem' }}>No Diagram</div>
+                                    </div>
+                                )}
                             </div>
-                        )
-                    }
+                        );
+                    })()}
                     <div className="play-content">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
@@ -23793,20 +23824,25 @@
                                 </div>
                             )}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                                {filteredPlays.map(play => (
+                                {filteredPlays.map(play => {
+                                    const thumbnail = renderPlayThumbnail(play, 'skill');
+                                    return (
                                     <div key={play.id} className="card" style={{ padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'var(--shadow-sm)' }}>
                                         {/* Diagram Preview Area */}
                                         <div style={{
                                             width: '100%',
                                             height: '220px',
-                                            background: '#ffffff',
+                                            background: thumbnail ? '#ffffff' : '#f3f4f6',
                                             borderBottom: '1px solid var(--border)',
-                                            position: 'relative'
+                                            position: 'relative',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}>
-                                            {renderPlayThumbnail(play, 'skill') || (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.5rem', color: '#9ca3af' }}>
-                                                    <Icon name="Image" size={32} />
-                                                    <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>No Diagram</span>
+                                            {thumbnail || (
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.5rem', color: '#6b7280' }}>
+                                                    <span style={{ fontSize: '2rem' }}>📷</span>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>No Diagram</span>
                                                 </div>
                                             )}
                                             {/* Priority Star Overlay */}
@@ -23854,7 +23890,8 @@
                                             </div>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
