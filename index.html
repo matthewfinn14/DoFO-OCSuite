@@ -40635,11 +40635,16 @@
                                             );
                                         };
                                         const addCustomGroup = () => {
-                                            const name = prompt('Enter position group name (e.g., "Scout Team", "JV"):');
+                                            const name = prompt('Enter position group name (e.g., "ILB", "OLB", "S", "CB", "Slot"):');
                                             if (name && name.trim()) {
-                                                const key = 'CUSTOM_' + Date.now();
-                                                setCustomBigThreeGroups([...customBigThreeGroups, { key, name: name.trim(), category: 'custom' }]);
-                                                setPositionBigThree({ ...positionBigThree, [key]: ['', '', ''] });
+                                                const category = prompt('Which category? Enter: offense, defense, or st')?.toLowerCase()?.trim();
+                                                if (category === 'offense' || category === 'defense' || category === 'st') {
+                                                    const key = 'CUSTOM_' + Date.now();
+                                                    setCustomBigThreeGroups([...customBigThreeGroups, { key, name: name.trim(), category }]);
+                                                    setPositionBigThree({ ...positionBigThree, [key]: ['', '', ''] });
+                                                } else {
+                                                    alert('Please enter: offense, defense, or st');
+                                                }
                                             }
                                         };
                                         const removeCustomGroup = (key) => {
@@ -40692,54 +40697,58 @@
                                                 </div>
 
                                                 {/* Position Groups */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: customBigThreeGroups.length > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                                                    {/* Offense */}
-                                                    <div>
-                                                        <h4 style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.5rem', borderBottom: '2px solid #ef4444', paddingBottom: '0.25rem' }}>Offense by Position</h4>
-                                                        {renderPositionRow('QB', 'QB')}
-                                                        {renderPositionRow('RB', 'RB')}
-                                                        {renderPositionRow('WR', 'WR')}
-                                                        {renderPositionRow('TE', 'TE')}
-                                                        {renderPositionRow('OL', 'OL')}
-                                                    </div>
-                                                    {/* Defense */}
-                                                    <div>
-                                                        <h4 style={{ fontSize: '0.85rem', color: '#3b82f6', marginBottom: '0.5rem', borderBottom: '2px solid #3b82f6', paddingBottom: '0.25rem' }}>Defense by Position</h4>
-                                                        {renderPositionRow('DL', 'DL')}
-                                                        {renderPositionRow('LB', 'LB')}
-                                                        {renderPositionRow('DB', 'DB')}
-                                                    </div>
-                                                    {/* Special Teams */}
-                                                    <div>
-                                                        <h4 style={{ fontSize: '0.85rem', color: '#22c55e', marginBottom: '0.5rem', borderBottom: '2px solid #22c55e', paddingBottom: '0.25rem' }}>Special Teams by Unit</h4>
-                                                        {renderPositionRow('KO', 'Kickoff')}
-                                                        {renderPositionRow('KOR', 'KO Return')}
-                                                        {renderPositionRow('PUNT', 'Punt')}
-                                                        {renderPositionRow('PR', 'Punt Return')}
-                                                        {renderPositionRow('FG', 'FG / PAT')}
-                                                        {renderPositionRow('FGB', 'FG Block')}
-                                                    </div>
-                                                    {/* Custom Groups */}
-                                                    {customBigThreeGroups.length > 0 && (
-                                                        <div>
-                                                            <h4 style={{ fontSize: '0.85rem', color: '#f59e0b', marginBottom: '0.5rem', borderBottom: '2px solid #f59e0b', paddingBottom: '0.25rem' }}>Custom</h4>
-                                                            {customBigThreeGroups.map(group => (
-                                                                <div key={group.key} style={{ position: 'relative' }}>
-                                                                    {isHC && (
-                                                                        <button
-                                                                            onClick={() => removeCustomGroup(group.key)}
-                                                                            style={{ position: 'absolute', right: 0, top: 0, background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0', fontSize: '0.7rem', opacity: 0.6 }}
-                                                                            title="Remove group"
-                                                                        >
-                                                                            <Icon name="X" size={10} />
-                                                                        </button>
-                                                                    )}
-                                                                    {renderPositionRow(group.key, group.name)}
-                                                                </div>
-                                                            ))}
+                                                {(() => {
+                                                    const offenseCustom = customBigThreeGroups.filter(g => g.category === 'offense');
+                                                    const defenseCustom = customBigThreeGroups.filter(g => g.category === 'defense');
+                                                    const stCustom = customBigThreeGroups.filter(g => g.category === 'st');
+                                                    const renderCustomGroup = (group) => (
+                                                        <div key={group.key} style={{ position: 'relative' }}>
+                                                            {isHC && (
+                                                                <button
+                                                                    onClick={() => removeCustomGroup(group.key)}
+                                                                    style={{ position: 'absolute', right: 0, top: 0, background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0', fontSize: '0.7rem', opacity: 0.6 }}
+                                                                    title="Remove group"
+                                                                >
+                                                                    <Icon name="X" size={10} />
+                                                                </button>
+                                                            )}
+                                                            {renderPositionRow(group.key, group.name)}
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    );
+                                                    return (
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                                                            {/* Offense */}
+                                                            <div>
+                                                                <h4 style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.5rem', borderBottom: '2px solid #ef4444', paddingBottom: '0.25rem' }}>Offense by Position</h4>
+                                                                {renderPositionRow('QB', 'QB')}
+                                                                {renderPositionRow('RB', 'RB')}
+                                                                {renderPositionRow('WR', 'WR')}
+                                                                {renderPositionRow('TE', 'TE')}
+                                                                {renderPositionRow('OL', 'OL')}
+                                                                {offenseCustom.map(renderCustomGroup)}
+                                                            </div>
+                                                            {/* Defense */}
+                                                            <div>
+                                                                <h4 style={{ fontSize: '0.85rem', color: '#3b82f6', marginBottom: '0.5rem', borderBottom: '2px solid #3b82f6', paddingBottom: '0.25rem' }}>Defense by Position</h4>
+                                                                {renderPositionRow('DL', 'DL')}
+                                                                {renderPositionRow('LB', 'LB')}
+                                                                {renderPositionRow('DB', 'DB')}
+                                                                {defenseCustom.map(renderCustomGroup)}
+                                                            </div>
+                                                            {/* Special Teams */}
+                                                            <div>
+                                                                <h4 style={{ fontSize: '0.85rem', color: '#22c55e', marginBottom: '0.5rem', borderBottom: '2px solid #22c55e', paddingBottom: '0.25rem' }}>Special Teams by Unit</h4>
+                                                                {renderPositionRow('KO', 'Kickoff')}
+                                                                {renderPositionRow('KOR', 'KO Return')}
+                                                                {renderPositionRow('PUNT', 'Punt')}
+                                                                {renderPositionRow('PR', 'Punt Return')}
+                                                                {renderPositionRow('FG', 'FG / PAT')}
+                                                                {renderPositionRow('FGB', 'FG Block')}
+                                                                {stCustom.map(renderCustomGroup)}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         );
                                     })()}
