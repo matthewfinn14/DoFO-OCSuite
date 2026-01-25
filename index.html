@@ -4553,7 +4553,13 @@
 
                             {/* --- Tools: Select/Move, Player, Line --- */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                {TOOLS.filter(t => t.id !== 'delete' && !(mode === 'wiz-oline' && t.id === 'player')).map(tool => {
+                                {TOOLS.filter(t => {
+                                    if (t.id === 'delete') return false;
+                                    if (mode === 'wiz-oline' && t.id === 'player') return false;
+                                    // Hide Freehand, Line, Player Icon for wiz-skill (we have dedicated controls)
+                                    if (mode === 'wiz-skill' && (t.id === 'free' || t.id === 'line' || t.id === 'player')) return false;
+                                    return true;
+                                }).map(tool => {
                                     if (tool.id === 'line' && formationOnly) return null;
                                     if (tool.id === 'line') {
                                         return (
@@ -4588,8 +4594,8 @@
                                     );
                                 })}
 
-                                {/* Line style options - shown inline when line tool active */}
-                                {!formationOnly && (selectedTool === 'line' || selectedTool === 'free') && (
+                                {/* Line style options - shown inline when line tool active (not for wiz-skill) */}
+                                {!formationOnly && mode !== 'wiz-skill' && (selectedTool === 'line' || selectedTool === 'free') && (
                                     <>
                                         <select value={lineStyle} onChange={(e) => setLineStyle(e.target.value)} className="form-input" style={{ padding: '0.3rem', fontSize: '0.75rem', width: 'auto', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', color: '#1e293b' }}>
                                             <option value="solid">Solid</option>
@@ -4605,12 +4611,14 @@
                                 )}
                             </div>
 
-                            {/* --- Colors --- */}
-                            <div style={{ display: 'flex', gap: '3px', alignItems: 'center', background: '#f1f5f9', padding: '4px 6px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-                                {COLORS.map(c => (
-                                    <button key={c} onClick={() => { setColor(c); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: c } : el)); }} style={{ width: '18px', height: '18px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px #3b82f6' : 'none', cursor: 'pointer' }}></button>
-                                ))}
-                            </div>
+                            {/* --- Colors (hidden for wiz-skill since colors come from positions) --- */}
+                            {mode !== 'wiz-skill' && (
+                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center', background: '#f1f5f9', padding: '4px 6px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                    {COLORS.map(c => (
+                                        <button key={c} onClick={() => { setColor(c); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: c } : el)); }} style={{ width: '18px', height: '18px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px #3b82f6' : 'none', cursor: 'pointer' }}></button>
+                                    ))}
+                                </div>
+                            )}
 
                             <div style={{ flex: 1 }}></div>
 
