@@ -472,27 +472,18 @@ button {
     row-gap: 1in;
   }
 
-  /* Coach Size Wristband - 2 copies stacked vertically on portrait page */
-  .wristband-print-container.coach-size {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 8in !important;
-    height: 10in !important;
-    gap: 0.5in !important;
-    margin: 0.5in auto !important;
-    grid-template-columns: unset !important;
-    grid-template-rows: unset !important;
+  /* Coach Wristband Print - All wristbands, 2 per portrait page */
+  .coach-wristband-print-container {
+    width: 8.5in !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
   }
 
-  .wristband-print-container.coach-size > div {
-    flex: 1;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-  }
-
-  .wristband-print-container.coach-size > div > div {
-    transform: scale(1.5) !important;
+  .coach-wristband-print-container > div {
+    height: 5.5in !important;
+    page-break-inside: avoid !important;
+    box-sizing: border-box !important;
   }
 
   .wristband-card {

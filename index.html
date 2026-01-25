@@ -20785,35 +20785,7 @@
                         );
                     }
 
-                    // Coach size: 2 copies stacked vertically (portrait), scaled up for readability
-                    // Player size: 4 copies in 2x2 grid (landscape)
-                    const printContent = isCoachSize ? (
-                        <div className="wristband-print-container coach-size" style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            width: '8in',
-                            height: '10.5in',
-                            gap: '0.25in',
-                            margin: '0.25in auto',
-                            background: 'white',
-                            boxSizing: 'border-box'
-                        }}>
-                            {[1, 2].map(i => (
-                                <div key={i} style={{
-                                    flex: 1,
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    border: 'none',
-                                    overflow: 'hidden'
-                                }}>
-                                    <div style={{ transform: 'scale(1.5)', transformOrigin: 'center' }}>
-                                        {cardContent}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
+                    const printContent = (
                         <div className="wristband-print-container" style={{
                             display: 'grid',
                             gridTemplateColumns: '1fr 1fr',
@@ -20847,7 +20819,7 @@
                             <div className="no-print" style={{ padding: '1rem', background: '#333', color: 'white', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
                                     <div style={{ marginBottom: '0.5rem' }}>
-                                        <strong>Wristband Print Preview</strong> - Card {cardNumber} ({isCoachSize ? '2 coach-size copies, portrait' : '4 copies per page'})
+                                        <strong>Player Wristband Print</strong> - Card {cardNumber} (4 copies per page)
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <label style={{ fontSize: '0.9rem', opacity: 0.8 }}>Header Title:</label>
@@ -20873,16 +20845,9 @@
                                         />
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                    <button onClick={() => { setSelectedCardForPrint(null); setIsCoachSize(false); }} className="btn btn-secondary">
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button onClick={() => setSelectedCardForPrint(null)} className="btn btn-secondary">
                                         <Icon name="ChevronLeft" /> Back
-                                    </button>
-                                    <button
-                                        onClick={() => setIsCoachSize(!isCoachSize)}
-                                        className={`btn ${isCoachSize ? 'btn-primary' : 'btn-secondary'}`}
-                                        title={isCoachSize ? 'Switch to player size (4 per page)' : 'Switch to coach size (2 per page, larger)'}
-                                    >
-                                        <Icon name="Eye" size={16} /> {isCoachSize ? 'Coach Size' : 'Player Size'}
                                     </button>
                                     <button onClick={() => window.print()} className="btn btn-primary">
                                         <Icon name="Printer" /> Print
@@ -20938,167 +20903,245 @@
                 return `${num}00s`;
             };
 
+            // Get cards that have content
             const allCards = wbSettings ? Object.keys(wbSettings).filter(key => key.startsWith('card')).sort() : [];
+            const activeCards = allCards.filter(cardId => {
+                const card = wbSettings[cardId];
+                if (!card) return false;
+                const playCount = card.rows?.filter(r => r && (r.playId || r.text || r.customText)).length || 0;
+                return playCount > 0;
+            });
 
-            // State for coach size printing
-            const [isCoachSize, setIsCoachSize] = useState(false);
-
-            // Print wristband (player or coach size)
-            const handlePrintWristband = (cardId, coachSize = false) => {
-                setIsCoachSize(coachSize);
-                setSelectedOption('wristbands');
-                setSelectedCardForPrint(cardId);
-            };
+            // State for coach wristband print mode
+            const [coachPrintMode, setCoachPrintMode] = useState(false);
 
             return (
-                <div style={{ padding: '2rem', maxWidth: 'calc(100% - 4rem)', margin: '0 auto' }}>
-                    <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
+                    <div style={{ marginBottom: '2rem' }}>
                         <h1 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>Print Center</h1>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Print wristbands, depth charts, practice materials, and game documents.</p>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Print game day materials for the current week.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-                        {/* Wristband Cards Section */}
-                        <div className="card" style={{ padding: '1rem', gridColumn: 'span 2' }}>
-                            <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icon name="Columns" size={18} /> Wristband Cards
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
+                        {/* Column 1: Wristbands */}
+                        <div className="card" style={{ padding: '1.25rem' }}>
+                            <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                                <Icon name="Columns" size={18} /> Player Wristbands
                             </h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
                                 {allCards.map(cardId => {
                                     const card = wbSettings[cardId];
                                     if (!card) return null;
                                     const label = getCardLabel(cardId, card);
                                     const playCount = card.rows?.filter(r => r && (r.playId || r.text || r.customText)).length || 0;
-                                    const opponent = card.opp || '';
 
                                     return (
-                                        <div key={cardId} style={{ background: 'var(--surface)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                            <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{label}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                                                {playCount} plays {opponent && `• ${opponent}`}
+                                        <div key={cardId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', background: 'var(--surface)', borderRadius: '6px' }}>
+                                            <div>
+                                                <span style={{ fontWeight: '600' }}>{label}</span>
+                                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginLeft: '0.5rem' }}>({playCount} plays)</span>
                                             </div>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <button
-                                                    className="btn btn-primary"
-                                                    style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.75rem' }}
-                                                    onClick={() => handlePrintWristband(cardId, false)}
-                                                    title="Player wristband (3.5x4.5 inches)"
-                                                >
-                                                    <Icon name="Printer" size={12} /> Player
-                                                </button>
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.75rem' }}
-                                                    onClick={() => handlePrintWristband(cardId, true)}
-                                                    title="Coach wristband (half page, larger text)"
-                                                >
-                                                    <Icon name="Eye" size={12} /> Coach
-                                                </button>
-                                            </div>
+                                            <button
+                                                className="btn btn-primary"
+                                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                                                onClick={() => { setSelectedOption('wristbands'); setSelectedCardForPrint(cardId); }}
+                                            >
+                                                <Icon name="Printer" size={14} /> Print
+                                            </button>
                                         </div>
                                     );
                                 })}
                             </div>
+                            {activeCards.length > 0 && (
+                                <button
+                                    className="btn btn-secondary"
+                                    style={{ width: '100%', marginTop: '0.5rem' }}
+                                    onClick={() => setCoachPrintMode(true)}
+                                >
+                                    <Icon name="Eye" size={16} /> Print Coach Wristbands (All)
+                                </button>
+                            )}
                         </div>
 
-                        {/* Practice Print Batcher */}
-                        <div className="card" style={{ padding: '1rem' }}>
-                            <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icon name="Calendar" size={18} /> Practice Print Batcher
+                        {/* Column 2: Practice Materials */}
+                        <div className="card" style={{ padding: '1.25rem' }}>
+                            <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                                <Icon name="Calendar" size={18} /> Practice Materials
                             </h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                                Batch print daily plans, scripts, and scout cards.
-                            </p>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '1rem' }}>
                                 <thead>
                                     <tr style={{ background: 'var(--surface)' }}>
-                                        <th style={{ padding: '0.5rem', textAlign: 'left' }}>Day</th>
+                                        <th style={{ padding: '0.5rem', textAlign: 'left', borderRadius: '4px 0 0 0' }}>Day</th>
                                         <th style={{ padding: '0.5rem', textAlign: 'center' }}>Plan</th>
                                         <th style={{ padding: '0.5rem', textAlign: 'center' }}>Script</th>
-                                        <th style={{ padding: '0.5rem', textAlign: 'center' }}>Cards</th>
+                                        <th style={{ padding: '0.5rem', textAlign: 'center', borderRadius: '0 4px 0 0' }}>Cards</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {Object.keys(batchSelection).map(day => (
-                                        <tr key={day} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '0.4rem 0.5rem', fontWeight: '500' }}>{day.slice(0, 3)}</td>
-                                            <td style={{ padding: '0.4rem', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={batchSelection[day].plan} onChange={() => handleToggleBatch(day, 'plan')} style={{ cursor: 'pointer' }} />
+                                        <tr key={day}>
+                                            <td style={{ padding: '0.5rem', fontWeight: '500' }}>{day}</td>
+                                            <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                                                <input type="checkbox" checked={batchSelection[day].plan} onChange={() => handleToggleBatch(day, 'plan')} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
                                             </td>
-                                            <td style={{ padding: '0.4rem', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={batchSelection[day].script} onChange={() => handleToggleBatch(day, 'script')} style={{ cursor: 'pointer' }} />
+                                            <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                                                <input type="checkbox" checked={batchSelection[day].script} onChange={() => handleToggleBatch(day, 'script')} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
                                             </td>
-                                            <td style={{ padding: '0.4rem', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={batchSelection[day].cards} onChange={() => handleToggleBatch(day, 'cards')} style={{ cursor: 'pointer' }} />
+                                            <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                                                <input type="checkbox" checked={batchSelection[day].cards} onChange={() => handleToggleBatch(day, 'cards')} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-                                <select className="form-select" value={selectedPrintCoach} onChange={(e) => setSelectedPrintCoach(e.target.value)} style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <select className="form-select" value={selectedPrintCoach} onChange={(e) => setSelectedPrintCoach(e.target.value)} style={{ flex: 1 }}>
                                     <option value="ALL">All Coaches</option>
                                     {staff && staff.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
-                                <button className="btn btn-primary" onClick={handleGenerateBatch} style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}>
-                                    <Icon name="Printer" size={14} /> Print
+                                <button className="btn btn-primary" onClick={handleGenerateBatch}>
+                                    <Icon name="Printer" size={16} /> Print
                                 </button>
                             </div>
                         </div>
 
-                        {/* Depth Chart */}
-                        <div className="card" style={{ padding: '1rem' }}>
-                            <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icon name="Layers" size={18} /> Depth Chart
+                        {/* Column 3: Game Day Documents */}
+                        <div className="card" style={{ padding: '1.25rem' }}>
+                            <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                                <Icon name="FileText" size={18} /> Game Day Documents
                             </h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                                Offense, Defense, and Special Teams depth charts.
-                            </p>
-                            <button className="btn btn-primary" onClick={() => setSelectedOption('depth_chart')} style={{ width: '100%' }}>
-                                <Icon name="Printer" size={16} /> Print Depth Chart
-                            </button>
-                        </div>
-
-                        {/* Pre-game Timeline */}
-                        <div className="card" style={{ padding: '1rem' }}>
-                            <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icon name="Clock" size={18} /> Pre-game Timeline
-                            </h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                                Game day warmup schedule and timeline.
-                            </p>
-                            <button className="btn btn-primary" onClick={() => {
-                                // Navigate to pregame view for printing
-                                if (typeof onNavigate === 'function') {
-                                    onNavigate('pregame');
-                                } else {
-                                    alert('Navigate to Week view and select Pre-game Timeline to print.');
-                                }
-                            }} style={{ width: '100%' }}>
-                                <Icon name="ExternalLink" size={16} /> Go to Timeline
-                            </button>
-                        </div>
-
-                        {/* Call Sheets */}
-                        <div className="card" style={{ padding: '1rem' }}>
-                            <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icon name="Clipboard" size={18} /> Call Sheets
-                            </h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                                Game plan situational call sheets.
-                            </p>
-                            <button className="btn btn-primary" onClick={() => {
-                                if (typeof onNavigate === 'function') {
-                                    onNavigate('gameplan');
-                                } else {
-                                    alert('Navigate to Week view and select Game Planner to print call sheets.');
-                                }
-                            }} style={{ width: '100%' }}>
-                                <Icon name="ExternalLink" size={16} /> Go to Call Sheets
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <button className="btn btn-primary" onClick={() => setSelectedOption('depth_chart')} style={{ width: '100%', justifyContent: 'flex-start', gap: '0.75rem' }}>
+                                    <Icon name="Layers" size={18} /> Depth Chart
+                                </button>
+                                <button className="btn btn-primary" onClick={() => onNavigate && onNavigate('pregame')} style={{ width: '100%', justifyContent: 'flex-start', gap: '0.75rem' }}>
+                                    <Icon name="Clock" size={18} /> Pre-game Timeline
+                                </button>
+                                <button className="btn btn-primary" onClick={() => onNavigate && onNavigate('gameplan')} style={{ width: '100%', justifyContent: 'flex-start', gap: '0.75rem' }}>
+                                    <Icon name="Clipboard" size={18} /> Call Sheets
+                                </button>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Coach Wristband Print Modal */}
+                    {coachPrintMode && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
+                            <div className="no-print" style={{ padding: '1rem', background: '#1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <strong style={{ fontSize: '1.1rem' }}>Coach Wristbands</strong>
+                                    <span style={{ marginLeft: '1rem', color: 'var(--text-secondary)' }}>{activeCards.length} cards, {Math.ceil(activeCards.length / 2)} pages (portrait, 2 per page)</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button onClick={() => setCoachPrintMode(false)} className="btn btn-secondary">
+                                        <Icon name="X" size={16} /> Close
+                                    </button>
+                                    <button onClick={() => window.print()} className="btn btn-primary">
+                                        <Icon name="Printer" size={16} /> Print All
+                                    </button>
+                                </div>
+                            </div>
+                            <div style={{ flex: 1, overflow: 'auto', background: '#374151', padding: '2rem' }}>
+                                <div className="coach-wristband-print-container" style={{ background: 'white', maxWidth: '8.5in', margin: '0 auto' }}>
+                                    {activeCards.map((cardId, idx) => {
+                                        const card = wbSettings[cardId];
+                                        const label = getCardLabel(cardId, card);
+                                        const isPageBreak = idx > 0 && idx % 2 === 0;
+
+                                        return (
+                                            <div key={cardId} style={{
+                                                height: '5.5in',
+                                                padding: '0.25in',
+                                                boxSizing: 'border-box',
+                                                pageBreakBefore: isPageBreak ? 'always' : 'auto',
+                                                display: 'flex',
+                                                flexDirection: 'column'
+                                            }}>
+                                                <div style={{ fontWeight: 'bold', fontSize: '14pt', marginBottom: '0.25in', textAlign: 'center', color: 'black' }}>
+                                                    {label} {card.opp && `- vs ${card.opp}`}
+                                                </div>
+                                                <div style={{ flex: 1, border: '2px solid black', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                                    <CoachWristbandContent card={card} cardId={cardId} plays={plays} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
+            );
+        };
+
+        // Coach wristband content renderer (larger text for readability)
+        const CoachWristbandContent = ({ card, cardId, plays }) => {
+            if (!card) return null;
+
+            const slots = [];
+            const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
+            for (let i = start; i <= start + 47; i++) slots.push(i);
+
+            const slotMap = {};
+            if (plays) {
+                plays.forEach(play => {
+                    if (play.wristbandSlot) slotMap[play.wristbandSlot] = play;
+                });
+            }
+
+            // For mini-scripts or modular cards, use rows
+            if (card.type === 'mini-scripts' || card.type === 'modular') {
+                const displayRows = (card.rows || []).map((row, idx) => {
+                    if (row.type === 'play') {
+                        const play = plays?.find(p => p.id === row.playId);
+                        return { slot: slots[idx], text: row.playName || play?.name || 'Unknown', type: 'play' };
+                    }
+                    return { slot: slots[idx], text: row.label || '', type: row.type };
+                });
+
+                const col1 = displayRows.filter((_, i) => i % 2 === 0);
+                const col2 = displayRows.filter((_, i) => i % 2 === 1);
+                const rowCount = Math.max(col1.length, col2.length);
+
+                return (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', flex: 1, fontSize: '11pt' }}>
+                        <tbody>
+                            {Array.from({ length: rowCount }).map((_, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid #ccc' }}>
+                                    <td style={{ width: '30px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid #ccc', padding: '4px', color: 'black' }}>{col1[i]?.slot || ''}</td>
+                                    <td style={{ padding: '4px 8px', borderRight: '1px solid #999', color: 'black', fontWeight: col1[i]?.type === 'header' ? 'bold' : 'normal', background: col1[i]?.type === 'header' ? '#f0f0f0' : 'white' }}>{col1[i]?.text || ''}</td>
+                                    <td style={{ width: '30px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid #ccc', padding: '4px', color: 'black' }}>{col2[i]?.slot || ''}</td>
+                                    <td style={{ padding: '4px 8px', color: 'black', fontWeight: col2[i]?.type === 'header' ? 'bold' : 'normal', background: col2[i]?.type === 'header' ? '#f0f0f0' : 'white' }}>{col2[i]?.text || ''}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                );
+            }
+
+            // Traditional cards
+            const displayRows = slots.map(slot => {
+                const play = slotMap[slot];
+                return { slot, text: play ? play.name : '' };
+            });
+
+            const col1 = displayRows.filter((_, i) => i % 2 === 0);
+            const col2 = displayRows.filter((_, i) => i % 2 === 1);
+            const rowCount = Math.max(col1.length, col2.length);
+
+            return (
+                <table style={{ width: '100%', borderCollapse: 'collapse', flex: 1, fontSize: '11pt' }}>
+                    <tbody>
+                        {Array.from({ length: rowCount }).map((_, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid #ccc' }}>
+                                <td style={{ width: '30px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid #ccc', padding: '4px', color: 'black' }}>{col1[i]?.slot || ''}</td>
+                                <td style={{ padding: '4px 8px', borderRight: '1px solid #999', color: 'black' }}>{col1[i]?.text || ''}</td>
+                                <td style={{ width: '30px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid #ccc', padding: '4px', color: 'black' }}>{col2[i]?.slot || ''}</td>
+                                <td style={{ padding: '4px 8px', color: 'black' }}>{col2[i]?.text || ''}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             );
         };
 
