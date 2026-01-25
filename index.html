@@ -1205,20 +1205,6 @@
                             appData = schoolDoc.data();
                             isSchoolData = true;
 
-                            // Generate join code if school doesn't have one
-                            if (!appData.joinCode) {
-                                try {
-                                    const newJoinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                                    await window.db.collection('schools').doc(activeSchoolId).update({
-                                        joinCode: newJoinCode
-                                    });
-                                    appData.joinCode = newJoinCode;
-                                    console.log("Generated new join code for school:", newJoinCode);
-                                } catch (err) {
-                                    console.warn("Failed to generate join code:", err);
-                                }
-                            }
-
                             // SYNC MEMBER LIST (Ensure user is listed in school doc)
                             // Only add if not already listed by UID or email
                             try {
@@ -1248,156 +1234,48 @@
                             console.warn("School ID found but document missing.");
                         }
                     } else {
-                        // No membership found - try to recover
-                        console.log("No membership found. Attempting recovery...");
+                        // Check for Pending Invites (Auto-Join)
+                        console.log("No membership found. Checking for invites...");
                         const myEmail = window.auth.currentUser.email.toLowerCase();
+                        let inviteSchoolId = null;
 
-                        // STEP 1: Search ALL schools for this user's email in memberList
-                        console.log("Searching schools for user email in memberList...");
                         try {
-                            const schoolsSnapshot = await window.db.collection('schools').get();
-                            for (const schoolDoc of schoolsSnapshot.docs) {
-                                const schoolData = schoolDoc.data();
-                                const memberList = schoolData.memberList || [];
-                                const linkedEmail = schoolData.linkedAccessRequest;
+                            const inviteDoc = await window.db.collection('invites').doc(myEmail).get();
+                            if (inviteDoc.exists) {
+                                const inviteData = inviteDoc.data();
+                                console.log("Found invite for school:", inviteData.schoolId);
+                                inviteSchoolId = inviteData.schoolId;
 
-                                // Check if user's email is in memberList or linkedAccessRequest
-                                const isMember = memberList.some(m =>
-                                    m && m.email && m.email.toLowerCase() === myEmail
-                                );
-                                const isLinked = linkedEmail && linkedEmail.toLowerCase() === myEmail;
-
-                                if (isMember || isLinked) {
-                                    console.log("Found existing school for user:", schoolDoc.id, schoolData.name);
-
-                                    // Find user's role from memberList
-                                    const memberEntry = memberList.find(m =>
-                                        m && m.email && m.email.toLowerCase() === myEmail
-                                    );
-                                    const userRole = memberEntry?.role || (isLinked ? 'admin' : 'viewer');
-
-                                    // Auto-repair membership
-                                    await userDocRef.collection('memberships').doc(schoolDoc.id).set({
-                                        role: userRole,
-                                        joinedAt: new Date().toISOString(),
-                                        status: 'active',
-                                        repairedAt: new Date().toISOString()
-                                    });
-
-                                    // Update user doc with schoolId
-                                    await userDocRef.set({ schoolId: schoolDoc.id }, { merge: true });
-
-                                    activeSchoolId = schoolDoc.id;
-                                    console.log("Membership repaired for school:", schoolDoc.id);
-                                    break;
-                                }
+                                // Auto-create membership
+                                await userDocRef.collection('memberships').doc(inviteSchoolId).set({
+                                    role: inviteData.role || 'assistant',
+                                    joinedAt: new Date().toISOString(),
+                                    status: 'active'
+                                });
+                                activeSchoolId = inviteSchoolId;
                             }
                         } catch (err) {
-                            console.error("Error searching schools for recovery:", err);
-                        }
-
-                        // STEP 2: If still no school, check for invites
-                        if (!activeSchoolId) {
-                            console.log("No existing school found. Checking for invites...");
-                            try {
-                                const inviteDoc = await window.db.collection('invites').doc(myEmail).get();
-                                if (inviteDoc.exists) {
-                                    const inviteData = inviteDoc.data();
-                                    console.log("Found invite for school:", inviteData.schoolId);
-
-                                    // Auto-create membership
-                                    await userDocRef.collection('memberships').doc(inviteData.schoolId).set({
-                                        role: inviteData.role || 'assistant',
-                                        joinedAt: new Date().toISOString(),
-                                        status: 'active'
-                                    });
-                                    activeSchoolId = inviteData.schoolId;
-                                }
-                            } catch (err) {
-                                console.error("Error checking invites:", err);
-                            }
+                            console.error("Error checking invites:", err);
                         }
 
                         if (activeSchoolId) {
-                            // Actually load the school data now that we found an invite
-                            console.log("Auto-joined school via invite. Loading school data for:", activeSchoolId);
-                            localStorage.setItem('hc_school_id', activeSchoolId);
-
-                            const schoolDoc = await window.db.collection('schools').doc(activeSchoolId).get();
-                            if (schoolDoc.exists) {
-                                console.log("Loaded SCHOOL data from invite");
-                                appData = schoolDoc.data();
-                                isSchoolData = true;
-                            } else {
-                                console.warn("Invite school ID found but document missing.");
-                            }
+                            // Recursively load data now that we have a school
+                            // Or just fall through to the logic below?
+                            // Logic below checks `if (activeSchoolId)` so we just need to set it!
+                            console.log("Auto-joined school. Loading data...");
                         } else {
                             // Ensure we clear any stale school ID if they are not in a school
                             console.log("No school data found for user.");
                             localStorage.removeItem('hc_school_id');
                         }
+
+                        localStorage.removeItem('hc_school_id');
                     }
                 } else {
-                    // User Doc does not exist - but user might have an existing school!
-                    // Search schools for this user's email before treating as new user
-                    console.log("User doc not found. Searching schools for recovery...");
-                    const myEmail = window.auth.currentUser.email.toLowerCase();
-                    let recoveredSchoolId = null;
-
-                    try {
-                        const schoolsSnapshot = await window.db.collection('schools').get();
-                        for (const schoolDoc of schoolsSnapshot.docs) {
-                            const schoolData = schoolDoc.data();
-                            const memberList = schoolData.memberList || [];
-                            const linkedEmail = schoolData.linkedAccessRequest;
-
-                            const isMember = memberList.some(m =>
-                                m && m.email && m.email.toLowerCase() === myEmail
-                            );
-                            const isLinked = linkedEmail && linkedEmail.toLowerCase() === myEmail;
-
-                            if (isMember || isLinked) {
-                                console.log("RECOVERY: Found school for orphaned user:", schoolDoc.id, schoolData.name);
-                                recoveredSchoolId = schoolDoc.id;
-
-                                const memberEntry = memberList.find(m =>
-                                    m && m.email && m.email.toLowerCase() === myEmail
-                                );
-                                const userRole = memberEntry?.role || (isLinked ? 'admin' : 'viewer');
-
-                                // Create/repair user doc AND membership
-                                await userDocRef.set({
-                                    email: myEmail,
-                                    schoolId: recoveredSchoolId,
-                                    createdAt: new Date().toISOString(),
-                                    recoveredAt: new Date().toISOString()
-                                });
-
-                                await userDocRef.collection('memberships').doc(recoveredSchoolId).set({
-                                    role: userRole,
-                                    joinedAt: new Date().toISOString(),
-                                    status: 'active',
-                                    recoveredAt: new Date().toISOString()
-                                });
-
-                                // Load the school data
-                                localStorage.setItem('hc_school_id', recoveredSchoolId);
-                                appData = schoolData;
-                                isSchoolData = true;
-
-                                console.log("RECOVERY: User doc and membership repaired");
-                                break;
-                            }
-                        }
-                    } catch (err) {
-                        console.error("Error during school recovery search:", err);
-                    }
-
-                    if (!recoveredSchoolId) {
-                        // Truly a new user - clear local data
-                        console.log("No existing school found. Treating as new user.");
-                        clearAllLocalData();
-                    }
+                    // NEW: User Doc does not exist (New User or Deleted Doc).
+                    // WIPE LOCAL STORAGE to prevent "ghost" sessions from previous users on this device.
+                    clearAllLocalData();
+                    // Don't return, let execution continue so appData (empty) flows through to clear state
                 }
 
                 console.log("Applying data to localStorage...", appData);
@@ -1446,9 +1324,10 @@
                 if (data.billing) {
                     localStorage.setItem('hc_school_billing', JSON.stringify(data.billing));
                 }
-                if (data.joinCode) {
-                    localStorage.setItem('hc_school_join_code', data.joinCode);
+                if (data.attendance) {
+                    localStorage.setItem('attendance_log', JSON.stringify(data.attendance));
                 }
+
                 if (data.formationLayouts) {
                     localStorage.setItem('formationLayouts', JSON.stringify(data.formationLayouts));
                 }
@@ -1962,8 +1841,6 @@
         const SchoolOnboardingWizard = ({ user, onComplete, requestData }) => {
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
-            const [mode, setMode] = useState('create'); // 'create' or 'join'
-            const [joinCode, setJoinCode] = useState('');
 
             // Data State - Pre-populate from access request if available
             const [schoolName, setSchoolName] = useState(requestData?.schoolName || '');
@@ -2002,12 +1879,10 @@
                 setError('');
                 try {
                     // 1. Create School Document
-                    const newJoinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                     const schoolData = {
                         name: schoolName,
                         mascot: mascot,
                         zipCode: zipCode,
-                        joinCode: newJoinCode,
                         colors: { primary: primaryColor, secondary: secondaryColor },
                         settings: {
                             schoolName: schoolName,
@@ -2091,79 +1966,6 @@
                 }
             };
 
-            const handleJoinSchool = async () => {
-                if (!joinCode || joinCode.length < 6) {
-                    setError('Please enter a valid 6-character join code.');
-                    return;
-                }
-
-                setLoading(true);
-                setError('');
-                try {
-                    // Look up school by join code
-                    const querySnapshot = await window.db.collection('schools')
-                        .where('joinCode', '==', joinCode.toUpperCase())
-                        .limit(1)
-                        .get();
-
-                    if (querySnapshot.empty) {
-                        setError('No school found with that join code. Please check and try again.');
-                        setLoading(false);
-                        return;
-                    }
-
-                    const schoolDoc = querySnapshot.docs[0];
-                    const schoolId = schoolDoc.id;
-                    const schoolData = schoolDoc.data();
-
-                    // Create user profile with school ID
-                    const userRef = window.db.collection('users').doc(user.uid);
-                    await userRef.set({
-                        schoolId: schoolId,
-                        role: 'Assistant Coach',
-                        email: user.email
-                    }, { merge: true });
-
-                    // Create membership document
-                    await userRef.collection('memberships').doc(schoolId).set({
-                        role: 'Assistant Coach',
-                        joinedAt: new Date().toISOString(),
-                        status: 'active'
-                    });
-
-                    // Add to school's memberList
-                    await window.db.collection('schools').doc(schoolId).update({
-                        memberList: firebase.firestore.FieldValue.arrayUnion({
-                            uid: user.uid,
-                            email: user.email,
-                            role: 'Assistant Coach',
-                            joinedAt: new Date().toISOString()
-                        }),
-                        // Also add to staff array for Staff Hub visibility
-                        staff: firebase.firestore.FieldValue.arrayUnion({
-                            id: 'coach_' + Date.now(),
-                            uid: user.uid,
-                            name: user.displayName || 'Assistant Coach',
-                            email: user.email,
-                            role: 'Assistant Coach',
-                            joinedAt: new Date().toISOString()
-                        })
-                    });
-
-                    // Set local storage
-                    localStorage.setItem('hc_school_id', schoolId);
-                    localStorage.setItem('hc_school_name', schoolData.name || 'My School');
-                    localStorage.setItem('hc_school_join_code', schoolData.joinCode || '');
-
-                    console.log("Joined school:", schoolId, schoolData.name);
-                    onComplete(schoolId);
-                } catch (err) {
-                    console.error("Error joining school:", err);
-                    setError("Failed to join school: " + err.message);
-                    setLoading(false);
-                }
-            };
-
             return (
                 <div style={{
                     height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2173,95 +1975,13 @@
                         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center', color: '#38bdf8' }}>
                             Welcome to DoFO!
                         </h1>
-                        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '1.5rem' }}>
-                            {mode === 'create' ? "Let's set up your team." : "Join an existing team with your code."}
+                        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '2rem' }}>
+                            Let&apos;s get your team set up in seconds.
                         </p>
-
-                        {/* Mode Toggle */}
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                            <button
-                                onClick={() => { setMode('create'); setError(''); }}
-                                style={{
-                                    flex: 1,
-                                    padding: '0.75rem',
-                                    background: mode === 'create' ? '#0ea5e9' : '#0f172a',
-                                    border: mode === 'create' ? 'none' : '1px solid #475569',
-                                    color: 'white',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontWeight: mode === 'create' ? 'bold' : 'normal'
-                                }}
-                            >
-                                Create New School
-                            </button>
-                            <button
-                                onClick={() => { setMode('join'); setError(''); }}
-                                style={{
-                                    flex: 1,
-                                    padding: '0.75rem',
-                                    background: mode === 'join' ? '#0ea5e9' : '#0f172a',
-                                    border: mode === 'join' ? 'none' : '1px solid #475569',
-                                    color: 'white',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontWeight: mode === 'join' ? 'bold' : 'normal'
-                                }}
-                            >
-                                Join Existing
-                            </button>
-                        </div>
 
                         {error && <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>{error}</div>}
 
-                        {/* JOIN MODE */}
-                        {mode === 'join' && (
-                            <div>
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>Join Code</label>
-                                    <input
-                                        value={joinCode}
-                                        onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                                        maxLength={6}
-                                        style={{
-                                            width: '100%',
-                                            padding: '1rem',
-                                            borderRadius: '6px',
-                                            background: '#0f172a',
-                                            border: '2px solid #475569',
-                                            color: 'white',
-                                            fontSize: '1.5rem',
-                                            fontFamily: 'monospace',
-                                            letterSpacing: '0.2em',
-                                            textAlign: 'center'
-                                        }}
-                                        placeholder="ABC123"
-                                    />
-                                    <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.5rem', textAlign: 'center' }}>
-                                        Get this code from your head coach or team admin.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={handleJoinSchool}
-                                    disabled={loading || joinCode.length < 6}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.75rem 2rem',
-                                        background: joinCode.length >= 6 ? '#22c55e' : '#475569',
-                                        border: 'none',
-                                        color: 'white',
-                                        borderRadius: '6px',
-                                        fontWeight: 'bold',
-                                        cursor: loading || joinCode.length < 6 ? 'not-allowed' : 'pointer',
-                                        fontSize: '1rem'
-                                    }}
-                                >
-                                    {loading ? 'Joining...' : 'Join Team'}
-                                </button>
-                            </div>
-                        )}
-
-                        {/* CREATE MODE */}
-                        {mode === 'create' && (
+                        {/* Single Step Form */}
                         <div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>School Name</label>
@@ -2321,7 +2041,6 @@
                                 {loading ? 'Creating School...' : 'Complete Setup'}
                             </button>
                         </div>
-                        )}
                     </div>
                 </div>
             )
@@ -2582,11 +2301,6 @@
             const [editingRequest, setEditingRequest] = useState(null);
             const [editForm, setEditForm] = useState({ trialDays: '', accessExpiresAt: '', notes: '' });
 
-            // Invite School Modal State
-            const [showInviteModal, setShowInviteModal] = useState(false);
-            const [inviteForm, setInviteForm] = useState({ email: '', name: '', schoolName: '', trialDays: '14' });
-            const [inviteSending, setInviteSending] = useState(false);
-
             useEffect(() => {
                 const loadRequests = async () => {
                     try {
@@ -2704,99 +2418,6 @@
                 }
             };
 
-            const handleInviteSchool = async () => {
-                if (!inviteForm.email || !inviteForm.name || !inviteForm.schoolName) {
-                    alert('Please fill in all required fields (email, name, school name).');
-                    return;
-                }
-
-                const trialDays = parseInt(inviteForm.trialDays, 10) || 14;
-                const email = inviteForm.email.toLowerCase().trim();
-
-                setInviteSending(true);
-                try {
-                    const now = new Date();
-                    const accessExpiresAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
-                    const dataExpiresAt = new Date(accessExpiresAt.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-                    // Create pre-approved access request
-                    await window.db.collection('access_requests').doc(email).set({
-                        email: email,
-                        name: inviteForm.name.trim(),
-                        schoolName: inviteForm.schoolName.trim(),
-                        role: 'Head Coach',
-                        status: 'approved',
-                        submittedAt: now.toISOString(),
-                        reviewedAt: now.toISOString(),
-                        reviewedBy: currentUser?.email || 'admin',
-                        trialDays: trialDays,
-                        accessExpiresAt: accessExpiresAt.toISOString(),
-                        dataExpiresAt: dataExpiresAt.toISOString(),
-                        invitedByAdmin: true
-                    });
-
-                    // Create invite ticket for auto-join flow
-                    await window.db.collection('invites').doc(email).set({
-                        email: email,
-                        schoolName: inviteForm.schoolName.trim(),
-                        role: 'Head Coach',
-                        invitedBy: currentUser?.displayName || currentUser?.email || 'Site Admin',
-                        invitedAt: now.toISOString(),
-                        status: 'pending',
-                        isNewSchool: true // Flag to indicate they should create a new school
-                    });
-
-                    // Send invitation email
-                    await window.db.collection('mail').add({
-                        to: email,
-                        message: {
-                            subject: `You're invited to Digital DoFO`,
-                            text: `Hello ${inviteForm.name},\n\nYou've been invited to use Digital DoFO for ${inviteForm.schoolName}.\n\nYou have a ${trialDays}-day trial to explore all features.\n\nGet started: https://digitaldofo.com\n\n- The Digital DoFO Team`,
-                            html: `<div style="font-family: sans-serif; padding: 20px; max-width: 600px;">
-                                <h2 style="color: #2563eb;">You're Invited to Digital DoFO</h2>
-                                <p>Hello ${inviteForm.name},</p>
-                                <p>You've been invited to use Digital DoFO for <strong>${inviteForm.schoolName}</strong>.</p>
-                                <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                                    <strong>Your Trial:</strong> ${trialDays} days<br/>
-                                    <strong>Expires:</strong> ${accessExpiresAt.toLocaleDateString()}
-                                </div>
-                                <p>
-                                    <a href="https://digitaldofo.com" style="display: inline-block; padding: 12px 24px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                                        Get Started
-                                    </a>
-                                </p>
-                                <p style="color: #6b7280; font-size: 0.9em; margin-top: 20px;">
-                                    Log in with your Google account (${email}) to access your pre-approved trial.
-                                </p>
-                            </div>`
-                        }
-                    });
-
-                    // Update local state
-                    setRequests(prev => [{
-                        id: email,
-                        email: email,
-                        name: inviteForm.name.trim(),
-                        schoolName: inviteForm.schoolName.trim(),
-                        role: 'Head Coach',
-                        status: 'approved',
-                        submittedAt: now.toISOString(),
-                        reviewedAt: now.toISOString(),
-                        trialDays: trialDays,
-                        accessExpiresAt: accessExpiresAt.toISOString(),
-                        invitedByAdmin: true
-                    }, ...prev]);
-
-                    setShowInviteModal(false);
-                    setInviteForm({ email: '', name: '', schoolName: '', trialDays: '14' });
-                    alert(`Invitation sent to ${email}!\n\nThey have ${trialDays} days of access (until ${accessExpiresAt.toLocaleDateString()}).`);
-                } catch (err) {
-                    console.error('Error sending invite:', err);
-                    alert('Failed to send invite: ' + err.message);
-                }
-                setInviteSending(false);
-            };
-
             const filteredRequests = filter === 'all'
                 ? requests
                 : requests.filter(r => r.status === filter);
@@ -2814,115 +2435,8 @@
 
             return (
                 <div style={{ padding: '1rem' }}>
-                    {/* Invite School Modal */}
-                    {showInviteModal && (
-                        <div style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            background: 'rgba(0,0,0,0.7)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 10000
-                        }}>
-                            <div style={{
-                                background: 'var(--bg-panel)',
-                                borderRadius: '12px',
-                                padding: '2rem',
-                                width: '100%',
-                                maxWidth: '450px',
-                                boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
-                            }}>
-                                <h3 style={{ marginTop: 0 }}>Invite New School</h3>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                                    Send a pre-approved invitation to a new school. They'll receive an email with login instructions.
-                                </p>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Email *</label>
-                                        <input
-                                            type="email"
-                                            value={inviteForm.email}
-                                            onChange={(e) => setInviteForm(f => ({ ...f, email: e.target.value }))}
-                                            placeholder="coach@school.edu"
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Coach Name *</label>
-                                        <input
-                                            type="text"
-                                            value={inviteForm.name}
-                                            onChange={(e) => setInviteForm(f => ({ ...f, name: e.target.value }))}
-                                            placeholder="John Smith"
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>School Name *</label>
-                                        <input
-                                            type="text"
-                                            value={inviteForm.schoolName}
-                                            onChange={(e) => setInviteForm(f => ({ ...f, schoolName: e.target.value }))}
-                                            placeholder="Central High School"
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Trial Days</label>
-                                        <input
-                                            type="number"
-                                            value={inviteForm.trialDays}
-                                            onChange={(e) => setInviteForm(f => ({ ...f, trialDays: e.target.value }))}
-                                            min="1"
-                                            max="365"
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
-                                    <button
-                                        onClick={() => setShowInviteModal(false)}
-                                        style={{ padding: '0.75rem 1.5rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', color: 'var(--text-primary)' }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleInviteSchool}
-                                        disabled={inviteSending}
-                                        style={{ padding: '0.75rem 1.5rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '6px', cursor: inviteSending ? 'not-allowed' : 'pointer', fontWeight: 'bold', opacity: inviteSending ? 0.7 : 1 }}
-                                    >
-                                        {inviteSending ? 'Sending...' : 'Send Invitation'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <h2 style={{ margin: 0 }}>Access Requests</h2>
-                            <button
-                                onClick={() => setShowInviteModal(true)}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    background: '#22c55e',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    fontSize: '0.85rem'
-                                }}
-                            >
-                                + Invite School
-                            </button>
-                        </div>
+                        <h2 style={{ margin: 0 }}>Access Requests</h2>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                             {['pending', 'approved', 'rejected', 'archived', 'all'].map(f => (
                                 <button
@@ -2962,14 +2476,7 @@
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div>
-                                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                {request.name}
-                                                {request.invitedByAdmin && (
-                                                    <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', background: '#22c55e20', color: '#22c55e', borderRadius: '4px', fontWeight: 'normal' }}>
-                                                        Admin Invited
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{request.name}</div>
                                             <div style={{ color: 'var(--text-secondary)' }}>{request.schoolName}</div>
                                             <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
                                                 {request.role} &bull; {request.email}
@@ -15424,6 +14931,7 @@
                                 accept=".csv"
                                 onChange={handleFileChange}
                             />
+                            <button className="btn btn-secondary" onClick={() => window.print()}>🖨️ Print Attendance</button>
                         </div>
                     </div>
 
@@ -16327,6 +15835,11 @@
                             // Fallback to mailto
                             window.location.href = `mailto:${newMember.email}?subject=${encodeURIComponent(subjectRaw)}&body=${encodeURIComponent(bodyRaw)}`;
                         });
+
+                        // Auto-add to Access Control List
+                        window.db.collection('config').doc('access').update({
+                            allowedEmails: firebase.firestore.FieldValue.arrayUnion(newMember.email)
+                        }).catch(err => console.warn("Could not update access list:", err));
 
                         // Create Invite Ticket (For Auto-Join)
                         window.db.collection('invites').doc(newMember.email.toLowerCase()).set({
@@ -18685,57 +18198,6 @@
                                     </p>
                                 </div>
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                    <button
-                                        onClick={async () => {
-                                            if (!window.confirm('This will remove legacy fields (budget, cultural_calibration, dailyConnections) from ALL schools. Continue?')) return;
-                                            try {
-                                                const snapshot = await window.db.collection('schools').get();
-                                                let cleanedCount = 0;
-                                                // All legacy fields to remove
-                                                const legacyFields = [
-                                                    'budget', 'budgetLastModified',
-                                                    'cultural_calibration', 'cultural_calibrationLastModified',
-                                                    'dailyConnections', 'dailyConnectionsLastModified',
-                                                    'attendance', 'attendanceLastModified',
-                                                    'drills', 'drillsLastModified',
-                                                    'inventory', 'inventoryLastModified',
-                                                    'onboarding', 'onboardingLastModified',
-                                                    'positionFatigue', 'positionFatigueLastModified',
-                                                    'program_records', 'program_recordsLastModified',
-                                                    'rooskiLib', 'rooskiLibLastModified',
-                                                    'valhalla', 'valhallaLastModified'
-                                                ];
-                                                for (const doc of snapshot.docs) {
-                                                    const data = doc.data();
-                                                    // Check if any legacy fields exist
-                                                    const hasLegacy = legacyFields.some(f => data[f] !== undefined);
-                                                    if (hasLegacy) {
-                                                        const deleteObj = {};
-                                                        legacyFields.forEach(f => {
-                                                            deleteObj[f] = firebase.firestore.FieldValue.delete();
-                                                        });
-                                                        await window.db.collection('schools').doc(doc.id).update(deleteObj);
-                                                        cleanedCount++;
-                                                    }
-                                                }
-                                                alert(`Cleanup complete! Removed legacy data from ${cleanedCount} school(s).`);
-                                            } catch (err) {
-                                                console.error('Cleanup error:', err);
-                                                alert('Error during cleanup: ' + err.message);
-                                            }
-                                        }}
-                                        style={{
-                                            padding: '0.5rem 1rem',
-                                            background: '#f59e0b',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '0.85rem'
-                                        }}
-                                    >
-                                        Cleanup Legacy Data
-                                    </button>
                                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                         {allSchools.length} school{allSchools.length !== 1 ? 's' : ''}
                                     </span>
@@ -21054,7 +20516,7 @@
             );
         };
 
-        const PrintHubView = ({ roster, staff, weeks = [], currentWeekId, onChangeWeek, gamePlans, depthChart, practicePlans, wbSettings, setWbSettings, plays, personnelGroupings = {}, onNavigate, positionGroups = {}, weeklyNotes = {} }) => {
+        const PrintHubView = ({ roster, staff, weeks = [], currentWeekId, onChangeWeek, gamePlans, depthChart, practicePlans, attendance, wbSettings, setWbSettings, plays, personnelGroupings = {}, onNavigate, positionGroups = {}, weeklyNotes = {} }) => {
             // Get current week info for display
             const currentWeek = weeks.find(w => w.id === currentWeekId) || {};
             const weekLabel = currentWeek.opponent ? `${currentWeek.name} vs ${currentWeek.opponent}` : currentWeek.name || 'Select Week';
@@ -31088,7 +30550,7 @@
                     // 1. Gather all local data keys
                     const keys = [
                         'oc-dashboard-roster', 'oc-dashboard-plays', 'oc-dashboard-staff',
-                        'oc-dashboard-depthchart',
+                        'oc-dashboard-depthchart', 'attendance_log',
                         'formationLayouts', 'oc-dashboard-ratings',
                         'athlete_assessments', 'oc-dashboard-formations', 'oc-dashboard-zone-philosophies',
                         'oc-dashboard-custom-focus',
@@ -31145,6 +30607,8 @@
                                 if (k === 'oc-dashboard-depthchart') schoolData.depthChart = JSON.parse(val);
 
                                 if (k === 'oc-dashboard-weeks') schoolData.weeks = JSON.parse(val);
+                                if (k === 'attendance_log') schoolData.attendance = JSON.parse(val);
+                                if (k === 'oc-dashboard-valhalla') schoolData.valhalla = JSON.parse(val);
                                 if (k === 'formationLayouts') schoolData.formationLayouts = JSON.parse(val);
                                 if (k === 'oc-dashboard-ratings') schoolData.ratings = JSON.parse(val);
                                 if (k === 'athlete_assessments') schoolData.athleteAssessments = JSON.parse(val);
@@ -31215,35 +30679,17 @@
                         throw new Error("School not found. Check the Code or ID.");
                     }
 
-                    if (!confirm(`Join ${targetSchoolName} as Assistant Coach?`)) return;
+                    if (!confirm(`Join ${targetSchoolName}?`)) return;
 
-                    // Update user doc with school ID
                     await window.db.collection('users').doc(currentUser.uid).update({ schoolId: targetSchoolId });
 
-                    // Create membership document for this user
-                    await window.db.collection('users').doc(currentUser.uid).collection('memberships').doc(targetSchoolId).set({
-                        role: 'Assistant Coach',
-                        joinedAt: new Date().toISOString(),
-                        status: 'active'
-                    });
-
-                    // Add to school's memberList array and staff array
+                    // Add to member list (optional but good practice)
                     await window.db.collection('schools').doc(targetSchoolId).update({
-                        memberList: firebase.firestore.FieldValue.arrayUnion({
-                            uid: currentUser.uid,
+                        [`memberList.${currentUser.uid}`]: {
                             email: currentUser.email,
-                            role: 'Assistant Coach',
+                            role: 'viewer', // Default role
                             joinedAt: new Date().toISOString()
-                        }),
-                        // Also add to staff array for Staff Hub visibility
-                        staff: firebase.firestore.FieldValue.arrayUnion({
-                            id: 'coach_' + Date.now(),
-                            uid: currentUser.uid,
-                            name: currentUser.displayName || 'Assistant Coach',
-                            email: currentUser.email,
-                            role: 'Assistant Coach',
-                            joinedAt: new Date().toISOString()
-                        })
+                        }
                     });
 
                     window.location.reload();
@@ -31262,7 +30708,7 @@
                     // CLEAR LOCAL DATA to avoid ghost data
                     const keys = [
                         'oc-dashboard-roster', 'oc-dashboard-plays', 'oc-dashboard-staff',
-                        'oc-dashboard-depthchart',
+                        'oc-dashboard-depthchart', 'attendance_log',
                         'formationLayouts', 'oc-dashboard-ratings', 'oc-dashboard-game-grades',
                         'oc-dashboard-scouting',
                         'athlete_assessments', 'oc-dashboard-formations', 'oc-dashboard-zone-philosophies',
@@ -32708,7 +32154,7 @@
                     // 1. WIPE LOCAL DATA (Clean Slate)
                     const keysToWipe = [
                         'oc-dashboard-roster', 'oc-dashboard-plays', 'oc-dashboard-staff',
-                        'oc-dashboard-depthchart',
+                        'oc-dashboard-depthchart', 'attendance_log',
                         'formationLayouts', 'oc-dashboard-ratings', 'oc-dashboard-game-grades',
                         'oc-dashboard-scouting',
                         'athlete_assessments', 'oc-dashboard-formations', 'oc-dashboard-zone-philosophies',
@@ -35555,6 +35001,24 @@
 
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
+            }, [plays]);
+
+            // Sync Weeks (Practice Plans) to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'weeks', weeks); // Changed currentUser to authUser
+                }, 3000); // 3s debounce for large plan objects
+                return () => clearTimeout(timer);
+            }, [weeks, authUser]); // Changed currentUser to authUser
+
+            // Sync Attendance to Firestore
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (authUser) syncToFirestore(authUser.uid, 'attendance', attendance); // Changed currentUser to authUser
+                }, 1500);
+                return () => clearTimeout(timer);
+            }, [attendance, authUser]); // Changed currentUser to authUser
+
 
             // --- LOADING STATE & SAFETY LOCK ---
             // 'dataLoaded' prevents the app from auto-syncing "empty" initial state back to the cloud.
@@ -35596,7 +35060,6 @@
             useAutoSync(authUser, 'weeks', weeks, 3000, dataLoaded);
             useAutoSync(authUser, 'plays', plays, 2000, dataLoaded);
             useAutoSync(authUser, 'staff', staff, 2000, dataLoaded);
-            useAutoSync(authUser, 'depthChart', depthChart, 2000, dataLoaded);
 
             // Formation Database
             const [formations, setFormations] = useState(() => {
@@ -35607,7 +35070,6 @@
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-formations', JSON.stringify(formations));
             }, [formations]);
-            useAutoSync(authUser, 'formations', formations, 2000, dataLoaded);
 
             // Zone Philosophies
             const [zonePhilosophies, setZonePhilosophies] = useState(() => {
@@ -36561,7 +36023,6 @@
                 return localStorage.getItem('hc_school_name') || '';
             });
             const [teamMascot, setTeamMascot] = useLocalStorage('oc-dashboard-team-mascot', '');
-            const [teamJoinCode, setTeamJoinCode] = useState(() => localStorage.getItem('hc_school_join_code') || '');
             const [teamAddress, setTeamAddress] = useLocalStorage('oc-dashboard-team-address', '');
             const [teamCity, setTeamCity] = useLocalStorage('oc-dashboard-team-city', '');
             const [teamState, setTeamState] = useLocalStorage('oc-dashboard-team-state', '');
@@ -36937,6 +36398,7 @@
             };
 
             const [ratings, setRatings] = useLocalStorage('oc-dashboard-ratings', {});
+            const [attendance, setAttendance] = useLocalStorage('oc-dashboard-attendance', []);
 
 
 
@@ -36947,32 +36409,44 @@
             }, [plays]);
 
             // Save roster to localStorage whenever it changes
-            // Cloud sync handled by useAutoSync with dataLoaded guard
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-roster', JSON.stringify(roster));
-            }, [roster]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'roster', roster);
+                }
+            }, [roster, currentUser]);
 
             // Save depth chart to localStorage whenever it changes
-            // Cloud sync handled by useAutoSync with dataLoaded guard
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-depthchart', JSON.stringify(depthChart));
-            }, [depthChart]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'depthChart', depthChart);
+                }
+            }, [depthChart, currentUser]);
 
             // Save staff to localStorage whenever it changes
-            // Cloud sync handled by useAutoSync with dataLoaded guard
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-staff', JSON.stringify(staff));
-            }, [staff]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'staff', staff);
+                }
+            }, [staff, currentUser]);
 
             // Save team logo to localStorage whenever it changes
-            // Cloud sync handled separately with dataLoaded guard
             useEffect(() => {
                 if (teamLogo) {
                     localStorage.setItem('oc-dashboard-logo', teamLogo);
                 } else {
                     localStorage.removeItem('oc-dashboard-logo');
                 }
-            }, [teamLogo]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'settings', { teamLogo });
+                }
+            }, [teamLogo, currentUser]);
 
             // Apply and Save Accent Color
             useEffect(() => {
@@ -36997,10 +36471,13 @@
             }, [accentColor]);
 
             // Save position names to localStorage
-            // Cloud sync handled by useAutoSync with dataLoaded guard
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-position-names', JSON.stringify(positionNames));
-            }, [positionNames]);
+                // Cloud Sync
+                if (currentUser && window.db) {
+                    syncToFirestore(currentUser.uid, 'settings', { positionNames });
+                }
+            }, [positionNames, currentUser]);
 
             // Save ratings to localStorage whenever they change
             useEffect(() => {
@@ -37369,6 +36846,8 @@
                     { id: 'plays', label: 'Playbook', data: getLocal('oc-dashboard-plays', []) },
                     { id: 'staff', label: 'Staff', data: getLocal('oc-dashboard-staff', []) },
                     { id: 'weeks', label: 'Game Planner & Scripts', data: getLocal('oc-dashboard-weeks', []) },
+
+                    { id: 'attendance', label: 'Attendance', data: getLocal('attendance_log', []) },
                     { id: 'formationLayouts', label: 'Formation Maps', data: getLocal('formationLayouts', {}) },
                     { id: 'ratings', label: 'Player Ratings', data: getLocal('oc-dashboard-ratings', {}) },
                     { id: 'athleteAssessments', label: 'Athlete Assessments', data: getLocal('athlete_assessments', {}) },
@@ -37852,51 +37331,6 @@
                                             />
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Join Code - Share with Assistant Coaches */}
-                                <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', border: '2px solid var(--accent)' }}>
-                                    <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
-                                        <Icon name="UserPlus" size={18} /> Staff Join Code
-                                    </h3>
-                                    <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                        Share this code with assistant coaches to let them join your team.
-                                    </p>
-                                    {teamJoinCode ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            <div style={{
-                                                flex: 1,
-                                                padding: '0.75rem 1rem',
-                                                background: 'var(--bg-panel)',
-                                                borderRadius: '8px',
-                                                fontFamily: 'monospace',
-                                                fontSize: '1.5rem',
-                                                fontWeight: 'bold',
-                                                letterSpacing: '0.2em',
-                                                textAlign: 'center',
-                                                color: 'var(--accent)'
-                                            }}>
-                                                {teamJoinCode}
-                                            </div>
-                                            <button
-                                                className="btn btn-primary"
-                                                style={{ padding: '0.75rem 1rem' }}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(teamJoinCode);
-                                                    alert('Join code copied to clipboard!');
-                                                }}
-                                            >
-                                                <Icon name="Copy" size={16} />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                            Join code not available. Sync with cloud to generate one.
-                                        </div>
-                                    )}
-                                    <p style={{ margin: '0.75rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                        Coaches who sign up with this code will automatically join as Assistant Coach.
-                                    </p>
                                 </div>
 
                                 {/* Team Logo */}
@@ -41402,7 +40836,7 @@
                                 </div>
                             )}
                             
-                            {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} weeks={weeks} currentWeekId={currentWeekId} onChangeWeek={setCurrentWeekId} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} personnelGroupings={personnelGroupings} onNavigate={setView} positionGroups={positionGroups} weeklyNotes={weeklyCoachesNotes[currentWeekId] || {}} />}
+                            {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} weeks={weeks} currentWeekId={currentWeekId} onChangeWeek={setCurrentWeekId} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} personnelGroupings={personnelGroupings} onNavigate={setView} positionGroups={positionGroups} weeklyNotes={weeklyCoachesNotes[currentWeekId] || {}} />}
 
                             {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
@@ -43687,7 +43121,7 @@
                                     week={currentWeek}
                                     onUpdateWeek={handleUpdateWeek}
                                     teamLogo={teamLogo}
-                                    weeks={this.state.weeks}
+                                    weeks={weeks}
                                     isLocked={currentWeek.isLocked}
                                 />
                             )}
@@ -43953,7 +43387,7 @@
                                                         padding: '0.75rem 1.5rem',
                                                         borderRadius: '6px',
                                                         border: 'none',
-                                                        ound: '#ef4444',
+                                                        background: '#ef4444',
                                                         color: 'white',
                                                         fontWeight: '600',
                                                         cursor: 'pointer',
@@ -43990,14 +43424,14 @@
                                                 }                          </p>
                                             <button
                                                 className="btn btn-primary"
-                                                style={{ width: '100%', padding: '', e: '1.1rem', marginBottom: '0.5rem' }}
+                                                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '0.5rem' }}
                                                 onClick={handleAcceptInvite}
                                             >
                                                 Accept & Join Team
                                             </button>
                                             <button
                                                 className="btn btn-secondary"
-                                                yle={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
+                                                style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'transparent', border: 'none', textDecoration: 'underline' }}
                                                 onClick={() => {
                                                     if (confirm("Are you sure you want to ignore the existing team and create a new school instead?")) {
                                                         setInviteData(null);
