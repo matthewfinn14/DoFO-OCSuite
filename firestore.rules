@@ -59,16 +59,22 @@ service cloud.firestore {
 
     // Access Requests: For new users requesting access
     match /access_requests/{requestId} {
-      // Users can create requests
-      allow create: if request.auth != null;
+      // Users can create requests (requestId is their email)
+      allow create: if request.auth != null &&
+        request.auth.token.email.lower() == requestId;
 
       // Users can read their own request, admins can read all
       allow read: if request.auth != null && (
-        resource.data.email == request.auth.token.email.lower() || isSiteAdmin()
+        requestId == request.auth.token.email.lower() || isSiteAdmin()
       );
 
-      // Only admins can update/delete requests
-      allow update, delete: if request.auth != null && isSiteAdmin();
+      // Users can update their own pending request, admins can update any
+      allow update: if request.auth != null && (
+        requestId == request.auth.token.email.lower() || isSiteAdmin()
+      );
+
+      // Only admins can delete requests
+      allow delete: if request.auth != null && isSiteAdmin();
     }
 
     // Config: App configuration (billing, access control)

@@ -2100,6 +2100,10 @@
                     // Force local storage update nicely
                     localStorage.setItem('hc_school_id', schoolId);
                     localStorage.setItem('hc_school_name', schoolName);
+                    localStorage.setItem('oc-dashboard-team-mascot', mascot);
+                    localStorage.setItem('oc-dashboard-team-zip', zipCode);
+                    localStorage.setItem('oc-dashboard-team-primary-color', primaryColor);
+                    localStorage.setItem('oc-dashboard-team-secondary-color', secondaryColor);
 
                     onComplete(schoolId);
 
@@ -40164,6 +40168,9 @@
                                         await loadUserDataFromFirestore(authUser.uid);
                                         // Ensure School ID is set in local state (in case loader didn't catch it yet)
                                         localStorage.setItem('hc_school_id', schoolId);
+                                        // Sync React state with localStorage values set by wizard
+                                        setSchoolName(localStorage.getItem('hc_school_name') || '');
+                                        setTeamMascot(localStorage.getItem('oc-dashboard-team-mascot') || '');
                                     }}
                                 />
                             </div>
