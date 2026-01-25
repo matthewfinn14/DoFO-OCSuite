@@ -35583,7 +35583,12 @@
             const [teamVision, setTeamVision] = useLocalStorage('oc-dashboard-team-vision', '');
             const [teamNonNegotiables, setTeamNonNegotiables] = useLocalStorage('oc-dashboard-team-nonnegotiables', '');
             const [coachesExpectations, setCoachesExpectations] = useLocalStorage('oc-dashboard-coaches-expectations', '');
-            const [teamStandards, setTeamStandards] = useLocalStorage('oc-dashboard-team-standards', '');
+            const [practiceStandards, setPracticeStandards] = useLocalStorage('oc-dashboard-practice-standards', '');
+            const [meetingStandards, setMeetingStandards] = useLocalStorage('oc-dashboard-meeting-standards', '');
+            const [weightRoomStandards, setWeightRoomStandards] = useLocalStorage('oc-dashboard-weightroom-standards', '');
+            const [lifeStandards, setLifeStandards] = useLocalStorage('oc-dashboard-life-standards', '');
+            const [schoolStandards, setSchoolStandards] = useLocalStorage('oc-dashboard-school-standards', '');
+            const [travelStandards, setTravelStandards] = useLocalStorage('oc-dashboard-travel-standards', '');
             const [offensePhilosophy, setOffensePhilosophy] = useLocalStorage('oc-dashboard-offense-philosophy', '');
             const [defensePhilosophy, setDefensePhilosophy] = useLocalStorage('oc-dashboard-defense-philosophy', '');
             const [specialTeamsPhilosophy, setSpecialTeamsPhilosophy] = useLocalStorage('oc-dashboard-st-philosophy', '');
@@ -40345,16 +40350,44 @@
                                         </div>
                                     </div>
 
-                                    {/* Bottom Row: Standards + Coaches' Expectations */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                        <div className="card" style={{ padding: '0.75rem' }}>
-                                            <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="BookOpen" size={14} /> Standards of Behavior</h3>
-                                            <textarea className="form-input" value={teamStandards} onChange={(e) => setTeamStandards(e.target.value)} placeholder="1. Be on time&#10;2. Give maximum effort&#10;3. Respect everyone" rows={3} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                    {/* Standards Section */}
+                                    <div className="card" style={{ padding: '0.75rem', marginBottom: '0.75rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <h3 style={{ margin: 0, fontSize: '0.95rem' }}><Icon name="BookOpen" size={16} /> Program Standards</h3>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontStyle: 'italic' }}>Coaches: Enforce these daily!</span>
                                         </div>
-                                        <div className="card" style={{ padding: '0.75rem' }}>
-                                            <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="UserCheck" size={14} /> Coaches' Expectations</h3>
-                                            <textarea className="form-input" value={coachesExpectations} onChange={(e) => setCoachesExpectations(e.target.value)} placeholder="What do we expect from our coaches?" rows={3} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Practice</label>
+                                                <textarea className="form-input" value={practiceStandards} onChange={(e) => setPracticeStandards(e.target.value)} placeholder="Practice expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Meetings/Film</label>
+                                                <textarea className="form-input" value={meetingStandards} onChange={(e) => setMeetingStandards(e.target.value)} placeholder="Meeting room expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Weight Room</label>
+                                                <textarea className="form-input" value={weightRoomStandards} onChange={(e) => setWeightRoomStandards(e.target.value)} placeholder="Weight room expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Life</label>
+                                                <textarea className="form-input" value={lifeStandards} onChange={(e) => setLifeStandards(e.target.value)} placeholder="Off-field expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>School</label>
+                                                <textarea className="form-input" value={schoolStandards} onChange={(e) => setSchoolStandards(e.target.value)} placeholder="Academic expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Travel</label>
+                                                <textarea className="form-input" value={travelStandards} onChange={(e) => setTravelStandards(e.target.value)} placeholder="Travel expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
+                                            </div>
                                         </div>
+                                    </div>
+
+                                    {/* Coaches' Expectations */}
+                                    <div className="card" style={{ padding: '0.75rem' }}>
+                                        <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="UserCheck" size={14} /> Coaches' Expectations</h3>
+                                        <textarea className="form-input" value={coachesExpectations} onChange={(e) => setCoachesExpectations(e.target.value)} placeholder="What do we expect from our coaches?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
                                     </div>
                                 </div>
                             )}
