@@ -40017,7 +40017,10 @@
                 localStorage.setItem('hc_user_id', authUser.uid);
             }
 
-            if (!accessRequestStatus.checked && !schoolSetupData.showWizard && !isCurrentUserData) {
+            // Only bypass loading screen if user has completed setup (has both user ID and school ID)
+            // New users must wait for access check to complete
+            const hasCompletedSetup = isCurrentUserData && hasExistingSchool;
+            if (!accessRequestStatus.checked && !schoolSetupData.showWizard && !hasCompletedSetup && !isSiteAdmin) {
                 return (
                     <div style={{
                         height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
