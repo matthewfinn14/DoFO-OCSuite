@@ -2686,6 +2686,7 @@
                 case "BarChart2": return <svg {...commonProps}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>;
                 case "Landmark": return <svg {...commonProps}><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7" /><line x1="3" x2="21" y1="7" y2="7" /></svg>;
                 case "FileQuestion": return <svg {...commonProps}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><path d="M10 10.3c.2-.4.5-.8.9-1a2.1 2.1 0 0 1 2.6.4c.3.4.5.8.5 1.3 0 1.3-2 2-2 2" /><path d="M12 17h.01" /></svg>;
+                case "MessageSquare": return <svg {...commonProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
 
                 default:
                     // Fallback to text (Emoji or just text)
@@ -7125,6 +7126,8 @@
             onUpdateWeek, // Optional: function(date, field, val)
             onUpdatePlay, // Required: function(id, updates)
             onAssignSituation, // Optional: function(playId, box) -> adds to script/situation
+            onSuggest, // Optional: function(playId, setId) -> adds play suggestion for situation
+            suggestions = {}, // Current suggestions { setId: [playId, ...] }
             position = { x: 0, y: 0 },
             playBuckets = [], // Concept families (nested under categories)
             playCategories = [], // Top-level buckets (Run, Pass, Screen)
@@ -7428,6 +7431,20 @@
 
                         {/* BODY - SCROLLABLE CHIPS */}
                         <div style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
+                            {/* Suggest Mode Toggle - only show if onSuggest is available */}
+                            {onSuggest && (
+                                <div style={{
+                                    marginBottom: '12px',
+                                    padding: '8px 12px',
+                                    background: '#fef2f2',
+                                    borderRadius: '6px',
+                                    border: '1px solid #fecaca',
+                                    fontSize: '0.8rem',
+                                    color: '#991b1b'
+                                }}>
+                                    <strong>Suggest Mode:</strong> Click situations below to suggest this play
+                                </div>
+                            )}
                             {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
                                 const relevantBoxes = (section.boxes || []).filter(b => b.header && !b.hidden);
                                 if (relevantBoxes.length === 0) return null;
@@ -7443,35 +7460,50 @@
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                             {relevantBoxes.map((box, bIdx) => {
                                                 const isCheck = localAssignedIds.has(box.setId);
+                                                const isSuggested = suggestions[box.setId]?.includes(playId);
                                                 // Determine active color based on box config or fallbacks
                                                 const activeBorderColor = box.color || '#3b82f6';
 
                                                 return (
                                                     <button
                                                         key={bIdx}
-                                                        onClick={() => handleSituationClick(box)}
+                                                        onClick={() => {
+                                                            if (onSuggest) {
+                                                                // Suggest mode: toggle suggestion
+                                                                onSuggest(playId, box.setId);
+                                                            } else {
+                                                                handleSituationClick(box);
+                                                            }
+                                                        }}
                                                         style={{
                                                             padding: '6px 10px',
                                                             borderRadius: '6px',
                                                             cursor: 'pointer',
                                                             fontSize: '0.8rem',
-                                                            fontWeight: isCheck ? '600' : '500',
-                                                            border: isCheck ? `2px solid ${activeBorderColor}` : '1px solid #e2e8f0',
-                                                            background: isCheck ? `${activeBorderColor}15` : 'white',
-                                                            color: isCheck ? activeBorderColor : '#64748b',
+                                                            fontWeight: isCheck || isSuggested ? '600' : '500',
+                                                            border: isSuggested ? '2px solid #ef4444' : isCheck ? `2px solid ${activeBorderColor}` : '1px solid #e2e8f0',
+                                                            background: isSuggested ? '#fef2f2' : isCheck ? `${activeBorderColor}15` : 'white',
+                                                            color: isSuggested ? '#ef4444' : isCheck ? activeBorderColor : '#64748b',
                                                             boxShadow: isCheck ? `0 0 0 1px ${activeBorderColor}40` : 'none',
                                                             transition: 'all 0.15s ease',
                                                             position: 'relative',
                                                             overflow: 'hidden'
                                                         }}
                                                     >
-                                                        {isCheck && (
+                                                        {isSuggested && (
+                                                            <div style={{
+                                                                position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px',
+                                                                background: '#ef4444'
+                                                            }} />
+                                                        )}
+                                                        {isCheck && !isSuggested && (
                                                             <div style={{
                                                                 position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px',
                                                                 background: activeBorderColor
                                                             }} />
                                                         )}
                                                         {box.header}
+                                                        {isSuggested && <span style={{ marginLeft: '4px', fontSize: '0.7rem' }}>★</span>}
                                                     </button>
                                                 );
                                             })}
@@ -19474,75 +19506,63 @@
             // Wristband Print Preview
             if (selectedOption === 'wristbands') {
                 if (!selectedCardForPrint) {
-                    // Card Selector View
-                    const availableCards = wbSettings ? Object.keys(wbSettings).filter(key => key.startsWith('card')) : [];
+                    // Card Selector View - simple list of all configured cards
+                    const allCards = wbSettings ? Object.keys(wbSettings).filter(key => key.startsWith('card')).sort() : [];
+
+                    const getCardLabel = (cardId, card) => {
+                        if (card?.type === 'wiz') return 'Staples';
+                        const num = parseInt(cardId.replace('card', ''));
+                        return `${num}00s`;
+                    };
 
                     return (
-                        <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
+                        <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
                             <button onClick={handleBack} className="btn btn-secondary" style={{ marginBottom: '1rem' }}>
                                 <Icon name="ArrowLeft" size={16} /> Back to Print Center
                             </button>
 
-                            <div style={{ marginBottom: '2rem' }}>
-                                <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Select Wristband Card</h2>
-                                <p style={{ color: 'var(--text-secondary)' }}>Choose which wristband card to print (4 copies per page)</p>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Wristband Cards</h2>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>4 copies per page (landscape)</p>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                                {availableCards.map(cardId => {
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {allCards.map(cardId => {
                                     const card = wbSettings[cardId];
-                                    const cardNumber = cardId.replace('card', '');
-                                    const cardTypeLabel = card && (card.type === 'wiz') ? 'WIZ' : card && card.type === 'mini-scripts' ? 'SCRIPT' : 'TRADITIONAL';
-                                    const opponent = card.opp || card.opponent || 'No Opponent';
+                                    if (!card) return null;
+                                    const label = getCardLabel(cardId, card);
+                                    const opponent = card.opp || card.opponent || '';
 
                                     return (
                                         <div
                                             key={cardId}
                                             className="card"
                                             style={{
-                                                padding: '1.5rem',
+                                                padding: '1rem 1.25rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '1rem',
                                                 cursor: 'pointer',
-                                                transition: 'transform 0.2s, box-shadow 0.2s'
+                                                transition: 'background 0.15s'
                                             }}
                                             onClick={() => setSelectedCardForPrint(cardId)}
-                                            onMouseEnter={e => {
-                                                e.currentTarget.style.transform = 'translateY(-4px)';
-                                                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
-                                            }}
-                                            onMouseLeave={e => {
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.boxShadow = '';
-                                            }}>
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Card {cardNumber}</h3>
-                                                <div style={{
-                                                    background: 'black',
-                                                    color: 'white',
-                                                    padding: '4px 8px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 'bold',
-                                                    display: 'inline-block',
-                                                    marginBottom: '0.5rem'
-                                                }}>
-                                                    {cardTypeLabel}
-                                                </div>
-                                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-                                                    vs. {opponent}
-                                                </p>
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = ''}
+                                        >
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: '600' }}>{label}</div>
+                                                {opponent && <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>vs. {opponent}</div>}
                                             </div>
-                                            <button className="btn btn-primary" style={{ width: '100%' }}>
-                                                <Icon name="Printer" size={16} /> Select Card
-                                            </button>
+                                            <Icon name="ChevronRight" size={18} style={{ color: 'var(--text-secondary)' }} />
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            {availableCards.length === 0 && (
-                                <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
-                                        No wristband cards available. Please create cards in the Wristband Builder first.
+                            {allCards.length === 0 && (
+                                <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
+                                    <p style={{ color: 'var(--text-secondary)' }}>
+                                        No wristband cards available. Create cards in the Wristband Builder first.
                                     </p>
                                 </div>
                             )}
@@ -20389,7 +20409,7 @@
             );
         };
 
-        function GamePlannerSideMenu({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection, onUpdatePlay, onUpdateGamePlan, currentWeek, onNavigate, onAddToNextSlot }) {
+        function GamePlannerSideMenu({ plays, practicePlans, onQuickAddPlay, isOpen, onToggle, weekStats, gamePlan, gamePlanLayouts, playBuckets, playCategories, onAddSection, onUpdatePlay, onUpdateGamePlan, currentWeek, onNavigate, onAddToNextSlot, suggestions = {}, onUpdateSuggestions }) {
             const [searchTerm, setSearchTerm] = useState('');
             const [quickAddValue, setQuickAddValue] = useState('');
             const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, install
@@ -21282,9 +21302,11 @@
 
                         {/* Tabs */}
                         <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
-                            {['Full Playbook', 'Game Plan', 'Install'].map(tab => {
-                                const key = tab === 'Full Playbook' ? 'usage' : tab === 'Game Plan' ? 'gameplan' : 'install';
+                            {['Full Playbook', 'Game Plan', 'Install', 'Suggestions'].map(tab => {
+                                const key = tab === 'Full Playbook' ? 'usage' : tab === 'Game Plan' ? 'gameplan' : tab === 'Install' ? 'install' : 'suggestions';
                                 const isActive = activeTab === key;
+                                // Count total suggestions
+                                const suggestionCount = key === 'suggestions' ? Object.values(suggestions || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0) : 0;
                                 return (
                                     <div
                                         key={key}
@@ -21298,10 +21320,25 @@
                                             color: isActive ? '#0f172a' : '#64748b',
                                             borderBottom: isActive ? '2px solid #0f172a' : '2px solid transparent',
                                             cursor: 'pointer',
-                                            background: isActive ? 'white' : '#f8fafc'
+                                            background: isActive ? 'white' : '#f8fafc',
+                                            position: 'relative'
                                         }}
                                     >
                                         {tab}
+                                        {key === 'suggestions' && suggestionCount > 0 && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                top: '2px',
+                                                right: '4px',
+                                                background: '#ef4444',
+                                                color: 'white',
+                                                fontSize: '0.6rem',
+                                                fontWeight: '700',
+                                                padding: '1px 4px',
+                                                borderRadius: '8px',
+                                                minWidth: '14px'
+                                            }}>{suggestionCount}</span>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -21489,6 +21526,135 @@
 
 
                         {activeTab === 'install' && renderInstallContent()}
+
+                        {/* Suggestions Tab Content */}
+                        {activeTab === 'suggestions' && (
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
+                                {Object.keys(suggestions || {}).length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
+                                        <Icon name="MessageSquare" size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                                        <p style={{ fontSize: '0.85rem', margin: 0 }}>No suggestions yet</p>
+                                        <p style={{ fontSize: '0.75rem', margin: '0.25rem 0 0' }}>Assistant coaches can suggest plays from the play details modal</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {(gamePlanLayouts?.CALL_SHEET?.sections || []).map((section, sIdx) => {
+                                            const sectionSuggestions = (section.boxes || []).filter(box =>
+                                                box.setId && suggestions[box.setId]?.length > 0
+                                            );
+                                            if (sectionSuggestions.length === 0) return null;
+
+                                            return (
+                                                <div key={sIdx}>
+                                                    <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                                                        {section.title || `Section ${sIdx + 1}`}
+                                                    </div>
+                                                    {sectionSuggestions.map((box, bIdx) => (
+                                                        <div key={bIdx} style={{ marginBottom: '0.5rem' }}>
+                                                            <div style={{
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: '600',
+                                                                color: box.color || '#3b82f6',
+                                                                marginBottom: '0.25rem',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.25rem'
+                                                            }}>
+                                                                {box.header}
+                                                                <span style={{
+                                                                    background: '#fef2f2',
+                                                                    color: '#ef4444',
+                                                                    fontSize: '0.65rem',
+                                                                    padding: '1px 4px',
+                                                                    borderRadius: '4px'
+                                                                }}>
+                                                                    {suggestions[box.setId].length}
+                                                                </span>
+                                                            </div>
+                                                            {suggestions[box.setId].map((playId, pIdx) => {
+                                                                const play = plays.find(p => p.id === playId);
+                                                                if (!play) return null;
+                                                                return (
+                                                                    <div
+                                                                        key={pIdx}
+                                                                        style={{
+                                                                            fontSize: '0.8rem',
+                                                                            padding: '4px 8px',
+                                                                            background: '#fef2f2',
+                                                                            borderRadius: '4px',
+                                                                            marginBottom: '2px',
+                                                                            display: 'flex',
+                                                                            justifyContent: 'space-between',
+                                                                            alignItems: 'center'
+                                                                        }}
+                                                                    >
+                                                                        <span
+                                                                            style={{ cursor: 'pointer' }}
+                                                                            onClick={() => setSituationModalPlayId(playId)}
+                                                                        >
+                                                                            {play.name}
+                                                                        </span>
+                                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    // Accept: add to quick list and remove from suggestions
+                                                                                    handleAssignSituation(playId, box);
+                                                                                    if (onUpdateSuggestions) {
+                                                                                        const newSuggestions = { ...suggestions };
+                                                                                        newSuggestions[box.setId] = newSuggestions[box.setId].filter(id => id !== playId);
+                                                                                        if (newSuggestions[box.setId].length === 0) delete newSuggestions[box.setId];
+                                                                                        onUpdateSuggestions(newSuggestions);
+                                                                                    }
+                                                                                }}
+                                                                                style={{
+                                                                                    background: '#22c55e',
+                                                                                    color: 'white',
+                                                                                    border: 'none',
+                                                                                    borderRadius: '4px',
+                                                                                    padding: '2px 6px',
+                                                                                    fontSize: '0.65rem',
+                                                                                    cursor: 'pointer'
+                                                                                }}
+                                                                                title="Accept suggestion"
+                                                                            >
+                                                                                ✓
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    // Dismiss: just remove from suggestions
+                                                                                    if (onUpdateSuggestions) {
+                                                                                        const newSuggestions = { ...suggestions };
+                                                                                        newSuggestions[box.setId] = newSuggestions[box.setId].filter(id => id !== playId);
+                                                                                        if (newSuggestions[box.setId].length === 0) delete newSuggestions[box.setId];
+                                                                                        onUpdateSuggestions(newSuggestions);
+                                                                                    }
+                                                                                }}
+                                                                                style={{
+                                                                                    background: '#ef4444',
+                                                                                    color: 'white',
+                                                                                    border: 'none',
+                                                                                    borderRadius: '4px',
+                                                                                    padding: '2px 6px',
+                                                                                    fontSize: '0.65rem',
+                                                                                    cursor: 'pointer'
+                                                                                }}
+                                                                                title="Dismiss suggestion"
+                                                                            >
+                                                                                ✕
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {situationModalPlayId && (
@@ -21501,6 +21667,20 @@
                             onAssignSituation={(playId, situationId, type) => {
                                 handleAssignSituation(playId, situationId, type);
                             }}
+                            onSuggest={onUpdateSuggestions ? (playId, setId) => {
+                                const newSuggestions = { ...suggestions };
+                                if (!newSuggestions[setId]) newSuggestions[setId] = [];
+                                if (newSuggestions[setId].includes(playId)) {
+                                    // Toggle off
+                                    newSuggestions[setId] = newSuggestions[setId].filter(id => id !== playId);
+                                    if (newSuggestions[setId].length === 0) delete newSuggestions[setId];
+                                } else {
+                                    // Add suggestion
+                                    newSuggestions[setId].push(playId);
+                                }
+                                onUpdateSuggestions(newSuggestions);
+                            } : null}
+                            suggestions={suggestions}
                             playBuckets={playBuckets}
                             playCategories={playCategories}
                             currentWeek={currentWeek}
@@ -21512,7 +21692,7 @@
 
 
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef, teamLogo, positionNames = {}, customPositions = {}, hiddenPositions = {} }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef, teamLogo, positionNames = {}, customPositions = {}, hiddenPositions = {}, suggestions = {}, onUpdateSuggestions }) => {
             const { openPlayDetails } = usePlayDetailsModal();
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
@@ -23959,6 +24139,85 @@
                                     No plays assigned yet.
                                     <br />
                                     Click "Add Play" below to get started.
+                                </div>
+                            )}
+
+                            {/* Suggestions Section */}
+                            {suggestions[box.setId]?.length > 0 && (
+                                <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#fef2f2', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#ef4444', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Icon name="MessageSquare" size={14} />
+                                        SUGGESTIONS ({suggestions[box.setId].length})
+                                    </div>
+                                    {suggestions[box.setId].map((playId, idx) => {
+                                        const play = plays.find(p => p.id === playId);
+                                        if (!play) return null;
+                                        return (
+                                            <div key={idx} style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '4px 8px',
+                                                background: 'white',
+                                                borderRadius: '4px',
+                                                marginBottom: '4px',
+                                                fontSize: '0.8rem'
+                                            }}>
+                                                <span style={{ fontWeight: '500' }}>{play.name}</span>
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            // Accept: add to quick list
+                                                            handleAddPlay(playId);
+                                                            // Remove from suggestions
+                                                            if (onUpdateSuggestions) {
+                                                                const newSuggestions = { ...suggestions };
+                                                                newSuggestions[box.setId] = newSuggestions[box.setId].filter(id => id !== playId);
+                                                                if (newSuggestions[box.setId].length === 0) delete newSuggestions[box.setId];
+                                                                onUpdateSuggestions(newSuggestions);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            background: '#22c55e',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            padding: '2px 8px',
+                                                            fontSize: '0.7rem',
+                                                            fontWeight: 'bold',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        title="Accept"
+                                                    >
+                                                        ✓ Accept
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            // Dismiss: just remove from suggestions
+                                                            if (onUpdateSuggestions) {
+                                                                const newSuggestions = { ...suggestions };
+                                                                newSuggestions[box.setId] = newSuggestions[box.setId].filter(id => id !== playId);
+                                                                if (newSuggestions[box.setId].length === 0) delete newSuggestions[box.setId];
+                                                                onUpdateSuggestions(newSuggestions);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            background: '#f1f5f9',
+                                                            color: '#64748b',
+                                                            border: '1px solid #e2e8f0',
+                                                            borderRadius: '4px',
+                                                            padding: '2px 8px',
+                                                            fontSize: '0.7rem',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        title="Dismiss"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -26795,7 +27054,14 @@
                                                                                 ×
                                                                             </div>
                                                                         ) : (
-                                                                            <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{quickListCount}</span>
+                                                                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                                                {suggestions[box.setId]?.length > 0 && (
+                                                                                    <span style={{ fontSize: '0.65rem', background: '#ef4444', padding: '0 4px', borderRadius: '4px', fontWeight: '700' }}>
+                                                                                        {suggestions[box.setId].length}★
+                                                                                    </span>
+                                                                                )}
+                                                                                <span style={{ fontSize: '0.7rem', opacity: 0.9, background: 'rgba(0,0,0,0.2)', padding: '0 4px', borderRadius: '4px' }}>{quickListCount}</span>
+                                                                            </div>
                                                                         )}
                                                                     </div>
 
@@ -38077,6 +38343,8 @@
                                 positionNames={positionNames}
                                 customPositions={customPositions}
                                 hiddenPositions={hiddenPositions}
+                                suggestions={currentWeek.suggestions || {}}
+                                onUpdateSuggestions={(newSuggestions) => handleUpdateWeek(currentWeek.id, 'suggestions', newSuggestions)}
                             />}
 
                             {
@@ -38889,6 +39157,8 @@
                                         addToNextSlotRef.current(playId, play);
                                     }
                                 }}
+                                suggestions={currentWeek?.suggestions || {}}
+                                onUpdateSuggestions={(newSuggestions) => handleUpdateWeek(currentWeek?.id, 'suggestions', newSuggestions)}
                             />
                         </div>
                     </div>
