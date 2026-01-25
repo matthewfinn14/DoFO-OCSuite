@@ -7884,6 +7884,10 @@
             const [editingWizPlay, setEditingWizPlay] = useState(null); // Play being edited
             const [editingWizType, setEditingWizType] = useState(null); // 'skill' or 'oline'
 
+            // WIZ print selection state
+            const [wizPrintModal, setWizPrintModal] = useState(false);
+            const [wizPrintType, setWizPrintType] = useState(null); // 'skill' or 'oline' - which to print
+
             // Layout constants
             const rowHeight = 11;
             const fontSize = 0.55;
@@ -10079,7 +10083,13 @@
                                 ))}
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button className="btn btn-secondary" onClick={() => onNavigate && onNavigate('print-hub')}>Print</button>
+                                <button className="btn btn-secondary" onClick={() => {
+                                    if (activeCard && activeCard.type === 'wiz') {
+                                        setWizPrintModal(true);
+                                    } else {
+                                        window.print();
+                                    }
+                                }}>Print</button>
                                 <button className="btn btn-danger" onClick={() => handleClearCard(selectedCardId)}>Clear Card</button>
                                 <button className="btn btn-danger" onClick={handleClearBoth} style={{ fontWeight: 'bold' }}>Clear All</button>
                             </div>
@@ -10109,6 +10119,45 @@
                                         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
                                             <button className="btn btn-secondary" onClick={() => setConfirmModal(null)}>Cancel</button>
                                             <button className="btn btn-danger" onClick={confirmClear}>Confirm</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {wizPrintModal && (
+                                <div style={{
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 9999
+                                }}>
+                                    <div style={{
+                                        backgroundColor: 'var(--bg-panel)',
+                                        padding: '2rem',
+                                        borderRadius: '8px',
+                                        maxWidth: '400px',
+                                        textAlign: 'center',
+                                        border: '1px solid var(--border)'
+                                    }}>
+                                        <h3 style={{ marginTop: 0 }}>Print WIZ Card</h3>
+                                        <p>Which version do you want to print?</p>
+                                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+                                            <button className="btn btn-secondary" onClick={() => setWizPrintModal(false)}>Cancel</button>
+                                            <button className="btn btn-primary" onClick={() => {
+                                                setWizPrintType('skill');
+                                                setWizPrintModal(false);
+                                                setTimeout(() => window.print(), 100);
+                                            }}>SKILL</button>
+                                            <button className="btn btn-primary" onClick={() => {
+                                                setWizPrintType('oline');
+                                                setWizPrintModal(false);
+                                                setTimeout(() => window.print(), 100);
+                                            }}>OLINE</button>
                                         </div>
                                     </div>
                                 </div>
@@ -10323,35 +10372,39 @@
                         </div>
                     ) : activeCard && (activeCard.type === 'wiz') ? (
                         <>
-                            {/* Skill Version - Page 1 */}
-                            <div className="wristband-print-container" style={{ display: 'none', pageBreakAfter: 'always' }}>
-                                <div className="wristband-print-grid">
-                                    {[1, 2, 3, 4].map(copyNum => (
-                                        <div key={copyNum} className="wristband-print-card">
-                                            {renderWizGrid(
-                                                getSlotsForCard(selectedCardId),
-                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
-                                                'skill'
-                                            )}
-                                        </div>
-                                    ))}
+                            {/* Skill Version - only prints if wizPrintType is 'skill' */}
+                            {wizPrintType === 'skill' && (
+                                <div className="wristband-print-container" style={{ display: 'none' }}>
+                                    <div className="wristband-print-grid">
+                                        {[1, 2, 3, 4].map(copyNum => (
+                                            <div key={copyNum} className="wristband-print-card">
+                                                {renderWizGrid(
+                                                    getSlotsForCard(selectedCardId),
+                                                    `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                    'skill'
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* O-Line Version - Page 2 */}
-                            <div className="wristband-print-container" style={{ display: 'none' }}>
-                                <div className="wristband-print-grid">
-                                    {[1, 2, 3, 4].map(copyNum => (
-                                        <div key={copyNum} className="wristband-print-card">
-                                            {renderWizGrid(
-                                                getSlotsForCard(selectedCardId),
-                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
-                                                'oline'
-                                            )}
-                                        </div>
-                                    ))}
+                            {/* O-Line Version - only prints if wizPrintType is 'oline' */}
+                            {wizPrintType === 'oline' && (
+                                <div className="wristband-print-container" style={{ display: 'none' }}>
+                                    <div className="wristband-print-grid">
+                                        {[1, 2, 3, 4].map(copyNum => (
+                                            <div key={copyNum} className="wristband-print-card">
+                                                {renderWizGrid(
+                                                    getSlotsForCard(selectedCardId),
+                                                    `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                    'oline'
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </>
                     ) : activeCard ? (
                         <div className="wristband-print-container" style={{ display: 'none' }}>
