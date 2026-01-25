@@ -20061,7 +20061,10 @@
             );
         };
 
-        const PrintHubView = ({ roster, staff, gamePlans, depthChart, practicePlans, attendance, wbSettings, setWbSettings, plays, personnelGroupings = {}, onNavigate }) => {
+        const PrintHubView = ({ roster, staff, weeks = [], currentWeekId, onChangeWeek, gamePlans, depthChart, practicePlans, attendance, wbSettings, setWbSettings, plays, personnelGroupings = {}, onNavigate }) => {
+            // Get current week info for display
+            const currentWeek = weeks.find(w => w.id === currentWeekId) || {};
+            const weekLabel = currentWeek.opponent ? `${currentWeek.name} vs ${currentWeek.opponent}` : currentWeek.name || 'Select Week';
             const [selectedCategory, setSelectedCategory] = useState('practice');
             const [selectedOption, setSelectedOption] = useState(null); // 'daily_plan', 'weekly_plan', 'wristbands', etc.
             const [selectedDay, setSelectedDay] = useState(null); // For daily plan selection
@@ -20917,9 +20920,26 @@
 
             return (
                 <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-                    <div style={{ marginBottom: '2rem' }}>
-                        <h1 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>Print Center</h1>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Print game day materials for the current week.</p>
+                    <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <h1 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>Print Center</h1>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Print game day materials for the selected week.</p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Week:</label>
+                            <select
+                                className="form-select"
+                                value={currentWeekId || ''}
+                                onChange={(e) => onChangeWeek && onChangeWeek(e.target.value)}
+                                style={{ minWidth: '250px', fontWeight: '600' }}
+                            >
+                                {weeks.map(w => (
+                                    <option key={w.id} value={w.id}>
+                                        {w.name}{w.opponent ? ` vs ${w.opponent}` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
@@ -40209,7 +40229,7 @@
                                 </div>
                             )}
                             
-                            {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} personnelGroupings={personnelGroupings} onNavigate={setView} />}
+                            {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} weeks={weeks} currentWeekId={currentWeekId} onChangeWeek={setCurrentWeekId} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} personnelGroupings={personnelGroupings} onNavigate={setView} />}
 
                             {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
