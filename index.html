@@ -34777,9 +34777,11 @@
 
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', padding: '0.25rem 0 0.5rem 0' }}>
-
-
-
+                        <button className={`nav-item ${isActive && view === 'coaches-notes' ? 'active' : ''}`}
+                            onClick={() => { setCurrentWeekId(weekId); setView('coaches-notes'); }}
+                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            <Icon name="FileText" size={12} /> Meeting Notes
+                        </button>
                         <button className={`nav-item ${isActive && view === 'practice' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('practice'); }}
                             style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
@@ -34811,17 +34813,10 @@
                             style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
                             <Icon name="FileText" size={12} /> Practice Scripts
                         </button>
-
-
                         <button className={`nav-item ${isActive && view === 'pregame' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('pregame'); }}
                             style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
                             <Icon name="Clock" size={12} /> Pre-Game Timeline
-                        </button>
-                        <button className={`nav-item ${isActive && view === 'coaches-notes' ? 'active' : ''}`}
-                            onClick={() => { setCurrentWeekId(weekId); setView('coaches-notes'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
-                            <Icon name="FileText" size={12} /> Coaches' Notes
                         </button>
                     </div>
                 );
@@ -41135,7 +41130,7 @@
                                     <div style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                             <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <Icon name="FileText" size={24} /> Coaches' Notes - {currentWeek?.name || 'Week'}
+                                                <Icon name="FileText" size={24} /> Meeting Notes - {currentWeek?.name || 'Week'}
                                             </h2>
                                             {isHeadCoach && (
                                                 <button className="btn btn-secondary" onClick={addCoach}>
