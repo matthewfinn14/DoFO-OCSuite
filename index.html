@@ -22100,7 +22100,7 @@
 
 
 
-        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef, teamLogo, positionNames = {}, customPositions = {}, hiddenPositions = {}, suggestions = {}, onUpdateSuggestions }) => {
+        const OffensiveGamePlan = ({ plays, weekDate, gamePlan, practicePlans = {}, onUpdateGamePlan, onQuickAddPlay, onUpdatePlay, gamePlanLayouts = GAME_PLAN_LAYOUTS, onUpdateLayouts, isLocked, layoutVersions = {}, onSaveLayoutVersion, onDeleteLayoutVersion, onLoadLayoutVersion, wbSettings, newInstallIds = [], onUpdateWeek, weeks = [], currentWeek = {}, playCategories = [], playBuckets = [], setAppSidebarCollapsed, appSidebarCollapsed, addToNextSlotRef, teamLogo, positionNames = {}, customPositions = {}, hiddenPositions = {}, suggestions = {}, onUpdateSuggestions, personnelGroupings = [] }) => {
             const { openPlayDetails } = usePlayDetailsModal();
             const [layoutSaveState, setLayoutSaveState] = useState({ isSaving: false, name: '' });
             const [layoutConfirmAction, setLayoutConfirmAction] = useState(null); // { type: 'load'|'delete', name: 'versionName' }
@@ -40070,6 +40070,7 @@
                                 hiddenPositions={hiddenPositions}
                                 suggestions={currentWeek.suggestions || {}}
                                 onUpdateSuggestions={(newSuggestions) => handleUpdateWeek(currentWeek.id, 'suggestions', newSuggestions)}
+                                personnelGroupings={personnelGroupings}
                             />}
 
                             {
