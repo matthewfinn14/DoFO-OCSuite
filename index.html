@@ -1259,17 +1259,23 @@
                         }
 
                         if (activeSchoolId) {
-                            // Recursively load data now that we have a school
-                            // Or just fall through to the logic below?
-                            // Logic below checks `if (activeSchoolId)` so we just need to set it!
-                            console.log("Auto-joined school. Loading data...");
+                            // Actually load the school data now that we found an invite
+                            console.log("Auto-joined school via invite. Loading school data for:", activeSchoolId);
+                            localStorage.setItem('hc_school_id', activeSchoolId);
+
+                            const schoolDoc = await window.db.collection('schools').doc(activeSchoolId).get();
+                            if (schoolDoc.exists) {
+                                console.log("Loaded SCHOOL data from invite");
+                                appData = schoolDoc.data();
+                                isSchoolData = true;
+                            } else {
+                                console.warn("Invite school ID found but document missing.");
+                            }
                         } else {
                             // Ensure we clear any stale school ID if they are not in a school
                             console.log("No school data found for user.");
                             localStorage.removeItem('hc_school_id');
                         }
-
-                        localStorage.removeItem('hc_school_id');
                     }
                 } else {
                     // NEW: User Doc does not exist (New User or Deleted Doc).
