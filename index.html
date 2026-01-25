@@ -1838,12 +1838,12 @@
             );
         };
 
-        const SchoolOnboardingWizard = ({ user, onComplete }) => {
+        const SchoolOnboardingWizard = ({ user, onComplete, requestData }) => {
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
 
-            // Data State
-            const [schoolName, setSchoolName] = useState('');
+            // Data State - Pre-populate from access request if available
+            const [schoolName, setSchoolName] = useState(requestData?.schoolName || '');
             const [mascot, setMascot] = useState('');
             const [zipCode, setZipCode] = useState('');
             const [primaryColor, setPrimaryColor] = useState('#000000');
@@ -2725,22 +2725,12 @@
             }
         };
 
-        // Built-in tag categories (minimal set - users can add custom categories)
+        // Built-in tag categories for self-scout analysis (users can add custom categories)
         const TAG_CATEGORIES = {
-            "Coverage Beaters": ["MOFO (Middle Open)", "MOFC (Middle Closed)", "Man Beater", "Zone Beater"],
-            "Motion": [
-                "Down motion",
-                "THRU MO from 1x3 to 2x2",
-                "THRU MO from 2x2 to 3x1",
-                "Orbit MO from 1x3 to 2x2",
-                "Orbit MO from 2x2 to 3x1",
-                "RB push motion",
-                "Zipper",
-                "YAC",
-                "YO-YO"
-            ],
-            "Primary Target": ["X", "A", "Z", "Y", "B", "Q", "F"],
-            "Action Types": ["Strong Run", "Weak Run", "Quick Game", "Drop Back", "Screen", "Gadget"]
+            "RB Alignment": ["RB to Play", "RB Away from Play"],
+            "TE Alignment": ["TE to Play", "TE Away from Play", "No TE"],
+            "Motion": ["No Motion", "Jet/Fly", "Orbit", "Push", "Return", "Trade"],
+            "Backfield Action": ["Under Center", "Shotgun", "Pistol", "Play Action", "RPO", "Sprint Out", "Boot"]
         };
 
         const HASH_PREFERENCES = ["Left", "Right", "Middle", "Any"];
@@ -17598,9 +17588,6 @@
             );
         };
 
-
-        // REMOVED: TestingRecords (~1,047 lines) - check git history
-
         // Site Admin Panel - Only accessible to site admins
         const SiteAdminPanel = () => {
             const { currentUser } = useAuth();
@@ -17811,6 +17798,39 @@
                                                                 {school.memberCount} roster member{school.memberCount !== 1 ? 's' : ''}
                                                             </div>
                                                         )}
+                                                        <button
+                                                            onClick={async () => {
+                                                                const newName = prompt('Edit School Name:', school.name || '');
+                                                                if (newName === null) return; // Cancelled
+                                                                if (!newName.trim()) {
+                                                                    alert('School name cannot be empty.');
+                                                                    return;
+                                                                }
+                                                                try {
+                                                                    await window.db.collection('schools').doc(school.id).update({
+                                                                        name: newName.trim(),
+                                                                        'settings.schoolName': newName.trim()
+                                                                    });
+                                                                    alert('School name updated to: ' + newName.trim());
+                                                                } catch (err) {
+                                                                    console.error('Error updating school:', err);
+                                                                    alert('Error updating school: ' + err.message);
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                marginTop: '0.5rem',
+                                                                marginRight: '0.5rem',
+                                                                padding: '0.25rem 0.5rem',
+                                                                fontSize: '0.75rem',
+                                                                background: 'transparent',
+                                                                border: '1px solid var(--accent)',
+                                                                color: 'var(--accent)',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Edit
+                                                        </button>
                                                         <button
                                                             onClick={async () => {
                                                                 if (!window.confirm(`Are you sure you want to delete "${school.name || school.id}"?\n\nThis will permanently delete all data for this school including roster, plays, and practice plans.`)) {
@@ -18046,7 +18066,7 @@
             );
         };
 
-        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isAdmin = false, currentSchoolId }) => {
+        const Settings = ({ teamLogo, onUpdateLogo, accentColor, onUpdateAccentColor, theme, onUpdateTheme, positionNames, onUpdatePositionNames, activeYear, onUpdateActiveYear, visibleFeatures, onUpdateVisibleFeatures, renderSyncManager, isAdmin = false, currentSchoolId, schoolName: schoolNameProp }) => {
 
 
             const handleImageUpload = (e) => {
@@ -18405,9 +18425,46 @@
                                     <h3 style={{ margin: 0 }}>Account Information</h3>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                    <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px', position: 'relative' }}>
                                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>School/Organization</label>
-                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>{billingInfo?.schoolName || 'Not Set'}</p>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>{schoolNameProp || billingInfo?.schoolName || 'Not Set'}</p>
+                                        {currentSchoolId && (
+                                            <button
+                                                onClick={async () => {
+                                                    const newName = prompt('Edit School Name:', schoolNameProp || billingInfo?.schoolName || '');
+                                                    if (newName === null) return;
+                                                    if (!newName.trim()) {
+                                                        alert('School name cannot be empty.');
+                                                        return;
+                                                    }
+                                                    try {
+                                                        await window.db.collection('schools').doc(currentSchoolId).update({
+                                                            name: newName.trim(),
+                                                            'settings.schoolName': newName.trim()
+                                                        });
+                                                        localStorage.setItem('hc_school_name', newName.trim());
+                                                        alert('School name updated. Reloading...');
+                                                        window.location.reload();
+                                                    } catch (err) {
+                                                        console.error('Error updating school name:', err);
+                                                        alert('Error updating school name: ' + err.message);
+                                                    }
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '0.5rem',
+                                                    right: '0.5rem',
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: 'var(--accent)',
+                                                    cursor: 'pointer',
+                                                    padding: '0.25rem'
+                                                }}
+                                                title="Edit School Name"
+                                            >
+                                                <Icon name="Edit2" size={14} />
+                                            </button>
+                                        )}
                                     </div>
                                     <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
                                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account Email</label>
@@ -18480,7 +18537,7 @@
                                 </p>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     <a
-                                        href={`mailto:billing@dofo.app?subject=Invoice Request - ${billingInfo?.schoolName || 'Account'}&body=Account ID: ${currentSchoolId}%0D%0ASchool: ${billingInfo?.schoolName || 'N/A'}%0D%0AEmail: ${currentUser?.email}%0D%0A%0D%0APlease send an invoice for our subscription.`}
+                                        href={`mailto:billing@dofo.app?subject=Invoice Request - ${schoolNameProp || billingInfo?.schoolName || 'Account'}&body=Account ID: ${currentSchoolId}%0D%0ASchool: ${schoolNameProp || billingInfo?.schoolName || 'N/A'}%0D%0AEmail: ${currentUser?.email}%0D%0A%0D%0APlease send an invoice for our subscription.`}
                                         className="btn btn-primary"
                                         style={{ textDecoration: 'none' }}
                                     >
@@ -31485,690 +31542,6 @@
             return 'FREE';
         };
 
-        const LEGACY_PROGRAM_RECORDS = {
-            'Squat': {
-                '320+': {
-                    'PR': { value: '--', holder: '-', year: '-' }
-                },
-                '310-319': {
-                    '12': { value: '470', holder: 'David Downs', year: '8/20' },
-                    'PR': { value: '470', holder: 'David Downs', year: '8/20' }
-                },
-                '300-309': {
-                    '12': { value: '480', holder: 'Tyler Heithoff', year: '7/22' },
-                    '11': { value: '465', holder: 'Tyler Heithoff', year: '5/22' },
-                    '10': { value: '350', holder: 'Tyler Heithoff', year: '5/21' },
-                    '9': { value: '240', holder: 'Patrick Gomez', year: '5/22' },
-                    'PR': { value: '480', holder: 'Tyler Heithoff', year: '7/22' }
-                },
-                '290-299': {
-                    '12': { value: '315', holder: 'Colin Hansen', year: '8/21' },
-                    '11': { value: '280', holder: 'Colin Hansen', year: '5/21' },
-                    '10': { value: '315', holder: 'Tyler Heithoff', year: '2/21' },
-                    '9': { value: '220', holder: 'Patrick Gomez', year: '11/21' },
-                    'PR': { value: '315', holder: 'C. Hansen / T. Heithoff', year: '2021' }
-                },
-                '280-289': {
-                    '12': { value: '355', holder: 'Carson Barber', year: '7/24' },
-                    '11': { value: '455', holder: 'Aaron Peyton', year: '5/23' },
-                    '10': { value: '350', holder: 'Carson Barber', year: '5/23' },
-                    'PR': { value: '455', holder: 'Aaron Peyton', year: '5/23' }
-                },
-                '270-279': {
-                    '12': { value: '455', holder: 'Aaron Peyton', year: '7/23' },
-                    '10': { value: '315', holder: 'Carson Barber', year: '10/22' },
-                    '9': { value: '270', holder: 'Carson Barber', year: '5/22' },
-                    'PR': { value: '455', holder: 'Aaron Peyton', year: '7/23' }
-                },
-                '260-269': {
-                    '11': { value: '415', holder: 'Aaron Peyton', year: '10/22' },
-                    '9': { value: '250', holder: 'Carson Barber', year: '2/22' },
-                    'PR': { value: '415', holder: 'Aaron Peyton', year: '10/22' }
-                },
-                '250-259': {
-                    '11': { value: '450', holder: 'Record Holder', year: '5/24' },
-                    '10': { value: '365', holder: 'Aaron Peyton', year: '5/22' },
-                    '9': { value: '230', holder: 'Carson Barber', year: '11/21' },
-                    'PR': { value: '450', holder: 'Record Holder', year: '5/24' }
-                },
-                '240-249': {
-                    '12': { value: '405', holder: 'W. Licht, T. Tjaden, T. Peterson', year: '23/24' },
-                    '11': { value: '415', holder: 'Record Holder', year: '7/23' },
-                    '10': { value: '380', holder: 'Record Holder', year: '2/23' },
-                    '9': { value: '225', holder: 'Jackson Mohr', year: '2/23' },
-                    'PR': { value: '415', holder: 'Record Holder', year: '7/23' }
-                },
-                '230-239': {
-                    '12': { value: '400', holder: 'Wes Hansen', year: '7/24' },
-                    '11': { value: '425', holder: 'Wes Hansen', year: '5/24' },
-                    '10': { value: '335', holder: 'Aaron Peyton', year: '2/22' },
-                    'PR': { value: '425', holder: 'Wes Hansen', year: '5/24' }
-                },
-                '220-229': {
-                    '12': { value: '470', holder: 'Zach Twedt', year: '8/20' },
-                    '11': { value: '445', holder: 'Charlie Watts', year: '2/24' },
-                    '10': { value: '340', holder: 'Wes Hansen', year: '5/23' },
-                    '9': { value: '285', holder: 'Blake Nelsen', year: '2/23' },
-                    'PR': { value: '470', holder: 'Zach Twedt', year: '8/20' }
-                },
-                '210-219': {
-                    '12': { value: '460', holder: 'Garret Nerem', year: '7/24' },
-                    '11': { value: '425', holder: 'Garrett Nerem', year: '5/24' },
-                    '10': { value: '335', holder: 'Tristan Peterson', year: '5/23' },
-                    '9': { value: '340', holder: 'Jake Rogers', year: '5/23' },
-                    'PR': { value: '460', holder: 'Garret Nerem', year: '7/24' }
-                },
-                '200-209': {
-                    '12': { value: '280', holder: 'Parker Watts', year: '8/21' },
-                    '11': { value: '415', holder: 'C. Watts / G. Nerem', year: '23/24' },
-                    '10': { value: '425', holder: 'Fiston Carlson', year: '7/24' },
-                    '9': { value: '335', holder: 'Jake Rogers', year: '2/23' },
-                    'PR': { value: '425', holder: 'Fiston Carlson', year: '7/24' }
-                },
-                '190-199': {
-                    '12': { value: '285', holder: 'Logan Schnurr', year: '8/21' },
-                    '11': { value: '400', holder: 'Cael Vermeer', year: '7/24' },
-                    '10': { value: '350', holder: 'Cael Vermeer', year: '7/23' },
-                    '9': { value: '430', holder: 'Fiston Carlson', year: '5/24' },
-                    'PR': { value: '430', holder: 'Fiston Carlson', year: '5/24' }
-                },
-                '180-189': {
-                    '12': { value: '380', holder: 'Sam Knoll', year: '7/24' },
-                    '11': { value: '440', holder: 'Fiston Carlson', year: '7/25' },
-                    '10': { value: '355', holder: 'Ben Licht', year: '7/24' },
-                    '9': { value: '360', holder: 'Fiston Carlson', year: '7/23' },
-                    'PR': { value: '440', holder: 'Fiston Carlson', year: '7/25' }
-                },
-                '170-179': {
-                    '12': { value: '355', holder: 'D. Lettow / H. Johnson', year: '22/23' },
-                    '11': { value: '340', holder: 'Tyler Lambert', year: '7/25' },
-                    '10': { value: '350', holder: 'Isaac Miskell', year: '7/24' },
-                    '9': { value: '345', holder: 'Isaac Miskell', year: '2/24' },
-                    'PR': { value: '355', holder: 'D. Lettow / H. Johnson', year: '22/23' }
-                },
-                '160-169': {
-                    '12': { value: '320', holder: 'Heston McIlrath', year: '7/24' },
-                    '11': { value: '350', holder: 'Sam Knoll', year: '7/23' },
-                    '10': { value: '335', holder: 'Cooper Triggs', year: '7/24' },
-                    '9': { value: '300', holder: 'Ben Licht', year: '10/23' },
-                    'PR': { value: '350', holder: 'Sam Knoll', year: '7/23' }
-                },
-                '150-159': {
-                    '12': { value: '315', holder: 'G. Carpenter / C. Long', year: '22/25' },
-                    '11': { value: '345', holder: 'Cody Long', year: '7/24' },
-                    '10': { value: '330', holder: 'Cody Long', year: '11/23' },
-                    '9': { value: '355', holder: 'Ben Mazyck', year: '10/23' },
-                    'PR': { value: '355', holder: 'Ben Mazyck', year: '10/23' }
-                },
-                '140-149': {
-                    '12': { value: '290', holder: 'C. Diehl / J. Martin', year: '21/22' },
-                    '11': { value: '275', holder: 'Blake Larson', year: '7/24' },
-                    '10': { value: '315', holder: 'Cody Long', year: '7/23' },
-                    '9': { value: '305', holder: 'Ben Mazyck', year: '7/23' },
-                    'PR': { value: '315', holder: 'Cody Long', year: '7/23' }
-                },
-                '130-139': {
-                    '11': { value: '255', holder: 'Jake Knoll', year: '7/25' },
-                    '10': { value: '275', holder: 'Jake Knoll', year: '7/24' },
-                    '9': { value: '270', holder: 'C. Long / B. Loof', year: '22/23' },
-                    'PR': { value: '275', holder: 'Jake Knoll', year: '7/24' }
-                },
-                '120-129': {
-                    '11': { value: '215', holder: 'Noah Healy', year: '7/25' },
-                    '9': { value: '260', holder: 'Brady Long', year: '7/24' },
-                    'PR': { value: '260', holder: 'Brady Long', year: '7/24' }
-                },
-                '110-119': {
-                    '11': { value: '180', holder: 'Brayden Kilstofte', year: '11/21' },
-                    '9': { value: '195', holder: 'B. Larson / M. Dahlsten', year: '23/25' },
-                    'PR': { value: '195', holder: 'B. Larson / M. Dahlsten', year: '23/25' }
-                },
-                '100-109': {
-                    '11': { value: '160', holder: 'Brayden Kilstofte', year: '8/21' },
-                    '9': { value: '185', holder: 'Blake Larson', year: '10/22' },
-                    'PR': { value: '185', holder: 'Blake Larson', year: '10/22' }
-                }
-            },
-            'Bench': {
-                '320+': {
-                    'PR': { value: '--', holder: '-', year: '-' }
-                },
-                '310-319': {
-                    '12': { value: '295', holder: 'David Downs', year: '8/20' },
-                    'PR': { value: '295', holder: 'David Downs', year: '8/20' }
-                },
-                '300-309': {
-                    '12': { value: '250', holder: 'Tyler Heithoff', year: '7/22' },
-                    '11': { value: '250', holder: 'Tyler Heithoff', year: '5/22' },
-                    '9': { value: '170', holder: 'Patrick Gomez', year: '5/22' },
-                    'PR': { value: '250', holder: 'Tyler Heithoff', year: '2022' }
-                },
-                '290-299': {
-                    '12': { value: '175', holder: 'Colin Hansen', year: '8/21' },
-                    '11': { value: '165', holder: 'Colin Hansen', year: '5/21' },
-                    '10': { value: '185', holder: 'Tyler Heithoff', year: '2/21' },
-                    '9': { value: '155', holder: 'Patrick Gomez', year: '11/21' },
-                    'PR': { value: '185', holder: 'Tyler Heithoff', year: '2/21' }
-                },
-                '280-289': {
-                    '12': { value: '220', holder: 'Carson Barber', year: '7/24' },
-                    '11': { value: '220', holder: 'Carson Barber', year: '7/23' },
-                    '10': { value: '215', holder: 'Carson Barber', year: '5/23' },
-                    'PR': { value: '220', holder: 'Carson Barber', year: '23/24' }
-                },
-                '270-279': {
-                    '12': { value: '245', holder: 'Aaron Peyton', year: '7/23' },
-                    '10': { value: '195', holder: 'Carson Barber', year: '10/22' },
-                    '9': { value: '175', holder: 'Carson Barber', year: '5/22' },
-                    'PR': { value: '245', holder: 'Aaron Peyton', year: '7/23' }
-                },
-                '260-269': {
-                    '11': { value: '245', holder: 'Aaron Peyton', year: '10/22' },
-                    '10': { value: '155', holder: 'Carson Barber', year: '2/22' },
-                    'PR': { value: '245', holder: 'Aaron Peyton', year: '10/22' }
-                },
-                '250-259': {
-                    '11': { value: '245', holder: 'Aaron Peyton', year: '7/22' },
-                    '10': { value: '245', holder: 'Aaron Peyton', year: '5/22' },
-                    '9': { value: '145', holder: 'Carson Barber', year: '11/21' },
-                    'PR': { value: '245', holder: 'Aaron Peyton', year: '2022' }
-                },
-                '240-249': {
-                    '12': { value: '280', holder: 'William Licht', year: '7/23' },
-                    '11': { value: '255', holder: 'Thomas Tjaden', year: '5/23' },
-                    '10': { value: '215', holder: 'Aaron Peyton', year: '11/21' },
-                    '9': { value: '170', holder: 'Jackson Mohr', year: '10/22' },
-                    'PR': { value: '280', holder: 'William Licht', year: '7/23' }
-                },
-                '230-239': {
-                    '12': { value: '265', holder: 'Blake Nelsen', year: '8/25' },
-                    '11': { value: '270', holder: 'William Licht', year: '5/23' },
-                    '10': { value: '215', holder: 'Record Holder', year: '10/22' },
-                    'PR': { value: '270', holder: 'William Licht', year: '5/23' }
-                },
-                '220-229': {
-                    '12': { value: '315', holder: 'Jimmy Philipsen', year: '8/20' },
-                    '11': { value: '280', holder: 'Charlie Watts', year: '2/24' },
-                    '10': { value: '190', holder: 'Wes Hansen', year: '5/23' },
-                    '9': { value: '185', holder: 'Aaron Peyton', year: '5/21' },
-                    'PR': { value: '315', holder: 'Jimmy Philipsen', year: '8/20' }
-                },
-                '210-219': {
-                    '12': { value: '255', holder: 'Garrett Nerem', year: '7/24' },
-                    '11': { value: '300', holder: 'Chance Georgius', year: '7/25' },
-                    '10': { value: '250', holder: 'William Licht', year: '5/22' },
-                    '9': { value: '245', holder: 'Jake Rogers', year: '5/23' },
-                    'PR': { value: '300', holder: 'Chance Georgius', year: '7/25' }
-                },
-                '200-209': {
-                    '12': { value: '230', holder: 'Jonovan Wilkinson', year: '7/23' },
-                    '11': { value: '270', holder: 'Charlie Watts', year: '7/23' },
-                    '10': { value: '235', holder: 'William Licht', year: '2/22' },
-                    '9': { value: '225', holder: 'Blake Winecoff', year: '7/25' },
-                    'PR': { value: '270', holder: 'Charlie Watts', year: '7/23' }
-                },
-                '190-199': {
-                    '12': { value: '170', holder: 'Logan Schnurr', year: '8/21' },
-                    '11': { value: '210', holder: 'Jonovan Wilkinson', year: '10/22' },
-                    '10': { value: '270', holder: 'Charlie Watts', year: '5/23' },
-                    '9': { value: '305', holder: 'Fiston Carlson', year: '2/24' },
-                    'PR': { value: '305', holder: 'Fiston Carlson', year: '2/24' }
-                },
-                '180-189': {
-                    '12': { value: '280', holder: 'Christian Eslick', year: '7/22' },
-                    '11': { value: '325', holder: 'Fiston Carlson', year: '7/25' },
-                    '10': { value: '215', holder: 'G. Nerem / C. Barber', year: '23/24' },
-                    '9': { value: '255', holder: 'Fiston Carlson', year: '7/23' },
-                    'PR': { value: '325', holder: 'Fiston Carlson', year: '7/25' }
-                },
-                '170-179': {
-                    '12': { value: '220', holder: 'Jackson Sterle', year: '8/20' },
-                    '11': { value: '245', holder: 'Ben Mazyck', year: '7/25' },
-                    '10': { value: '215', holder: 'Isaac Miskell', year: '7/24' },
-                    '9': { value: '210', holder: 'Ben Licht', year: '2/24' },
-                    'PR': { value: '245', holder: 'Ben Mazyck', year: '7/25' }
-                },
-                '160-169': {
-                    '12': { value: '235', holder: 'Heston McIlrath', year: '7/24' },
-                    '11': { value: '200', holder: 'Q. Ante / D. Lettow', year: '21/21' },
-                    '10': { value: '235', holder: 'Sam Knoll', year: '2/23' },
-                    '9': { value: '195', holder: 'S. Knoll / B. Licht', year: '22/23' },
-                    'PR': { value: '235', holder: 'H. McIlrath / S. Knoll', year: '23/24' }
-                },
-                '150-159': {
-                    '12': { value: '210', holder: 'Cody Long', year: '7/25' },
-                    '11': { value: '205', holder: 'Brady Lettow', year: '7/23' },
-                    '10': { value: '235', holder: 'Ben Mazyck', year: '7/24' },
-                    '9': { value: '225', holder: 'Ben Mazyck', year: '10/23' },
-                    'PR': { value: '235', holder: 'Ben Mazyck', year: '7/24' }
-                },
-                '140-149': {
-                    '12': { value: '185', holder: 'John Martin', year: '7/22' },
-                    '11': { value: '190', holder: 'Blake Larson', year: '7/24' },
-                    '10': { value: '200', holder: 'Brody Kilstofte', year: '7/25' },
-                    '9': { value: '200', holder: 'Ben Mazyck', year: '7/23' },
-                    'PR': { value: '200', holder: 'B. Kilstofte / B. Mazyck', year: '23/25' }
-                },
-                '130-139': {
-                    '11': { value: '185', holder: 'Jake Knoll', year: '7/25' },
-                    '10': { value: '190', holder: 'Jake Knoll', year: '7/24' },
-                    '9': { value: '160', holder: 'Blake Loof', year: '11/23' },
-                    'PR': { value: '190', holder: 'Jake Knoll', year: '7/24' }
-                },
-                '120-129': {
-                    '11': { value: '160', holder: 'Noah Healy', year: '7/25' },
-                    '10': { value: '185', holder: 'Jake Knoll', year: '7/23' },
-                    'PR': { value: '185', holder: 'Jake Knoll', year: '7/23' }
-                },
-                '110-119': {
-                    '11': { value: '120', holder: 'Brayden Kilstofte', year: '11/21' },
-                    '10': { value: '160', holder: 'Max Dahlsten', year: '7/25' },
-                    'PR': { value: '160', holder: 'Max Dahlsten', year: '7/25' }
-                },
-                '100-109': {
-                    '10': { value: '125', holder: 'Blake Larson', year: '2/23' },
-                    'PR': { value: '125', holder: 'Blake Larson', year: '2/23' }
-                }
-            },
-            'Tape Shuttle': {
-                '320+': {
-                    'PR': { value: '--', holder: '-', year: '-' }
-                },
-                '310-319': {
-                    '12': { value: '59.4', holder: 'David Downs', year: '8/20' },
-                    'PR': { value: '59.4', holder: 'David Downs', year: '8/20' }
-                },
-                '300-309': {
-                    '12': { value: '1:05.2', holder: 'Tyler Heithoff', year: '8/22' },
-                    '11': { value: '1:08', holder: 'Tyler Heithoff', year: '8/21' },
-                    'PR': { value: '1:05.2', holder: 'Tyler Heithoff', year: '8/22' }
-                },
-                '290-299': {
-                    '12': { value: '1:05', holder: 'Colin Hansen', year: '8/21' },
-                    '11': { value: '1:05', holder: 'Colin Hansen', year: '8/20' },
-                    '10': { value: '68.9', holder: 'Tyler Heithoff', year: '8/20' },
-                    'PR': { value: '1:05', holder: 'Colin Hansen', year: '8/21' }
-                },
-                '280-289': {
-                    '12': { value: '59.0', holder: 'Carson Barber', year: '8/24' },
-                    'PR': { value: '59.0', holder: 'Carson Barber', year: '8/24' }
-                },
-                '270-279': {
-                    '12': { value: '58.7', holder: 'Jackson Mohr', year: '8/25' },
-                    '10': { value: '58.9', holder: 'Carson Barber', year: '8/22' },
-                    'PR': { value: '58.7', holder: 'Jackson Mohr', year: '8/25' }
-                },
-                '260-269': {
-                    '11': { value: '59.2', holder: 'Jackson Mohr', year: '8/24' },
-                    'PR': { value: '59.2', holder: 'Jackson Mohr', year: '8/24' }
-                },
-                '250-259': {
-                    '11': { value: '51.5', holder: 'Aaron Peyton', year: '8/22' },
-                    '10': { value: '1:08', holder: 'Carson Barber', year: '8/21' },
-                    'PR': { value: '51.5', holder: 'Aaron Peyton', year: '8/22' }
-                },
-                '240-249': {
-                    '12': { value: '51.6', holder: 'Tristan Peterson', year: '8/24' },
-                    '11': { value: '1:00.6', holder: 'Jake Jennings', year: '8/22' },
-                    '9': { value: '1:00', holder: 'Jackson Mohr', year: '8/22' },
-                    'PR': { value: '51.6', holder: 'Tristan Peterson', year: '8/24' }
-                },
-                '230-239': {
-                    '12': { value: '48.6', holder: 'Blake Nelsen', year: '8/25' },
-                    '11': { value: '1:01', holder: 'Nick Stewart', year: '8/21' },
-                    '10': { value: '49.4', holder: 'Record Holder', year: '8/22' },
-                    'PR': { value: '48.6', holder: 'Blake Nelsen', year: '8/25' }
-                },
-                '220-229': {
-                    '12': { value: '49.3', holder: 'Luke Patton', year: '8/22' },
-                    '11': { value: '52.5', holder: 'Blake Nelsen', year: '8/24' },
-                    '9': { value: '1:10', holder: 'Aaron Peyton', year: '8/20' },
-                    'PR': { value: '49.3', holder: 'Luke Patton', year: '8/22' }
-                },
-                '210-219': {
-                    '11': { value: '49.8', holder: 'Carter Barber', year: '8/25' },
-                    '10': { value: '53', holder: 'Luke Patton', year: '8/20' },
-                    '9': { value: '1:01', holder: 'B. Nelsen / J. Rogers', year: '8/22' },
-                    'PR': { value: '49.8', holder: 'Carter Barber', year: '8/25' }
-                },
-                '200-209': {
-                    '12': { value: '50.1', holder: 'Cael Vermeer', year: '8/25' },
-                    '11': { value: '50.8', holder: 'Christian Chelsvig', year: '8/22' },
-                    '10': { value: '45.0', holder: 'Fiston Carlson', year: '8/24' },
-                    '9': { value: '55.32', holder: 'Blake Winecoff', year: '8/25' },
-                    'PR': { value: '45.0', holder: 'Fiston Carlson', year: '8/24' }
-                },
-                '190-199': {
-                    '12': { value: '50.6', holder: 'Logan Schnurr', year: '8/21' },
-                    '11': { value: '47.9', holder: 'Cael Vermeer', year: '8/24' },
-                    '10': { value: '49.4', holder: 'Nick Butler', year: '8/20' },
-                    '9': { value: '1:00.7', holder: 'Jaxson Kadolph', year: '8/20' },
-                    'PR': { value: '47.9', holder: 'Cael Vermeer', year: '8/24' }
-                },
-                '180-189': {
-                    '12': { value: '45.4', holder: 'Kale Lande', year: '8/22' },
-                    '11': { value: '45.3', holder: 'Cooper Triggs', year: '8/25' },
-                    '10': { value: '48.0', holder: 'Carter Barber', year: '8/24' },
-                    '9': { value: '52.9', holder: 'Cole Olson', year: '8/20' },
-                    'PR': { value: '45.3', holder: 'Cooper Triggs', year: '8/25' }
-                },
-                '170-179': {
-                    '12': { value: '45', holder: 'Will Bunn', year: '8/21' },
-                    '11': { value: '44.1', holder: 'Hesston Johnson', year: '8/22' },
-                    '10': { value: '46.2', holder: 'Jonovan Wilkinson', year: '8/21' },
-                    '9': { value: '47.6', holder: 'Connor Morton', year: '8/21' },
-                    'PR': { value: '44.1', holder: 'Hesston Johnson', year: '8/22' }
-                },
-                '160-169': {
-                    '12': { value: '43.8', holder: 'Heston McIlrath', year: '8/24' },
-                    '11': { value: '45.9', holder: 'Dillon Lettow', year: '8/21' },
-                    '10': { value: '45.5', holder: 'Sam Knoll', year: '8/22' },
-                    '9': { value: '51.3', holder: 'Charlie Watts', year: '8/21' },
-                    'PR': { value: '43.8', holder: 'Heston McIlrath', year: '8/24' }
-                },
-                '150-159': {
-                    '12': { value: '43.3', holder: 'Cody Long', year: '8/25' },
-                    '11': { value: '44.9', holder: 'Gavin Carpenter', year: '8/21' },
-                    '10': { value: '44.1', holder: 'Luke Thoreson', year: '8/24' },
-                    '9': { value: '46.7', holder: 'Sam Scarrow', year: '8/25' },
-                    'PR': { value: '43.3', holder: 'Cody Long', year: '8/25' }
-                },
-                '140-149': {
-                    '12': { value: '45.5', holder: 'Cade Diehl', year: '8/21' },
-                    '11': { value: '46.3', holder: 'Blake Larson', year: '8/24' },
-                    '10': { value: '46.3', holder: 'Brody Kilstofte', year: '8/25' },
-                    '9': { value: '48.1', holder: 'Hesston Johnson', year: '8/20' },
-                    'PR': { value: '45.5', holder: 'Cade Diehl', year: '8/21' }
-                },
-                '130-139': {
-                    '11': { value: '45.9', holder: 'Jake Knoll', year: '8/25' },
-                    '10': { value: '46.1', holder: 'Brady Long', year: '8/25' },
-                    '9': { value: '45.7', holder: 'Myles McIlrath', year: '8/25' },
-                    'PR': { value: '45.7', holder: 'Myles McIlrath', year: '8/25' }
-                },
-                '120-129': {
-                    '11': { value: '47.21', holder: 'Noah Healy', year: '8/25' },
-                    '10': { value: '45.9', holder: 'Cody Long', year: '8/22' },
-                    'PR': { value: '45.9', holder: 'Cody Long', year: '8/22' }
-                },
-                '110-119': {
-                    '10': { value: '50.4', holder: 'Parker Watson', year: '8/25' },
-                    'PR': { value: '50.4', holder: 'Parker Watson', year: '8/25' }
-                },
-                '100-109': {
-                    '10': { value: '49.3', holder: 'Brayden Kilstofte', year: '8/21' },
-                    '9': { value: '50.2', holder: 'Blake Larson', year: '8/22' },
-                    'PR': { value: '49.3', holder: 'Brayden Kilstofte', year: '8/21' }
-                }
-            },
-            '800m': {
-                '320+': {
-                    'PR': { value: '--', holder: '-', year: '-' }
-                },
-                '310-319': {
-                    '12': { value: '3:53', holder: 'David Downs', year: '8/20' },
-                    'PR': { value: '3:53', holder: 'David Downs', year: '8/20' }
-                },
-                '300-309': {
-                    '12': { value: '4:51', holder: 'Tyler Heithoff', year: '8/22' },
-                    'PR': { value: '4:51', holder: 'Tyler Heithoff', year: '8/22' }
-                },
-                '290-299': {
-                    '11': { value: '4:18', holder: 'Colin Hansen', year: '8/20' },
-                    '10': { value: '4:39', holder: 'Patrick Gomez', year: '8/22' },
-                    'PR': { value: '4:18', holder: 'Colin Hansen', year: '8/20' }
-                },
-                '280-289': {
-                    '12': { value: '4:13', holder: 'Ryan Johnson', year: '8/21' },
-                    'PR': { value: '4:13', holder: 'Ryan Johnson', year: '8/21' }
-                },
-                '270-279': {
-                    '12': { value: '3:43', holder: 'Jackson Mohr', year: '8/25' },
-                    '10': { value: '4:04', holder: 'Carson Barber', year: '8/22' },
-                    'PR': { value: '3:43', holder: 'Jackson Mohr', year: '8/25' }
-                },
-                '260-269': {
-                    '11': { value: '4:35', holder: 'Ryan Johnson', year: '8/20' },
-                    'PR': { value: '4:35', holder: 'Ryan Johnson', year: '8/20' }
-                },
-                '250-259': {
-                    '11': { value: '3:33', holder: 'Aaron Peyton', year: '8/22' },
-                    '10': { value: '3:39', holder: 'Carson Barber', year: '8/21' },
-                    'PR': { value: '3:33', holder: 'Aaron Peyton', year: '8/22' }
-                },
-                '240-249': {
-                    '11': { value: '3:40', holder: 'Jake Jennings', year: '8/22' },
-                    '10': { value: '4:18', holder: 'Jackson Mohr', year: '8/22' },
-                    'PR': { value: '3:40', holder: 'Jake Jennings', year: '8/22' }
-                },
-                '230-239': {
-                    '12': { value: '2:43', holder: 'Blake Nelsen', year: '8/25' },
-                    '11': { value: '3:32', holder: 'Nick Stewart', year: '8/21' },
-                    '10': { value: '3:27', holder: 'Aaron Peyton', year: '8/21' },
-                    'PR': { value: '2:43', holder: 'Blake Nelsen', year: '8/25' }
-                },
-                '220-229': {
-                    '12': { value: '2:25', holder: 'Luke Patton', year: '8/22' },
-                    '11': { value: '3:20', holder: 'William Licht', year: '8/22' },
-                    '9': { value: '4:36', holder: 'Aaron Peyton', year: '8/20' },
-                    'PR': { value: '2:25', holder: 'Luke Patton', year: '8/22' }
-                },
-                '210-219': {
-                    '11': { value: '2:43', holder: 'C. Barber / G. Jeter', year: '8/25' },
-                    '10': { value: '2:52', holder: 'Luke Patton', year: '8/20' },
-                    '9': { value: '4:05', holder: 'Jake Rogers', year: '8/22' },
-                    'PR': { value: '2:43', holder: 'C. Barber / G. Jeter', year: '8/25' }
-                },
-                '200-209': {
-                    '12': { value: '2:34', holder: 'Cael Vermeer', year: '8/25' },
-                    '11': { value: '2:54', holder: 'Christian Chelsvig', year: '8/22' },
-                    '10': { value: '3:15', holder: 'Nick Stewart', year: '8/21' },
-                    '9': { value: '3:35', holder: 'Blake Winecoff', year: '8/25' },
-                    'PR': { value: '2:34', holder: 'Cael Vermeer', year: '8/25' }
-                },
-                '190-199': {
-                    '12': { value: '3:08', holder: 'Logan Schnurr', year: '8/21' },
-                    '11': { value: '2:40', holder: 'Tucker Hawkins', year: '8/25' },
-                    '10': { value: '3:02', holder: 'Nick Butler', year: '8/20' },
-                    '9': { value: '3:29', holder: 'Jaxson Kadolph', year: '8/20' },
-                    'PR': { value: '2:40', holder: 'Tucker Hawkins', year: '8/25' }
-                },
-                '180-189': {
-                    '12': { value: '2:09', holder: 'Kale Lande', year: '8/22' },
-                    '11': { value: '2:31', holder: 'Luke Thoreson', year: '8/25' },
-                    '10': { value: '3:02', holder: 'Garrett Nerem', year: '8/22' },
-                    '9': { value: '2:52', holder: 'Cael Vermeer', year: '8/22' },
-                    'PR': { value: '2:09', holder: 'Kale Lande', year: '8/22' }
-                },
-                '170-179': {
-                    '12': { value: '2:11', holder: 'Dillon Lettow', year: '8/22' },
-                    '11': { value: '2:09', holder: 'Kale Lande', year: '8/21' },
-                    '10': { value: '2:29', holder: 'Jonovan Wilkinson', year: '8/21' },
-                    '9': { value: '2:38', holder: 'Connor Morton', year: '8/21' },
-                    'PR': { value: '2:09', holder: 'Kale Lande', year: '8/21' }
-                },
-                '160-169': {
-                    '12': { value: '2:34', holder: 'Matt Phelan', year: '8/21' },
-                    '11': { value: '2:19', holder: 'Dillon Lettow', year: '8/21' },
-                    '10': { value: '2:15', holder: 'Colin Willis', year: '8/25' },
-                    '9': { value: '2:53', holder: 'Garrett Nerem', year: '8/21' },
-                    'PR': { value: '2:15', holder: 'Colin Willis', year: '8/25' }
-                },
-                '150-159': {
-                    '12': { value: '2:16', holder: 'Ben Greenfield', year: '8/22' },
-                    '11': { value: '2:23', holder: 'Gavin Carpenter', year: '8/21' },
-                    '10': { value: '2:20', holder: 'Hesston Johnson', year: '8/21' },
-                    '9': { value: '2:45', holder: 'Sam Scarrow', year: '8/25' },
-                    'PR': { value: '2:16', holder: 'Ben Greenfield', year: '8/22' }
-                },
-                '140-149': {
-                    '12': { value: '2:15', holder: 'Cade Diehl', year: '8/21' },
-                    '11': { value: '2:32', holder: 'Carter Loof', year: '8/20' },
-                    '10': { value: '2:30', holder: 'Boaz Clark', year: '8/21' },
-                    '9': { value: '2:38', holder: 'Sam Knoll', year: '8/21' },
-                    'PR': { value: '2:15', holder: 'Cade Diehl', year: '8/21' }
-                },
-                '130-139': {
-                    '11': { value: '2:26', holder: 'Cade Diehl', year: '8/21' },
-                    '10': { value: '2:38', holder: 'Brady Long', year: '8/25' },
-                    '9': { value: '2:39', holder: 'Myles McIlrath', year: '8/25' },
-                    'PR': { value: '2:26', holder: 'Cade Diehl', year: '8/21' }
-                },
-                '120-129': {
-                    '11': { value: '2:31', holder: 'Noah Healy', year: '8/25' },
-                    '10': { value: '2:33', holder: 'Hayden Janssen', year: '8/22' },
-                    'PR': { value: '2:31', holder: 'Noah Healy', year: '8/25' }
-                },
-                '110-119': {
-                    '11': { value: '2:43', holder: 'Tristan Anderson', year: '8/21' },
-                    '10': { value: '2:42', holder: 'Max Dahlsten', year: '8/25' },
-                    'PR': { value: '2:42', holder: 'Max Dahlsten', year: '8/25' }
-                },
-                '100-109': {
-                    '11': { value: '2:28', holder: 'Brayden Kilstofte', year: '8/21' },
-                    '9': { value: '2:46', holder: 'Blake Larson', year: '8/22' },
-                    'PR': { value: '2:28', holder: 'Brayden Kilstofte', year: '8/21' }
-                }
-            },
-            'Bag Jump': {
-                '320+': {
-                    'PR': { value: '--', holder: '-', year: '-' }
-                },
-                '310-319': {
-                    '12': { value: '33', holder: 'David Downs', year: '8/20' },
-                    'PR': { value: '33', holder: 'David Downs', year: '8/20' }
-                },
-                '300-309': {
-                    '12': { value: '27', holder: 'Tyler Heithoff', year: '8/22' },
-                    '11': { value: '27', holder: 'Tyler Heithoff', year: '8/21' },
-                    'PR': { value: '27', holder: 'Tyler Heithoff', year: '21/22' }
-                },
-                '290-299': {
-                    '12': { value: '34', holder: 'Colin Hansen', year: '8/21' },
-                    '11': { value: '36', holder: 'Colin Hansen', year: '8/20' },
-                    '10': { value: '25', holder: 'Tyler Heithoff', year: '8/20' },
-                    'PR': { value: '36', holder: 'Colin Hansen', year: '8/20' }
-                },
-                '280-289': {
-                    '12': { value: '43', holder: 'Carson Barber', year: '8/24' },
-                    'PR': { value: '43', holder: 'Carson Barber', year: '8/24' }
-                },
-                '270-279': {
-                    '12': { value: '37', holder: 'Jackson Mohr', year: '8/25' },
-                    '10': { value: '36', holder: 'Carson Barber', year: '8/22' },
-                    'PR': { value: '37', holder: 'Jackson Mohr', year: '8/25' }
-                },
-                '260-269': {
-                    '11': { value: '39', holder: 'Ryan Johnson', year: '8/20' },
-                    'PR': { value: '39', holder: 'Ryan Johnson', year: '8/20' }
-                },
-                '250-259': {
-                    '11': { value: '49', holder: 'Aaron Peyton', year: '8/22' },
-                    '10': { value: '44', holder: 'Carson Barber', year: '8/21' },
-                    'PR': { value: '49', holder: 'Aaron Peyton', year: '8/22' }
-                },
-                '240-249': {
-                    '12': { value: '53', holder: 'Tristan Peterson', year: '8/24' },
-                    '11': { value: '44', holder: 'Jake Jennings', year: '8/22' },
-                    '9': { value: '38', holder: 'Jackson Mohr', year: '8/22' },
-                    'PR': { value: '53', holder: 'Tristan Peterson', year: '8/24' }
-                },
-                '230-239': {
-                    '12': { value: '55', holder: 'Blake Nelsen', year: '8/25' },
-                    '11': { value: '44', holder: 'Nick Stewart', year: '8/21' },
-                    '10': { value: '50', holder: 'Aaron Peyton', year: '8/21' },
-                    'PR': { value: '55', holder: 'Blake Nelsen', year: '8/25' }
-                },
-                '220-229': {
-                    '12': { value: '57', holder: 'Jimmy Philipsen', year: '8/20' },
-                    '11': { value: '53', holder: 'Blake Nelsen', year: '8/24' },
-                    '9': { value: '43', holder: 'Aaron Peyton', year: '8/20' },
-                    'PR': { value: '57', holder: 'Jimmy Philipsen', year: '8/20' }
-                },
-                '210-219': {
-                    '12': { value: '59', holder: 'Garrett Nerem', year: '8/24' },
-                    '11': { value: '53', holder: 'C. Barber / C. Georgius', year: '8/25' },
-                    '10': { value: '51', holder: 'Luke Patton', year: '8/20' },
-                    '9': { value: '52', holder: 'Jake Rogers', year: '8/22' },
-                    'PR': { value: '59', holder: 'Garrett Nerem', year: '8/24' }
-                },
-                '200-209': {
-                    '12': { value: '51', holder: 'Parker Watts', year: '8/21' },
-                    '11': { value: '55', holder: 'Christian Chelsvig', year: '8/22' },
-                    '10': { value: '53', holder: 'Thomas Tjaden', year: '8/21' },
-                    '9': { value: '46', holder: 'Blake Winecoff', year: '8/25' },
-                    'PR': { value: '55', holder: 'Christian Chelsvig', year: '8/22' }
-                },
-                '190-199': {
-                    '12': { value: '51', holder: 'Logan Schnurr', year: '8/21' },
-                    '11': { value: '54', holder: 'Nick Butler', year: '8/21' },
-                    '10': { value: '54', holder: 'Charlie Watts', year: '8/22' },
-                    '9': { value: '41', holder: 'Jaxson Kadolph', year: '8/20' },
-                    'PR': { value: '54', holder: 'N. Butler / C. Watts', year: '21/22' }
-                },
-                '180-189': {
-                    '12': { value: '62', holder: 'Sam Knoll', year: '8/24' },
-                    '11': { value: '61', holder: 'Luke Thoreson', year: '8/25' },
-                    '10': { value: '56', holder: 'C. Chelsvig / C. Barber', year: '21/24' },
-                    '9': { value: '47', holder: 'Cael Vermeer', year: '8/22' },
-                    'PR': { value: '62', holder: 'Sam Knoll', year: '8/24' }
-                },
-                '170-179': {
-                    '12': { value: '64', holder: 'Adam McIlrath', year: '8/20' },
-                    '11': { value: '63', holder: 'Hesston Johnson', year: '8/22' },
-                    '10': { value: '58', holder: 'Jonovan Wilkinson', year: '8/21' },
-                    '9': { value: '61', holder: 'Connor Morton', year: '8/21' },
-                    'PR': { value: '64', holder: 'Adam McIlrath', year: '8/20' }
-                },
-                '160-169': {
-                    '12': { value: '66', holder: 'Heston McIlrath', year: '8/24' },
-                    '11': { value: '64', holder: 'Aiden Frey', year: '8/25' },
-                    '10': { value: '56', holder: 'K. Lande / C. Willis', year: '20/25' },
-                    '9': { value: '59', holder: 'Charlie Watts', year: '8/21' },
-                    'PR': { value: '66', holder: 'Heston McIlrath', year: '8/24' }
-                },
-                '150-159': {
-                    '12': { value: '65', holder: 'Cody Long', year: '8/25' },
-                    '11': { value: '62', holder: 'Cody Long', year: '8/24' },
-                    '10': { value: '62', holder: 'Hesston Johnson', year: '8/21' },
-                    '9': { value: '60', holder: 'Sam Scarrow', year: '8/25' },
-                    'PR': { value: '65', holder: 'Cody Long', year: '8/25' }
-                },
-                '140-149': {
-                    '12': { value: '64', holder: 'Cade Diehl', year: '8/22' },
-                    '11': { value: '64', holder: 'Riley Larson', year: '8/22' },
-                    '10': { value: '62', holder: 'Jake Berggren', year: '8/22' },
-                    '9': { value: '60', holder: 'H. McIlrath / H. Johnson', year: '20/21' },
-                    'PR': { value: '64', holder: 'C. Diehl / R. Larson', year: '2022' }
-                },
-                '130-139': {
-                    '11': { value: '64', holder: 'Cade Diehl', year: '8/20' },
-                    '10': { value: '65', holder: 'Brady Long', year: '8/25' },
-                    '9': { value: '61', holder: 'Jake Berggren', year: '8/21' },
-                    'PR': { value: '65', holder: 'Brady Long', year: '8/25' }
-                },
-                '120-129': {
-                    '10': { value: '58', holder: 'Riley Larson', year: '8/21' },
-                    '9': { value: '66', holder: 'Brady Long', year: '8/24' },
-                    'PR': { value: '66', holder: 'Brady Long', year: '8/24' }
-                },
-                '110-119': {
-                    '10': { value: '50', holder: 'Tristan Anderson', year: '8/21' },
-                    '9': { value: '54', holder: 'Max Dahlsten', year: '8/25' },
-                    'PR': { value: '54', holder: 'Max Dahlsten', year: '8/25' }
-                },
-                '100-109': {
-                    '10': { value: '51', holder: 'Brayden Kilstofte', year: '8/21' },
-                    '9': { value: '56', holder: 'Blake Larson', year: '8/22' },
-                    'PR': { value: '56', holder: 'Blake Larson', year: '8/22' }
-                }
-            },
-            'Broad Jump': {},
-            '10m Fly': {},
-            'Pro Agility': {},
-            'Deadlift': {}
-        };
-
         // Schedule Modal Component
         const ScheduleModal = ({ scheduleModal, setScheduleModal, updateSchedule }) => {
             const [tempDate, setTempDate] = useState(scheduleModal.item.scheduledDate || new Date().toISOString().split('T')[0]);
@@ -34135,7 +33508,7 @@
             const closePlayDetails = () => setPlayDetailsModalState({ isOpen: false, playId: null });
 
             // -- SCHOOL INITIALIZATION CHECK --
-            const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
+            const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null, requestData: null });
             const [inviteData, setInviteData] = useState(null); // NEW: Invite State
             const [accessRequestStatus, setAccessRequestStatus] = useState({ checked: false, status: null, data: null }); // 'pending' | 'approved' | 'rejected' | null
 
@@ -34149,12 +33522,6 @@
             const [pendingAccessRequests, setPendingAccessRequests] = useState(0); // Count of pending requests for admin badge
             const [isViewingAll, setIsViewingAll] = useState(false);
             const [selectedCharts, setSelectedCharts] = useState(DEPTH_CHART_TYPES.map(t => t.id));
-
-            // -- PROGRAM RECORDS MIGRATION --
-            const [programRecords, setProgramRecords] = useLocalStorage('hc-program-records', {});
-
-            // Sync Program Records to Firestore
-            useAutoSync(authUser, 'program_records', programRecords);
 
             // -- DEPTH CHART STATE --
             const [depthCharts, setDepthCharts] = useLocalStorage('hc-depth-charts', {});
@@ -34367,7 +33734,8 @@
                                             localStorage.setItem('dofo_trial_days', requestData.trialDays || '7');
                                         }
                                         const newSchoolId = 'school_' + Date.now();
-                                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                                        // Pass requestData so wizard can pre-populate school name
+                                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId, requestData: requestData });
                                         return;
                                     } else if (requestData.status === 'pending') {
                                         console.log("Access request pending.");
@@ -39647,14 +39015,14 @@
                                         return;
                                     }
                                 }
-                                // No existing school found - show wizard
+                                // No existing school found - show wizard with access request data
                                 const newSchoolId = 'school_' + Date.now();
-                                setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                                setSchoolSetupData({ showWizard: true, schoolId: newSchoolId, requestData: accessRequestStatus.data });
                             } catch (err) {
                                 console.error("Error checking for existing school:", err);
-                                // On error, show wizard anyway
+                                // On error, show wizard anyway with access request data
                                 const newSchoolId = 'school_' + Date.now();
-                                setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                                setSchoolSetupData({ showWizard: true, schoolId: newSchoolId, requestData: accessRequestStatus.data });
                             }
                         };
                         if (!schoolSetupData.showWizard) {
@@ -39777,9 +39145,10 @@
                             <div className="onboarding-wizard-wrapper">
                                 <SchoolOnboardingWizard
                                     user={authUser}
+                                    requestData={schoolSetupData.requestData}
                                     onComplete={async (schoolId) => {
                                         console.log("Onboarding Complete. Fetching new data...");
-                                        setSchoolSetupData({ showWizard: false, schoolId: null });
+                                        setSchoolSetupData({ showWizard: false, schoolId: null, requestData: null });
                                         // Fetch fresh data immediately to populate Dashboard without reload
                                         await loadUserDataFromFirestore(authUser.uid);
                                         // Ensure School ID is set in local state (in case loader didn't catch it yet)
@@ -40020,13 +39389,14 @@
                                 {/* PERSONNEL */}
                                 {currentPermissions.staff.view && (
                                     <CollapsibleCategory title="PERSONNEL" icon="Users" defaultOpen={false}>
-                                        <CollapsibleCategory title="Staff & Roles" icon="UserCog" defaultOpen={false} nested={true} onTitleClick={() => setView('staff-roster')}>
-                                            {currentUser && currentUser.roles && currentUser.roles.includes('Head Coach') && (
-                                                <button className={`nav-item ${view === 'permissions' ? 'active' : ''}`} onClick={() => setView('permissions')} style={{ paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                    <Icon name="Lock" size={16} style={{ marginRight: '8px' }} /> Permissions
-                                                </button>
-                                            )}
-                                        </CollapsibleCategory>
+                                        <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="UserCog" size={16} style={{ marginRight: '8px' }} /> Staff & Roles
+                                        </button>
+                                        {currentUser && currentUser.roles && currentUser.roles.includes('Head Coach') && (
+                                            <button className={`nav-item ${view === 'permissions' ? 'active' : ''}`} onClick={() => setView('permissions')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                <Icon name="Lock" size={16} style={{ marginRight: '8px' }} /> Permissions
+                                            </button>
+                                        )}
                                         <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
                                         </button>
@@ -40157,6 +39527,22 @@
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                         {programLevels.map(level => {
                                                             const canEdit = currentUser?.roles?.includes('Head Coach') || (level.staffPermissions || []).includes(currentUser?.id);
+                                                            const navBtnStyle = { paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 };
+
+                                                            // Get season weeks for this level
+                                                            const seasonWeeks = weeks.filter(w =>
+                                                                (w.name.startsWith("Week ") && !w.name.includes("Summer") && w.name !== "Week 0") ||
+                                                                w.name === "First Week with No Game" ||
+                                                                ["Family Week", "Camp Week", "First Week of Practice", "Week 0"].includes(w.name)
+                                                            ).sort((a, b) => {
+                                                                const getNum = (item) => {
+                                                                    if (item.weekNum !== undefined) return item.weekNum;
+                                                                    const match = item.name.match(/Week (\d+)/);
+                                                                    return match ? parseInt(match[1]) : -1;
+                                                                };
+                                                                return getNum(a) - getNum(b);
+                                                            });
+
                                                             return (
                                                                 <CollapsibleCategory
                                                                     key={level.id}
@@ -40165,7 +39551,55 @@
                                                                     defaultOpen={activeLevelId === level.id}
                                                                     onTitleClick={() => { setActiveLevelId(level.id); setView('sublevel-view'); }}
                                                                 >
-                                                                    {/* Sub-level content could go here - depth chart, roster, etc. */}
+                                                                    <button
+                                                                        className={`nav-item ${activeLevelId === level.id && view === 'sublevel-view' ? 'active' : ''}`}
+                                                                        onClick={() => { setActiveLevelId(level.id); setView('sublevel-view'); }}
+                                                                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', paddingLeft: '2.5rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                                    >
+                                                                        <Icon name="Home" size={13} /> Overview
+                                                                    </button>
+                                                                    <button
+                                                                        className={`nav-item ${activeLevelId === level.id && view === 'sublevel-schedule' ? 'active' : ''}`}
+                                                                        onClick={() => { setActiveLevelId(level.id); setView('sublevel-schedule'); }}
+                                                                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', paddingLeft: '2.5rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                                    >
+                                                                        <Icon name="Calendar" size={13} /> Game Schedule
+                                                                    </button>
+                                                                    {level.enabledTools?.depthChart && (
+                                                                        <button
+                                                                            className={`nav-item ${activeLevelId === level.id && view === 'sublevel-depth' ? 'active' : ''}`}
+                                                                            onClick={() => { setActiveLevelId(level.id); setView('sublevel-depth'); }}
+                                                                            style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', paddingLeft: '2.5rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                                        >
+                                                                            <Icon name="Users" size={13} /> Depth Chart
+                                                                        </button>
+                                                                    )}
+
+                                                                    {/* Weekly Practice Plans for this level */}
+                                                                    {seasonWeeks.length > 0 && (
+                                                                        <CollapsibleCategory
+                                                                            title="PRACTICE PLANS"
+                                                                            icon="Clipboard"
+                                                                            nested={true}
+                                                                            defaultOpen={false}
+                                                                        >
+                                                                            {seasonWeeks.map(w => (
+                                                                                <button
+                                                                                    key={w.id}
+                                                                                    className={`nav-item ${activeLevelId === level.id && view === 'sublevel-practice' && currentWeekId === w.id ? 'active' : ''}`}
+                                                                                    onClick={() => {
+                                                                                        setActiveLevelId(level.id);
+                                                                                        setCurrentWeekId(w.id);
+                                                                                        setView('sublevel-practice');
+                                                                                    }}
+                                                                                    style={navBtnStyle}
+                                                                                >
+                                                                                    <Icon name="FileText" size={11} />
+                                                                                    {w.name}{w.opponent ? ` - ${w.opponent}` : ''}
+                                                                                </button>
+                                                                            ))}
+                                                                        </CollapsibleCategory>
+                                                                    )}
                                                                 </CollapsibleCategory>
                                                             );
                                                         })}
@@ -41572,6 +41006,7 @@
                                         siteAdmins={siteAdmins}
                                         schoolData={{ id: localStorage.getItem('hc_school_id') }}
                                         currentSchoolId={localStorage.getItem('hc_school_id')}
+                                        schoolName={schoolName}
                                     />
                                 )
                             }
@@ -41878,15 +41313,22 @@
                                         </div>
                                     );
                                 }
-                                const canEdit = currentUser?.roles?.includes('Head Coach') || (activeLevel.staffPermissions || []).includes(currentUser?.id);
+                                const isHeadCoach = currentUser?.roles?.includes('Head Coach');
+                                const canEdit = isHeadCoach || (activeLevel.staffPermissions || []).includes(currentUser?.id);
                                 const enabledTools = activeLevel.enabledTools || {};
+
+                                const updateLevelField = (field, value) => {
+                                    setProgramLevels(prev => prev.map(l =>
+                                        l.id === activeLevel.id ? { ...l, [field]: value } : l
+                                    ));
+                                };
 
                                 return (
                                     <div style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                                             <div>
                                                 <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <Icon name="Layers" size={24} color="var(--accent)" /> {activeLevel.name}
+                                                    <Icon name="Layers" size={24} color="var(--accent)" /> {activeLevel.name} Overview
                                                 </h2>
                                                 <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>
                                                     {canEdit ? 'You have edit access to this level' : 'View only'}
@@ -41899,78 +41341,123 @@
                                             )}
                                         </div>
 
+                                        {/* HC Focus & Reminders - Only HC can edit */}
+                                        <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Icon name="Target" size={18} color="var(--accent)" /> Level Focus & Reminders
+                                            </h3>
+                                            <div style={{ marginBottom: '1rem' }}>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500' }}>
+                                                    Focus for this Level
+                                                </label>
+                                                {isHeadCoach ? (
+                                                    <textarea
+                                                        className="form-input"
+                                                        placeholder="What is the primary focus for this level? (e.g., Development, fundamentals, game experience...)"
+                                                        value={activeLevel.levelFocus || ''}
+                                                        onChange={(e) => updateLevelField('levelFocus', e.target.value)}
+                                                        style={{ minHeight: '80px', resize: 'vertical' }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ background: 'var(--surface)', padding: '0.75rem', borderRadius: 'var(--radius)', minHeight: '60px', color: activeLevel.levelFocus ? 'var(--text-primary)' : 'var(--text-secondary)', fontStyle: activeLevel.levelFocus ? 'normal' : 'italic' }}>
+                                                        {activeLevel.levelFocus || 'No focus set by Head Coach'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500' }}>
+                                                    Key Things Needed from Coaches
+                                                </label>
+                                                {isHeadCoach ? (
+                                                    <textarea
+                                                        className="form-input"
+                                                        placeholder="What do you need from coaches at this level? (e.g., Daily attendance tracking, film review emphasis...)"
+                                                        value={activeLevel.coachExpectations || ''}
+                                                        onChange={(e) => updateLevelField('coachExpectations', e.target.value)}
+                                                        style={{ minHeight: '80px', resize: 'vertical' }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ background: 'var(--surface)', padding: '0.75rem', borderRadius: 'var(--radius)', minHeight: '60px', color: activeLevel.coachExpectations ? 'var(--text-primary)' : 'var(--text-secondary)', fontStyle: activeLevel.coachExpectations ? 'normal' : 'italic' }}>
+                                                        {activeLevel.coachExpectations || 'No expectations set by Head Coach'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
                                         {/* Quick Links to Enabled Tools */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                                            {enabledTools.playbook && (
-                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Playbook for ' + activeLevel.name + ' - Coming soon!')}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                        <div style={{ background: 'var(--accent)', padding: '0.5rem', borderRadius: '8px' }}>
-                                                            <Icon name="Book" size={20} color="white" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Playbook</h4>
-                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Manage plays</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {enabledTools.depthChart && (
-                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Depth Chart for ' + activeLevel.name + ' - Coming soon!')}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                        <div style={{ background: '#3b82f6', padding: '0.5rem', borderRadius: '8px' }}>
-                                                            <Icon name="Users" size={20} color="white" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Depth Chart</h4>
-                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Player positions</p>
+                                        <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Icon name="Grid" size={18} color="var(--accent)" /> {activeLevel.name} Tools
+                                            </h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                                                {enabledTools.playbook && (
+                                                    <div className="card" style={{ padding: '0.75rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border)' }} onClick={() => alert(activeLevel.name + ' Playbook - Coming soon!')}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <div style={{ background: 'var(--accent)', padding: '0.4rem', borderRadius: '6px' }}>
+                                                                <Icon name="Book" size={16} color="white" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 style={{ margin: 0, fontSize: '0.85rem' }}>{activeLevel.name} Playbook</h4>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                            {enabledTools.practiceScripts && (
-                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Practice Scripts for ' + activeLevel.name + ' - Coming soon!')}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                        <div style={{ background: '#22c55e', padding: '0.5rem', borderRadius: '8px' }}>
-                                                            <Icon name="FileText" size={20} color="white" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Practice Scripts</h4>
-                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Practice plans</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {enabledTools.gamePlan && (
-                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Game Planner for ' + activeLevel.name + ' - Coming soon!')}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                        <div style={{ background: '#f59e0b', padding: '0.5rem', borderRadius: '8px' }}>
-                                                            <Icon name="Clipboard" size={20} color="white" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Game Planner</h4>
-                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Game strategy</p>
+                                                )}
+                                                {enabledTools.depthChart && (
+                                                    <div className="card" style={{ padding: '0.75rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border)' }} onClick={() => { setActiveLevelId(activeLevel.id); setView('sublevel-depth'); }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <div style={{ background: '#3b82f6', padding: '0.4rem', borderRadius: '6px' }}>
+                                                                <Icon name="Users" size={16} color="white" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 style={{ margin: 0, fontSize: '0.85rem' }}>{activeLevel.name} Depth Chart</h4>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                            {enabledTools.wristband && (
-                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Wristband Builder for ' + activeLevel.name + ' - Coming soon!')}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                        <div style={{ background: '#ec4899', padding: '0.5rem', borderRadius: '8px' }}>
-                                                            <Icon name="Grid" size={20} color="white" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Wristband</h4>
-                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Play cards</p>
+                                                )}
+                                                {enabledTools.practiceScripts && (
+                                                    <div className="card" style={{ padding: '0.75rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border)' }} onClick={() => alert(activeLevel.name + ' Practice Scripts - Coming soon!')}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <div style={{ background: '#22c55e', padding: '0.4rem', borderRadius: '6px' }}>
+                                                                <Icon name="FileText" size={16} color="white" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 style={{ margin: 0, fontSize: '0.85rem' }}>Practice Scripts</h4>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
+                                                {enabledTools.gamePlan && (
+                                                    <div className="card" style={{ padding: '0.75rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border)' }} onClick={() => alert(activeLevel.name + ' Game Planner - Coming soon!')}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <div style={{ background: '#f59e0b', padding: '0.4rem', borderRadius: '6px' }}>
+                                                                <Icon name="Clipboard" size={16} color="white" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 style={{ margin: 0, fontSize: '0.85rem' }}>Game Planner</h4>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {enabledTools.wristband && (
+                                                    <div className="card" style={{ padding: '0.75rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border)' }} onClick={() => alert(activeLevel.name + ' Wristband - Coming soon!')}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <div style={{ background: '#ec4899', padding: '0.4rem', borderRadius: '6px' }}>
+                                                                <Icon name="Grid" size={16} color="white" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 style={{ margin: 0, fontSize: '0.85rem' }}>Wristband</h4>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Staff with Access */}
-                                        <div className="card" style={{ padding: '1rem' }}>
-                                            <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem' }}><Icon name="UserCheck" size={16} /> Staff with Edit Access</h3>
+                                        <div className="card" style={{ padding: '1.25rem' }}>
+                                            <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Icon name="UserCheck" size={18} color="var(--accent)" /> Staff with Edit Access
+                                            </h3>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                                                 {(activeLevel.staffPermissions || []).length === 0 ? (
                                                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', margin: 0 }}>No staff assigned (Head Coach only)</p>
@@ -41986,6 +41473,310 @@
                                                 )}
                                             </div>
                                         </div>
+                                    </div>
+                                );
+                            })()}
+                            {view === 'sublevel-schedule' && (() => {
+                                const activeLevel = programLevels.find(l => l.id === activeLevelId);
+                                if (!activeLevel) {
+                                    return (
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                            <p>Select a sub-level from the sidebar to view schedule.</p>
+                                        </div>
+                                    );
+                                }
+                                const isHeadCoach = currentUser?.roles?.includes('Head Coach');
+                                const canEdit = isHeadCoach || (activeLevel.staffPermissions || []).includes(currentUser?.id);
+                                const schedule = activeLevel.competitionSchedule || [];
+
+                                const updateSchedule = (newSchedule) => {
+                                    setProgramLevels(prev => prev.map(l =>
+                                        l.id === activeLevel.id ? { ...l, competitionSchedule: newSchedule } : l
+                                    ));
+                                };
+
+                                const addGame = () => {
+                                    const newGame = {
+                                        id: Date.now().toString(),
+                                        date: '',
+                                        opponent: '',
+                                        location: 'home',
+                                        time: '',
+                                        notes: ''
+                                    };
+                                    updateSchedule([...schedule, newGame]);
+                                };
+
+                                const updateGame = (gameId, field, value) => {
+                                    updateSchedule(schedule.map(g =>
+                                        g.id === gameId ? { ...g, [field]: value } : g
+                                    ));
+                                };
+
+                                const deleteGame = (gameId) => {
+                                    if (confirm('Delete this game from the schedule?')) {
+                                        updateSchedule(schedule.filter(g => g.id !== gameId));
+                                    }
+                                };
+
+                                return (
+                                    <div style={{ padding: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                            <div>
+                                                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Icon name="Calendar" size={24} color="var(--accent)" /> {activeLevel.name} Competition Schedule
+                                                </h2>
+                                                <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>
+                                                    {schedule.length} game{schedule.length !== 1 ? 's' : ''} scheduled
+                                                </p>
+                                            </div>
+                                            {canEdit && (
+                                                <button className="btn btn-primary" onClick={addGame}>
+                                                    <Icon name="Plus" size={16} /> Add Game
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {schedule.length === 0 ? (
+                                            <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
+                                                <Icon name="Calendar" size={48} color="var(--text-secondary)" />
+                                                <p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>
+                                                    No games scheduled yet.
+                                                </p>
+                                                {canEdit && (
+                                                    <button className="btn btn-secondary" onClick={addGame} style={{ marginTop: '1rem' }}>
+                                                        <Icon name="Plus" size={16} /> Add First Game
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                {schedule.sort((a, b) => new Date(a.date) - new Date(b.date)).map((game, idx) => (
+                                                    <div key={game.id} className="card" style={{ padding: '1rem' }}>
+                                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', background: game.location === 'home' ? 'var(--success)' : game.location === 'away' ? 'var(--danger)' : 'var(--accent)', borderRadius: '8px', color: 'white', fontWeight: '700', fontSize: '1rem', flexShrink: 0 }}>
+                                                                {idx + 1}
+                                                            </div>
+                                                            <div style={{ flex: 1, minWidth: '200px' }}>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                                                                    <div>
+                                                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Date</label>
+                                                                        {canEdit ? (
+                                                                            <input
+                                                                                type="date"
+                                                                                className="form-input"
+                                                                                value={game.date || ''}
+                                                                                onChange={(e) => updateGame(game.id, 'date', e.target.value)}
+                                                                                style={{ padding: '0.5rem' }}
+                                                                            />
+                                                                        ) : (
+                                                                            <div style={{ padding: '0.5rem', background: 'var(--surface)', borderRadius: 'var(--radius)' }}>
+                                                                                {game.date ? new Date(game.date).toLocaleDateString() : '-'}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div>
+                                                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Time</label>
+                                                                        {canEdit ? (
+                                                                            <input
+                                                                                type="time"
+                                                                                className="form-input"
+                                                                                value={game.time || ''}
+                                                                                onChange={(e) => updateGame(game.id, 'time', e.target.value)}
+                                                                                style={{ padding: '0.5rem' }}
+                                                                            />
+                                                                        ) : (
+                                                                            <div style={{ padding: '0.5rem', background: 'var(--surface)', borderRadius: 'var(--radius)' }}>
+                                                                                {game.time || '-'}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div>
+                                                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Opponent</label>
+                                                                        {canEdit ? (
+                                                                            <input
+                                                                                type="text"
+                                                                                className="form-input"
+                                                                                placeholder="Opponent name"
+                                                                                value={game.opponent || ''}
+                                                                                onChange={(e) => updateGame(game.id, 'opponent', e.target.value)}
+                                                                                style={{ padding: '0.5rem' }}
+                                                                            />
+                                                                        ) : (
+                                                                            <div style={{ padding: '0.5rem', background: 'var(--surface)', borderRadius: 'var(--radius)' }}>
+                                                                                {game.opponent || '-'}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div>
+                                                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Location</label>
+                                                                        {canEdit ? (
+                                                                            <select
+                                                                                className="form-select"
+                                                                                value={game.location || 'home'}
+                                                                                onChange={(e) => updateGame(game.id, 'location', e.target.value)}
+                                                                                style={{ padding: '0.5rem' }}
+                                                                            >
+                                                                                <option value="home">Home</option>
+                                                                                <option value="away">Away</option>
+                                                                                <option value="neutral">Neutral</option>
+                                                                            </select>
+                                                                        ) : (
+                                                                            <div style={{ padding: '0.5rem', background: 'var(--surface)', borderRadius: 'var(--radius)', textTransform: 'capitalize' }}>
+                                                                                {game.location || 'home'}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                {canEdit && (
+                                                                    <div style={{ marginTop: '0.5rem' }}>
+                                                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Notes</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            className="form-input"
+                                                                            placeholder="Game notes..."
+                                                                            value={game.notes || ''}
+                                                                            onChange={(e) => updateGame(game.id, 'notes', e.target.value)}
+                                                                            style={{ padding: '0.5rem' }}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                {!canEdit && game.notes && (
+                                                                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                                                        {game.notes}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {canEdit && (
+                                                                <button
+                                                                    className="btn"
+                                                                    onClick={() => deleteGame(game.id)}
+                                                                    style={{ background: 'transparent', color: 'var(--danger)', padding: '0.5rem' }}
+                                                                    title="Delete game"
+                                                                >
+                                                                    <Icon name="Trash2" size={18} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                            {view === 'sublevel-practice' && (() => {
+                                const activeLevel = programLevels.find(l => l.id === activeLevelId);
+                                const currentWeek = weeks.find(w => w.id === currentWeekId);
+                                if (!activeLevel || !currentWeek) {
+                                    return (
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                            <p>Select a sub-level and week to view practice plans.</p>
+                                        </div>
+                                    );
+                                }
+                                const isHeadCoach = currentUser?.roles?.includes('Head Coach');
+                                const canEdit = isHeadCoach || (activeLevel.staffPermissions || []).includes(currentUser?.id);
+
+                                // Get or create sub-level practice data for this week
+                                const levelPracticeKey = `${activeLevel.id}-${currentWeekId}`;
+                                const levelPracticeData = activeLevel.practicePlans?.[currentWeekId] || { sameAsVarsity: false, notes: '' };
+                                const sameAsVarsity = levelPracticeData.sameAsVarsity || false;
+
+                                const updateLevelPractice = (updates) => {
+                                    setProgramLevels(prev => prev.map(l => {
+                                        if (l.id === activeLevel.id) {
+                                            return {
+                                                ...l,
+                                                practicePlans: {
+                                                    ...(l.practicePlans || {}),
+                                                    [currentWeekId]: {
+                                                        ...(l.practicePlans?.[currentWeekId] || {}),
+                                                        ...updates
+                                                    }
+                                                }
+                                            };
+                                        }
+                                        return l;
+                                    }));
+                                };
+
+                                // Get varsity practice data for reference
+                                const varsityPractice = practicePlans[currentWeekId] || {};
+
+                                return (
+                                    <div style={{ padding: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                            <div>
+                                                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Icon name="Clipboard" size={24} color="var(--accent)" /> {activeLevel.name} Practice Plan
+                                                </h2>
+                                                <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>
+                                                    {currentWeek.name}{currentWeek.opponent ? ` - vs ${currentWeek.opponent}` : ''}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Same as Varsity Toggle */}
+                                        <div className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: canEdit ? 'pointer' : 'default' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={sameAsVarsity}
+                                                    onChange={(e) => canEdit && updateLevelPractice({ sameAsVarsity: e.target.checked })}
+                                                    disabled={!canEdit}
+                                                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }}
+                                                />
+                                                <div>
+                                                    <span style={{ fontWeight: '600', fontSize: '1rem' }}>Same as Varsity</span>
+                                                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                        Use the varsity practice plan for this week
+                                                    </p>
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        {sameAsVarsity ? (
+                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--success)' }}>
+                                                    <Icon name="Check" size={20} />
+                                                    <span style={{ fontWeight: '600' }}>Using Varsity Practice Plan</span>
+                                                </div>
+                                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+                                                    {activeLevel.name} will follow the same practice schedule as Varsity for {currentWeek.name}.
+                                                    View or edit the plan in the main Practice Plans section.
+                                                </p>
+                                                <button
+                                                    className="btn btn-secondary"
+                                                    onClick={() => { setView('practice'); }}
+                                                    style={{ marginTop: '1rem' }}
+                                                >
+                                                    <Icon name="ExternalLink" size={16} /> View Varsity Practice Plan
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="card" style={{ padding: '1.5rem' }}>
+                                                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem' }}>
+                                                    <Icon name="FileText" size={18} /> {activeLevel.name} Practice Notes
+                                                </h3>
+                                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                                                    Add specific practice adjustments or notes for {activeLevel.name} this week.
+                                                </p>
+                                                {canEdit ? (
+                                                    <textarea
+                                                        className="form-input"
+                                                        placeholder={`Enter ${activeLevel.name} practice notes, adjustments, or specific drills...`}
+                                                        value={levelPracticeData.notes || ''}
+                                                        onChange={(e) => updateLevelPractice({ notes: e.target.value })}
+                                                        style={{ minHeight: '200px', resize: 'vertical' }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: 'var(--radius)', minHeight: '100px' }}>
+                                                        {levelPracticeData.notes || 'No practice notes added yet.'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })()}
