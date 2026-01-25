@@ -1159,13 +1159,14 @@
         };
 
         // URL parameter to force reset localStorage (for admin troubleshooting)
+        // Must run after Firebase is initialized, so we set a flag and handle in auth listener
         if (window.location.search.includes('reset=true')) {
             console.log("Force reset triggered via URL parameter");
             localStorage.clear();
             sessionStorage.clear();
-            // Remove the parameter and reload
+            sessionStorage.setItem('force_signout', 'true');
+            // Remove the parameter
             window.history.replaceState({}, document.title, window.location.pathname);
-            window.location.reload();
         }
 
         const loadUserDataFromFirestore = async (userId) => {
@@ -1563,6 +1564,16 @@
                 }
 
                 const unsubscribe = window.auth.onAuthStateChanged(async (user) => {
+                    // Handle force reset from ?reset=true URL parameter
+                    if (sessionStorage.getItem('force_signout') === 'true') {
+                        sessionStorage.removeItem('force_signout');
+                        if (user) {
+                            console.log("Force signout triggered - signing out user");
+                            await window.auth.signOut();
+                            return;
+                        }
+                    }
+
                     if (user) {
                         try {
                             // SUPER ADMIN BYPASS
