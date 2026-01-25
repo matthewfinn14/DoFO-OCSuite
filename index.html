@@ -18383,50 +18383,6 @@
                         <div className="animation-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
                             <div className="card">
-                                <h3>Team Branding</h3>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Upload your team logo to appear on printed documents.</p>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                                    <div style={{
-                                        width: '100px',
-                                        height: '100px',
-                                        border: '2px dashed var(--border)',
-                                        borderRadius: '8px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        overflow: 'hidden',
-                                        background: 'var(--surface)'
-                                    }}>
-                                        {teamLogo ? (
-                                            <img src={teamLogo} alt="Team Logo" style={{ maxWidth: '100%', maxHeight: '100%' }} />
-                                        ) : (
-                                            <span style={{ fontSize: '2rem' }}>🛡️</span>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleImageUpload}
-                                            style={{ marginBottom: '0.5rem' }}
-                                        />
-                                        {teamLogo && (
-                                            <button
-                                                className="btn"
-                                                style={{ color: '#ef4444', display: 'block' }}
-                                                onClick={() => onUpdateLogo(null)}
-                                            >
-                                                Remove Logo
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-
-
-                            <div className="card">
                                 <h3>Interface Theme</h3>
                                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Select the overall look and feel of the application.</p>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
@@ -18462,8 +18418,9 @@
                             </div>
 
                             <div className="card">
-                                <h3>Team Colors</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                                <h3>Accent Color</h3>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Customize the app's accent color for buttons, active states, and highlights.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                         <input
                                             type="color"
@@ -18472,8 +18429,8 @@
                                             style={{ width: '50px', height: '50px', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer', background: 'none' }}
                                         />
                                         <div>
-                                            <div style={{ fontWeight: 'bold' }}>Accent Color</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Primary color for buttons, active states, and highlights.</div>
+                                            <div style={{ fontWeight: 'bold' }}>Current Color</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{accentColor || '#38bdf8'}</div>
                                         </div>
                                     </div>
 
@@ -18534,7 +18491,7 @@
                                         },
                                         {
                                             key: 'gameWeek', label: 'Offense, Defense & Special Teams', items: [
-                                                { key: 'schemeSetup', label: 'Scheme Setup' },
+                                                { key: 'schemeSetup', label: 'Setup' },
                                                 { key: 'depthCharts', label: 'Depth Charts' },
                                                 { key: 'playbook', label: 'Playbook' },
                                                 { key: 'gamePlan', label: 'Game Plan' },
@@ -35612,6 +35569,13 @@
             const [schoolName, setSchoolName] = useState(() => {
                 return localStorage.getItem('hc_school_name') || '';
             });
+            const [teamMascot, setTeamMascot] = useLocalStorage('oc-dashboard-team-mascot', '');
+            const [teamAddress, setTeamAddress] = useLocalStorage('oc-dashboard-team-address', '');
+            const [teamCity, setTeamCity] = useLocalStorage('oc-dashboard-team-city', '');
+            const [teamState, setTeamState] = useLocalStorage('oc-dashboard-team-state', '');
+            const [teamZip, setTeamZip] = useLocalStorage('oc-dashboard-team-zip', '');
+            const [teamPrimaryColor, setTeamPrimaryColor] = useLocalStorage('oc-dashboard-team-primary-color', '#000000');
+            const [teamSecondaryColor, setTeamSecondaryColor] = useLocalStorage('oc-dashboard-team-secondary-color', '#ffffff');
 
             // Access Config for Permissions (Paying Admin Check)
             const [appAccessConfig, setAppAccessConfig] = useState({});
@@ -36756,10 +36720,206 @@
             };
 
             const renderSetup = (phase) => {
+                const isTeam = phase === 'TEAM';
                 const isOffense = phase === 'OFFENSE';
                 const isDefense = phase === 'DEFENSE';
                 const isST = phase === 'SPECIAL_TEAMS';
                 const isPractice = phase === 'PRACTICE';
+
+                // TEAM Setup - separate content for team info
+                if (isTeam) {
+                    const handleLogoUpload = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                setTeamLogo(reader.result);
+                                localStorage.setItem('oc-dashboard-logo', reader.result);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+
+                    const handleSchoolNameChange = (value) => {
+                        setSchoolName(value);
+                        localStorage.setItem('hc_school_name', value);
+                    };
+
+                    return (
+                        <div className="card" style={{ maxWidth: '900px', margin: '2rem auto', padding: '0', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+                                <h1 style={{ margin: 0 }}>Team Information</h1>
+                                <p style={{ opacity: 0.7, margin: '0.5rem 0 0 0' }}>Configure your team's identity, branding, and contact information.</p>
+                            </div>
+
+                            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                {/* Team Identity */}
+                                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="Users" size={20} /> Team Identity
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label">School / Organization Name</label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={schoolName}
+                                                onChange={(e) => handleSchoolNameChange(e.target.value)}
+                                                placeholder="e.g., Lincoln High School"
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label">Mascot / Team Name</label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={teamMascot}
+                                                onChange={(e) => setTeamMascot(e.target.value)}
+                                                placeholder="e.g., Eagles"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Team Logo */}
+                                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="Image" size={20} /> Team Logo
+                                    </h3>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Upload your team logo to appear on printed documents and reports.</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                                        <div style={{
+                                            width: '120px',
+                                            height: '120px',
+                                            border: '2px dashed var(--border)',
+                                            borderRadius: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            overflow: 'hidden',
+                                            background: 'var(--bg-panel)',
+                                            flexShrink: 0
+                                        }}>
+                                            {teamLogo ? (
+                                                <img src={teamLogo} alt="Team Logo" style={{ maxWidth: '100%', maxHeight: '100%' }} />
+                                            ) : (
+                                                <span style={{ fontSize: '3rem', opacity: 0.3 }}>🏈</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleLogoUpload}
+                                                style={{ marginBottom: '0.75rem' }}
+                                            />
+                                            {teamLogo && (
+                                                <button
+                                                    className="btn btn-secondary"
+                                                    style={{ display: 'block' }}
+                                                    onClick={() => {
+                                                        setTeamLogo(null);
+                                                        localStorage.removeItem('oc-dashboard-logo');
+                                                    }}
+                                                >
+                                                    Remove Logo
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Team Colors */}
+                                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="Palette" size={20} /> Team Colors
+                                    </h3>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Set your team's primary and secondary colors for branding.</p>
+                                    <div style={{ display: 'flex', gap: '2rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <input
+                                                type="color"
+                                                value={teamPrimaryColor}
+                                                onChange={(e) => setTeamPrimaryColor(e.target.value)}
+                                                style={{ width: '60px', height: '60px', padding: '0', border: '2px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: 'none' }}
+                                            />
+                                            <div>
+                                                <div style={{ fontWeight: 'bold' }}>Primary Color</div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{teamPrimaryColor}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <input
+                                                type="color"
+                                                value={teamSecondaryColor}
+                                                onChange={(e) => setTeamSecondaryColor(e.target.value)}
+                                                style={{ width: '60px', height: '60px', padding: '0', border: '2px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: 'none' }}
+                                            />
+                                            <div>
+                                                <div style={{ fontWeight: 'bold' }}>Secondary Color</div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{teamSecondaryColor}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Location / Address */}
+                                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="MapPin" size={20} /> Location
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label">Street Address</label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={teamAddress}
+                                                onChange={(e) => setTeamAddress(e.target.value)}
+                                                placeholder="e.g., 123 Stadium Drive"
+                                            />
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem' }}>
+                                            <div className="form-group" style={{ margin: 0 }}>
+                                                <label className="form-label">City</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={teamCity}
+                                                    onChange={(e) => setTeamCity(e.target.value)}
+                                                    placeholder="e.g., Springfield"
+                                                />
+                                            </div>
+                                            <div className="form-group" style={{ margin: 0 }}>
+                                                <label className="form-label">State</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={teamState}
+                                                    onChange={(e) => setTeamState(e.target.value)}
+                                                    placeholder="e.g., IL"
+                                                    maxLength={2}
+                                                />
+                                            </div>
+                                            <div className="form-group" style={{ margin: 0 }}>
+                                                <label className="form-label">ZIP Code</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={teamZip}
+                                                    onChange={(e) => setTeamZip(e.target.value)}
+                                                    placeholder="e.g., 62701"
+                                                    maxLength={10}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
 
                 let currentSyntax, setSyntax, defaultPositions;
 
@@ -39526,7 +39686,7 @@
                                                         onMouseLeave={e => { if (view !== 'setup') e.currentTarget.style.background = 'transparent'; }}
                                                     >
                                                         <Icon name="Settings" size={18} style={{ marginRight: '0.5rem' }} />
-                                                        <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.8rem' }}>Scheme Setup</span>
+                                                        <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.8rem' }}>Setup</span>
                                                     </div>
                                                 </div>
                                             )}
@@ -39943,6 +40103,7 @@
                                         borderBottom: '1px solid var(--border)'
                                     }}>
                                         {[
+                                            { key: 'TEAM', label: 'Team', icon: 'Home' },
                                             { key: 'OFFENSE', label: 'Offense', icon: 'Zap' },
                                             { key: 'DEFENSE', label: 'Defense', icon: 'Shield' },
                                             { key: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Target' },
