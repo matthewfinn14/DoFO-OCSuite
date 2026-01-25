@@ -4524,331 +4524,271 @@
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', background: isWizMode ? '#1e293b' : 'rgba(0,0,0,0.8)', zIndex: 99999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <div className="animate-fade-in" style={{ width: isWizMode ? '100%' : '95%', height: isWizMode ? '100%' : '90%', background: 'white', borderRadius: isWizMode ? '0' : '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: isWizMode ? 'none' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
                         {/* Header / Toolbar */}
-                        <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #e5e7eb', display: readOnly ? 'none' : 'flex', alignItems: 'center', background: '#f8fafc', gap: '0.75rem' }}>
+                        <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #e5e7eb', display: readOnly ? 'none' : 'flex', alignItems: 'center', background: '#f8fafc', gap: '0.75rem', flexWrap: 'wrap' }}>
 
-                            {/* --- LEFT: Save/Cancel Actions --- */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <button className="btn btn-secondary" onClick={onCancel} style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', color: '#64748b', background: 'white', border: '1px solid #cbd5e1' }}>Cancel</button>
-                                <button className="btn btn-primary" onClick={() => onSave({ elements })} style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', color: 'white', backgroundColor: '#22c55e', fontWeight: 'bold', border: 'none' }}>
-                                    <Icon name="Save" size={14} style={{ marginRight: '4px' }} /> Save
-                                </button>
-                            </div>
-
-                            <div style={{ width: '1px', height: '24px', background: '#cbd5e1' }}></div>
-
-                            {/* --- Edit Actions: Undo/Redo/Delete --- */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <button className="btn btn-secondary" onClick={undo} disabled={historyIndex === 0} title="Undo" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.2rem', color: '#64748b', backgroundColor: 'white', border: '1px solid #e2e8f0' }}>
-                                    <Icon name="RotateCcw" size={14} />
-                                </button>
-                                <button className="btn btn-secondary" onClick={redo} disabled={historyIndex === history.length - 1} title="Redo" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.2rem', color: '#64748b', backgroundColor: 'white', border: '1px solid #e2e8f0' }}>
-                                    <Icon name="RotateCw" size={14} />
-                                </button>
-                                <button className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`} onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }} title="Delete selected" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444', backgroundColor: selectedTool === 'delete' ? '#ef4444' : 'white', border: '1px solid #fca5a5' }}>
-                                    <Icon name="Trash" size={14} />
-                                </button>
-                            </div>
-
-                            <div style={{ width: '1px', height: '24px', background: '#cbd5e1' }}></div>
-
-                            {/* --- Tools: Select/Move, Player, Line --- */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                {TOOLS.filter(t => {
-                                    if (t.id === 'delete') return false;
-                                    if (mode === 'wiz-oline' && t.id === 'player') return false;
-                                    // Hide Freehand, Line, Player Icon for wiz-skill (we have dedicated controls)
-                                    if (mode === 'wiz-skill' && (t.id === 'free' || t.id === 'line' || t.id === 'player')) return false;
-                                    return true;
-                                }).map(tool => {
-                                    if (tool.id === 'line' && formationOnly) return null;
-                                    if (tool.id === 'line') {
-                                        return (
-                                            <div key={tool.id} style={{ position: 'relative' }}>
-                                                <button
-                                                    className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`}
-                                                    onClick={() => selectedTool === 'line' ? setShowLineOptions(!showLineOptions) : (setSelectedTool('line'), setEndType('arrow'), setShowLineOptions(false))}
-                                                    title="Line Tool"
-                                                    style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b' }}
-                                                >
-                                                    <Icon name={tool.icon} size={16} />
-                                                    <span style={{ fontSize: '0.8rem' }}>Line</span>
-                                                    {selectedTool === 'line' && <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>▼</span>}
-                                                </button>
-                                                {showLineOptions && selectedTool === 'line' && (
-                                                    <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column', minWidth: '120px' }}>
-                                                        {[{ id: 'arrow', label: 'Arrow →' }, { id: 't', label: 'Block —|' }, { id: 'dot', label: 'Dot •' }, { id: 'none', label: 'Plain —' }].map(opt => (
-                                                            <button key={opt.id} onClick={(e) => { e.stopPropagation(); setEndType(opt.id); setShowLineOptions(false); }} style={{ padding: '0.5rem', textAlign: 'left', background: endType === opt.id ? '#f0f9ff' : 'white', border: 'none', borderBottom: '1px solid #eee', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                {opt.label}
-                                                                {endType === opt.id && <Icon name="CheckCircle" size={12} color="#0284c7" />}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    }
-                                    return (
-                                        <button key={tool.id} className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setSelectedTool(tool.id); if (tool.id !== 'line') setShowLineOptions(false); }} title={tool.label} style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b' }}>
-                                            <Icon name={tool.icon} size={16} /><span style={{ fontSize: '0.8rem' }}>{tool.label}</span>
-                                        </button>
-                                    );
-                                })}
-
-                                {/* Line style options - shown inline when line tool active (not for wiz-skill) */}
-                                {!formationOnly && mode !== 'wiz-skill' && (selectedTool === 'line' || selectedTool === 'free') && (
-                                    <>
-                                        <select value={lineStyle} onChange={(e) => setLineStyle(e.target.value)} className="form-input" style={{ padding: '0.3rem', fontSize: '0.75rem', width: 'auto', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', color: '#1e293b' }}>
-                                            <option value="solid">Solid</option>
-                                            <option value="dashed">Dashed</option>
-                                            <option value="zigzag">Zigzag</option>
-                                        </select>
-                                        <select value={lineWidth} onChange={(e) => { const w = parseInt(e.target.value); setLineWidth(w); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && (el.type === 'line' || el.type === 'free' || el.type === 'poly')) ? { ...el, strokeWidth: w } : el)); }} className="form-input" style={{ padding: '0.3rem', fontSize: '0.75rem', width: 'auto', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', color: '#1e293b' }}>
-                                            <option value={2}>Thin</option>
-                                            <option value={4}>Med</option>
-                                            <option value={6}>Thick</option>
-                                        </select>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* --- Colors (hidden for wiz-skill since colors come from positions) --- */}
-                            {mode !== 'wiz-skill' && (
-                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center', background: '#f1f5f9', padding: '4px 6px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-                                    {COLORS.map(c => (
-                                        <button key={c} onClick={() => { setColor(c); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: c } : el)); }} style={{ width: '18px', height: '18px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px #3b82f6' : 'none', cursor: 'pointer' }}></button>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div style={{ flex: 1 }}></div>
-
-                            {/* --- RIGHT: Formation & Flip --- */}
-                            {mode.startsWith('wiz') && formations.length > 0 && !formationOnly && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <select value={selectedFormationId} onChange={(e) => { setSelectedFormationId(e.target.value); if (e.target.value) loadFormation(e.target.value); }} style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#1e293b', backgroundColor: 'white' }}>
-                                        <option value="">Formation...</option>
-                                        {formations.map(f => (<option key={f.id} value={f.id}>{f.name}</option>))}
-                                    </select>
-                                </div>
-                            )}
-
-                            <button className="btn btn-secondary" onClick={flipFormation} title="Flip Left/Right" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b', backgroundColor: 'white', border: '1px solid #cbd5e1' }}>
-                                <Icon name="RefreshCw" size={14} />
-                                <span style={{ fontSize: '0.8rem' }}>Flip</span>
-                            </button>
-
-                            {!formationOnly && (
-                                <button className="btn btn-secondary" onClick={saveAsFormationTemplate} title="Save as Formation" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#0891b2', backgroundColor: '#ecfeff', border: '1px solid #a5f3fc' }}>
-                                    <Icon name="Layout" size={14} />
-                                    <span style={{ fontSize: '0.8rem' }}>Save Formation</span>
-                                </button>
-                            )}
-
-                            {/* --- WIZ Skill: Personnel & Add Player --- */}
-                            {mode === 'wiz-skill' && !formationOnly && (
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#e0f2fe', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
-                                    {/* Personnel Dropdown */}
-                                    {personnelGroupings.length > 0 && (
+                            {/* ========== WIZ SKILL MODE TOOLBAR ========== */}
+                            {mode === 'wiz-skill' && !formationOnly ? (
+                                <>
+                                    {/* 1. Blue Box: Personnel, Formation, Add Player */}
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#e0f2fe', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
+                                        {personnelGroupings.length > 0 && (
+                                            <select
+                                                onChange={(e) => { if (e.target.value) { loadPersonnelGrouping(e.target.value); e.target.value = ''; } }}
+                                                defaultValue=""
+                                                style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}
+                                            >
+                                                <option value="">Personnel...</option>
+                                                {personnelGroupings.map(g => (<option key={g.id} value={g.id}>{g.code} - {g.name}</option>))}
+                                            </select>
+                                        )}
+                                        {formations.length > 0 && (
+                                            <select value={selectedFormationId} onChange={(e) => { setSelectedFormationId(e.target.value); if (e.target.value) loadFormation(e.target.value); }} style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}>
+                                                <option value="">Formation...</option>
+                                                {formations.map(f => (<option key={f.id} value={f.id}>{f.name}</option>))}
+                                            </select>
+                                        )}
                                         <select
-                                            onChange={(e) => { if (e.target.value) { loadPersonnelGrouping(e.target.value); e.target.value = ''; } }}
+                                            onChange={(e) => { if (e.target.value) { addSinglePlayer(e.target.value); e.target.value = ''; } }}
                                             defaultValue=""
                                             style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}
                                         >
-                                            <option value="">Personnel...</option>
-                                            {personnelGroupings.map(g => (<option key={g.id} value={g.id}>{g.code} - {g.name}</option>))}
+                                            <option value="">+ Add Player...</option>
+                                            <optgroup label="Skill Positions">
+                                                {['QB', 'RB', 'F', 'X', 'Z', 'Y', 'A', 'H', 'B'].map(pos => (
+                                                    <option key={pos} value={pos}>{positionNames[pos] || pos}</option>
+                                                ))}
+                                            </optgroup>
+                                            <optgroup label="O-Line">
+                                                {['LT', 'LG', 'C', 'RG', 'RT'].map(pos => (
+                                                    <option key={pos} value={pos}>{pos}</option>
+                                                ))}
+                                            </optgroup>
+                                        </select>
+                                    </div>
+
+                                    {/* 2. Select/Move */}
+                                    <button className={`btn ${selectedTool === 'select' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSelectedTool('select')} title="Select / Move" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b' }}>
+                                        <Icon name="MousePointer" size={16} /><span style={{ fontSize: '0.8rem' }}>Select</span>
+                                    </button>
+
+                                    {/* 3. Line Style & End Buttons */}
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#fef3c7', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #fcd34d' }}>
+                                        <span style={{ fontSize: '0.65rem', color: '#92400e', fontWeight: 'bold' }}>STYLE</span>
+                                        <button onClick={() => { setSelectedTool('line'); setLineStyle('solid'); }} title="Solid" style={{ padding: '0.2rem 0.4rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && lineStyle === 'solid' ? '#f59e0b' : 'white', color: selectedTool === 'line' && lineStyle === 'solid' ? 'white' : '#1e293b', border: '1px solid #fcd34d' }}>
+                                            <span style={{ display: 'inline-block', width: '16px', borderBottom: '2px solid currentColor' }}></span>
+                                        </button>
+                                        <button onClick={() => { setSelectedTool('line'); setLineStyle('dashed'); }} title="Dashed" style={{ padding: '0.2rem 0.4rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && lineStyle === 'dashed' ? '#f59e0b' : 'white', color: selectedTool === 'line' && lineStyle === 'dashed' ? 'white' : '#1e293b', border: '1px solid #fcd34d' }}>
+                                            <span style={{ display: 'inline-block', width: '16px', borderBottom: '2px dashed currentColor' }}></span>
+                                        </button>
+                                        <button onClick={() => { setSelectedTool('line'); setLineStyle('zigzag'); }} title="Zigzag" style={{ padding: '0.2rem 0.4rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && lineStyle === 'zigzag' ? '#f59e0b' : 'white', color: selectedTool === 'line' && lineStyle === 'zigzag' ? 'white' : '#1e293b', border: '1px solid #fcd34d' }}>
+                                            <svg width="16" height="8" viewBox="0 0 16 8" style={{ display: 'block' }}><path d="M0,4 L3,1 L6,7 L10,1 L13,7 L16,4" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg>
+                                        </button>
+                                        <div style={{ width: '1px', height: '18px', background: '#fcd34d' }}></div>
+                                        <span style={{ fontSize: '0.65rem', color: '#92400e', fontWeight: 'bold' }}>END</span>
+                                        <button onClick={() => { setSelectedTool('line'); setEndType('arrow'); }} title="Arrow" style={{ padding: '0.2rem 0.35rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && endType === 'arrow' ? '#f59e0b' : 'white', color: selectedTool === 'line' && endType === 'arrow' ? 'white' : '#1e293b', border: '1px solid #fcd34d', fontSize: '0.75rem' }}>→</button>
+                                        <button onClick={() => { setSelectedTool('line'); setEndType('t'); }} title="Block" style={{ padding: '0.2rem 0.35rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && endType === 't' ? '#f59e0b' : 'white', color: selectedTool === 'line' && endType === 't' ? 'white' : '#1e293b', border: '1px solid #fcd34d', fontSize: '0.75rem' }}>—|</button>
+                                        <button onClick={() => { setSelectedTool('line'); setEndType('dot'); }} title="Dot" style={{ padding: '0.2rem 0.35rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && endType === 'dot' ? '#f59e0b' : 'white', color: selectedTool === 'line' && endType === 'dot' ? 'white' : '#1e293b', border: '1px solid #fcd34d', fontSize: '0.75rem' }}>•</button>
+                                        <button onClick={() => { setSelectedTool('line'); setEndType('none'); }} title="Plain" style={{ padding: '0.2rem 0.35rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && endType === 'none' ? '#f59e0b' : 'white', color: selectedTool === 'line' && endType === 'none' ? 'white' : '#1e293b', border: '1px solid #fcd34d', fontSize: '0.75rem' }}>—</button>
+                                    </div>
+
+                                    {/* 4. Flip */}
+                                    <button className="btn btn-secondary" onClick={flipFormation} title="Flip Left/Right" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b', backgroundColor: 'white', border: '1px solid #cbd5e1' }}>
+                                        <Icon name="RefreshCw" size={14} /><span style={{ fontSize: '0.8rem' }}>Flip</span>
+                                    </button>
+
+                                    {/* 5. Save Formation */}
+                                    <button className="btn btn-secondary" onClick={saveAsFormationTemplate} title="Save as Formation" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#0891b2', backgroundColor: '#ecfeff', border: '1px solid #a5f3fc' }}>
+                                        <Icon name="Layout" size={14} /><span style={{ fontSize: '0.8rem' }}>Save Formation</span>
+                                    </button>
+
+                                    {/* 6. Undo, Redo, Delete */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <button className="btn btn-secondary" onClick={undo} disabled={historyIndex === 0} title="Undo" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', color: '#64748b', backgroundColor: 'white', border: '1px solid #e2e8f0' }}><Icon name="RotateCcw" size={14} /></button>
+                                        <button className="btn btn-secondary" onClick={redo} disabled={historyIndex === history.length - 1} title="Redo" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', color: '#64748b', backgroundColor: 'white', border: '1px solid #e2e8f0' }}><Icon name="RotateCw" size={14} /></button>
+                                        <button className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`} onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }} title="Delete" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444', backgroundColor: selectedTool === 'delete' ? '#ef4444' : 'white', border: '1px solid #fca5a5' }}><Icon name="Trash" size={14} /></button>
+                                    </div>
+
+                                    {/* 7. Cancel & Save */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        <button className="btn btn-secondary" onClick={onCancel} style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', color: '#64748b', background: 'white', border: '1px solid #cbd5e1' }}>Cancel</button>
+                                        <button className="btn btn-primary" onClick={() => onSave({ elements })} style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', color: 'white', backgroundColor: '#22c55e', fontWeight: 'bold', border: 'none' }}>
+                                            <Icon name="Save" size={14} style={{ marginRight: '4px' }} /> Save
+                                        </button>
+                                    </div>
+
+                                    {/* Selected Polyline Editor (green box) */}
+                                    {selectedIds.size === 1 && (() => {
+                                        const selectedEl = elements.find(el => selectedIds.has(el.id));
+                                        if (!selectedEl || selectedEl.type !== 'poly') return null;
+                                        const segStyles = selectedEl.segmentStyles || [];
+                                        const numSegments = Math.max(0, (selectedEl.points?.length || 0) - 1);
+                                        return (
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#dcfce7', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #86efac' }}>
+                                                <span style={{ fontSize: '0.65rem', color: '#166534', fontWeight: 'bold' }}>EDIT</span>
+                                                <div style={{ display: 'flex', gap: '0.15rem', alignItems: 'center' }}>
+                                                    {[{ id: 'arrow', label: '→' }, { id: 't', label: '—|' }, { id: 'dot', label: '•' }, { id: 'none', label: '—' }].map(opt => (
+                                                        <button key={opt.id} onClick={() => updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, endType: opt.id } : el))} style={{ padding: '0.15rem 0.3rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer', background: selectedEl.endType === opt.id ? '#22c55e' : 'white', color: selectedEl.endType === opt.id ? 'white' : '#1e293b', border: '1px solid #86efac' }}>{opt.label}</button>
+                                                    ))}
+                                                </div>
+                                                {numSegments > 0 && (
+                                                    <>
+                                                        <div style={{ width: '1px', height: '18px', background: '#86efac' }}></div>
+                                                        <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                                                            {Array.from({ length: numSegments }).map((_, i) => {
+                                                                const segStyle = segStyles[i] || selectedEl.style || 'solid';
+                                                                return (
+                                                                    <select key={i} value={segStyle} onChange={(e) => { const newStyles = [...segStyles]; while (newStyles.length < numSegments) newStyles.push(selectedEl.style || 'solid'); newStyles[i] = e.target.value; updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, segmentStyles: newStyles } : el)); }} style={{ padding: '0.1rem', fontSize: '0.6rem', borderRadius: '3px', border: '1px solid #86efac', background: 'white', color: '#1e293b', width: '40px' }}>
+                                                                        <option value="solid">—</option>
+                                                                        <option value="dashed">- -</option>
+                                                                        <option value="zigzag">∿</option>
+                                                                    </select>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+                                </>
+                            ) : (
+                                <>
+                                    {/* ========== STANDARD / OTHER MODES TOOLBAR ========== */}
+                                    {/* --- LEFT: Save/Cancel Actions --- */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        <button className="btn btn-secondary" onClick={onCancel} style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', color: '#64748b', background: 'white', border: '1px solid #cbd5e1' }}>Cancel</button>
+                                        <button className="btn btn-primary" onClick={() => onSave({ elements })} style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', color: 'white', backgroundColor: '#22c55e', fontWeight: 'bold', border: 'none' }}>
+                                            <Icon name="Save" size={14} style={{ marginRight: '4px' }} /> Save
+                                        </button>
+                                    </div>
+
+                                    <div style={{ width: '1px', height: '24px', background: '#cbd5e1' }}></div>
+
+                                    {/* --- Edit Actions: Undo/Redo/Delete --- */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <button className="btn btn-secondary" onClick={undo} disabled={historyIndex === 0} title="Undo" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.2rem', color: '#64748b', backgroundColor: 'white', border: '1px solid #e2e8f0' }}><Icon name="RotateCcw" size={14} /></button>
+                                        <button className="btn btn-secondary" onClick={redo} disabled={historyIndex === history.length - 1} title="Redo" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.2rem', color: '#64748b', backgroundColor: 'white', border: '1px solid #e2e8f0' }}><Icon name="RotateCw" size={14} /></button>
+                                        <button className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`} onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }} title="Delete selected" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444', backgroundColor: selectedTool === 'delete' ? '#ef4444' : 'white', border: '1px solid #fca5a5' }}><Icon name="Trash" size={14} /></button>
+                                    </div>
+
+                                    <div style={{ width: '1px', height: '24px', background: '#cbd5e1' }}></div>
+
+                                    {/* --- Tools: Select/Move, Player, Line --- */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        {TOOLS.filter(t => {
+                                            if (t.id === 'delete') return false;
+                                            if (mode === 'wiz-oline' && t.id === 'player') return false;
+                                            return true;
+                                        }).map(tool => {
+                                            if (tool.id === 'line' && formationOnly) return null;
+                                            if (tool.id === 'line') {
+                                                return (
+                                                    <div key={tool.id} style={{ position: 'relative' }}>
+                                                        <button className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`} onClick={() => selectedTool === 'line' ? setShowLineOptions(!showLineOptions) : (setSelectedTool('line'), setEndType('arrow'), setShowLineOptions(false))} title="Line Tool" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b' }}>
+                                                            <Icon name={tool.icon} size={16} /><span style={{ fontSize: '0.8rem' }}>Line</span>{selectedTool === 'line' && <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>▼</span>}
+                                                        </button>
+                                                        {showLineOptions && selectedTool === 'line' && (
+                                                            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column', minWidth: '120px' }}>
+                                                                {[{ id: 'arrow', label: 'Arrow →' }, { id: 't', label: 'Block —|' }, { id: 'dot', label: 'Dot •' }, { id: 'none', label: 'Plain —' }].map(opt => (
+                                                                    <button key={opt.id} onClick={(e) => { e.stopPropagation(); setEndType(opt.id); setShowLineOptions(false); }} style={{ padding: '0.5rem', textAlign: 'left', background: endType === opt.id ? '#f0f9ff' : 'white', border: 'none', borderBottom: '1px solid #eee', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                        {opt.label}{endType === opt.id && <Icon name="CheckCircle" size={12} color="#0284c7" />}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <button key={tool.id} className={`btn ${selectedTool === tool.id ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setSelectedTool(tool.id); if (tool.id !== 'line') setShowLineOptions(false); }} title={tool.label} style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b' }}>
+                                                    <Icon name={tool.icon} size={16} /><span style={{ fontSize: '0.8rem' }}>{tool.label}</span>
+                                                </button>
+                                            );
+                                        })}
+
+                                        {/* Line style options - shown inline when line tool active */}
+                                        {!formationOnly && (selectedTool === 'line' || selectedTool === 'free') && (
+                                            <>
+                                                <select value={lineStyle} onChange={(e) => setLineStyle(e.target.value)} className="form-input" style={{ padding: '0.3rem', fontSize: '0.75rem', width: 'auto', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', color: '#1e293b' }}>
+                                                    <option value="solid">Solid</option>
+                                                    <option value="dashed">Dashed</option>
+                                                    <option value="zigzag">Zigzag</option>
+                                                </select>
+                                                <select value={lineWidth} onChange={(e) => { const w = parseInt(e.target.value); setLineWidth(w); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && (el.type === 'line' || el.type === 'free' || el.type === 'poly')) ? { ...el, strokeWidth: w } : el)); }} className="form-input" style={{ padding: '0.3rem', fontSize: '0.75rem', width: 'auto', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', color: '#1e293b' }}>
+                                                    <option value={2}>Thin</option>
+                                                    <option value={4}>Med</option>
+                                                    <option value={6}>Thick</option>
+                                                </select>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* --- Colors --- */}
+                                    <div style={{ display: 'flex', gap: '3px', alignItems: 'center', background: '#f1f5f9', padding: '4px 6px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                        {COLORS.map(c => (
+                                            <button key={c} onClick={() => { setColor(c); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: c } : el)); }} style={{ width: '18px', height: '18px', borderRadius: '50%', background: c, border: color === c ? '2px solid white' : '1px solid rgba(0,0,0,0.1)', boxShadow: color === c ? '0 0 0 2px #3b82f6' : 'none', cursor: 'pointer' }}></button>
+                                        ))}
+                                    </div>
+
+                                    <div style={{ flex: 1 }}></div>
+
+                                    {/* --- RIGHT: Formation & Flip --- */}
+                                    {mode.startsWith('wiz') && formations.length > 0 && !formationOnly && (
+                                        <select value={selectedFormationId} onChange={(e) => { setSelectedFormationId(e.target.value); if (e.target.value) loadFormation(e.target.value); }} style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#1e293b', backgroundColor: 'white' }}>
+                                            <option value="">Formation...</option>
+                                            {formations.map(f => (<option key={f.id} value={f.id}>{f.name}</option>))}
                                         </select>
                                     )}
-                                    {/* Add Player Dropdown */}
-                                    <select
-                                        onChange={(e) => { if (e.target.value) { addSinglePlayer(e.target.value); e.target.value = ''; } }}
-                                        defaultValue=""
-                                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}
-                                    >
-                                        <option value="">+ Add Player...</option>
-                                        <optgroup label="Skill Positions">
-                                            {['QB', 'RB', 'F', 'X', 'Z', 'Y', 'A', 'H', 'B'].map(pos => (
-                                                <option key={pos} value={pos}>{positionNames[pos] || pos}</option>
-                                            ))}
-                                        </optgroup>
-                                        <optgroup label="O-Line">
-                                            {['LT', 'LG', 'C', 'RG', 'RT'].map(pos => (
-                                                <option key={pos} value={pos}>{pos}</option>
-                                            ))}
-                                        </optgroup>
-                                    </select>
-                                </div>
-                            )}
 
-                            {/* --- WIZ Skill: Line Style & Endpoints --- */}
-                            {mode === 'wiz-skill' && !formationOnly && (
-                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', background: '#fef3c7', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #fcd34d' }}>
-                                    {/* Line Style Buttons */}
-                                    <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.65rem', color: '#92400e', fontWeight: 'bold', marginRight: '0.25rem' }}>STYLE</span>
-                                        <button
-                                            onClick={() => { setSelectedTool('line'); setLineStyle('solid'); }}
-                                            title="Solid Line"
-                                            style={{
-                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
-                                                background: selectedTool === 'line' && lineStyle === 'solid' ? '#f59e0b' : 'white',
-                                                color: selectedTool === 'line' && lineStyle === 'solid' ? 'white' : '#1e293b',
-                                                border: '1px solid #fcd34d'
-                                            }}
-                                        >
-                                            <span style={{ display: 'inline-block', width: '20px', borderBottom: '2px solid currentColor' }}></span>
-                                        </button>
-                                        <button
-                                            onClick={() => { setSelectedTool('line'); setLineStyle('dashed'); }}
-                                            title="Dashed Line"
-                                            style={{
-                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
-                                                background: selectedTool === 'line' && lineStyle === 'dashed' ? '#f59e0b' : 'white',
-                                                color: selectedTool === 'line' && lineStyle === 'dashed' ? 'white' : '#1e293b',
-                                                border: '1px solid #fcd34d'
-                                            }}
-                                        >
-                                            <span style={{ display: 'inline-block', width: '20px', borderBottom: '2px dashed currentColor' }}></span>
-                                        </button>
-                                        <button
-                                            onClick={() => { setSelectedTool('line'); setLineStyle('zigzag'); }}
-                                            title="Zigzag Line"
-                                            style={{
-                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
-                                                background: selectedTool === 'line' && lineStyle === 'zigzag' ? '#f59e0b' : 'white',
-                                                color: selectedTool === 'line' && lineStyle === 'zigzag' ? 'white' : '#1e293b',
-                                                border: '1px solid #fcd34d'
-                                            }}
-                                        >
-                                            <svg width="20" height="10" viewBox="0 0 20 10" style={{ display: 'block' }}>
-                                                <path d="M0,5 L4,2 L8,8 L12,2 L16,8 L20,5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div style={{ width: '1px', height: '20px', background: '#fcd34d' }}></div>
-                                    {/* Endpoint Buttons */}
-                                    <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.65rem', color: '#92400e', fontWeight: 'bold', marginRight: '0.25rem' }}>END</span>
-                                        <button
-                                            onClick={() => { setSelectedTool('line'); setEndType('arrow'); }}
-                                            title="Arrow (Routes)"
-                                            style={{
-                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
-                                                background: selectedTool === 'line' && endType === 'arrow' ? '#f59e0b' : 'white',
-                                                color: selectedTool === 'line' && endType === 'arrow' ? 'white' : '#1e293b',
-                                                border: '1px solid #fcd34d'
-                                            }}
-                                        >
-                                            →
-                                        </button>
-                                        <button
-                                            onClick={() => { setSelectedTool('line'); setEndType('t'); }}
-                                            title="T-Block (Blocking)"
-                                            style={{
-                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
-                                                background: selectedTool === 'line' && endType === 't' ? '#f59e0b' : 'white',
-                                                color: selectedTool === 'line' && endType === 't' ? 'white' : '#1e293b',
-                                                border: '1px solid #fcd34d'
-                                            }}
-                                        >
-                                            —|
-                                        </button>
-                                        <button
-                                            onClick={() => { setSelectedTool('line'); setEndType('dot'); }}
-                                            title="Dot (Play Fake)"
-                                            style={{
-                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
-                                                background: selectedTool === 'line' && endType === 'dot' ? '#f59e0b' : 'white',
-                                                color: selectedTool === 'line' && endType === 'dot' ? 'white' : '#1e293b',
-                                                border: '1px solid #fcd34d'
-                                            }}
-                                        >
-                                            •
-                                        </button>
-                                        <button
-                                            onClick={() => { setSelectedTool('line'); setEndType('none'); }}
-                                            title="No Endpoint"
-                                            style={{
-                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
-                                                background: selectedTool === 'line' && endType === 'none' ? '#f59e0b' : 'white',
-                                                color: selectedTool === 'line' && endType === 'none' ? 'white' : '#1e293b',
-                                                border: '1px solid #fcd34d'
-                                            }}
-                                        >
-                                            —
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                    <button className="btn btn-secondary" onClick={flipFormation} title="Flip Left/Right" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b', backgroundColor: 'white', border: '1px solid #cbd5e1' }}>
+                                        <Icon name="RefreshCw" size={14} /><span style={{ fontSize: '0.8rem' }}>Flip</span>
+                                    </button>
 
-                            {/* --- WIZ Skill: Selected Polyline Editor --- */}
-                            {mode === 'wiz-skill' && !formationOnly && selectedIds.size === 1 && (() => {
-                                const selectedEl = elements.find(el => selectedIds.has(el.id));
-                                if (!selectedEl || selectedEl.type !== 'poly') return null;
-                                const segStyles = selectedEl.segmentStyles || [];
-                                const numSegments = Math.max(0, (selectedEl.points?.length || 0) - 1);
+                                    {!formationOnly && (
+                                        <button className="btn btn-secondary" onClick={saveAsFormationTemplate} title="Save as Formation" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#0891b2', backgroundColor: '#ecfeff', border: '1px solid #a5f3fc' }}>
+                                            <Icon name="Layout" size={14} /><span style={{ fontSize: '0.8rem' }}>Save Formation</span>
+                                        </button>
+                                    )}
 
-                                return (
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#dcfce7', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #86efac' }}>
-                                        <span style={{ fontSize: '0.65rem', color: '#166534', fontWeight: 'bold' }}>EDIT LINE</span>
-                                        {/* Endpoint Editor */}
-                                        <div style={{ display: 'flex', gap: '0.15rem', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.6rem', color: '#166534' }}>End:</span>
-                                            {[
-                                                { id: 'arrow', label: '→' },
-                                                { id: 't', label: '—|' },
-                                                { id: 'dot', label: '•' },
-                                                { id: 'none', label: '—' }
-                                            ].map(opt => (
-                                                <button
-                                                    key={opt.id}
-                                                    onClick={() => updateElements(elements.map(el =>
-                                                        selectedIds.has(el.id) ? { ...el, endType: opt.id } : el
-                                                    ))}
-                                                    style={{
-                                                        padding: '0.15rem 0.3rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
-                                                        background: selectedEl.endType === opt.id ? '#22c55e' : 'white',
-                                                        color: selectedEl.endType === opt.id ? 'white' : '#1e293b',
-                                                        border: '1px solid #86efac'
-                                                    }}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
+                                    {/* --- WIZ O-Line Controls --- */}
+                                    {mode === 'wiz-oline' && !formationOnly && (
+                                        <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', background: '#e0f2fe', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
+                                            <input type="text" value={customLetterInput} onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())} placeholder="?" maxLength={2} style={{ width: '22px', padding: '2px', textAlign: 'center', fontSize: '0.75rem', color: '#1e293b', border: '1px solid #94a3b8', borderRadius: '3px' }} />
+                                            <button className="btn btn-secondary" onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }} disabled={!customLetterInput} style={{ padding: '0.15rem 0.35rem', fontSize: '0.75rem', color: '#1e293b' }}>Add</button>
+                                            <div style={{ width: '1px', height: '16px', background: '#7dd3fc', margin: '0 0.15rem' }}></div>
+                                            <button className="btn btn-secondary" onClick={() => { const s = Math.max(12, wizTextSize - 4); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.25rem', fontSize: '0.8rem', color: '#1e293b' }}>-</button>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', minWidth: '1rem', textAlign: 'center' }}>{wizTextSize}</span>
+                                            <button className="btn btn-secondary" onClick={() => { const s = Math.min(200, wizTextSize + 4); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.25rem', fontSize: '0.8rem', color: '#1e293b' }}>+</button>
+                                            <div style={{ width: '1px', height: '16px', background: '#7dd3fc', margin: '0 0.15rem' }}></div>
+                                            <button className="btn btn-secondary" onClick={initiateSave} title="Save to library" style={{ padding: '0.1rem 0.25rem', fontSize: '0.7rem', color: '#1e293b', border: 'none', background: 'transparent' }}><Icon name="Save" size={12} /></button>
+                                            <select style={{ padding: '2px', fontSize: '0.7rem', width: '70px', color: '#1e293b', border: 'none', background: 'transparent' }} onChange={(e) => { if (e.target.value) { loadWizPreset(e.target.value); e.target.value = ""; } }} defaultValue="">
+                                                <option value="" disabled>Lib</option>
+                                                {wizLibrary.map(preset => (<option key={preset.id} value={preset.id}>{preset.name}</option>))}
+                                            </select>
                                         </div>
-                                        <div style={{ width: '1px', height: '20px', background: '#86efac' }}></div>
-                                        {/* Segment Style Editor */}
-                                        <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexWrap: 'wrap', maxWidth: '300px' }}>
-                                            <span style={{ fontSize: '0.6rem', color: '#166534' }}>Segments:</span>
-                                            {Array.from({ length: numSegments }).map((_, i) => {
-                                                const segStyle = segStyles[i] || selectedEl.style || 'solid';
-                                                return (
-                                                    <select
-                                                        key={i}
-                                                        value={segStyle}
-                                                        onChange={(e) => {
-                                                            const newStyles = [...segStyles];
-                                                            while (newStyles.length < numSegments) newStyles.push(selectedEl.style || 'solid');
-                                                            newStyles[i] = e.target.value;
-                                                            updateElements(elements.map(el =>
-                                                                selectedIds.has(el.id) ? { ...el, segmentStyles: newStyles } : el
-                                                            ));
-                                                        }}
-                                                        style={{
-                                                            padding: '0.1rem', fontSize: '0.6rem', borderRadius: '3px',
-                                                            border: '1px solid #86efac', background: 'white', color: '#1e293b',
-                                                            width: '50px'
-                                                        }}
-                                                    >
-                                                        <option value="solid">—</option>
-                                                        <option value="dashed">- -</option>
-                                                        <option value="zigzag">∿</option>
-                                                    </select>
-                                                );
-                                            })}
+                                    )}
+
+                                    {/* Field position selector - standard mode only */}
+                                    {mode !== 'wiz-oline' && mode !== 'wiz-skill' && (
+                                        <select value={fieldPosition} onChange={(e) => setFieldPosition(parseInt(e.target.value))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#1e293b', backgroundColor: 'white' }}>
+                                            <option value={50}>Midfield</option><option value={20}>Red Zone</option><option value={5}>Goal Line</option><option value={35}>Open Field</option>
+                                        </select>
+                                    )}
+
+                                    {/* --- OVERLAYS (Floating within the toolbar wrap context) --- */}
+                                    {selectedTool === 'player' && (
+                                        <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', background: '#e2e8f0', padding: '0.25rem', borderRadius: '4px', width: '100%', marginTop: '0.25rem' }}>
+                                            {PLAYER_ICONS.map(p => (
+                                                <button key={p.label + p.shape} onClick={() => setSelectedPlayerIcon(p)} style={{ width: '24px', height: '24px', borderRadius: '4px', border: selectedPlayerIcon.label === p.label && selectedPlayerIcon.shape === p.shape ? '2px solid var(--accent)' : '1px solid #ccc', background: 'white', fontWeight: 'bold', fontSize: '0.7rem', color: 'black', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{p.shape === 'star' ? '★' : p.shape === 'target' ? '⌖' : p.label}</button>
+                                            ))}
+                                            <button className="btn btn-secondary" onClick={handleQuickOffense} title="11-Man Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', color: '#1e293b', background: 'white', border: '1px solid #ccc' }}>Quick 11</button>
+                                            <button className="btn btn-secondary" onClick={handleScoutDefense} title="Scout Defense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#374151', color: 'white' }}>Scout Def</button>
+                                            <button className="btn btn-secondary" onClick={handleScoutOffense} title="Scout Offense Formation" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', backgroundColor: '#eab308', color: 'black' }}>Scout Off</button>
+                                            <button className="btn btn-secondary" onClick={handleWizOffense} title="Wiz Skill Colors" style={{ fontSize: '0.7rem', padding: '0.25rem 0.4rem', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>Wiz</button>
                                         </div>
-                                    </div>
-                                );
-                            })()}
+                                    )}
+                                </>
+                            )}
 
                             {/* --- WIZ O-Line Controls --- */}
                             {mode === 'wiz-oline' && !formationOnly && (
