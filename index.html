@@ -5923,6 +5923,64 @@
                             </div>
                         </div>
 
+                        {/* Practice History Section */}
+                        {initialData && (
+                            <div style={{ marginTop: '2rem', background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <Icon name="Clock" size={20} style={{ color: 'var(--accent)' }} />
+                                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Play History</h3>
+                                    </div>
+                                    {initialData.createdAt && (
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                            Created: {new Date(initialData.createdAt).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {(!initialData.practiceHistory || initialData.practiceHistory.length === 0) ? (
+                                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--bg-input)', borderRadius: '8px' }}>
+                                        <Icon name="Calendar" size={32} style={{ opacity: 0.5, marginBottom: '0.5rem' }} />
+                                        <p style={{ margin: 0, fontSize: '0.9rem' }}>No practice reps recorded yet</p>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', opacity: 0.7 }}>This play's practice history will appear here when added to scripts</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Date</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Week</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Day</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Segment</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[...(initialData.practiceHistory || [])].reverse().map((entry, idx) => (
+                                                    <tr key={entry.id || idx} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'transparent' : 'var(--bg-input)' }}>
+                                                        <td style={{ padding: '0.5rem' }}>{new Date(entry.date).toLocaleDateString()}</td>
+                                                        <td style={{ padding: '0.5rem' }}>{entry.weekName}</td>
+                                                        <td style={{ padding: '0.5rem' }}>{entry.day}</td>
+                                                        <td style={{ padding: '0.5rem' }}>
+                                                            <span style={{ background: 'var(--accent)', color: 'var(--btn-primary-text)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                                {entry.segmentType}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'var(--bg-input)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                                            <Icon name="Activity" size={14} style={{ color: 'var(--accent)' }} />
+                                            <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>
+                                                Total Reps: {initialData.practiceHistory.length}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', paddingBottom: '2rem' }}>
                             <button type="submit" className="btn btn-primary">Save Play</button>
                             <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>
@@ -35100,7 +35158,13 @@
                         } else {
                             // Verify it's not a zombie play (has name)
                             if (!updatedPlay.name) return prev;
-                            return [...prev, updatedPlay];
+                            // Add createdAt timestamp for new plays
+                            const newPlay = {
+                                ...updatedPlay,
+                                createdAt: updatedPlay.createdAt || new Date().toISOString(),
+                                practiceHistory: updatedPlay.practiceHistory || []
+                            };
+                            return [...prev, newPlay];
                         }
                     });
                 } else {
@@ -35111,6 +35175,33 @@
                     }
                     setPlays(prev => prev.map(p => p.id === arg1 ? { ...p, ...arg2 } : p));
                 }
+            };
+
+            // Helper to add practice history entry to a play
+            const addPracticeHistoryEntry = (playId, weekId, weekName, day, segmentType) => {
+                const entry = {
+                    id: Date.now().toString(),
+                    date: new Date().toISOString(),
+                    weekId,
+                    weekName: weekName || 'Unknown Week',
+                    day: day || 'Unknown',
+                    segmentType: segmentType || 'Practice'
+                };
+                setPlays(prev => prev.map(p => {
+                    if (p.id === playId) {
+                        const history = p.practiceHistory || [];
+                        // Avoid duplicate entries for same week/day/segment within 1 hour
+                        const recentDupe = history.find(h =>
+                            h.weekId === weekId &&
+                            h.day === day &&
+                            h.segmentType === segmentType &&
+                            (Date.now() - new Date(h.date).getTime()) < 3600000
+                        );
+                        if (recentDupe) return p;
+                        return { ...p, practiceHistory: [...history, entry] };
+                    }
+                    return p;
+                }));
             };
 
             // RBAC State
