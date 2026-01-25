@@ -1206,31 +1206,9 @@
                             appData = schoolDoc.data();
                             isSchoolData = true;
 
-                            // SYNC MEMBER LIST (Ensure user is listed in school doc)
-                            // Only add if not already listed by UID or email
+                            // Note: memberList syncing removed - was causing duplicate entries
+                            // Users are added to memberList when they join via invite or school creation
                             const myEmail = window.auth.currentUser.email.toLowerCase();
-                            try {
-                                const currentMembers = appData.memberList || [];
-                                const isListed = currentMembers.find(m =>
-                                    m.uid === userId ||
-                                    (m.email && m.email.toLowerCase() === myEmail)
-                                );
-
-                                if (!isListed) {
-                                    console.log("Adding self to school memberList...");
-                                    const newMember = {
-                                        uid: userId,
-                                        email: myEmail,
-                                        role: 'admin', // Default for now, later derived from membership
-                                        joinedAt: new Date().toISOString()
-                                    };
-                                    await window.db.collection('schools').doc(activeSchoolId).update({
-                                        memberList: firebase.firestore.FieldValue.arrayUnion(newMember)
-                                    });
-                                }
-                            } catch (err) {
-                                console.warn("Failed to sync member list:", err);
-                            }
 
                             // SYNC STAFF ARRAY (Ensure user has correct Firebase uid for permissions)
                             try {
