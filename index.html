@@ -1208,9 +1208,9 @@
 
                             // SYNC MEMBER LIST (Ensure user is listed in school doc)
                             // Only add if not already listed by UID or email
+                            const myEmail = window.auth.currentUser.email.toLowerCase();
                             try {
                                 const currentMembers = appData.memberList || [];
-                                const myEmail = window.auth.currentUser.email.toLowerCase();
                                 const isListed = currentMembers.find(m =>
                                     m.uid === userId ||
                                     (m.email && m.email.toLowerCase() === myEmail)
@@ -1230,6 +1230,43 @@
                                 }
                             } catch (err) {
                                 console.warn("Failed to sync member list:", err);
+                            }
+
+                            // SYNC STAFF ARRAY (Ensure user has correct Firebase uid for permissions)
+                            try {
+                                let staffArray = appData.staff || [];
+                                const existingStaff = staffArray.find(s =>
+                                    s.id === userId ||
+                                    (s.email && s.email.toLowerCase() === myEmail)
+                                );
+
+                                let staffUpdated = false;
+                                if (!existingStaff) {
+                                    // User not in staff - add them with Head Coach role
+                                    console.log("Adding user to staff array with Head Coach role...");
+                                    staffArray.push({
+                                        id: userId,
+                                        name: window.auth.currentUser.displayName || 'Coach',
+                                        email: myEmail,
+                                        roles: ['Head Coach', 'Team Admin'],
+                                        phone: '',
+                                        bio: ''
+                                    });
+                                    staffUpdated = true;
+                                } else if (existingStaff.id !== userId) {
+                                    // User exists by email but with wrong id - update it
+                                    console.log("Updating staff entry with correct Firebase uid...");
+                                    existingStaff.id = userId;
+                                    staffUpdated = true;
+                                }
+
+                                if (staffUpdated) {
+                                    await window.db.collection('schools').doc(activeSchoolId).update({ staff: staffArray });
+                                    appData.staff = staffArray;
+                                    console.log("Staff array synced to Firestore");
+                                }
+                            } catch (err) {
+                                console.warn("Failed to sync staff array:", err);
                             }
                         } else {
                             console.warn("School ID found but document missing.");
