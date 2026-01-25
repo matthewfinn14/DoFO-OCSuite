@@ -39631,7 +39631,7 @@
                                         }}
                                     >
                                         <Icon name="Target" size={18} />
-                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>ALIGNMENT</span>}
+                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PROGRAM ALIGNMENT</span>}
                                     </button>
                                 )}
                                 {/* SETUP */}
@@ -39653,7 +39653,7 @@
                                         }}
                                     >
                                         <Icon name="Settings" size={18} />
-                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>SETUP</span>}
+                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>SYSTEM SETUP</span>}
                                     </button>
                                 )}
                                 {/* MASTER PLAYBOOK */}
@@ -40255,10 +40255,31 @@
                             {view === 'install-manager' && <InstallManagerView plays={plays} week={currentWeek} weeks={weeks} currentWeekId={currentWeekId} onUpdateWeek={handleUpdateWeek} gamePlan={currentWeek.offensiveGamePlan} practicePlans={currentWeek.practicePlans} wbSettings={currentWeek.wristbands || wbSettings} onQuickAddPlay={handleQuickAddPlay} playSyntax={playSyntax} onUpdatePlay={handlePatchPlay} gamePlanLayouts={currentWeek.gamePlanLayouts || gamePlanLayouts} defaultWbSettings={getGlobalWbSettings()} defaultDepthChart={getGlobalDepthCharts()} defaultZonePhilosophies={getGlobalZonePhilosophies()} playCategories={playCategories} playBuckets={playBuckets} />}
                             {view === 'staff-hub' && (
                                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                                    {(() => {
+                                        const isHeadCoach = currentUser?.roles?.includes('Head Coach');
+                                        const ReadOnlyText = ({ value, placeholder, style = {} }) => (
+                                            <div style={{
+                                                padding: '0.75rem 1rem',
+                                                background: 'var(--surface)',
+                                                borderRadius: 'var(--radius)',
+                                                fontSize: '0.9rem',
+                                                lineHeight: '1.5',
+                                                color: value ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                fontStyle: value ? 'normal' : 'italic',
+                                                minHeight: '2.5rem',
+                                                whiteSpace: 'pre-wrap',
+                                                ...style
+                                            }}>
+                                                {value || placeholder || 'Not set'}
+                                            </div>
+                                        );
+                                        return (
+                                            <>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.5rem' }}>
                                             <Icon name="Target" size={24} /> Alignment Dashboard
                                         </h1>
+                                        {!isHeadCoach && <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'var(--surface)', padding: '0.25rem 0.75rem', borderRadius: '20px' }}>View Only</span>}
                                     </div>
 
                                     {/* Season Theme - TOP */}
@@ -40268,23 +40289,38 @@
                                                 <Icon name="Megaphone" size={20} color="var(--accent)" />
                                                 <span style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Season Theme:</span>
                                             </div>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={seasonMotto}
-                                                onChange={(e) => setSeasonMotto(e.target.value)}
-                                                placeholder="e.g., 'All In', 'Championship Mindset', 'Finish Strong'"
-                                                style={{
+                                            {isHeadCoach ? (
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={seasonMotto}
+                                                    onChange={(e) => setSeasonMotto(e.target.value)}
+                                                    placeholder="e.g., 'All In', 'Championship Mindset', 'Finish Strong'"
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '0.5rem 0.75rem',
+                                                        fontSize: '1.25rem',
+                                                        fontWeight: '700',
+                                                        fontStyle: 'italic',
+                                                        textAlign: 'center',
+                                                        background: 'transparent',
+                                                        border: '1px dashed var(--border)'
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div style={{
                                                     flex: 1,
                                                     padding: '0.5rem 0.75rem',
-                                                    fontSize: '1.25rem',
+                                                    fontSize: '1.5rem',
                                                     fontWeight: '700',
                                                     fontStyle: 'italic',
                                                     textAlign: 'center',
-                                                    background: 'transparent',
-                                                    border: '1px dashed var(--border)'
-                                                }}
-                                            />
+                                                    color: seasonMotto ? 'var(--accent)' : 'var(--text-secondary)',
+                                                    letterSpacing: '0.025em'
+                                                }}>
+                                                    {seasonMotto ? `"${seasonMotto}"` : 'Theme not set'}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -40294,31 +40330,55 @@
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                             <div className="card" style={{ padding: '0.75rem' }}>
                                                 <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="Compass" size={14} /> Mission</h3>
-                                                <textarea className="form-input" value={teamMission} onChange={(e) => setTeamMission(e.target.value)} placeholder="What is your team's purpose?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                {isHeadCoach ? (
+                                                    <textarea className="form-input" value={teamMission} onChange={(e) => setTeamMission(e.target.value)} placeholder="What is your team's purpose?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                ) : (
+                                                    <ReadOnlyText value={teamMission} placeholder="Mission not defined" />
+                                                )}
                                             </div>
                                             <div className="card" style={{ padding: '0.75rem' }}>
                                                 <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="Eye" size={14} /> Vision</h3>
-                                                <textarea className="form-input" value={teamVision} onChange={(e) => setTeamVision(e.target.value)} placeholder="Where is your team going?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                {isHeadCoach ? (
+                                                    <textarea className="form-input" value={teamVision} onChange={(e) => setTeamVision(e.target.value)} placeholder="Where is your team going?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                ) : (
+                                                    <ReadOnlyText value={teamVision} placeholder="Vision not defined" />
+                                                )}
                                             </div>
                                             <div className="card" style={{ padding: '0.75rem' }}>
                                                 <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="AlertTriangle" size={14} /> Non-Negotiables</h3>
-                                                <textarea className="form-input" value={teamNonNegotiables} onChange={(e) => setTeamNonNegotiables(e.target.value)} placeholder="What are your absolute standards?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                {isHeadCoach ? (
+                                                    <textarea className="form-input" value={teamNonNegotiables} onChange={(e) => setTeamNonNegotiables(e.target.value)} placeholder="What are your absolute standards?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                ) : (
+                                                    <ReadOnlyText value={teamNonNegotiables} placeholder="Standards not defined" />
+                                                )}
                                             </div>
                                         </div>
 
                                         {/* Right Column: Philosophies */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                            <div className="card" style={{ padding: '0.75rem' }}>
+                                            <div className="card" style={{ padding: '0.75rem', borderLeft: '3px solid #ef4444' }}>
                                                 <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem', color: '#ef4444' }}><Icon name="Zap" size={14} /> Offense Philosophy</h3>
-                                                <textarea className="form-input" value={offensePhilosophy} onChange={(e) => setOffensePhilosophy(e.target.value)} placeholder="How do we attack?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                {isHeadCoach ? (
+                                                    <textarea className="form-input" value={offensePhilosophy} onChange={(e) => setOffensePhilosophy(e.target.value)} placeholder="How do we attack?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                ) : (
+                                                    <ReadOnlyText value={offensePhilosophy} placeholder="Philosophy not defined" />
+                                                )}
                                             </div>
-                                            <div className="card" style={{ padding: '0.75rem' }}>
+                                            <div className="card" style={{ padding: '0.75rem', borderLeft: '3px solid #3b82f6' }}>
                                                 <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem', color: '#3b82f6' }}><Icon name="Shield" size={14} /> Defense Philosophy</h3>
-                                                <textarea className="form-input" value={defensePhilosophy} onChange={(e) => setDefensePhilosophy(e.target.value)} placeholder="How do we stop them?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                {isHeadCoach ? (
+                                                    <textarea className="form-input" value={defensePhilosophy} onChange={(e) => setDefensePhilosophy(e.target.value)} placeholder="How do we stop them?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                ) : (
+                                                    <ReadOnlyText value={defensePhilosophy} placeholder="Philosophy not defined" />
+                                                )}
                                             </div>
-                                            <div className="card" style={{ padding: '0.75rem' }}>
+                                            <div className="card" style={{ padding: '0.75rem', borderLeft: '3px solid #22c55e' }}>
                                                 <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem', color: '#22c55e' }}><Icon name="Star" size={14} /> Special Teams Philosophy</h3>
-                                                <textarea className="form-input" value={specialTeamsPhilosophy} onChange={(e) => setSpecialTeamsPhilosophy(e.target.value)} placeholder="How do we win the hidden game?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                {isHeadCoach ? (
+                                                    <textarea className="form-input" value={specialTeamsPhilosophy} onChange={(e) => setSpecialTeamsPhilosophy(e.target.value)} placeholder="How do we win the hidden game?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                ) : (
+                                                    <ReadOnlyText value={specialTeamsPhilosophy} placeholder="Philosophy not defined" />
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -40329,15 +40389,24 @@
                                         <div className="card" style={{ padding: '0.75rem' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                                                 <h3 style={{ margin: 0, fontSize: '0.85rem' }}><Icon name="Flag" size={14} /> Season Goals</h3>
-                                                <button className="btn-icon" onClick={() => setTeamSeasonGoals([...teamSeasonGoals, { id: Date.now().toString(), text: '', completed: false }])} style={{ padding: '2px' }}><Icon name="Plus" size={12} /></button>
+                                                {isHeadCoach && <button className="btn-icon" onClick={() => setTeamSeasonGoals([...teamSeasonGoals, { id: Date.now().toString(), text: '', completed: false }])} style={{ padding: '2px' }}><Icon name="Plus" size={12} /></button>}
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '120px', overflowY: 'auto' }}>
-                                                {teamSeasonGoals.length === 0 && <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.75rem', margin: 0, padding: '0.5rem', textAlign: 'center' }}>No goals</p>}
+                                                {teamSeasonGoals.length === 0 && <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.75rem', margin: 0, padding: '0.5rem', textAlign: 'center' }}>No goals set</p>}
                                                 {teamSeasonGoals.map((g, i) => (
                                                     <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'var(--surface)', padding: '0.25rem 0.4rem', borderRadius: '3px', fontSize: '0.8rem' }}>
-                                                        <input type="checkbox" checked={g.completed} onChange={(e) => { const u = [...teamSeasonGoals]; u[i] = { ...g, completed: e.target.checked }; setTeamSeasonGoals(u); }} style={{ width: '14px', height: '14px' }} />
-                                                        <input type="text" className="form-input" value={g.text} onChange={(e) => { const u = [...teamSeasonGoals]; u[i] = { ...g, text: e.target.value }; setTeamSeasonGoals(u); }} placeholder="Goal..." style={{ flex: 1, padding: '0.15rem 0.3rem', fontSize: '0.8rem', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }} />
-                                                        <button className="btn-icon" onClick={() => setTeamSeasonGoals(teamSeasonGoals.filter(x => x.id !== g.id))} style={{ color: '#ef4444', padding: '1px' }}><Icon name="X" size={10} /></button>
+                                                        {isHeadCoach ? (
+                                                            <>
+                                                                <input type="checkbox" checked={g.completed} onChange={(e) => { const u = [...teamSeasonGoals]; u[i] = { ...g, completed: e.target.checked }; setTeamSeasonGoals(u); }} style={{ width: '14px', height: '14px' }} />
+                                                                <input type="text" className="form-input" value={g.text} onChange={(e) => { const u = [...teamSeasonGoals]; u[i] = { ...g, text: e.target.value }; setTeamSeasonGoals(u); }} placeholder="Goal..." style={{ flex: 1, padding: '0.15rem 0.3rem', fontSize: '0.8rem', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }} />
+                                                                <button className="btn-icon" onClick={() => setTeamSeasonGoals(teamSeasonGoals.filter(x => x.id !== g.id))} style={{ color: '#ef4444', padding: '1px' }}><Icon name="X" size={10} /></button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Icon name={g.completed ? "CheckCircle" : "Circle"} size={14} color={g.completed ? 'var(--success)' : 'var(--text-secondary)'} />
+                                                                <span style={{ flex: 1, textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.6 : 1 }}>{g.text || 'Untitled goal'}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -40347,15 +40416,24 @@
                                         <div className="card" style={{ padding: '0.75rem', borderTop: '3px solid #ef4444' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                                                 <h3 style={{ margin: 0, fontSize: '0.85rem' }}>OFF Weekly</h3>
-                                                <button className="btn-icon" onClick={() => setOffenseWeeklyGoals([...offenseWeeklyGoals, { id: Date.now().toString(), text: '', completed: false }])} style={{ padding: '2px' }}><Icon name="Plus" size={12} /></button>
+                                                {isHeadCoach && <button className="btn-icon" onClick={() => setOffenseWeeklyGoals([...offenseWeeklyGoals, { id: Date.now().toString(), text: '', completed: false }])} style={{ padding: '2px' }}><Icon name="Plus" size={12} /></button>}
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '120px', overflowY: 'auto' }}>
-                                                {offenseWeeklyGoals.length === 0 && <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.75rem', margin: 0, padding: '0.5rem', textAlign: 'center' }}>No goals</p>}
+                                                {offenseWeeklyGoals.length === 0 && <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.75rem', margin: 0, padding: '0.5rem', textAlign: 'center' }}>No goals set</p>}
                                                 {offenseWeeklyGoals.map((g, i) => (
                                                     <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'var(--surface)', padding: '0.25rem 0.4rem', borderRadius: '3px', fontSize: '0.8rem' }}>
-                                                        <input type="checkbox" checked={g.completed} onChange={(e) => { const u = [...offenseWeeklyGoals]; u[i] = { ...g, completed: e.target.checked }; setOffenseWeeklyGoals(u); }} style={{ width: '14px', height: '14px' }} />
-                                                        <input type="text" className="form-input" value={g.text} onChange={(e) => { const u = [...offenseWeeklyGoals]; u[i] = { ...g, text: e.target.value }; setOffenseWeeklyGoals(u); }} placeholder="Goal..." style={{ flex: 1, padding: '0.15rem 0.3rem', fontSize: '0.8rem', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }} />
-                                                        <button className="btn-icon" onClick={() => setOffenseWeeklyGoals(offenseWeeklyGoals.filter(x => x.id !== g.id))} style={{ color: '#ef4444', padding: '1px' }}><Icon name="X" size={10} /></button>
+                                                        {isHeadCoach ? (
+                                                            <>
+                                                                <input type="checkbox" checked={g.completed} onChange={(e) => { const u = [...offenseWeeklyGoals]; u[i] = { ...g, completed: e.target.checked }; setOffenseWeeklyGoals(u); }} style={{ width: '14px', height: '14px' }} />
+                                                                <input type="text" className="form-input" value={g.text} onChange={(e) => { const u = [...offenseWeeklyGoals]; u[i] = { ...g, text: e.target.value }; setOffenseWeeklyGoals(u); }} placeholder="Goal..." style={{ flex: 1, padding: '0.15rem 0.3rem', fontSize: '0.8rem', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }} />
+                                                                <button className="btn-icon" onClick={() => setOffenseWeeklyGoals(offenseWeeklyGoals.filter(x => x.id !== g.id))} style={{ color: '#ef4444', padding: '1px' }}><Icon name="X" size={10} /></button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Icon name={g.completed ? "CheckCircle" : "Circle"} size={14} color={g.completed ? 'var(--success)' : 'var(--text-secondary)'} />
+                                                                <span style={{ flex: 1, textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.6 : 1 }}>{g.text || 'Untitled goal'}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -40365,15 +40443,24 @@
                                         <div className="card" style={{ padding: '0.75rem', borderTop: '3px solid #3b82f6' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                                                 <h3 style={{ margin: 0, fontSize: '0.85rem' }}>DEF Weekly</h3>
-                                                <button className="btn-icon" onClick={() => setDefenseWeeklyGoals([...defenseWeeklyGoals, { id: Date.now().toString(), text: '', completed: false }])} style={{ padding: '2px' }}><Icon name="Plus" size={12} /></button>
+                                                {isHeadCoach && <button className="btn-icon" onClick={() => setDefenseWeeklyGoals([...defenseWeeklyGoals, { id: Date.now().toString(), text: '', completed: false }])} style={{ padding: '2px' }}><Icon name="Plus" size={12} /></button>}
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '120px', overflowY: 'auto' }}>
-                                                {defenseWeeklyGoals.length === 0 && <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.75rem', margin: 0, padding: '0.5rem', textAlign: 'center' }}>No goals</p>}
+                                                {defenseWeeklyGoals.length === 0 && <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.75rem', margin: 0, padding: '0.5rem', textAlign: 'center' }}>No goals set</p>}
                                                 {defenseWeeklyGoals.map((g, i) => (
                                                     <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'var(--surface)', padding: '0.25rem 0.4rem', borderRadius: '3px', fontSize: '0.8rem' }}>
-                                                        <input type="checkbox" checked={g.completed} onChange={(e) => { const u = [...defenseWeeklyGoals]; u[i] = { ...g, completed: e.target.checked }; setDefenseWeeklyGoals(u); }} style={{ width: '14px', height: '14px' }} />
-                                                        <input type="text" className="form-input" value={g.text} onChange={(e) => { const u = [...defenseWeeklyGoals]; u[i] = { ...g, text: e.target.value }; setDefenseWeeklyGoals(u); }} placeholder="Goal..." style={{ flex: 1, padding: '0.15rem 0.3rem', fontSize: '0.8rem', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }} />
-                                                        <button className="btn-icon" onClick={() => setDefenseWeeklyGoals(defenseWeeklyGoals.filter(x => x.id !== g.id))} style={{ color: '#ef4444', padding: '1px' }}><Icon name="X" size={10} /></button>
+                                                        {isHeadCoach ? (
+                                                            <>
+                                                                <input type="checkbox" checked={g.completed} onChange={(e) => { const u = [...defenseWeeklyGoals]; u[i] = { ...g, completed: e.target.checked }; setDefenseWeeklyGoals(u); }} style={{ width: '14px', height: '14px' }} />
+                                                                <input type="text" className="form-input" value={g.text} onChange={(e) => { const u = [...defenseWeeklyGoals]; u[i] = { ...g, text: e.target.value }; setDefenseWeeklyGoals(u); }} placeholder="Goal..." style={{ flex: 1, padding: '0.15rem 0.3rem', fontSize: '0.8rem', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }} />
+                                                                <button className="btn-icon" onClick={() => setDefenseWeeklyGoals(defenseWeeklyGoals.filter(x => x.id !== g.id))} style={{ color: '#ef4444', padding: '1px' }}><Icon name="X" size={10} /></button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Icon name={g.completed ? "CheckCircle" : "Circle"} size={14} color={g.completed ? 'var(--success)' : 'var(--text-secondary)'} />
+                                                                <span style={{ flex: 1, textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.6 : 1 }}>{g.text || 'Untitled goal'}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -40383,15 +40470,24 @@
                                         <div className="card" style={{ padding: '0.75rem', borderTop: '3px solid #22c55e' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                                                 <h3 style={{ margin: 0, fontSize: '0.85rem' }}>ST Weekly</h3>
-                                                <button className="btn-icon" onClick={() => setStWeeklyGoals([...stWeeklyGoals, { id: Date.now().toString(), text: '', completed: false }])} style={{ padding: '2px' }}><Icon name="Plus" size={12} /></button>
+                                                {isHeadCoach && <button className="btn-icon" onClick={() => setStWeeklyGoals([...stWeeklyGoals, { id: Date.now().toString(), text: '', completed: false }])} style={{ padding: '2px' }}><Icon name="Plus" size={12} /></button>}
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '120px', overflowY: 'auto' }}>
-                                                {stWeeklyGoals.length === 0 && <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.75rem', margin: 0, padding: '0.5rem', textAlign: 'center' }}>No goals</p>}
+                                                {stWeeklyGoals.length === 0 && <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.75rem', margin: 0, padding: '0.5rem', textAlign: 'center' }}>No goals set</p>}
                                                 {stWeeklyGoals.map((g, i) => (
                                                     <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'var(--surface)', padding: '0.25rem 0.4rem', borderRadius: '3px', fontSize: '0.8rem' }}>
-                                                        <input type="checkbox" checked={g.completed} onChange={(e) => { const u = [...stWeeklyGoals]; u[i] = { ...g, completed: e.target.checked }; setStWeeklyGoals(u); }} style={{ width: '14px', height: '14px' }} />
-                                                        <input type="text" className="form-input" value={g.text} onChange={(e) => { const u = [...stWeeklyGoals]; u[i] = { ...g, text: e.target.value }; setStWeeklyGoals(u); }} placeholder="Goal..." style={{ flex: 1, padding: '0.15rem 0.3rem', fontSize: '0.8rem', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }} />
-                                                        <button className="btn-icon" onClick={() => setStWeeklyGoals(stWeeklyGoals.filter(x => x.id !== g.id))} style={{ color: '#ef4444', padding: '1px' }}><Icon name="X" size={10} /></button>
+                                                        {isHeadCoach ? (
+                                                            <>
+                                                                <input type="checkbox" checked={g.completed} onChange={(e) => { const u = [...stWeeklyGoals]; u[i] = { ...g, completed: e.target.checked }; setStWeeklyGoals(u); }} style={{ width: '14px', height: '14px' }} />
+                                                                <input type="text" className="form-input" value={g.text} onChange={(e) => { const u = [...stWeeklyGoals]; u[i] = { ...g, text: e.target.value }; setStWeeklyGoals(u); }} placeholder="Goal..." style={{ flex: 1, padding: '0.15rem 0.3rem', fontSize: '0.8rem', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }} />
+                                                                <button className="btn-icon" onClick={() => setStWeeklyGoals(stWeeklyGoals.filter(x => x.id !== g.id))} style={{ color: '#ef4444', padding: '1px' }}><Icon name="X" size={10} /></button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Icon name={g.completed ? "CheckCircle" : "Circle"} size={14} color={g.completed ? 'var(--success)' : 'var(--text-secondary)'} />
+                                                                <span style={{ flex: 1, textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.6 : 1 }}>{g.text || 'Untitled goal'}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -40405,37 +40501,36 @@
                                             <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontStyle: 'italic' }}>Coaches: Enforce these daily!</span>
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Practice</label>
-                                                <textarea className="form-input" value={practiceStandards} onChange={(e) => setPracticeStandards(e.target.value)} placeholder="Practice expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Meetings/Film</label>
-                                                <textarea className="form-input" value={meetingStandards} onChange={(e) => setMeetingStandards(e.target.value)} placeholder="Meeting room expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Weight Room</label>
-                                                <textarea className="form-input" value={weightRoomStandards} onChange={(e) => setWeightRoomStandards(e.target.value)} placeholder="Weight room expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Life</label>
-                                                <textarea className="form-input" value={lifeStandards} onChange={(e) => setLifeStandards(e.target.value)} placeholder="Off-field expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>School</label>
-                                                <textarea className="form-input" value={schoolStandards} onChange={(e) => setSchoolStandards(e.target.value)} placeholder="Academic expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Travel</label>
-                                                <textarea className="form-input" value={travelStandards} onChange={(e) => setTravelStandards(e.target.value)} placeholder="Travel expectations..." rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
-                                            </div>
+                                            {[
+                                                { key: 'practice', label: 'Practice', value: practiceStandards, setter: setPracticeStandards, placeholder: 'Practice expectations...' },
+                                                { key: 'meetings', label: 'Meetings/Film', value: meetingStandards, setter: setMeetingStandards, placeholder: 'Meeting room expectations...' },
+                                                { key: 'weight', label: 'Weight Room', value: weightRoomStandards, setter: setWeightRoomStandards, placeholder: 'Weight room expectations...' },
+                                                { key: 'life', label: 'Life', value: lifeStandards, setter: setLifeStandards, placeholder: 'Off-field expectations...' },
+                                                { key: 'school', label: 'School', value: schoolStandards, setter: setSchoolStandards, placeholder: 'Academic expectations...' },
+                                                { key: 'travel', label: 'Travel', value: travelStandards, setter: setTravelStandards, placeholder: 'Travel expectations...' }
+                                            ].map(({ key, label, value, setter, placeholder }) => (
+                                                <div key={key}>
+                                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>{label}</label>
+                                                    {isHeadCoach ? (
+                                                        <textarea className="form-input" value={value} onChange={(e) => setter(e.target.value)} placeholder={placeholder} rows={2} style={{ fontSize: '0.8rem', marginTop: '0.25rem' }} />
+                                                    ) : (
+                                                        <div style={{ padding: '0.5rem 0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius)', fontSize: '0.8rem', lineHeight: '1.4', color: value ? 'var(--text-primary)' : 'var(--text-secondary)', fontStyle: value ? 'normal' : 'italic', minHeight: '2.5rem', marginTop: '0.25rem', whiteSpace: 'pre-wrap' }}>
+                                                            {value || 'Not set'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
 
                                     {/* Coaches' Expectations */}
                                     <div className="card" style={{ padding: '0.75rem', marginBottom: '0.75rem' }}>
                                         <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="UserCheck" size={14} /> Coaches' Expectations</h3>
-                                        <textarea className="form-input" value={coachesExpectations} onChange={(e) => setCoachesExpectations(e.target.value)} placeholder="What do we expect from our coaches?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                        {isHeadCoach ? (
+                                            <textarea className="form-input" value={coachesExpectations} onChange={(e) => setCoachesExpectations(e.target.value)} placeholder="What do we expect from our coaches?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                        ) : (
+                                            <ReadOnlyText value={coachesExpectations} placeholder="Expectations not defined" />
+                                        )}
                                     </div>
 
                                     {/* Position Group Big Three */}
@@ -40565,6 +40660,9 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                        );
+                                    })()}
+                                            </>
                                         );
                                     })()}
                                 </div>
