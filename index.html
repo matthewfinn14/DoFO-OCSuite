@@ -40795,24 +40795,16 @@
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                             <h2>Master Playbook</h2>
-                                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                                {selectedPlays.length > 0 && (
-                                                    <button className="btn" style={{ backgroundColor: '#ef4444', color: 'white' }} onClick={handleDeleteSelected}>
-                                                        <Icon name="Trash2" /> Delete Selected ({selectedPlays.length})
-                                                    </button>
-                                                )}
-                                                <button className="btn" style={{ backgroundColor: '#10b981', color: 'white' }} onClick={() => setIsBatchImportOpen(true)}>
-                                                    <Icon name="FileText" /> Batch Add Plays
+                                            {selectedPlays.length > 0 && (
+                                                <button className="btn" style={{ backgroundColor: '#ef4444', color: 'white' }} onClick={handleDeleteSelected}>
+                                                    <Icon name="Trash2" /> Delete Selected ({selectedPlays.length})
                                                 </button>
-                                                <button className="btn btn-primary" onClick={() => { setEditingPlay(null); setView('new-play'); }}>
-                                                    <Icon name="PlusCircle" /> New Play
-                                                </button>
-                                            </div>
+                                            )}
                                         </div>
 
                                         {/* Phase Tabs */}
                                         <div style={{
-                                            marginBottom: '1.5rem',
+                                            marginBottom: '1rem',
                                             background: 'var(--bg-panel)',
                                             border: '1px solid var(--border)',
                                             borderRadius: '8px',
@@ -40869,6 +40861,18 @@
                                                     </span>
                                                 </button>
                                             ))}
+                                        </div>
+
+                                        {/* Action Buttons - Phase specific */}
+                                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', justifyContent: 'flex-end' }}>
+                                            {playbookPhaseTab !== 'SPECIAL_TEAMS' && (
+                                                <button className="btn" style={{ backgroundColor: '#10b981', color: 'white' }} onClick={() => setIsBatchImportOpen(true)}>
+                                                    <Icon name="FileText" /> {playbookPhaseTab === 'DEFENSE' ? 'Batch Add Calls' : 'Batch Add Plays'}
+                                                </button>
+                                            )}
+                                            <button className="btn btn-primary" onClick={() => { setEditingPlay(null); setView('new-play'); }}>
+                                                <Icon name="PlusCircle" /> {playbookPhaseTab === 'DEFENSE' ? 'New Call' : playbookPhaseTab === 'SPECIAL_TEAMS' ? 'New Play' : 'New Play'}
+                                            </button>
                                         </div>
 
                                         <div style={{
