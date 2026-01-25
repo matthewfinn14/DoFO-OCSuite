@@ -40930,88 +40930,158 @@
                                     setPregameTemplates={setPregameTemplates}
                                 />
                             )}
-                            {view === 'coaches-notes' && (
-                                <div style={{ padding: '1rem' }}>
-                                    <h2 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="FileText" size={24} /> Coaches' Notes - {currentWeek?.name || 'Week'}
-                                    </h2>
-                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                                        Share notes, observations, and reminders with the coaching staff for this week.
-                                    </p>
+                            {view === 'coaches-notes' && (() => {
+                                const NOTE_CATEGORIES = [
+                                    { key: 'emphasis', label: 'Emphasis / Focus' },
+                                    { key: 'personnel', label: 'Personnel Considerations' },
+                                    { key: 'practice', label: 'Practice Needs' },
+                                    { key: 'improve', label: 'Areas to Improve' },
+                                    { key: 'emphasize', label: 'Areas to Emphasize' },
+                                    { key: 'opponents', label: 'Opponents to Watch' },
+                                    { key: 'misc', label: 'Misc' }
+                                ];
+                                const DEFAULT_COACHES = ['HC', 'OC', 'DC', 'STC'];
+                                const weekNotes = weeklyCoachesNotes[currentWeekId] || { coaches: DEFAULT_COACHES, data: {} };
+                                const coaches = weekNotes.coaches || DEFAULT_COACHES;
+                                const data = weekNotes.data || {};
 
-                                    {/* Add New Note */}
-                                    <div style={{ background: 'var(--bg-panel)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
-                                        <h4 style={{ marginBottom: '0.75rem', fontSize: '0.9rem' }}>Add a Note</h4>
-                                        <textarea
-                                            id="new-coach-note"
-                                            className="form-input"
-                                            placeholder="Type your note here..."
-                                            rows={3}
-                                            style={{ width: '100%', marginBottom: '0.75rem', resize: 'vertical' }}
-                                        />
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={() => {
-                                                const textarea = document.getElementById('new-coach-note');
-                                                const noteText = textarea.value.trim();
-                                                if (!noteText) return;
-                                                const newNote = {
-                                                    id: Date.now().toString(),
-                                                    text: noteText,
-                                                    author: currentUser?.name || 'Coach',
-                                                    authorId: currentUser?.id,
-                                                    timestamp: new Date().toISOString(),
-                                                };
-                                                setWeeklyCoachesNotes(prev => ({
-                                                    ...prev,
-                                                    [currentWeekId]: [...(prev[currentWeekId] || []), newNote]
-                                                }));
-                                                textarea.value = '';
-                                            }}
-                                        >
-                                            <Icon name="Plus" size={16} /> Add Note
-                                        </button>
-                                    </div>
+                                // Role-based editing permissions
+                                const ROLE_MAP = {
+                                    'HC': ['Head Coach'],
+                                    'OC': ['Offensive Coordinator', 'OC'],
+                                    'DC': ['Defensive Coordinator', 'DC'],
+                                    'STC': ['Special Teams Coordinator', 'STC', 'ST Coordinator']
+                                };
+                                const isHeadCoach = currentUser?.roles?.includes('Head Coach');
+                                const canEditRow = (coach) => {
+                                    if (isHeadCoach) return true; // HC can edit everything
+                                    const allowedRoles = ROLE_MAP[coach] || [coach]; // For custom coaches, match by name
+                                    return currentUser?.roles?.some(role => allowedRoles.includes(role)) ||
+                                           currentUser?.name === coach; // Or if user's name matches coach label
+                                };
 
-                                    {/* Notes List */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        {(weeklyCoachesNotes[currentWeekId] || []).length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                                No notes yet for this week. Be the first to add one!
-                                            </div>
-                                        ) : (
-                                            [...(weeklyCoachesNotes[currentWeekId] || [])].reverse().map(note => (
-                                                <div key={note.id} style={{ background: 'var(--bg-panel)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                                        <div>
-                                                            <strong style={{ color: 'var(--accent)' }}>{note.author}</strong>
-                                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginLeft: '0.75rem' }}>
-                                                                {new Date(note.timestamp).toLocaleDateString()} at {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
-                                                        </div>
-                                                        {(currentUser?.id === note.authorId || currentUser?.roles?.includes('Head Coach')) && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (confirm('Delete this note?')) {
-                                                                        setWeeklyCoachesNotes(prev => ({
-                                                                            ...prev,
-                                                                            [currentWeekId]: (prev[currentWeekId] || []).filter(n => n.id !== note.id)
-                                                                        }));
-                                                                    }
-                                                                }}
-                                                                style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.25rem' }}
-                                                            >
-                                                                <Icon name="Trash2" size={14} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{note.text}</p>
-                                                </div>
-                                            ))
-                                        )}
+                                const updateNote = (coach, category, value) => {
+                                    setWeeklyCoachesNotes(prev => ({
+                                        ...prev,
+                                        [currentWeekId]: {
+                                            ...weekNotes,
+                                            data: {
+                                                ...data,
+                                                [coach]: {
+                                                    ...(data[coach] || {}),
+                                                    [category]: value
+                                                }
+                                            }
+                                        }
+                                    }));
+                                };
+
+                                const addCoach = () => {
+                                    const name = prompt('Enter coach title (e.g., QB Coach, LB Coach):');
+                                    if (name && name.trim()) {
+                                        setWeeklyCoachesNotes(prev => ({
+                                            ...prev,
+                                            [currentWeekId]: {
+                                                ...weekNotes,
+                                                coaches: [...coaches, name.trim()]
+                                            }
+                                        }));
+                                    }
+                                };
+
+                                const removeCoach = (coach) => {
+                                    if (DEFAULT_COACHES.includes(coach)) {
+                                        alert('Cannot remove default coordinators.');
+                                        return;
+                                    }
+                                    if (confirm(`Remove ${coach} from this week's notes?`)) {
+                                        const newData = { ...data };
+                                        delete newData[coach];
+                                        setWeeklyCoachesNotes(prev => ({
+                                            ...prev,
+                                            [currentWeekId]: {
+                                                ...weekNotes,
+                                                coaches: coaches.filter(c => c !== coach),
+                                                data: newData
+                                            }
+                                        }));
+                                    }
+                                };
+
+                                return (
+                                    <div style={{ padding: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Icon name="FileText" size={24} /> Coaches' Notes - {currentWeek?.name || 'Week'}
+                                            </h2>
+                                            {isHeadCoach && (
+                                                <button className="btn btn-secondary" onClick={addCoach}>
+                                                    <Icon name="Plus" size={16} /> Add Coach
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div style={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--bg-panel)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                                                <thead>
+                                                    <tr style={{ background: 'var(--bg-input)' }}>
+                                                        <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border)', fontWeight: '600', minWidth: '100px' }}>Coach</th>
+                                                        {NOTE_CATEGORIES.map(cat => (
+                                                            <th key={cat.key} style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border)', fontWeight: '600', minWidth: '150px', fontSize: '0.85rem' }}>
+                                                                {cat.label}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {coaches.map((coach, idx) => (
+                                                        <tr key={coach} style={{ borderBottom: idx < coaches.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                                                            <td style={{ padding: '0.5rem 0.75rem', fontWeight: '600', color: 'var(--accent)', verticalAlign: 'top' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                    {coach}
+                                                                    {isHeadCoach && !DEFAULT_COACHES.includes(coach) && (
+                                                                        <button
+                                                                            onClick={() => removeCoach(coach)}
+                                                                            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px' }}
+                                                                            title="Remove coach"
+                                                                        >
+                                                                            <Icon name="X" size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            {NOTE_CATEGORIES.map(cat => {
+                                                                const editable = canEditRow(coach);
+                                                                return (
+                                                                    <td key={cat.key} style={{ padding: '0.25rem', verticalAlign: 'top' }}>
+                                                                        <textarea
+                                                                            className="form-input"
+                                                                            value={data[coach]?.[cat.key] || ''}
+                                                                            onChange={(e) => editable && updateNote(coach, cat.key, e.target.value)}
+                                                                            placeholder={editable ? `${coach} ${cat.label.toLowerCase()}...` : ''}
+                                                                            rows={3}
+                                                                            readOnly={!editable}
+                                                                            style={{
+                                                                                width: '100%',
+                                                                                fontSize: '0.8rem',
+                                                                                resize: 'vertical',
+                                                                                minHeight: '60px',
+                                                                                opacity: editable ? 1 : 0.7,
+                                                                                cursor: editable ? 'text' : 'default',
+                                                                                background: editable ? 'var(--bg-input)' : 'var(--surface)'
+                                                                            }}
+                                                                        />
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
                             {view === 'game-week-overview' && (
                                 <GameWeekOverview
                                     week={currentWeek}
