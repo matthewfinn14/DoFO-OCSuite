@@ -1295,6 +1295,7 @@
 
                             if (inMemberList || inStaff) {
                                 console.log("RECOVERY: Found school for orphaned user:", schoolDoc.id, schoolData.name);
+                                const userId = window.auth.currentUser.uid;
 
                                 // Create user document and membership
                                 await userDocRef.set({
@@ -1307,6 +1308,34 @@
                                     joinedAt: new Date().toISOString(),
                                     status: 'active'
                                 });
+
+                                // Ensure user is in staff array with their Firebase uid and Head Coach role
+                                let staffArray = schoolData.staff || [];
+                                const existingStaff = staffArray.find(s => s.id === userId || (s.email && s.email.toLowerCase() === myEmail));
+
+                                if (!existingStaff) {
+                                    // Add user to staff with Head Coach role
+                                    staffArray.push({
+                                        id: userId,
+                                        name: window.auth.currentUser.displayName || 'Coach',
+                                        email: myEmail,
+                                        roles: ['Head Coach', 'Team Admin'],
+                                        phone: '',
+                                        bio: 'Recovered user'
+                                    });
+                                    console.log("RECOVERY: Added user to staff array");
+                                } else if (existingStaff.id !== userId) {
+                                    // Update existing staff entry with correct Firebase uid
+                                    existingStaff.id = userId;
+                                    if (!existingStaff.roles || !existingStaff.roles.includes('Head Coach')) {
+                                        existingStaff.roles = ['Head Coach', 'Team Admin'];
+                                    }
+                                    console.log("RECOVERY: Updated staff entry with correct uid");
+                                }
+
+                                // Save updated staff array to Firestore
+                                await schoolDoc.ref.update({ staff: staffArray });
+                                schoolData.staff = staffArray;
 
                                 // Load school data
                                 localStorage.setItem('hc_school_id', schoolDoc.id);
@@ -35488,9 +35517,16 @@
 
             // RBAC State
             // Refactored to be User-Centric
-            // We default to the first user (Matt Finn) or finding 's1'
-            const [currentUserId, setCurrentUserId] = useState('s1');
+            // Initialize to authUser.uid if available, otherwise fallback
+            const [currentUserId, setCurrentUserId] = useState(() => authUser?.uid || 's1');
             const [permissions, setPermissions] = useLocalStorage('oc-dashboard-permissions', DEFAULT_PERMISSIONS);
+
+            // Keep currentUserId in sync with logged-in user
+            useEffect(() => {
+                if (authUser?.uid) {
+                    setCurrentUserId(authUser.uid);
+                }
+            }, [authUser]);
 
 
 
