@@ -2840,7 +2840,7 @@
                                                         )}
                                                         <button
                                                             onClick={async () => {
-                                                                if (!window.confirm(`Reset ${request.email} for re-onboarding?\n\nThis will:\n- Remove from all schools\n- Delete access request\n- User will need to request access again`)) return;
+                                                                if (!window.confirm(`Reset ${request.email} for re-onboarding?\n\nThis will:\n- Remove from all schools\n- Delete user profile & memberships\n- Delete access request\n- User will need to request access again`)) return;
                                                                 try {
                                                                     // Find and remove from all schools
                                                                     const schoolsSnapshot = await window.db.collection('schools').get();
@@ -2855,10 +2855,24 @@
                                                                             });
                                                                         }
                                                                     }
+                                                                    // Find user by email and delete their profile + memberships
+                                                                    const usersQuery = await window.db.collection('users')
+                                                                        .where('email', '==', request.email.toLowerCase())
+                                                                        .get();
+                                                                    for (const userDoc of usersQuery.docs) {
+                                                                        // Delete memberships subcollection
+                                                                        const memberships = await window.db.collection('users').doc(userDoc.id)
+                                                                            .collection('memberships').get();
+                                                                        for (const membership of memberships.docs) {
+                                                                            await membership.ref.delete();
+                                                                        }
+                                                                        // Delete user document
+                                                                        await userDoc.ref.delete();
+                                                                    }
                                                                     // Delete access request
                                                                     await window.db.collection('access_requests').doc(request.id).delete();
                                                                     setRequests(prev => prev.filter(r => r.id !== request.id));
-                                                                    alert('User reset. They will need to request access again.');
+                                                                    alert('User fully reset. They will need to request access again.');
                                                                 } catch (err) {
                                                                     console.error('Error resetting user:', err);
                                                                     alert('Failed to reset user. Check console.');
