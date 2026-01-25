@@ -36594,46 +36594,47 @@
                                 <p style={{ opacity: 0.7, margin: '0.5rem 0 0 0' }}>Configure your team's identity, branding, and contact information.</p>
                             </div>
 
-                            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 {/* Team Identity */}
-                                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="Users" size={20} /> Team Identity
+                                <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                                        <Icon name="Users" size={18} /> Team Identity
                                     </h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                         <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label">School / Organization Name</label>
+                                            <label className="form-label" style={{ marginBottom: '0.25rem' }}>School / Organization Name</label>
                                             <input
                                                 type="text"
                                                 className="form-input"
                                                 value={schoolName}
                                                 onChange={(e) => handleSchoolNameChange(e.target.value)}
                                                 placeholder="e.g., Lincoln High School"
+                                                style={{ padding: '0.5rem 0.75rem' }}
                                             />
                                         </div>
                                         <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label">Mascot / Team Name</label>
+                                            <label className="form-label" style={{ marginBottom: '0.25rem' }}>Mascot / Team Name</label>
                                             <input
                                                 type="text"
                                                 className="form-input"
                                                 value={teamMascot}
                                                 onChange={(e) => setTeamMascot(e.target.value)}
                                                 placeholder="e.g., Eagles"
+                                                style={{ padding: '0.5rem 0.75rem' }}
                                             />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Team Logo */}
-                                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="Image" size={20} /> Team Logo
+                                <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                                        <Icon name="Image" size={18} /> Team Logo
                                     </h3>
-                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Upload your team logo to appear on printed documents and reports.</p>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                         <div style={{
-                                            width: '120px',
-                                            height: '120px',
+                                            width: '80px',
+                                            height: '80px',
                                             border: '2px dashed var(--border)',
                                             borderRadius: '8px',
                                             display: 'flex',
@@ -36646,20 +36647,20 @@
                                             {teamLogo ? (
                                                 <img src={teamLogo} alt="Team Logo" style={{ maxWidth: '100%', maxHeight: '100%' }} />
                                             ) : (
-                                                <span style={{ fontSize: '3rem', opacity: 0.3 }}>🏈</span>
+                                                <span style={{ fontSize: '2rem', opacity: 0.3 }}>🏈</span>
                                             )}
                                         </div>
-                                        <div>
+                                        <div style={{ flex: 1 }}>
                                             <input
                                                 type="file"
                                                 accept="image/*"
                                                 onChange={handleLogoUpload}
-                                                style={{ marginBottom: '0.75rem' }}
+                                                style={{ marginBottom: '0.5rem', fontSize: '0.85rem', width: '100%' }}
                                             />
                                             {teamLogo && (
                                                 <button
                                                     className="btn btn-secondary"
-                                                    style={{ display: 'block' }}
+                                                    style={{ display: 'block', padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
                                                     onClick={() => {
                                                         setTeamLogo(null);
                                                         localStorage.removeItem('oc-dashboard-logo');
@@ -36673,86 +36674,89 @@
                                 </div>
 
                                 {/* Team Colors */}
-                                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="Palette" size={20} /> Team Colors
+                                <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                                        <Icon name="Palette" size={18} /> Team Colors
                                     </h3>
-                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Set your team's primary and secondary colors for branding.</p>
-                                    <div style={{ display: 'flex', gap: '2rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '1.5rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <input
                                                 type="color"
                                                 value={teamPrimaryColor}
                                                 onChange={(e) => setTeamPrimaryColor(e.target.value)}
-                                                style={{ width: '60px', height: '60px', padding: '0', border: '2px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: 'none' }}
+                                                style={{ width: '48px', height: '48px', padding: '0', border: '2px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: 'none' }}
                                             />
                                             <div>
-                                                <div style={{ fontWeight: 'bold' }}>Primary Color</div>
-                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{teamPrimaryColor}</div>
+                                                <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>Primary</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{teamPrimaryColor}</div>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <input
                                                 type="color"
                                                 value={teamSecondaryColor}
                                                 onChange={(e) => setTeamSecondaryColor(e.target.value)}
-                                                style={{ width: '60px', height: '60px', padding: '0', border: '2px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: 'none' }}
+                                                style={{ width: '48px', height: '48px', padding: '0', border: '2px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: 'none' }}
                                             />
                                             <div>
-                                                <div style={{ fontWeight: 'bold' }}>Secondary Color</div>
-                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{teamSecondaryColor}</div>
+                                                <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>Secondary</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{teamSecondaryColor}</div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Location / Address */}
-                                <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Icon name="MapPin" size={20} /> Location
+                                <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                                        <Icon name="MapPin" size={18} /> Location
                                     </h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                         <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label">Street Address</label>
+                                            <label className="form-label" style={{ marginBottom: '0.25rem' }}>Address</label>
                                             <input
                                                 type="text"
                                                 className="form-input"
                                                 value={teamAddress}
                                                 onChange={(e) => setTeamAddress(e.target.value)}
                                                 placeholder="e.g., 123 Stadium Drive"
+                                                style={{ padding: '0.5rem 0.75rem' }}
                                             />
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.5rem' }}>
                                             <div className="form-group" style={{ margin: 0 }}>
-                                                <label className="form-label">City</label>
+                                                <label className="form-label" style={{ marginBottom: '0.25rem' }}>City</label>
                                                 <input
                                                     type="text"
                                                     className="form-input"
                                                     value={teamCity}
                                                     onChange={(e) => setTeamCity(e.target.value)}
-                                                    placeholder="e.g., Springfield"
+                                                    placeholder="Springfield"
+                                                    style={{ padding: '0.5rem 0.75rem' }}
                                                 />
                                             </div>
                                             <div className="form-group" style={{ margin: 0 }}>
-                                                <label className="form-label">State</label>
+                                                <label className="form-label" style={{ marginBottom: '0.25rem' }}>State</label>
                                                 <input
                                                     type="text"
                                                     className="form-input"
                                                     value={teamState}
                                                     onChange={(e) => setTeamState(e.target.value)}
-                                                    placeholder="e.g., IL"
+                                                    placeholder="IL"
                                                     maxLength={2}
+                                                    style={{ padding: '0.5rem 0.75rem' }}
                                                 />
                                             </div>
                                             <div className="form-group" style={{ margin: 0 }}>
-                                                <label className="form-label">ZIP Code</label>
+                                                <label className="form-label" style={{ marginBottom: '0.25rem' }}>ZIP</label>
                                                 <input
                                                     type="text"
                                                     className="form-input"
                                                     value={teamZip}
                                                     onChange={(e) => setTeamZip(e.target.value)}
-                                                    placeholder="e.g., 62701"
+                                                    placeholder="62701"
                                                     maxLength={10}
+                                                    style={{ padding: '0.5rem 0.75rem' }}
                                                 />
                                             </div>
                                         </div>
