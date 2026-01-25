@@ -2701,12 +2701,12 @@
                                                     fontSize: '0.8rem'
                                                 }}>
                                                     <span style={{ color: new Date(request.accessExpiresAt) < new Date() ? '#fca5a5' : '#86efac' }}>
-                                                        {request.trialDays} day trial &bull;
+                                                        {request.trialDays} day trial •
                                                         {new Date(request.accessExpiresAt) < new Date()
                                                             ? ` Expired ${new Date(request.accessExpiresAt).toLocaleDateString()}`
                                                             : ` Expires ${new Date(request.accessExpiresAt).toLocaleDateString()}`
                                                         }
-                                                        {request.dataExpiresAt && ` &bull; Data deletion: ${new Date(request.dataExpiresAt).toLocaleDateString()}`}
+                                                        {request.dataExpiresAt && ` • Data deletion: ${new Date(request.dataExpiresAt).toLocaleDateString()}`}
                                                     </span>
                                                 </div>
                                             )}
@@ -2754,35 +2754,60 @@
                                                     }}>
                                                         ARCHIVED
                                                     </span>
-                                                    <button
-                                                        onClick={async () => {
-                                                            if (!window.confirm(`Restore access for ${request.name}? They will need to create a new school.`)) return;
-                                                            try {
-                                                                await window.db.collection('access_requests').doc(request.id).update({
-                                                                    status: 'approved',
-                                                                    restoredAt: new Date().toISOString()
-                                                                });
-                                                                setRequests(prev => prev.map(r =>
-                                                                    r.id === request.id ? { ...r, status: 'approved' } : r
-                                                                ));
-                                                                alert('Access restored. User can now create a new school.');
-                                                            } catch (err) {
-                                                                console.error('Error restoring:', err);
-                                                                alert('Failed to restore. Check console.');
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            padding: '0.25rem 0.75rem',
-                                                            background: '#3b82f6',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            fontSize: '0.75rem',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        Restore Access
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!window.confirm(`Restore access for ${request.name}? They will need to create a new school.`)) return;
+                                                                try {
+                                                                    await window.db.collection('access_requests').doc(request.id).update({
+                                                                        status: 'approved',
+                                                                        restoredAt: new Date().toISOString()
+                                                                    });
+                                                                    setRequests(prev => prev.map(r =>
+                                                                        r.id === request.id ? { ...r, status: 'approved' } : r
+                                                                    ));
+                                                                    alert('Access restored. User can now create a new school.');
+                                                                } catch (err) {
+                                                                    console.error('Error restoring:', err);
+                                                                    alert('Failed to restore. Check console.');
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                padding: '0.25rem 0.75rem',
+                                                                background: '#3b82f6',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.75rem',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Restore
+                                                        </button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!window.confirm(`Permanently delete access request for ${request.email}?`)) return;
+                                                                try {
+                                                                    await window.db.collection('access_requests').doc(request.id).delete();
+                                                                    setRequests(prev => prev.filter(r => r.id !== request.id));
+                                                                } catch (err) {
+                                                                    console.error('Error deleting:', err);
+                                                                    alert('Failed to delete. Check console.');
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                padding: '0.25rem 0.75rem',
+                                                                background: 'transparent',
+                                                                color: '#ef4444',
+                                                                border: '1px solid #ef4444',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.75rem',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
@@ -2796,22 +2821,85 @@
                                                     }}>
                                                         {request.status}
                                                     </span>
-                                                    {request.status === 'approved' && (
+                                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                        {request.status === 'approved' && (
+                                                            <button
+                                                                onClick={() => handleEdit(request)}
+                                                                style={{
+                                                                    padding: '0.25rem 0.75rem',
+                                                                    background: 'transparent',
+                                                                    border: '1px solid var(--border)',
+                                                                    color: 'var(--text-secondary)',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '0.75rem',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                        )}
                                                         <button
-                                                            onClick={() => handleEdit(request)}
+                                                            onClick={async () => {
+                                                                if (!window.confirm(`Reset ${request.email} for re-onboarding?\n\nThis will:\n- Remove from all schools\n- Delete access request\n- User will need to request access again`)) return;
+                                                                try {
+                                                                    // Find and remove from all schools
+                                                                    const schoolsSnapshot = await window.db.collection('schools').get();
+                                                                    for (const schoolDoc of schoolsSnapshot.docs) {
+                                                                        const data = schoolDoc.data();
+                                                                        if (data.memberList?.some(m => m.email?.toLowerCase() === request.email.toLowerCase())) {
+                                                                            const updatedList = data.memberList.filter(m =>
+                                                                                m.email?.toLowerCase() !== request.email.toLowerCase()
+                                                                            );
+                                                                            await window.db.collection('schools').doc(schoolDoc.id).update({
+                                                                                memberList: updatedList
+                                                                            });
+                                                                        }
+                                                                    }
+                                                                    // Delete access request
+                                                                    await window.db.collection('access_requests').doc(request.id).delete();
+                                                                    setRequests(prev => prev.filter(r => r.id !== request.id));
+                                                                    alert('User reset. They will need to request access again.');
+                                                                } catch (err) {
+                                                                    console.error('Error resetting user:', err);
+                                                                    alert('Failed to reset user. Check console.');
+                                                                }
+                                                            }}
                                                             style={{
                                                                 padding: '0.25rem 0.75rem',
                                                                 background: 'transparent',
-                                                                border: '1px solid var(--border)',
-                                                                color: 'var(--text-secondary)',
+                                                                color: '#f59e0b',
+                                                                border: '1px solid #f59e0b',
                                                                 borderRadius: '4px',
                                                                 fontSize: '0.75rem',
                                                                 cursor: 'pointer'
                                                             }}
                                                         >
-                                                            Edit
+                                                            Reset User
                                                         </button>
-                                                    )}
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!window.confirm(`Permanently delete access request for ${request.email}?`)) return;
+                                                                try {
+                                                                    await window.db.collection('access_requests').doc(request.id).delete();
+                                                                    setRequests(prev => prev.filter(r => r.id !== request.id));
+                                                                } catch (err) {
+                                                                    console.error('Error deleting:', err);
+                                                                    alert('Failed to delete. Check console.');
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                padding: '0.25rem 0.75rem',
+                                                                background: 'transparent',
+                                                                color: '#ef4444',
+                                                                border: '1px solid #ef4444',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.75rem',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -18551,10 +18639,14 @@
                                                             Edit
                                                         </button>
                                                         <button
-                                                            onClick={async () => {
-                                                                if (!window.confirm(`Are you sure you want to delete "${school.name || school.id}"?\n\nThis will permanently delete all data for this school including roster, plays, and practice plans.`)) {
+                                                            onClick={async (e) => {
+                                                                if (!window.confirm(`Are you sure you want to delete "${school.name || school.id}"?\n\nThis will permanently delete all data for this school including roster, plays, practice plans, and all subcollections.`)) {
                                                                     return;
                                                                 }
+                                                                const btn = e.target;
+                                                                const originalText = btn.textContent;
+                                                                btn.textContent = 'Deleting...';
+                                                                btn.disabled = true;
                                                                 try {
                                                                     // Archive access requests for all members of this school
                                                                     if (school.memberList && school.memberList.length > 0) {
@@ -18573,11 +18665,25 @@
                                                                         });
                                                                         await Promise.all(archivePromises);
                                                                     }
+                                                                    // Delete all subcollections first
+                                                                    const subcollections = ['roster', 'plays', 'practice_plans', 'weeks', 'staff'];
+                                                                    for (const sub of subcollections) {
+                                                                        const snapshot = await window.db.collection('schools').doc(school.id)
+                                                                            .collection(sub).get();
+                                                                        if (!snapshot.empty) {
+                                                                            const batch = window.db.batch();
+                                                                            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                                                                            await batch.commit();
+                                                                        }
+                                                                    }
+                                                                    // Then delete school document
                                                                     await window.db.collection('schools').doc(school.id).delete();
-                                                                    alert('School deleted successfully. Access requests archived.');
+                                                                    alert('School and all subcollections deleted successfully. Access requests archived.');
                                                                 } catch (err) {
                                                                     console.error('Error deleting school:', err);
                                                                     alert('Error deleting school: ' + err.message);
+                                                                    btn.textContent = originalText;
+                                                                    btn.disabled = false;
                                                                 }
                                                             }}
                                                             style={{
@@ -18615,12 +18721,45 @@
                                                                         padding: '0.25rem 0.5rem',
                                                                         background: 'var(--surface)',
                                                                         borderRadius: '4px',
-                                                                        color: 'var(--text-primary)'
+                                                                        color: 'var(--text-primary)',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '0.25rem'
                                                                     }}>
                                                                         {member.email}
                                                                         <span style={{ color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>
                                                                             ({member.role || 'member'})
                                                                         </span>
+                                                                        <button
+                                                                            onClick={async (e) => {
+                                                                                e.stopPropagation();
+                                                                                if (!window.confirm(`Remove ${member.email} from ${school.name || school.id}?`)) return;
+                                                                                try {
+                                                                                    const updatedList = school.memberList.filter(m =>
+                                                                                        m.email?.toLowerCase() !== member.email.toLowerCase()
+                                                                                    );
+                                                                                    await window.db.collection('schools').doc(school.id).update({
+                                                                                        memberList: updatedList
+                                                                                    });
+                                                                                    alert(`${member.email} removed from ${school.name || school.id}`);
+                                                                                } catch (err) {
+                                                                                    console.error('Error removing member:', err);
+                                                                                    alert('Error: ' + err.message);
+                                                                                }
+                                                                            }}
+                                                                            style={{
+                                                                                background: 'transparent',
+                                                                                border: 'none',
+                                                                                color: '#ef4444',
+                                                                                cursor: 'pointer',
+                                                                                padding: '0 0.25rem',
+                                                                                fontSize: '0.9rem',
+                                                                                lineHeight: 1
+                                                                            }}
+                                                                            title={`Remove ${member.email}`}
+                                                                        >
+                                                                            ✕
+                                                                        </button>
                                                                     </span>
                                                                 ))}
                                                             </div>
