@@ -10899,7 +10899,7 @@
             );
         };
 
-        const PracticePlanPrintView = ({ plan, onBack, teamLogo = '🦅', weekData = {}, isBatchMode = false, coachFilter = 'ALL', roster, staff, selectedDay = null }) => {
+        const PracticePlanPrintView = ({ plan, onBack, teamLogo = '🦅', weekData = {}, isBatchMode = false, coachFilter = 'ALL', roster, staff, selectedDay = null, positionGroups = {} }) => {
             console.log('PracticePlanPrintView debug:', { plan, weekData, teamLogo });
             if (!plan) return <div className="p-4">No plan data available <button onClick={onBack} className="btn btn-secondary">Back</button></div>;
 
@@ -11021,36 +11021,77 @@
                         )
                     }
 
-                    {/* Coach Big 3 - Show when filtered by specific coach */}
+                    {/* Coach Big 3 by Position Groups - Show when filtered by specific coach */}
                     {coachFilter && coachFilter !== 'ALL' && (() => {
                         const coach = staff?.find(s => s.id === coachFilter);
-                        if (!coach || !coach.big3 || coach.big3.every(b => !b)) return null;
+                        if (!coach) return null;
+
+                        // Find all position groups this coach is assigned to (across O, D, ST)
+                        const coachGroups = [];
+                        const pg = positionGroups || {};
+                        ['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].forEach(phase => {
+                            (pg[phase] || []).forEach(group => {
+                                if (group.coachId === coachFilter && group.big3 && group.big3.some(b => b)) {
+                                    coachGroups.push(group);
+                                }
+                            });
+                        });
+
+                        if (coachGroups.length === 0) return null;
+
                         return (
                             <div style={{
                                 border: '2px solid #000',
-                                padding: '0.5rem 1rem',
                                 marginBottom: '1rem',
-                                background: '#fef3c7',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '1.5rem'
+                                background: '#fef3c7'
                             }}>
-                                <div style={{ fontWeight: 'bold', fontSize: '1rem', whiteSpace: 'nowrap' }}>
-                                    {coach.name}'s BIG 3:
+                                <div style={{
+                                    padding: '0.4rem 0.75rem',
+                                    borderBottom: '1px solid #000',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.95rem'
+                                }}>
+                                    {coach.name}'s BIG 3
                                 </div>
-                                <div style={{ display: 'flex', gap: '1.5rem', flex: 1 }}>
-                                    {coach.big3.filter(b => b).map((item, i) => (
-                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span style={{
-                                                width: '22px', height: '22px',
-                                                background: '#000', color: '#fef3c7',
-                                                borderRadius: '50%', display: 'flex',
-                                                alignItems: 'center', justifyContent: 'center',
-                                                fontWeight: 'bold', fontSize: '0.85rem'
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: `repeat(${coachGroups.length}, 1fr)`,
+                                    gap: '0'
+                                }}>
+                                    {coachGroups.map((group, gIdx) => (
+                                        <div key={group.id} style={{
+                                            borderRight: gIdx < coachGroups.length - 1 ? '1px solid #000' : 'none',
+                                            padding: '0.5rem 0.75rem'
+                                        }}>
+                                            <div style={{
+                                                fontWeight: 'bold',
+                                                fontSize: '0.85rem',
+                                                marginBottom: '0.35rem',
+                                                textAlign: 'center'
                                             }}>
-                                                {i + 1}
-                                            </span>
-                                            <span style={{ fontWeight: '500' }}>{item}</span>
+                                                {group.abbrev}
+                                            </div>
+                                            {group.big3.filter(b => b).map((item, i) => (
+                                                <div key={i} style={{
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    gap: '0.4rem',
+                                                    marginBottom: '0.2rem',
+                                                    fontSize: '0.8rem'
+                                                }}>
+                                                    <span style={{
+                                                        width: '16px', height: '16px',
+                                                        background: '#000', color: '#fef3c7',
+                                                        borderRadius: '50%', display: 'flex',
+                                                        alignItems: 'center', justifyContent: 'center',
+                                                        fontWeight: 'bold', fontSize: '0.7rem',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        {i + 1}
+                                                    </span>
+                                                    <span>{item}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     ))}
                                 </div>
@@ -11329,7 +11370,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, teamLogo, addToNextSlotRef, onNavigate, practiceTemplates = [], setPracticeTemplates }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, teamLogo, addToNextSlotRef, onNavigate, practiceTemplates = [], setPracticeTemplates, positionGroups = {} }) => {
             console.log('PracticeScriptBuilder debug:', { currentWeek, teamLogo });
             const { openPlayDetails } = usePlayDetailsModal();
 
@@ -12582,6 +12623,7 @@
                                 roster={roster}
                                 staff={staff}
                                 selectedDay={selectedDay}
+                                positionGroups={positionGroups}
                             />
                         </div>,
                         document.body
@@ -20184,7 +20226,7 @@
             );
         };
 
-        const PrintHubView = ({ roster, staff, weeks = [], currentWeekId, onChangeWeek, gamePlans, depthChart, practicePlans, attendance, wbSettings, setWbSettings, plays, personnelGroupings = {}, onNavigate }) => {
+        const PrintHubView = ({ roster, staff, weeks = [], currentWeekId, onChangeWeek, gamePlans, depthChart, practicePlans, attendance, wbSettings, setWbSettings, plays, personnelGroupings = {}, onNavigate, positionGroups = {} }) => {
             // Get current week info for display
             const currentWeek = weeks.find(w => w.id === currentWeekId) || {};
             const weekLabel = currentWeek.opponent ? `${currentWeek.name} vs ${currentWeek.opponent}` : currentWeek.name || 'Select Week';
@@ -20239,7 +20281,7 @@
                     const plan = practicePlans[day];
 
                     // Order: Plan -> Script -> Cards (Ideal for Plan Front / Script Back if duplexing)
-                    if (sel.plan) components.push(<PracticePlanPrintView key={`${day} -plan`} plan={plan} isBatchMode={true} coachFilter={selectedPrintCoach} roster={roster} staff={staff} />);
+                    if (sel.plan) components.push(<PracticePlanPrintView key={`${day} -plan`} plan={plan} isBatchMode={true} coachFilter={selectedPrintCoach} roster={roster} staff={staff} positionGroups={positionGroups} />);
                     if (sel.script) components.push(<ScriptPrintView key={`${day} -script`} plan={plan} isBatchMode={true} />);
                     if (sel.cards) components.push(<ScoutCardPrintView key={`${day} -cards`} plan={plan} isBatchMode={true} />);
                 });
@@ -35822,6 +35864,28 @@
             const [customPositions, setCustomPositions] = useLocalStorage('oc-dashboard-custom-positions', { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] });
             const [hiddenPositions, setHiddenPositions] = useLocalStorage('oc-dashboard-hidden-positions', { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] });
             const [personnelGroupings, setPersonnelGroupings] = useLocalStorage('oc-dashboard-personnel-groupings', DEFAULT_PERSONNEL_GROUPINGS);
+            // Position Groups: Group positions under a coach with Big 3
+            const [positionGroups, setPositionGroups] = useLocalStorage('oc-dashboard-position-groups', {
+                OFFENSE: [
+                    { id: 'qb', name: 'Quarterbacks', abbrev: 'QB', positions: ['QB'], coachId: '', big3: ['', '', ''] },
+                    { id: 'rb', name: 'Running Backs', abbrev: 'RB', positions: ['RB', 'F'], coachId: '', big3: ['', '', ''] },
+                    { id: 'wr', name: 'Wide Receivers', abbrev: 'WR', positions: ['X', 'Z', 'A'], coachId: '', big3: ['', '', ''] },
+                    { id: 'te', name: 'Tight Ends', abbrev: 'TE', positions: ['Y', 'H'], coachId: '', big3: ['', '', ''] },
+                    { id: 'ol', name: 'Offensive Line', abbrev: 'OL', positions: ['LT', 'LG', 'C', 'RG', 'RT'], coachId: '', big3: ['', '', ''] }
+                ],
+                DEFENSE: [
+                    { id: 'dl', name: 'Defensive Line', abbrev: 'DL', positions: [], coachId: '', big3: ['', '', ''] },
+                    { id: 'lb', name: 'Linebackers', abbrev: 'LB', positions: [], coachId: '', big3: ['', '', ''] },
+                    { id: 'db', name: 'Defensive Backs', abbrev: 'DB', positions: [], coachId: '', big3: ['', '', ''] }
+                ],
+                SPECIAL_TEAMS: [
+                    { id: 'ko', name: 'Kickoff', abbrev: 'KO', positions: [], coachId: '', big3: ['', '', ''] },
+                    { id: 'kr', name: 'Kick Return', abbrev: 'KR', positions: [], coachId: '', big3: ['', '', ''] },
+                    { id: 'punt', name: 'Punt', abbrev: 'P', positions: [], coachId: '', big3: ['', '', ''] },
+                    { id: 'pr', name: 'Punt Return', abbrev: 'PR', positions: [], coachId: '', big3: ['', '', ''] },
+                    { id: 'fg', name: 'Field Goal', abbrev: 'FG', positions: [], coachId: '', big3: ['', '', ''] }
+                ]
+            });
             const [positionDescriptions, setPositionDescriptions] = useLocalStorage('oc-dashboard-position-descriptions', {});
             const [playSyntax, setPlaySyntax] = useLocalStorage('oc-dashboard-play-syntax', [
                 { id: 'pres_form', label: 'Formation', type: 'text' },
@@ -37477,6 +37541,24 @@
                                         onClick={() => setSetupTab('positions')}
                                     >
                                         <Icon name="Users" size={16} /> Positions
+                                    </button>
+                                    {/* 1b. Position Groups */}
+                                    <button
+                                        className={`btn-ghost`}
+                                        style={{
+                                            borderRadius: 0,
+                                            padding: '1rem 1.5rem',
+                                            borderBottom: setupTab === 'position-groups' ? '3px solid var(--accent)' : '3px solid transparent',
+                                            fontWeight: setupTab === 'position-groups' ? 'bold' : 'normal',
+                                            color: setupTab === 'position-groups' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            background: 'transparent',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem'
+                                        }}
+                                        onClick={() => setSetupTab('position-groups')}
+                                    >
+                                        <Icon name="Layers" size={16} /> Groups
                                     </button>
                                     {/* 2. Personnel (Offense only) */}
                                     {isOffense && (
@@ -39287,6 +39369,120 @@
                                 </div>
                             )}
 
+                            {setupTab === 'position-groups' && (
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0 }}>Position Groups</h3>
+                                            <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7, fontSize: '0.85rem' }}>
+                                                Assign coaches to position groups and set their Big 3 focus points.
+                                            </p>
+                                        </div>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={() => {
+                                                const name = prompt('New position group name:');
+                                                if (!name) return;
+                                                const abbrev = prompt('Abbreviation (e.g., OL, WR):') || name.substring(0, 2).toUpperCase();
+                                                const newGroup = { id: `grp_${Date.now()}`, name, abbrev, positions: [], coachId: '', big3: ['', '', ''] };
+                                                setPositionGroups(prev => ({
+                                                    ...prev,
+                                                    [phase]: [...(prev[phase] || []), newGroup]
+                                                }));
+                                            }}
+                                        >
+                                            <Icon name="Plus" size={16} /> Add Group
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                                        {(positionGroups[phase] || []).map((group, idx) => (
+                                            <div key={group.id} style={{
+                                                background: 'var(--surface)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '8px',
+                                                padding: '1rem'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{
+                                                            background: 'var(--accent)',
+                                                            color: 'black',
+                                                            padding: '0.25rem 0.5rem',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '0.75rem'
+                                                        }}>{group.abbrev}</span>
+                                                        <span style={{ fontWeight: '600' }}>{group.name}</span>
+                                                    </div>
+                                                    <button
+                                                        className="btn btn-ghost"
+                                                        style={{ padding: '0.25rem', color: 'var(--danger)' }}
+                                                        onClick={() => {
+                                                            if (!confirm(`Delete ${group.name}?`)) return;
+                                                            setPositionGroups(prev => ({
+                                                                ...prev,
+                                                                [phase]: prev[phase].filter(g => g.id !== group.id)
+                                                            }));
+                                                        }}
+                                                    >
+                                                        <Icon name="Trash2" size={14} />
+                                                    </button>
+                                                </div>
+                                                {/* Coach Assignment */}
+                                                <div style={{ marginBottom: '0.75rem' }}>
+                                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Coach</label>
+                                                    <select
+                                                        className="form-select"
+                                                        style={{ width: '100%', padding: '0.35rem 0.5rem', fontSize: '0.85rem' }}
+                                                        value={group.coachId || ''}
+                                                        onChange={e => {
+                                                            setPositionGroups(prev => ({
+                                                                ...prev,
+                                                                [phase]: prev[phase].map(g => g.id === group.id ? { ...g, coachId: e.target.value } : g)
+                                                            }));
+                                                        }}
+                                                    >
+                                                        <option value="">-- Select Coach --</option>
+                                                        {(staff || []).filter(s => !s.archived).map(s => (
+                                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                {/* Big 3 */}
+                                                <div>
+                                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Big 3</label>
+                                                    {[0, 1, 2].map(i => (
+                                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                                            <span style={{
+                                                                width: '18px', height: '18px',
+                                                                background: 'var(--accent)', color: 'black',
+                                                                borderRadius: '50%', display: 'flex',
+                                                                alignItems: 'center', justifyContent: 'center',
+                                                                fontWeight: 'bold', fontSize: '0.7rem', flexShrink: 0
+                                                            }}>{i + 1}</span>
+                                                            <input
+                                                                className="form-input"
+                                                                style={{ flex: 1, padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
+                                                                placeholder={`Focus ${i + 1}...`}
+                                                                value={(group.big3 || [])[i] || ''}
+                                                                onChange={e => {
+                                                                    const newBig3 = [...(group.big3 || ['', '', ''])];
+                                                                    newBig3[i] = e.target.value;
+                                                                    setPositionGroups(prev => ({
+                                                                        ...prev,
+                                                                        [phase]: prev[phase].map(g => g.id === group.id ? { ...g, big3: newBig3 } : g)
+                                                                    }));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {setupTab === 'personnel' && isOffense && (
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -40356,7 +40552,7 @@
                                 </div>
                             )}
                             
-                            {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} weeks={weeks} currentWeekId={currentWeekId} onChangeWeek={setCurrentWeekId} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} personnelGroupings={personnelGroupings} onNavigate={setView} />}
+                            {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} weeks={weeks} currentWeekId={currentWeekId} onChangeWeek={setCurrentWeekId} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} personnelGroupings={personnelGroupings} onNavigate={setView} positionGroups={positionGroups} />}
 
                             {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
@@ -41691,6 +41887,7 @@
                                     onNavigate={setView}
                                     practiceTemplates={practiceTemplates}
                                     setPracticeTemplates={setPracticeTemplates}
+                                    positionGroups={positionGroups}
                                 />
                             )}
                             {view === 'pregame' && (
@@ -42611,6 +42808,7 @@
                                     addToNextSlotRef={addToNextSlotRef}
                                     practiceTemplates={practiceTemplates}
                                     setPracticeTemplates={setPracticeTemplates}
+                                    positionGroups={positionGroups}
                                 />
                             )}
                             {/* REMOVED: coach-app view */}
