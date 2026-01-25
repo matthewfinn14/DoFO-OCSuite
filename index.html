@@ -35036,16 +35036,6 @@
                                 // Clear Invite Data just in case
                                 setInviteData(null);
                                 // Optional: You could reset other states here if needed, but Wizard hides them.
-                            } else {
-                                // FIX: Reload page once after Firebase data loads to sync React state with localStorage
-                                // This ensures React state is initialized from the freshly-loaded Firebase data
-                                const sessionKey = `firebase_loaded_${authUser.uid}`;
-                                if (!sessionStorage.getItem(sessionKey)) {
-                                    sessionStorage.setItem(sessionKey, 'true');
-                                    console.log("Firebase data loaded - reloading to sync React state");
-                                    window.location.reload();
-                                    return;
-                                }
                             }
                         } catch (e) {
                             console.error("Critical Load Error", e);
