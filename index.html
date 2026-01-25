@@ -1479,19 +1479,17 @@
 
         const syncToFirestore = async (userId, dataType, data) => {
             try {
-                // DETERMINE DESTINATION (School or User)
+                // ONLY sync to SCHOOL docs - never to user docs
+                // User docs should only contain profile info, not app data
                 const schoolId = localStorage.getItem('hc_school_id');
-                let docRef;
-                let contextLog = "Personal";
 
-                if (schoolId) {
-                    docRef = window.db.collection('schools').doc(schoolId);
-                    contextLog = `School (${schoolId})`;
-                } else {
-                    docRef = window.db.collection('users').doc(userId);
+                if (!schoolId) {
+                    console.log(`Skipping sync for ${dataType} - no school ID set`);
+                    return { success: false, reason: 'no_school' };
                 }
 
-                console.log(`Syncing ${dataType} to ${contextLog}...`);
+                const docRef = window.db.collection('schools').doc(schoolId);
+                console.log(`Syncing ${dataType} to School (${schoolId})...`);
 
                 const updateData = {
                     [dataType]: data,
