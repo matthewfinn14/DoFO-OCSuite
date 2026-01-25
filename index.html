@@ -36215,7 +36215,13 @@
             });
 
             // Calculate Permissions based on Current User's Roles
-            const currentUser = staff.find(s => s.id === currentUserId) || staff[0] || DEFAULT_STAFF_2025[0];
+            // IMPORTANT: Look up by EMAIL first, then uid. Email is consistent across sign-in methods,
+            // but uid can differ (e.g., Google Sign-In vs Email/Password create different uids for same email)
+            const authEmail = authUser?.email?.toLowerCase();
+            const currentUser = staff.find(s => s.email?.toLowerCase() === authEmail)
+                || staff.find(s => s.id === currentUserId)
+                || staff[0]
+                || DEFAULT_STAFF_2025[0];
 
             const currentPermissions = useMemo(() => {
                 const userRoles = currentUser?.roles || [];
