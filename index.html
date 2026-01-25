@@ -18144,6 +18144,20 @@
             };
             const { currentUser, logout } = useAuth();
 
+            // Fetch access request data for trial info
+            const [accessRequestData, setAccessRequestData] = useState(null);
+            useEffect(() => {
+                if (currentUser?.email) {
+                    window.db.collection('access_requests').doc(currentUser.email.toLowerCase()).get()
+                        .then(doc => {
+                            if (doc.exists) {
+                                setAccessRequestData(doc.data());
+                            }
+                        })
+                        .catch(err => console.warn('Could not fetch access request:', err));
+                }
+            }, [currentUser?.email]);
+
             const [activeTab, setActiveTab] = useState('general'); // 'general' | 'members' | 'billing'
             const [expandedCategories, setExpandedCategories] = useState({});
 
@@ -18539,7 +18553,13 @@
                                     </div>
                                     <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
                                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account Created</label>
-                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>{billingInfo?.createdAt ? new Date(billingInfo.createdAt).toLocaleDateString() : 'N/A'}</p>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>
+                                            {accessRequestData?.reviewedAt
+                                                ? new Date(accessRequestData.reviewedAt).toLocaleDateString()
+                                                : billingInfo?.createdAt
+                                                    ? new Date(billingInfo.createdAt).toLocaleDateString()
+                                                    : 'N/A'}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -18550,26 +18570,66 @@
                                     <Icon name="CreditCard" size={24} color="var(--accent)" />
                                     <h3 style={{ margin: 0 }}>Subscription Status</h3>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                                    <div style={{ padding: '1.25rem', background: currentPlanStatus?.includes('PREMIUM') ? 'rgba(34, 197, 94, 0.1)' : 'var(--surface)', borderRadius: '8px', border: currentPlanStatus?.includes('PREMIUM') ? '1px solid #22c55e' : '1px solid var(--border)' }}>
-                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Plan</label>
-                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '700', fontSize: '1.25rem', color: currentPlanStatus?.includes('PREMIUM') ? '#22c55e' : 'var(--text-primary)' }}>
-                                            {currentPlanStatus?.includes('PREMIUM') ? 'Premium' : currentPlanStatus === 'PREMIUM_TRIAL' ? 'Trial' : 'Free'}
-                                        </p>
-                                    </div>
-                                    <div style={{ padding: '1.25rem', background: 'var(--surface)', borderRadius: '8px' }}>
-                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</label>
-                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>
-                                            {billingInfo?.status === 'active' ? '✓ Active' : billingInfo?.status || 'N/A'}
-                                        </p>
-                                    </div>
-                                    <div style={{ padding: '1.25rem', background: 'var(--surface)', borderRadius: '8px' }}>
-                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Renewal Date</label>
-                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>
-                                            {billingInfo?.subscriptionEndsAt ? new Date(billingInfo.subscriptionEndsAt).toLocaleDateString() : billingInfo?.trialEndsAt ? new Date(billingInfo.trialEndsAt).toLocaleDateString() : 'N/A'}
-                                        </p>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    // Determine plan status from access request data
+                                    const isTrialActive = accessRequestData?.accessExpiresAt && new Date(accessRequestData.accessExpiresAt) > new Date();
+                                    const trialDays = accessRequestData?.trialDays;
+                                    const trialExpires = accessRequestData?.accessExpiresAt;
+                                    const dataExpires = accessRequestData?.dataExpiresAt;
+                                    const hasPremium = currentPlanStatus?.includes('PREMIUM');
+
+                                    return (
+                                        <>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                                                <div style={{ padding: '1.25rem', background: hasPremium || isTrialActive ? 'rgba(34, 197, 94, 0.1)' : 'var(--surface)', borderRadius: '8px', border: hasPremium || isTrialActive ? '1px solid #22c55e' : '1px solid var(--border)' }}>
+                                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Plan</label>
+                                                    <p style={{ margin: '0.25rem 0 0 0', fontWeight: '700', fontSize: '1.25rem', color: hasPremium || isTrialActive ? '#22c55e' : 'var(--text-primary)' }}>
+                                                        {hasPremium ? 'Premium' : isTrialActive ? `Trial (${trialDays} days)` : 'Free'}
+                                                    </p>
+                                                </div>
+                                                <div style={{ padding: '1.25rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</label>
+                                                    <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>
+                                                        {hasPremium ? '✓ Active' : isTrialActive ? '✓ Trial Active' : billingInfo?.status || 'N/A'}
+                                                    </p>
+                                                </div>
+                                                <div style={{ padding: '1.25rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                        {isTrialActive ? 'Trial Expires' : 'Renewal Date'}
+                                                    </label>
+                                                    <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>
+                                                        {trialExpires
+                                                            ? new Date(trialExpires).toLocaleDateString()
+                                                            : billingInfo?.subscriptionEndsAt
+                                                                ? new Date(billingInfo.subscriptionEndsAt).toLocaleDateString()
+                                                                : 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {/* Data Deletion Warning for trials */}
+                                            {isTrialActive && dataExpires && (
+                                                <div style={{
+                                                    padding: '1rem',
+                                                    background: 'rgba(245, 158, 11, 0.1)',
+                                                    border: '1px solid #f59e0b',
+                                                    borderRadius: '8px',
+                                                    marginBottom: '1.5rem',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.75rem'
+                                                }}>
+                                                    <Icon name="AlertTriangle" size={20} color="#f59e0b" />
+                                                    <div>
+                                                        <p style={{ margin: 0, fontWeight: '600', color: '#f59e0b' }}>Trial Data Retention</p>
+                                                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                                            If not upgraded, your data will be deleted on {new Date(dataExpires).toLocaleDateString()}.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
 
                                 {/* Promo Code Section */}
                                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
@@ -18600,14 +18660,14 @@
                                 </p>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     <a
-                                        href={`mailto:billing@dofo.app?subject=Invoice Request - ${schoolNameProp || billingInfo?.schoolName || 'Account'}&body=Account ID: ${currentSchoolId}%0D%0ASchool: ${schoolNameProp || billingInfo?.schoolName || 'N/A'}%0D%0AEmail: ${currentUser?.email}%0D%0A%0D%0APlease send an invoice for our subscription.`}
+                                        href={`mailto:admin@digitaldofo.com?subject=Invoice Request - ${schoolNameProp || billingInfo?.schoolName || 'Account'}&body=Account ID: ${currentSchoolId}%0D%0ASchool: ${schoolNameProp || billingInfo?.schoolName || 'N/A'}%0D%0AEmail: ${currentUser?.email}%0D%0A%0D%0APlease send an invoice for our subscription.`}
                                         className="btn btn-primary"
                                         style={{ textDecoration: 'none' }}
                                     >
                                         <Icon name="Mail" size={16} style={{ marginRight: '0.5rem' }} /> Request Invoice
                                     </a>
                                     <a
-                                        href="mailto:support@dofo.app?subject=Billing Support"
+                                        href="mailto:admin@digitaldofo.com?subject=Billing Support"
                                         className="btn btn-secondary"
                                         style={{ textDecoration: 'none' }}
                                     >
