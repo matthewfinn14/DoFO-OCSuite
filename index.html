@@ -1897,6 +1897,8 @@
                             createdAt: new Date().toISOString(),
                             createdBy: user.uid
                         },
+                        // Link to access request for data continuity
+                        linkedAccessRequest: user.email.toLowerCase(),
                         // Initialize empty collections/structures if needed
                         roster: [],
                         plays: {}, // Empty library
@@ -1940,8 +1942,20 @@
 
                     console.log("School Created & Verified:", schoolId);
 
+                    // 4. Link access request to school (two-way link)
+                    try {
+                        await window.db.collection('access_requests').doc(user.email.toLowerCase()).update({
+                            schoolId: schoolId,
+                            schoolCreatedAt: new Date().toISOString()
+                        });
+                        console.log("Access request linked to school:", schoolId);
+                    } catch (linkErr) {
+                        console.warn("Could not link access request (may not exist):", linkErr);
+                    }
+
                     // Force local storage update nicely
                     localStorage.setItem('hc_school_id', schoolId);
+                    localStorage.setItem('hc_school_name', schoolName);
 
                     onComplete(schoolId);
 
@@ -17797,6 +17811,55 @@
                                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
                                                                 {school.memberCount} roster member{school.memberCount !== 1 ? 's' : ''}
                                                             </div>
+                                                        )}
+                                                        {/* Sync from Access Request - only show if school has no name */}
+                                                        {!school.name && school.memberList && school.memberList.length > 0 && (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    // Find admin member email
+                                                                    const adminMember = school.memberList.find(m => m.role === 'Head Coach' || m.isAdmin);
+                                                                    const email = adminMember?.email || school.memberList[0]?.email;
+                                                                    if (!email) {
+                                                                        alert('No member email found to look up access request.');
+                                                                        return;
+                                                                    }
+                                                                    try {
+                                                                        const requestDoc = await window.db.collection('access_requests').doc(email.toLowerCase()).get();
+                                                                        if (!requestDoc.exists) {
+                                                                            alert('No access request found for ' + email);
+                                                                            return;
+                                                                        }
+                                                                        const requestData = requestDoc.data();
+                                                                        if (!requestData.schoolName) {
+                                                                            alert('Access request has no school name.');
+                                                                            return;
+                                                                        }
+                                                                        // Update school with data from access request
+                                                                        await window.db.collection('schools').doc(school.id).update({
+                                                                            name: requestData.schoolName,
+                                                                            'settings.schoolName': requestData.schoolName,
+                                                                            linkedAccessRequest: email.toLowerCase()
+                                                                        });
+                                                                        alert(`Synced school name: "${requestData.schoolName}" from access request.`);
+                                                                    } catch (err) {
+                                                                        console.error('Error syncing from access request:', err);
+                                                                        alert('Error: ' + err.message);
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    marginTop: '0.5rem',
+                                                                    marginRight: '0.5rem',
+                                                                    padding: '0.25rem 0.5rem',
+                                                                    fontSize: '0.75rem',
+                                                                    background: '#22c55e',
+                                                                    border: 'none',
+                                                                    color: 'white',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Sync from Request
+                                                            </button>
                                                         )}
                                                         <button
                                                             onClick={async () => {
