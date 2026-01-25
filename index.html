@@ -2037,6 +2037,8 @@
         // Form for new users to request access
         const AccessRequestForm = ({ user, onSubmit }) => {
             const [loading, setLoading] = useState(false);
+            const [checking, setChecking] = useState(true);
+            const [existingRequest, setExistingRequest] = useState(null);
             const [formData, setFormData] = useState({
                 name: user?.displayName || '',
                 schoolName: '',
@@ -2045,6 +2047,28 @@
                 howHeard: ''
             });
             const [error, setError] = useState('');
+
+            // Check for existing request on mount
+            useEffect(() => {
+                const checkExisting = async () => {
+                    try {
+                        const doc = await window.db.collection('access_requests').doc(user.email.toLowerCase()).get({ source: 'server' });
+                        if (doc.exists) {
+                            const data = doc.data();
+                            console.log("AccessRequestForm: Found existing request with status:", data.status);
+                            setExistingRequest(data);
+                            // If there's an existing request with a non-null status, notify parent
+                            if (data.status) {
+                                onSubmit(data.status);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("Error checking existing request:", err);
+                    }
+                    setChecking(false);
+                };
+                checkExisting();
+            }, [user.email]);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
@@ -2057,6 +2081,15 @@
                 setError('');
 
                 try {
+                    // Double-check for existing request before submitting
+                    const existingDoc = await window.db.collection('access_requests').doc(user.email.toLowerCase()).get();
+                    if (existingDoc.exists && existingDoc.data().status) {
+                        const existingStatus = existingDoc.data().status;
+                        console.log("Request already exists with status:", existingStatus);
+                        onSubmit(existingStatus);
+                        return;
+                    }
+
                     const requestData = {
                         ...formData,
                         email: user.email,
@@ -2074,10 +2107,24 @@
                     onSubmit('pending');
                 } catch (err) {
                     console.error('Error submitting request:', err);
-                    setError('Failed to submit request. Please try again.');
+                    setError(`Failed to submit request: ${err.message || 'Unknown error'}. Please try again or contact support.`);
                 }
                 setLoading(false);
             };
+
+            // Show loading while checking for existing request
+            if (checking) {
+                return (
+                    <div style={{
+                        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Checking access status...</div>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div style={{
@@ -33768,6 +33815,39 @@
                         // If no invites, no domain match, and no legacy school ID, check access request status
                         console.log("DEBUG: inviteData=", inviteData, "schoolId=", schoolId);
 
+                        // 3a. FALLBACK: Check if user email is in any school's memberList (covers edge cases)
+                        if (!inviteData && !schoolId) {
+                            console.log("DEBUG: Checking if user email is in any school memberList...");
+                            try {
+                                const memberQuery = await window.db.collection('schools')
+                                    .where('memberList', 'array-contains', { email: authUser.email.toLowerCase(), role: 'admin' })
+                                    .limit(1)
+                                    .get();
+
+                                if (!memberQuery.empty) {
+                                    schoolId = memberQuery.docs[0].id;
+                                    console.log("DEBUG: Found school via memberList query:", schoolId);
+                                } else {
+                                    // Try alternative memberList format (just email string)
+                                    const memberQuery2 = await window.db.collection('schools').get();
+                                    for (const doc of memberQuery2.docs) {
+                                        const members = doc.data().memberList || [];
+                                        const found = members.some(m =>
+                                            (typeof m === 'string' && m.toLowerCase() === authUser.email.toLowerCase()) ||
+                                            (m && m.email && m.email.toLowerCase() === authUser.email.toLowerCase())
+                                        );
+                                        if (found) {
+                                            schoolId = doc.id;
+                                            console.log("DEBUG: Found school via full scan:", schoolId);
+                                            break;
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                console.warn("DEBUG: memberList query failed:", err);
+                            }
+                        }
+
                         // matthewfinn14@gmail.com gets wizard to create template schools (admin bypass handled earlier)
                         if (authUser.email.toLowerCase() === 'matthewfinn14@gmail.com' && !inviteData && !schoolId) {
                             console.log("DEBUG: matthewfinn14@gmail.com detected. Showing school wizard for template creation.");
@@ -33839,9 +33919,8 @@
                             }
                         }
 
-                        // If Paying Admin + Has School ID + School Not Initialized -> Show Wizard
-                        // (Keep existing legacy check for now)
-                        if (isPaying && schoolId) {
+                        // If user has a school ID, check if the school exists and load it
+                        if (schoolId) {
                             let schoolDoc;
                             try {
                                 schoolDoc = await window.db.collection('schools').doc(schoolId).get({ source: 'server' });
@@ -33850,19 +33929,43 @@
                                 schoolDoc = await window.db.collection('schools').doc(schoolId).get();
                             }
 
-                            if (schoolDoc.exists && !schoolDoc.data().initialized) {
-                                console.log("School not initialized, showing wizard.");
-                                setSchoolSetupData({ showWizard: true, schoolId: schoolId });
+                            if (schoolDoc.exists) {
+                                const schoolData = schoolDoc.data();
+                                if (!schoolData.initialized) {
+                                    console.log("School not initialized, showing wizard.");
+                                    setSchoolSetupData({ showWizard: true, schoolId: schoolId });
+                                    return;
+                                }
+                                // School exists and is initialized - user should be able to access it
+                                // Ensure user has proper membership record (repair if missing)
+                                console.log("DEBUG: Found valid school for user:", schoolId, schoolData.name);
+                                const membershipRef = window.db.collection('users').doc(authUser.uid).collection('memberships').doc(schoolId);
+                                const membershipDoc = await membershipRef.get();
+                                if (!membershipDoc.exists) {
+                                    console.log("DEBUG: Repairing missing membership record...");
+                                    // Find user's role from school memberList
+                                    const members = schoolData.memberList || [];
+                                    const userEntry = members.find(m =>
+                                        (m && m.email && m.email.toLowerCase() === authUser.email.toLowerCase())
+                                    );
+                                    const userRole = userEntry?.role || 'viewer';
+                                    // Create membership
+                                    await window.db.collection('users').doc(authUser.uid).set({
+                                        email: authUser.email,
+                                        updatedAt: new Date().toISOString()
+                                    }, { merge: true });
+                                    await membershipRef.set({
+                                        schoolId: schoolId,
+                                        role: userRole,
+                                        joinedAt: new Date().toISOString()
+                                    });
+                                    console.log("DEBUG: Membership repaired. Reloading...");
+                                }
+                                // School is valid - let normal app loading continue
                                 return;
+                            } else {
+                                console.log("DEBUG: School", schoolId, "doesn't exist. User may need new school.");
                             }
-                        }
-
-                        // FALLBACK: If we reach here with a schoolId but no valid setup, require access request
-                        // This catches edge cases where legacy config has stale data
-                        if (schoolId && !isPaying) {
-                            console.log("DEBUG: Has legacy schoolId but not paying. Requiring access request.");
-                            setAccessRequestStatus({ checked: true, status: null, data: null });
-                            return;
                         }
 
                         // Mark as checked even if nothing matched (should rarely happen)
@@ -37489,6 +37592,39 @@
                                 </p>
                                 <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>
                                     Expired: {accessRequestStatus.data?.accessExpiresAt ? new Date(accessRequestStatus.data.accessExpiresAt).toLocaleDateString() : 'Unknown'}
+                                </p>
+                                <button
+                                    onClick={() => window.auth.signOut()}
+                                    style={{ background: '#334155', border: 'none', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer' }}
+                                >
+                                    Sign Out
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+                // Account archived (school was deleted)
+                if (accessRequestStatus.status === 'archived') {
+                    return (
+                        <div style={{
+                            height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
+                        }}>
+                            <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '500px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📦</div>
+                                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#6b7280' }}>
+                                    Account Archived
+                                </h1>
+                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
+                                    Your school account has been deleted by an administrator.
+                                    {accessRequestStatus.data?.previousSchoolName && (
+                                        <span style={{ display: 'block', marginTop: '0.5rem', color: '#64748b' }}>
+                                            Previous school: {accessRequestStatus.data.previousSchoolName}
+                                        </span>
+                                    )}
+                                </p>
+                                <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                                    Contact an administrator if you believe this was a mistake.
                                 </p>
                                 <button
                                     onClick={() => window.auth.signOut()}
