@@ -19573,8 +19573,8 @@
                         }}>
                             {[
                                 { id: 'OFFENSE', label: 'Offense', icon: 'Crosshair' },
-                                { id: 'DEFENSE', label: 'Defense', icon: 'Shield' },
-                                { id: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Zap' }
+                                { id: 'DEFENSE', label: 'Defense', icon: 'Shield', beta: true },
+                                { id: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Zap', beta: true }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -19596,6 +19596,18 @@
                                 >
                                     <Icon name={tab.icon} size={16} />
                                     {tab.label}
+                                    {tab.beta && (
+                                        <span style={{
+                                            fontSize: '0.6rem',
+                                            padding: '2px 5px',
+                                            background: '#8b5cf6',
+                                            color: 'white',
+                                            borderRadius: '4px',
+                                            fontWeight: '600',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px'
+                                        }}>Beta</span>
+                                    )}
                                 </button>
                             ))}
                         </div>
@@ -40785,8 +40797,8 @@
                                         }}>
                                             {[
                                                 { id: 'OFFENSE', label: 'Offense', icon: 'Crosshair', color: '#3b82f6' },
-                                                { id: 'DEFENSE', label: 'Defense', icon: 'Shield', color: '#ef4444' },
-                                                { id: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Zap', color: '#f59e0b' }
+                                                { id: 'DEFENSE', label: 'Defense', icon: 'Shield', color: '#ef4444', beta: true },
+                                                { id: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Zap', color: '#f59e0b', beta: true }
                                             ].map(tab => (
                                                 <button
                                                     key={tab.id}
@@ -40810,6 +40822,18 @@
                                                 >
                                                     <Icon name={tab.icon} size={18} />
                                                     {tab.label}
+                                                    {tab.beta && (
+                                                        <span style={{
+                                                            fontSize: '0.55rem',
+                                                            padding: '2px 5px',
+                                                            background: playbookPhaseTab === tab.id ? 'rgba(255,255,255,0.3)' : '#8b5cf6',
+                                                            color: 'white',
+                                                            borderRadius: '4px',
+                                                            fontWeight: '600',
+                                                            textTransform: 'uppercase',
+                                                            letterSpacing: '0.5px'
+                                                        }}>Beta</span>
+                                                    )}
                                                     <span style={{
                                                         marginLeft: '0.5rem',
                                                         padding: '0.15rem 0.5rem',
