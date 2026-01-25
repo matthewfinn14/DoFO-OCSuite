@@ -2790,6 +2790,10 @@
                 case "FileText": return <svg {...commonProps}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>;
                 case "Gamepad2": return <svg {...commonProps}><line x1="6" x2="10" y1="12" y2="12" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="15" x2="15.01" y1="13" y2="13" /><line x1="18" x2="18.01" y1="11" y2="11" /><rect width="20" height="12" x="2" y="6" rx="2" /></svg>;
                 case "Monitor": return <svg {...commonProps}><rect width="20" height="14" x="2" y="3" rx="2" ry="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg>;
+                case "Tablet": return <svg {...commonProps}><rect width="16" height="20" x="4" y="2" rx="2" ry="2" /><line x1="12" x2="12.01" y1="18" y2="18" /></svg>;
+                case "Brain": return <svg {...commonProps}><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" /><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" /><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" /><path d="M17.599 6.5a3 3 0 0 0 .399-1.375" /><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5" /><path d="M3.477 10.896a4 4 0 0 1 .585-.396" /><path d="M19.938 10.5a4 4 0 0 1 .585.396" /><path d="M6 18a4 4 0 0 1-1.967-.516" /><path d="M19.967 17.484A4 4 0 0 1 18 18" /></svg>;
+                case "Video": return <svg {...commonProps}><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" ry="2" /></svg>;
+                case "MessageCircle": return <svg {...commonProps}><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" /></svg>;
                 case "Target": return <svg {...commonProps}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>;
 
                 // -- Development --
@@ -17636,28 +17640,67 @@
                                 </div>
                             </div>
 
-                            {/* Phase 3: Field Apps - Final Phase */}
-                            <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #3b82f6', opacity: 0.8 }}>
+                            {/* Phase 3: Field Apps */}
+                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #3b82f6', opacity: 0.8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                                     <div style={{ background: '#3b82f6', padding: '0.5rem', borderRadius: '8px' }}>
-                                        <Icon name="Smartphone" size={24} color="white" />
+                                        <Icon name="Tablet" size={24} color="white" />
                                     </div>
                                     <div>
                                         <h2 style={{ margin: 0, color: '#3b82f6' }}>Phase 3: Field Apps</h2>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Coach Tools</span>
+                                    </div>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                    Tablet and mobile apps for coaches on the practice field, sideline, and pressbox.
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                    {[
+                                        { icon: 'Clipboard', label: 'Practice App', desc: 'Field-side practice tools' },
+                                        { icon: 'Zap', label: 'In-Game App', desc: 'Sideline play calling' },
+                                        { icon: 'Monitor', label: 'Pressbox Tracker', desc: 'Live game tracking' },
+                                        { icon: 'Brain', label: 'Smart Call Sheet', desc: 'Situational recommendations' },
+                                        { icon: 'Target', label: 'Play Call Simulator', desc: 'Practice decision-making' }
+                                    ].map((item, idx) => (
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.6 }}>
+                                            <Icon name={item.icon} size={16} color="#3b82f6" />
+                                            <div>
+                                                <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Phase 4: Player App */}
+                            <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #8b5cf6', opacity: 0.75 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                    <div style={{ background: '#8b5cf6', padding: '0.5rem', borderRadius: '8px' }}>
+                                        <Icon name="Smartphone" size={24} color="white" />
+                                    </div>
+                                    <div>
+                                        <h2 style={{ margin: 0, color: '#8b5cf6' }}>Phase 4: Player App</h2>
                                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Final Phase</span>
                                     </div>
                                 </div>
                                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                                    Mobile and tablet apps for players, practice field, and in-game sideline use.
+                                    Mobile app for players to access playbook, track progress, and connect with the program.
                                 </p>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                                     {[
-                                        { icon: 'User', label: 'Player App', desc: 'Playbook access for players' },
-                                        { icon: 'Megaphone', label: 'Practice App', desc: 'Field-side practice tools' },
-                                        { icon: 'Zap', label: 'In-Game App', desc: 'Sideline play calling' }
+                                        { icon: 'Book', label: 'Digital Playbook', desc: 'Access plays & formations' },
+                                        { icon: 'Video', label: 'Film Clips', desc: 'Watch assigned film' },
+                                        { icon: 'CheckSquare', label: 'Install Quizzes', desc: 'Test playbook knowledge' },
+                                        { icon: 'Scale', label: 'Weight Tracking', desc: 'Log daily weigh-ins' },
+                                        { icon: 'Activity', label: 'Testing Records', desc: 'View personal bests' },
+                                        { icon: 'Users', label: 'Depth Chart View', desc: 'See current rotations' },
+                                        { icon: 'Heart', label: 'Cultural Calibration', desc: 'Team culture check-ins' },
+                                        { icon: 'MessageCircle', label: 'Daily Connections', desc: 'Coach-player communication' },
+                                        { icon: 'Calendar', label: 'Schedule & Attendance', desc: 'View schedule, check in' }
                                     ].map((item, idx) => (
-                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.6 }}>
-                                            <Icon name={item.icon} size={16} color="#3b82f6" />
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.5 }}>
+                                            <Icon name={item.icon} size={16} color="#8b5cf6" />
                                             <div>
                                                 <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
@@ -42274,28 +42317,67 @@
                                         </div>
                                     </div>
 
-                                    {/* Phase 3: Field Apps - Final Phase */}
-                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #6366f1' }}>
+                                    {/* Phase 3: Field Apps */}
+                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #3b82f6' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                            <div style={{ background: '#6366f1', padding: '0.5rem', borderRadius: '8px' }}>
+                                            <div style={{ background: '#3b82f6', padding: '0.5rem', borderRadius: '8px' }}>
+                                                <Icon name="Tablet" size={24} color="white" />
+                                            </div>
+                                            <div>
+                                                <h2 style={{ margin: 0, color: '#3b82f6' }}>Phase 3: Field Apps</h2>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Coach Tools</span>
+                                            </div>
+                                        </div>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                            Tablet and mobile apps for coaches on the practice field, sideline, and pressbox.
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                            {[
+                                                { icon: 'Clipboard', label: 'Practice App', desc: 'Field-side practice tools' },
+                                                { icon: 'Zap', label: 'In-Game App', desc: 'Sideline play calling' },
+                                                { icon: 'Monitor', label: 'Pressbox Tracker', desc: 'Live game tracking' },
+                                                { icon: 'Brain', label: 'Smart Call Sheet', desc: 'Situational recommendations' },
+                                                { icon: 'Target', label: 'Play Call Simulator', desc: 'Practice decision-making' }
+                                            ].map((item, idx) => (
+                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.6 }}>
+                                                    <Icon name={item.icon} size={16} color="#3b82f6" />
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Phase 4: Player App */}
+                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #8b5cf6' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                            <div style={{ background: '#8b5cf6', padding: '0.5rem', borderRadius: '8px' }}>
                                                 <Icon name="Smartphone" size={24} color="white" />
                                             </div>
                                             <div>
-                                                <h2 style={{ margin: 0, color: '#6366f1' }}>Phase 3: Field Apps</h2>
+                                                <h2 style={{ margin: 0, color: '#8b5cf6' }}>Phase 4: Player App</h2>
                                                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Final Phase</span>
                                             </div>
                                         </div>
                                         <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                                            Mobile applications for players, practice, and in-game use.
+                                            Mobile app for players to access playbook, track progress, and connect with the program.
                                         </p>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                                             {[
-                                                { icon: 'User', label: 'Player App', desc: 'Playbook on mobile' },
-                                                { icon: 'Activity', label: 'Practice App', desc: 'Live practice tools' },
-                                                { icon: 'Zap', label: 'In-Game App', desc: 'Real-time play calling' }
+                                                { icon: 'Book', label: 'Digital Playbook', desc: 'Access plays & formations' },
+                                                { icon: 'Video', label: 'Film Clips', desc: 'Watch assigned film' },
+                                                { icon: 'CheckSquare', label: 'Install Quizzes', desc: 'Test playbook knowledge' },
+                                                { icon: 'Scale', label: 'Weight Tracking', desc: 'Log daily weigh-ins' },
+                                                { icon: 'Activity', label: 'Testing Records', desc: 'View personal bests' },
+                                                { icon: 'Users', label: 'Depth Chart View', desc: 'See current rotations' },
+                                                { icon: 'Heart', label: 'Cultural Calibration', desc: 'Team culture check-ins' },
+                                                { icon: 'MessageCircle', label: 'Daily Connections', desc: 'Coach-player communication' },
+                                                { icon: 'Calendar', label: 'Schedule & Attendance', desc: 'View schedule, check in' }
                                             ].map((item, idx) => (
                                                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.5 }}>
-                                                    <Icon name={item.icon} size={16} color="#6366f1" />
+                                                    <Icon name={item.icon} size={16} color="#8b5cf6" />
                                                     <div>
                                                         <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
                                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
