@@ -21231,7 +21231,10 @@
                     }
                 });
 
-                const categories = (playCategories || []).map(cat => {
+                // Filter categories by phase (default to OFFENSE if no phase set)
+                const phaseCategories = (playCategories || []).filter(cat => (cat.phase || 'OFFENSE') === playBankPhase);
+
+                const categories = phaseCategories.map(cat => {
                     const families = (playBuckets || []).filter(b => b.categoryId === cat.id).map(bucket => {
                         // Find plays assigned to this category and family label
                         const bucketPlays = Object.values(filteredMap).filter(p =>
