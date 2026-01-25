@@ -8397,25 +8397,11 @@
             const confirmClear = () => {
                 if (!confirmModal) return;
 
-                const updates = [];
+                // NOTE: We only clear week-specific wristband rows, NOT the global play.wristbandSlot
+                // This ensures clearing wristbands on one week doesn't affect other weeks
 
                 if (confirmModal.action === 'all') {
-                    // Clear all play linkings
-                    plays.forEach(play => {
-                        let needsUpdate = false;
-                        const update = { ...play };
-                        if (play.wristbandSlot) {
-                            update.wristbandSlot = '';
-                            needsUpdate = true;
-                        }
-                        if (play.staplesSlot) {
-                            update.staplesSlot = '';
-                            needsUpdate = true;
-                        }
-                        if (needsUpdate) updates.push(update);
-                    });
-
-                    // Clear all modular rows
+                    // Clear all week-specific modular rows (does NOT affect other weeks)
                     setWbSettings(prev => ({
                         card1: { ...prev.card1, rows: [] },
                         card2: { ...prev.card2, rows: [] },
@@ -8426,39 +8412,8 @@
                     }));
                 } else {
                     const cardId = confirmModal.action;
-                    const card = wbSettings[cardId];
-
-                    if (card && card.type === 'staples') {
-                        // Clear Staples (10-89)
-                        plays.forEach(play => {
-                            if (play.staplesSlot) {
-                                const slot = parseInt(play.staplesSlot, 10);
-                                if (!isNaN(slot) && slot >= 10 && slot <= 89) {
-                                    updates.push({ ...play, staplesSlot: '' });
-                                }
-                            }
-                        });
-                    } else {
-                        // Standard Clear (works for Standard, Wiz, Mini-Scripts if they use slots)
-                        const start = cardId === 'card1' ? 101 : (cardId === 'card2' ? 201 : (cardId === 'card3' ? 301 : (cardId === 'card4' ? 401 : (cardId === 'card5' ? 501 : 601))));
-                        const end = start + 99; // Allow for wider range (e.g. up to 199) to catch A/B slots if parsed as int
-
-                        plays.forEach(play => {
-                            if (play.wristbandSlot) {
-                                const slot = parseInt(play.wristbandSlot, 10);
-                                // Check if slot matches the card range (e.g. 101-199)
-                                if (!isNaN(slot) && slot >= start && slot < start + 100) {
-                                    updates.push({ ...play, wristbandSlot: '' });
-                                }
-                            }
-                        });
-                    }
-
+                    // Clear only this card's rows for this week
                     updateCard(cardId, { rows: [] });
-                }
-
-                if (updates.length > 0) {
-                    onUpdatePlay(updates);
                 }
 
                 setConfirmModal(null);
