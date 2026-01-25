@@ -1166,6 +1166,7 @@
 
                 let appData = {};
                 let isSchoolData = false;
+                let recoveryPerformed = false;
 
                 if (userDoc.exists) {
                     const userData = userDoc.data();
@@ -1312,6 +1313,7 @@
                                 localStorage.setItem('hc_school_name', schoolData.name || 'My School');
                                 appData = schoolData;
                                 isSchoolData = true;
+                                recoveryPerformed = true;
                                 break;
                             }
                         }
@@ -1417,6 +1419,13 @@
                     if (data.wbSettings.wb2Iter) localStorage.setItem('hc_wb2_iteration', data.wbSettings.wb2Iter);
                     if (data.wbSettings.sheetUrl) localStorage.setItem('hc_wristband_sheet_url', data.wbSettings.sheetUrl);
                 }
+
+                // Return recovery status so caller can reload page to reinitialize React state
+                if (recoveryPerformed) {
+                    console.log("RECOVERY COMPLETE: Returning recovered flag to trigger reload");
+                    return { success: true, recovered: true };
+                }
+                return { success: true };
 
             } catch (error) {
                 console.error("Error loading data from Firestore:", error);
@@ -35171,6 +35180,12 @@
                     if (authUser) {
                         try {
                             const result = await loadUserDataFromFirestore(authUser.uid);
+                            if (result && result.recovered) {
+                                // User was recovered from orphaned state - reload to reinitialize React state from localStorage
+                                console.log("User recovered - reloading page to apply data to React state");
+                                window.location.reload();
+                                return;
+                            }
                             if (result && result.wiped) {
                                 console.log("User data wiped (New/Deleted User). Forcing School Setup.");
                                 // Force Wizard to appear
