@@ -10899,7 +10899,7 @@
             );
         };
 
-        const PracticePlanPrintView = ({ plan, onBack, teamLogo = '🦅', weekData = {}, isBatchMode = false, coachFilter = 'ALL', roster, staff, selectedDay = null, positionGroups = {} }) => {
+        const PracticePlanPrintView = ({ plan, onBack, teamLogo = '', weekData = {}, isBatchMode = false, coachFilter = 'ALL', roster, staff, selectedDay = null, positionGroups = {}, weeklyNotes = {} }) => {
             console.log('PracticePlanPrintView debug:', { plan, weekData, teamLogo });
             if (!plan) return <div className="p-4">No plan data available <button onClick={onBack} className="btn btn-secondary">Back</button></div>;
 
@@ -10997,7 +10997,7 @@
                                 {(teamLogo && (teamLogo.startsWith('http') || teamLogo.startsWith('data:'))) ? (
                                     <img src={teamLogo} alt="Logo" style={{ maxHeight: '100%', width: 'auto' }} />
                                 ) : (
-                                    <div style={{ fontSize: '2.5rem' }}>{teamLogo || '🦅'}</div>
+                                    <div style={{ fontSize: '2.5rem' }}>{teamLogo || ''}</div>
                                 )}
                             </div>
                             <div>
@@ -11093,6 +11093,40 @@
                                                 </div>
                                             ))}
                                         </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Areas to Emphasize from Weekly Notes */}
+                    {weeklyNotes && weeklyNotes.data && (() => {
+                        const emphasizeItems = [];
+                        Object.entries(weeklyNotes.data).forEach(([coach, notes]) => {
+                            if (notes?.emphasize) {
+                                emphasizeItems.push({ coach, text: notes.emphasize });
+                            }
+                        });
+                        if (emphasizeItems.length === 0) return null;
+                        return (
+                            <div style={{
+                                border: '1px solid #000',
+                                marginBottom: '0.75rem',
+                                fontSize: '0.8rem'
+                            }}>
+                                <div style={{
+                                    background: '#e5e7eb',
+                                    padding: '0.25rem 0.5rem',
+                                    fontWeight: 'bold',
+                                    borderBottom: '1px solid #000'
+                                }}>
+                                    Areas to Emphasize
+                                </div>
+                                <div style={{ padding: '0.35rem 0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.5rem' }}>
+                                    {emphasizeItems.map((item, i) => (
+                                        <span key={i}>
+                                            <strong>{item.coach}:</strong> {item.text}
+                                        </span>
                                     ))}
                                 </div>
                             </div>
@@ -11296,7 +11330,7 @@
             );
         };
 
-        const ScriptPrintView = ({ plan, onBack, teamLogo = '🦅', isBatchMode = false }) => {
+        const ScriptPrintView = ({ plan, onBack, teamLogo = '', isBatchMode = false }) => {
             return (
                 <div className="print-container" style={{ padding: '2rem', background: 'white', minHeight: '100vh', color: 'black' }}>
                     {!isBatchMode && (
@@ -11317,7 +11351,7 @@
             );
         };
 
-        const ScoutCardPrintView = ({ plan, onBack, teamLogo = '🦅', isBatchMode = false }) => {
+        const ScoutCardPrintView = ({ plan, onBack, teamLogo = '', isBatchMode = false }) => {
             return (
                 <div className="print-container" style={{ padding: '2rem', background: 'white', minHeight: '100vh', color: 'black' }}>
                     {!isBatchMode && (
@@ -11370,7 +11404,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, teamLogo, addToNextSlotRef, onNavigate, practiceTemplates = [], setPracticeTemplates, positionGroups = {} }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, teamLogo, addToNextSlotRef, onNavigate, practiceTemplates = [], setPracticeTemplates, positionGroups = {}, weeklyNotes = {} }) => {
             console.log('PracticeScriptBuilder debug:', { currentWeek, teamLogo });
             const { openPlayDetails } = usePlayDetailsModal();
 
@@ -12624,6 +12658,7 @@
                                 staff={staff}
                                 selectedDay={selectedDay}
                                 positionGroups={positionGroups}
+                                weeklyNotes={weeklyNotes}
                             />
                         </div>,
                         document.body
@@ -20226,7 +20261,7 @@
             );
         };
 
-        const PrintHubView = ({ roster, staff, weeks = [], currentWeekId, onChangeWeek, gamePlans, depthChart, practicePlans, attendance, wbSettings, setWbSettings, plays, personnelGroupings = {}, onNavigate, positionGroups = {} }) => {
+        const PrintHubView = ({ roster, staff, weeks = [], currentWeekId, onChangeWeek, gamePlans, depthChart, practicePlans, attendance, wbSettings, setWbSettings, plays, personnelGroupings = {}, onNavigate, positionGroups = {}, weeklyNotes = {} }) => {
             // Get current week info for display
             const currentWeek = weeks.find(w => w.id === currentWeekId) || {};
             const weekLabel = currentWeek.opponent ? `${currentWeek.name} vs ${currentWeek.opponent}` : currentWeek.name || 'Select Week';
@@ -20281,7 +20316,7 @@
                     const plan = practicePlans[day];
 
                     // Order: Plan -> Script -> Cards (Ideal for Plan Front / Script Back if duplexing)
-                    if (sel.plan) components.push(<PracticePlanPrintView key={`${day} -plan`} plan={plan} isBatchMode={true} coachFilter={selectedPrintCoach} roster={roster} staff={staff} positionGroups={positionGroups} />);
+                    if (sel.plan) components.push(<PracticePlanPrintView key={`${day} -plan`} plan={plan} isBatchMode={true} coachFilter={selectedPrintCoach} roster={roster} staff={staff} positionGroups={positionGroups} weeklyNotes={weeklyNotes} />);
                     if (sel.script) components.push(<ScriptPrintView key={`${day} -script`} plan={plan} isBatchMode={true} />);
                     if (sel.cards) components.push(<ScoutCardPrintView key={`${day} -cards`} plan={plan} isBatchMode={true} />);
                 });
@@ -40552,7 +40587,7 @@
                                 </div>
                             )}
                             
-                            {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} weeks={weeks} currentWeekId={currentWeekId} onChangeWeek={setCurrentWeekId} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} personnelGroupings={personnelGroupings} onNavigate={setView} positionGroups={positionGroups} />}
+                            {view === 'print-hub' && <PrintHubView roster={roster} staff={staff} weeks={weeks} currentWeekId={currentWeekId} onChangeWeek={setCurrentWeekId} gamePlans={currentWeek.offensiveGamePlan} depthChart={currentWeek.depthChart || depthChart} practicePlans={currentWeek.practicePlans} attendance={attendance} wbSettings={currentWeek.wristbands || wbSettings} setWbSettings={handleUpdateWristbands} plays={plays} personnelGroupings={personnelGroupings} onNavigate={setView} positionGroups={positionGroups} weeklyNotes={weeklyCoachesNotes[currentWeekId] || {}} />}
 
                             {view === 'permissions' && <PermissionsView permissions={permissions} onUpdatePermissions={setPermissions} onResetDefaults={() => setPermissions(DEFAULT_PERMISSIONS)} />}
 
@@ -41888,6 +41923,7 @@
                                     practiceTemplates={practiceTemplates}
                                     setPracticeTemplates={setPracticeTemplates}
                                     positionGroups={positionGroups}
+                                    weeklyNotes={weeklyCoachesNotes[currentWeekId] || {}}
                                 />
                             )}
                             {view === 'pregame' && (
@@ -42765,6 +42801,68 @@
                                                 </tbody>
                                             </table>
                                         </div>
+
+                                        {/* Position Groups Big 3 Section */}
+                                        <div style={{ marginTop: '2rem' }}>
+                                            <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Icon name="Layers" size={20} /> Position Group Focus Points
+                                            </h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+                                                {['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].map(phase => (
+                                                    (positionGroups[phase] || []).filter(g => g.coachId || (g.big3 && g.big3.some(b => b))).map(group => {
+                                                        const coach = staff?.find(s => s.id === group.coachId);
+                                                        return (
+                                                            <div key={group.id} style={{
+                                                                background: 'var(--surface)',
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '8px',
+                                                                padding: '0.75rem',
+                                                                borderLeft: `4px solid ${phase === 'OFFENSE' ? 'var(--accent)' : phase === 'DEFENSE' ? '#ef4444' : '#8b5cf6'}`
+                                                            }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                                    <span style={{
+                                                                        fontWeight: 'bold',
+                                                                        fontSize: '0.9rem',
+                                                                        background: phase === 'OFFENSE' ? 'var(--accent)' : phase === 'DEFENSE' ? '#ef4444' : '#8b5cf6',
+                                                                        color: phase === 'OFFENSE' ? 'black' : 'white',
+                                                                        padding: '0.15rem 0.5rem',
+                                                                        borderRadius: '4px'
+                                                                    }}>{group.abbrev}</span>
+                                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                                        {coach?.name || 'No coach assigned'}
+                                                                    </span>
+                                                                </div>
+                                                                <div style={{ fontSize: '0.8rem' }}>
+                                                                    {group.big3 && group.big3.filter(b => b).length > 0 ? (
+                                                                        group.big3.filter(b => b).map((item, i) => (
+                                                                            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                                                                                <span style={{
+                                                                                    width: '16px', height: '16px',
+                                                                                    background: 'var(--bg-tertiary)',
+                                                                                    borderRadius: '50%',
+                                                                                    display: 'flex',
+                                                                                    alignItems: 'center',
+                                                                                    justifyContent: 'center',
+                                                                                    fontWeight: 'bold',
+                                                                                    fontSize: '0.65rem',
+                                                                                    flexShrink: 0
+                                                                                }}>{i + 1}</span>
+                                                                                <span>{item}</span>
+                                                                            </div>
+                                                                        ))
+                                                                    ) : (
+                                                                        <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No Big 3 set</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                ))}
+                                            </div>
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.75rem' }}>
+                                                Edit position groups and Big 3 in Offense/Defense/Special Teams Setup → Groups tab
+                                            </p>
+                                        </div>
                                     </div>
                                 );
                             })()}
@@ -42809,6 +42907,7 @@
                                     practiceTemplates={practiceTemplates}
                                     setPracticeTemplates={setPracticeTemplates}
                                     positionGroups={positionGroups}
+                                    weeklyNotes={weeklyCoachesNotes[currentWeekId] || {}}
                                 />
                             )}
                             {/* REMOVED: coach-app view */}
