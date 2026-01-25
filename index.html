@@ -35610,6 +35610,7 @@
                 DL: ['', '', ''], LB: ['', '', ''], DB: ['', '', ''],
                 KO: ['', '', ''], KOR: ['', '', ''], PUNT: ['', '', ''], PR: ['', '', ''], FG: ['', '', ''], FGB: ['', '', '']
             });
+            const [positionBigThreeAssignments, setPositionBigThreeAssignments] = useLocalStorage('oc-dashboard-position-big-three-assignments', {});
 
             // Access Config for Permissions (Paying Admin Check)
             const [appAccessConfig, setAppAccessConfig] = useState({});
@@ -40388,104 +40389,132 @@
                                     </div>
 
                                     {/* Position Group Big Three */}
-                                    <div className="card" style={{ padding: '0.75rem' }}>
-                                        <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <Icon name="Target" size={16} /> Position Group "Big Three" Emphasis
-                                        </h3>
-                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.75rem', marginTop: 0 }}>
-                                            Each position group's top 3 focus areas for the season.
-                                        </p>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                                            {/* Offense */}
-                                            <div>
-                                                <h4 style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.5rem', borderBottom: '2px solid #ef4444', paddingBottom: '0.25rem' }}>Offense</h4>
-                                                {['QB', 'RB', 'WR', 'TE', 'OL'].map(pos => (
-                                                    <div key={pos} style={{ marginBottom: '0.5rem' }}>
-                                                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent)', marginBottom: '0.2rem' }}>{pos}</div>
-                                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                            {[0, 1, 2].map(i => (
-                                                                <input
-                                                                    key={i}
-                                                                    type="text"
-                                                                    className="form-input"
-                                                                    value={positionBigThree[pos]?.[i] || ''}
-                                                                    onChange={(e) => {
-                                                                        const updated = { ...positionBigThree };
-                                                                        if (!updated[pos]) updated[pos] = ['', '', ''];
-                                                                        updated[pos][i] = e.target.value;
-                                                                        setPositionBigThree(updated);
-                                                                    }}
-                                                                    placeholder={`#${i + 1}`}
-                                                                    style={{ flex: 1, padding: '0.2rem 0.4rem', fontSize: '0.7rem', minWidth: 0 }}
-                                                                />
-                                                            ))}
-                                                        </div>
+                                    {(() => {
+                                        const isHC = currentUser?.roles?.includes('Head Coach');
+                                        const canEditPosition = (posKey) => {
+                                            if (isHC) return true;
+                                            const assignedId = positionBigThreeAssignments[posKey];
+                                            return assignedId && assignedId === currentUser?.id;
+                                        };
+                                        const getAssignedName = (posKey) => {
+                                            const assignedId = positionBigThreeAssignments[posKey];
+                                            if (!assignedId) return null;
+                                            const assigned = staff.find(s => s.id === assignedId);
+                                            return assigned?.name || 'Unknown';
+                                        };
+                                        const handleAssign = (posKey) => {
+                                            if (!isHC) return;
+                                            const staffList = staff.filter(s => s.id !== currentUser?.id);
+                                            const options = staffList.map(s => s.name).join('\n');
+                                            const current = getAssignedName(posKey);
+                                            const input = prompt(`Assign coach to ${posKey}:\n\nCurrent: ${current || 'None'}\n\nAvailable coaches:\n${options}\n\nEnter coach name (or leave blank to unassign):`);
+                                            if (input === null) return; // cancelled
+                                            if (input.trim() === '') {
+                                                const updated = { ...positionBigThreeAssignments };
+                                                delete updated[posKey];
+                                                setPositionBigThreeAssignments(updated);
+                                            } else {
+                                                const found = staff.find(s => s.name.toLowerCase() === input.trim().toLowerCase());
+                                                if (found) {
+                                                    setPositionBigThreeAssignments({ ...positionBigThreeAssignments, [posKey]: found.id });
+                                                } else {
+                                                    alert('Coach not found. Please enter exact name.');
+                                                }
+                                            }
+                                        };
+                                        const renderPositionRow = (posKey, label) => {
+                                            const canEdit = canEditPosition(posKey);
+                                            const assignedName = getAssignedName(posKey);
+                                            return (
+                                                <div key={posKey} style={{ marginBottom: '0.5rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.2rem' }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent)' }}>{label}</span>
+                                                        <button
+                                                            onClick={() => handleAssign(posKey)}
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                padding: '0 0.25rem',
+                                                                fontSize: '0.65rem',
+                                                                color: assignedName ? 'var(--success)' : 'var(--text-secondary)',
+                                                                cursor: isHC ? 'pointer' : 'default',
+                                                                opacity: isHC ? 1 : 0.7
+                                                            }}
+                                                            title={isHC ? 'Click to assign coach' : (assignedName || 'No coach assigned')}
+                                                        >
+                                                            [{assignedName || (isHC ? 'assign' : 'none')}]
+                                                        </button>
                                                     </div>
-                                                ))}
-                                            </div>
-                                            {/* Defense */}
-                                            <div>
-                                                <h4 style={{ fontSize: '0.85rem', color: '#3b82f6', marginBottom: '0.5rem', borderBottom: '2px solid #3b82f6', paddingBottom: '0.25rem' }}>Defense</h4>
-                                                {['DL', 'LB', 'DB'].map(pos => (
-                                                    <div key={pos} style={{ marginBottom: '0.5rem' }}>
-                                                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent)', marginBottom: '0.2rem' }}>{pos}</div>
-                                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                            {[0, 1, 2].map(i => (
-                                                                <input
-                                                                    key={i}
-                                                                    type="text"
-                                                                    className="form-input"
-                                                                    value={positionBigThree[pos]?.[i] || ''}
-                                                                    onChange={(e) => {
-                                                                        const updated = { ...positionBigThree };
-                                                                        if (!updated[pos]) updated[pos] = ['', '', ''];
-                                                                        updated[pos][i] = e.target.value;
-                                                                        setPositionBigThree(updated);
-                                                                    }}
-                                                                    placeholder={`#${i + 1}`}
-                                                                    style={{ flex: 1, padding: '0.2rem 0.4rem', fontSize: '0.7rem', minWidth: 0 }}
-                                                                />
-                                                            ))}
-                                                        </div>
+                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                        {[0, 1, 2].map(i => (
+                                                            <input
+                                                                key={i}
+                                                                type="text"
+                                                                className="form-input"
+                                                                value={positionBigThree[posKey]?.[i] || ''}
+                                                                onChange={(e) => {
+                                                                    if (!canEdit) return;
+                                                                    const updated = { ...positionBigThree };
+                                                                    if (!updated[posKey]) updated[posKey] = ['', '', ''];
+                                                                    updated[posKey][i] = e.target.value;
+                                                                    setPositionBigThree(updated);
+                                                                }}
+                                                                placeholder={`#${i + 1}`}
+                                                                readOnly={!canEdit}
+                                                                style={{
+                                                                    flex: 1,
+                                                                    padding: '0.2rem 0.4rem',
+                                                                    fontSize: '0.7rem',
+                                                                    minWidth: 0,
+                                                                    opacity: canEdit ? 1 : 0.6,
+                                                                    cursor: canEdit ? 'text' : 'default',
+                                                                    background: canEdit ? 'var(--bg-input)' : 'var(--surface)'
+                                                                }}
+                                                            />
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
-                                            {/* Special Teams */}
-                                            <div>
-                                                <h4 style={{ fontSize: '0.85rem', color: '#22c55e', marginBottom: '0.5rem', borderBottom: '2px solid #22c55e', paddingBottom: '0.25rem' }}>Special Teams</h4>
-                                                {[
-                                                    { key: 'KO', label: 'Kickoff' },
-                                                    { key: 'KOR', label: 'KO Return' },
-                                                    { key: 'PUNT', label: 'Punt' },
-                                                    { key: 'PR', label: 'Punt Return' },
-                                                    { key: 'FG', label: 'FG / PAT' },
-                                                    { key: 'FGB', label: 'FG Block' }
-                                                ].map(unit => (
-                                                    <div key={unit.key} style={{ marginBottom: '0.5rem' }}>
-                                                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent)', marginBottom: '0.2rem' }}>{unit.label}</div>
-                                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                            {[0, 1, 2].map(i => (
-                                                                <input
-                                                                    key={i}
-                                                                    type="text"
-                                                                    className="form-input"
-                                                                    value={positionBigThree[unit.key]?.[i] || ''}
-                                                                    onChange={(e) => {
-                                                                        const updated = { ...positionBigThree };
-                                                                        if (!updated[unit.key]) updated[unit.key] = ['', '', ''];
-                                                                        updated[unit.key][i] = e.target.value;
-                                                                        setPositionBigThree(updated);
-                                                                    }}
-                                                                    placeholder={`#${i + 1}`}
-                                                                    style={{ flex: 1, padding: '0.2rem 0.4rem', fontSize: '0.7rem', minWidth: 0 }}
-                                                                />
-                                                            ))}
-                                                        </div>
+                                                </div>
+                                            );
+                                        };
+                                        return (
+                                            <div className="card" style={{ padding: '0.75rem' }}>
+                                                <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Icon name="Target" size={16} /> Position Group "Big Three" Emphasis
+                                                </h3>
+                                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.75rem', marginTop: 0 }}>
+                                                    Each position group's top 3 focus areas. {isHC && <span style={{ color: 'var(--accent)' }}>Click [assign] to assign a coach.</span>}
+                                                </p>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                                                    {/* Offense */}
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.5rem', borderBottom: '2px solid #ef4444', paddingBottom: '0.25rem' }}>Offense</h4>
+                                                        {renderPositionRow('QB', 'QB')}
+                                                        {renderPositionRow('RB', 'RB')}
+                                                        {renderPositionRow('WR', 'WR')}
+                                                        {renderPositionRow('TE', 'TE')}
+                                                        {renderPositionRow('OL', 'OL')}
                                                     </div>
-                                                ))}
+                                                    {/* Defense */}
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.85rem', color: '#3b82f6', marginBottom: '0.5rem', borderBottom: '2px solid #3b82f6', paddingBottom: '0.25rem' }}>Defense</h4>
+                                                        {renderPositionRow('DL', 'DL')}
+                                                        {renderPositionRow('LB', 'LB')}
+                                                        {renderPositionRow('DB', 'DB')}
+                                                    </div>
+                                                    {/* Special Teams */}
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.85rem', color: '#22c55e', marginBottom: '0.5rem', borderBottom: '2px solid #22c55e', paddingBottom: '0.25rem' }}>Special Teams</h4>
+                                                        {renderPositionRow('KO', 'Kickoff')}
+                                                        {renderPositionRow('KOR', 'KO Return')}
+                                                        {renderPositionRow('PUNT', 'Punt')}
+                                                        {renderPositionRow('PR', 'Punt Return')}
+                                                        {renderPositionRow('FG', 'FG / PAT')}
+                                                        {renderPositionRow('FGB', 'FG Block')}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
+                                        );
+                                    })()}
                                 </div>
                             )}
                             {view === 'game-plan' && <OffensiveGamePlan
