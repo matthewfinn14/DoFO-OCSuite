@@ -4006,13 +4006,15 @@
                             style: lineStyle,
                             endType,
                             strokeWidth: lineWidth, // Save width
-                            points: [point, { x: point.x + 1, y: point.y + 1 }] // Follower point
+                            points: [point, { x: point.x + 1, y: point.y + 1 }], // Follower point
+                            segmentStyles: [lineStyle] // Per-segment styles
                         });
                     } else {
-                        // Add segment anchor
+                        // Add segment anchor - each click adds a new segment with current lineStyle
                         setCurrentPath(prev => ({
                             ...prev,
-                            points: [...prev.points.slice(0, -1), point, point] // Replace follower with actual point, then add new follower
+                            points: [...prev.points.slice(0, -1), point, point], // Replace follower with actual point, then add new follower
+                            segmentStyles: [...(prev.segmentStyles || []), lineStyle] // Add style for new segment
                         }));
                     }
                 } else if (selectedTool === 'free') {
@@ -4378,14 +4380,6 @@
 
                 if (el.points.length < 2) return null;
 
-                // Path Data Generation
-                let d = '';
-                if (el.style === 'zigzag') {
-                    d = getZigZagPath(el.points);
-                } else if (el.type === 'free' || el.type === 'poly') {
-                    d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-                }
-
                 // T-Block Marker (Custom logic since SVG markers are limited)
                 let markerEnd = undefined;
                 let tBlock = null;
@@ -4400,9 +4394,6 @@
                     const dy = end.y - prev.y;
                     const len = Math.hypot(dx, dy) || 1;
                     const sWidth = parseInt(el.strokeWidth || 2);
-                    // Scale T-width slightly with stroke, but mostly fixed length. 
-                    // Length of T-bar: 30px total (15 scale).
-                    // Thickness: match line width.
                     const perpX = (-dy / len) * 15;
                     const perpY = (dx / len) * 15;
 
@@ -4441,17 +4432,41 @@
                     }
                 };
 
-                return (
-                    <g key={el.id || 'current'} onClick={handleElementClick} style={{ cursor: (readOnly && (el.link || el.conceptLabel)) ? 'pointer' : (selectedTool === 'delete' ? 'pointer' : 'default'), opacity: isPreview ? 0.6 : 1, pointerEvents: (readOnly || isInteractionTool) ? 'all' : 'none' }}>
+                // Generate segments with per-segment styles
+                const segments = [];
+                const segStyles = el.segmentStyles || [];
+                const defaultStyle = el.style || 'solid';
+
+                for (let i = 0; i < el.points.length - 1; i++) {
+                    const p1 = el.points[i];
+                    const p2 = el.points[i + 1];
+                    const segStyle = segStyles[i] || defaultStyle;
+                    const isLastSegment = i === el.points.length - 2;
+
+                    let segD = '';
+                    if (segStyle === 'zigzag') {
+                        segD = getZigZagPath([p1, p2]);
+                    } else {
+                        segD = `M ${p1.x},${p1.y} L ${p2.x},${p2.y}`;
+                    }
+
+                    segments.push(
                         <path
-                            d={d}
+                            key={i}
+                            d={segD}
                             stroke={isSelected ? '#2563eb' : el.color}
                             strokeWidth={isSelected ? strokeWidth + 2 : strokeWidth}
                             fill="none"
-                            strokeDasharray={el.style === 'dashed' ? "10,5" : "none"}
-                            markerEnd={markerEnd}
+                            strokeDasharray={segStyle === 'dashed' ? "10,5" : "none"}
+                            markerEnd={isLastSegment ? markerEnd : undefined}
                             filter={isSelected ? "drop-shadow(0 0 2px #2563eb)" : "none"}
                         />
+                    );
+                }
+
+                return (
+                    <g key={el.id || 'current'} onClick={handleElementClick} style={{ cursor: (readOnly && (el.link || el.conceptLabel)) ? 'pointer' : (selectedTool === 'delete' ? 'pointer' : 'default'), opacity: isPreview ? 0.6 : 1, pointerEvents: (readOnly || isInteractionTool) ? 'all' : 'none' }}>
+                        {segments}
                         {tBlock}
                         {/* Title for hover tooltip */}
                         {(el.link || el.conceptLabel) && <title>{`Linked: ${el.conceptLabel || 'Video'} ${el.link ? `(${el.link})` : ''}`}</title>}
@@ -4756,6 +4771,76 @@
                                     </div>
                                 </div>
                             )}
+
+                            {/* --- WIZ Skill: Selected Polyline Editor --- */}
+                            {mode === 'wiz-skill' && !formationOnly && selectedIds.size === 1 && (() => {
+                                const selectedEl = elements.find(el => selectedIds.has(el.id));
+                                if (!selectedEl || selectedEl.type !== 'poly') return null;
+                                const segStyles = selectedEl.segmentStyles || [];
+                                const numSegments = Math.max(0, (selectedEl.points?.length || 0) - 1);
+
+                                return (
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#dcfce7', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #86efac' }}>
+                                        <span style={{ fontSize: '0.65rem', color: '#166534', fontWeight: 'bold' }}>EDIT LINE</span>
+                                        {/* Endpoint Editor */}
+                                        <div style={{ display: 'flex', gap: '0.15rem', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.6rem', color: '#166534' }}>End:</span>
+                                            {[
+                                                { id: 'arrow', label: '→' },
+                                                { id: 't', label: '—|' },
+                                                { id: 'dot', label: '•' },
+                                                { id: 'none', label: '—' }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.id}
+                                                    onClick={() => updateElements(elements.map(el =>
+                                                        selectedIds.has(el.id) ? { ...el, endType: opt.id } : el
+                                                    ))}
+                                                    style={{
+                                                        padding: '0.15rem 0.3rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
+                                                        background: selectedEl.endType === opt.id ? '#22c55e' : 'white',
+                                                        color: selectedEl.endType === opt.id ? 'white' : '#1e293b',
+                                                        border: '1px solid #86efac'
+                                                    }}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div style={{ width: '1px', height: '20px', background: '#86efac' }}></div>
+                                        {/* Segment Style Editor */}
+                                        <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexWrap: 'wrap', maxWidth: '300px' }}>
+                                            <span style={{ fontSize: '0.6rem', color: '#166534' }}>Segments:</span>
+                                            {Array.from({ length: numSegments }).map((_, i) => {
+                                                const segStyle = segStyles[i] || selectedEl.style || 'solid';
+                                                return (
+                                                    <select
+                                                        key={i}
+                                                        value={segStyle}
+                                                        onChange={(e) => {
+                                                            const newStyles = [...segStyles];
+                                                            while (newStyles.length < numSegments) newStyles.push(selectedEl.style || 'solid');
+                                                            newStyles[i] = e.target.value;
+                                                            updateElements(elements.map(el =>
+                                                                selectedIds.has(el.id) ? { ...el, segmentStyles: newStyles } : el
+                                                            ));
+                                                        }}
+                                                        style={{
+                                                            padding: '0.1rem', fontSize: '0.6rem', borderRadius: '3px',
+                                                            border: '1px solid #86efac', background: 'white', color: '#1e293b',
+                                                            width: '50px'
+                                                        }}
+                                                    >
+                                                        <option value="solid">—</option>
+                                                        <option value="dashed">- -</option>
+                                                        <option value="zigzag">∿</option>
+                                                    </select>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* --- WIZ O-Line Controls --- */}
                             {mode === 'wiz-oline' && !formationOnly && (
