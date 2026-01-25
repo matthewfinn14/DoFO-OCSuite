@@ -23489,20 +23489,22 @@
             const renderPlayerTouches = () => {
                 const allActivePlays = getAllActivePlays();
 
-                // Build positions list from Offense Setup
-                const defaultOffensePositions = [
-                    { key: 'X' }, { key: 'Z' }, { key: 'A' }, { key: 'Y' },
-                    { key: 'QB' }, { key: 'RB' },
-                    { key: 'LT' }, { key: 'LG' }, { key: 'C' }, { key: 'RG' }, { key: 'RT' }
+                // Skill positions only (no OL - they don't get touches)
+                const defaultSkillPositions = [
+                    { key: 'QB' }, { key: 'RB' }, { key: 'FB' },
+                    { key: 'X' }, { key: 'Z' }, { key: 'Y' }, { key: 'A' }, { key: 'B' }, { key: 'H' }
                 ];
 
-                // Filter out hidden positions
-                const visibleDefaults = defaultOffensePositions.filter(
+                // Filter out hidden positions and positions that don't exist in user's setup
+                const visibleDefaults = defaultSkillPositions.filter(
                     p => !(hiddenPositions['OFFENSE'] || []).includes(p.key)
                 );
 
-                // Append custom positions
-                const allPositions = [...visibleDefaults, ...(customPositions['OFFENSE'] || [])];
+                // Append custom positions (non-OL positions user added)
+                const customSkillPositions = (customPositions['OFFENSE'] || []).filter(
+                    p => !['LT', 'LG', 'C', 'RG', 'RT'].includes(p.key)
+                );
+                const allPositions = [...visibleDefaults, ...customSkillPositions];
 
                 return (
                     <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', paddingRight: '1rem', background: 'white', padding: '1rem', borderRadius: '8px' }}>
