@@ -34772,50 +34772,100 @@
 
             const renderWeeklyTools = (weekId) => {
                 const isActive = currentWeekId === weekId;
-                const currentSeason = getCurrentSeason();
-                const isOffseason = currentSeason === 'offseason';
+                const week = weeks.find(w => w.id === weekId);
+                const isOffseasonWeek = week?.name === 'Offseason';
 
+                const navBtnStyle = { paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 };
+
+                // OFFSEASON-specific menu
+                if (isOffseasonWeek) {
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', padding: '0.25rem 0 0.5rem 0' }}>
+                            <button className={`nav-item ${isActive && view === 'offseason-swot' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('offseason-swot'); }}
+                                style={navBtnStyle}>
+                                <Icon name="Target" size={12} /> SWOT Analysis
+                            </button>
+                            <button className={`nav-item ${isActive && view === 'offseason-meetings' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('offseason-meetings'); }}
+                                style={navBtnStyle}>
+                                <Icon name="Calendar" size={12} /> Meeting Schedule
+                            </button>
+                            <button className={`nav-item ${isActive && view === 'coaches-notes' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('coaches-notes'); }}
+                                style={navBtnStyle}>
+                                <Icon name="FileText" size={12} /> Meeting Notes
+                            </button>
+                            <button className={`nav-item ${isActive && view === 'practice' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('practice'); }}
+                                style={navBtnStyle}>
+                                <Icon name="Megaphone" size={12} /> Improving Practice
+                            </button>
+                            <button className={`nav-item ${isActive && view === 'install-manager' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('install-manager'); }}
+                                style={navBtnStyle}>
+                                <Icon name="Layers" size={12} /> Concepts to Add
+                            </button>
+                            <button className={`nav-item ${isActive && view === 'depth' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('OFFENSE'); }}
+                                style={navBtnStyle}>
+                                <Icon name="Users" size={12} /> Offseason Depth Charts
+                            </button>
+                            <button className={`nav-item ${isActive && view === 'offseason-research' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('offseason-research'); }}
+                                style={navBtnStyle}>
+                                <Icon name="Search" size={12} /> Offseason Research
+                            </button>
+                            <button className={`nav-item ${isActive && view === 'end-of-season-reports' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('end-of-season-reports'); }}
+                                style={navBtnStyle}>
+                                <Icon name="FileBarChart" size={12} /> End of Season Reports
+                            </button>
+                        </div>
+                    );
+                }
+
+                // Regular season menu
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', padding: '0.25rem 0 0.5rem 0' }}>
                         <button className={`nav-item ${isActive && view === 'coaches-notes' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('coaches-notes'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            style={navBtnStyle}>
                             <Icon name="FileText" size={12} /> Meeting Notes
                         </button>
                         <button className={`nav-item ${isActive && view === 'practice' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('practice'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            style={navBtnStyle}>
                             <Icon name="Megaphone" size={12} /> Practice Plans
                         </button>
                         <button className={`nav-item ${isActive && view === 'install-manager' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('install-manager'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            style={navBtnStyle}>
                             <Icon name="Layers" size={12} /> Install
                         </button>
-                        {/* Expanded Depth Charts */}
                         <button className={`nav-item ${isActive && view === 'depth' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('depth'); setDepthChartType('OFFENSE'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            style={navBtnStyle}>
                             <Icon name="Users" size={12} /> Depth Charts
                         </button>
                         <button className={`nav-item ${isActive && view === 'game-plan' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('game-plan'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            style={navBtnStyle}>
                             <Icon name="Clipboard" size={12} /> Game Planner
                         </button>
                         <button className={`nav-item ${isActive && view === 'wristband' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('wristband'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            style={navBtnStyle}>
                             <Icon name="Watch" size={12} /> Wristband Builder
                         </button>
                         <button className={`nav-item ${isActive && view === 'practice-scripts' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('practice-scripts'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            style={navBtnStyle}>
                             <Icon name="FileText" size={12} /> Practice Scripts
                         </button>
                         <button className={`nav-item ${isActive && view === 'pregame' ? 'active' : ''}`}
                             onClick={() => { setCurrentWeekId(weekId); setView('pregame'); }}
-                            style={{ paddingLeft: '2.5rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.85 }}>
+                            style={navBtnStyle}>
                             <Icon name="Clock" size={12} /> Pre-Game Timeline
                         </button>
                     </div>
@@ -35606,6 +35656,11 @@
                 KO: ['', '', ''], KOR: ['', '', ''], PUNT: ['', '', ''], PR: ['', '', ''], FG: ['', '', ''], FGB: ['', '', '']
             });
             const [positionBigThreeAssignments, setPositionBigThreeAssignments] = useLocalStorage('oc-dashboard-position-big-three-assignments', {});
+            // Offseason-specific state
+            const [offseasonSwot, setOffseasonSwot] = useLocalStorage('oc-dashboard-offseason-swot', { strengths: '', weaknesses: '', opportunities: '', threats: '' });
+            const [offseasonMeetings, setOffseasonMeetings] = useLocalStorage('oc-dashboard-offseason-meetings', []);
+            const [offseasonResearch, setOffseasonResearch] = useLocalStorage('oc-dashboard-offseason-research', []);
+            const [endOfSeasonReports, setEndOfSeasonReports] = useLocalStorage('oc-dashboard-end-of-season-reports', {});
 
             // Access Config for Permissions (Paying Admin Check)
             const [appAccessConfig, setAppAccessConfig] = useState({});
@@ -41047,6 +41102,152 @@
                                     pregameTemplates={pregameTemplates}
                                     setPregameTemplates={setPregameTemplates}
                                 />
+                            )}
+                            {/* OFFSEASON VIEWS */}
+                            {view === 'offseason-swot' && (
+                                <div style={{ padding: '1rem' }}>
+                                    <h2 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="Target" size={24} /> SWOT Analysis
+                                    </h2>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                        Evaluate the team's Strengths, Weaknesses, Opportunities, and Threats for the upcoming season.
+                                    </p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #22c55e' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#22c55e', fontSize: '1rem' }}>Strengths</h3>
+                                            <textarea className="form-input" value={offseasonSwot.strengths} onChange={(e) => setOffseasonSwot({ ...offseasonSwot, strengths: e.target.value })} placeholder="What are we good at? What advantages do we have?" rows={6} style={{ resize: 'vertical' }} />
+                                        </div>
+                                        <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #ef4444' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#ef4444', fontSize: '1rem' }}>Weaknesses</h3>
+                                            <textarea className="form-input" value={offseasonSwot.weaknesses} onChange={(e) => setOffseasonSwot({ ...offseasonSwot, weaknesses: e.target.value })} placeholder="Where do we need to improve? What are our limitations?" rows={6} style={{ resize: 'vertical' }} />
+                                        </div>
+                                        <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #3b82f6' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#3b82f6', fontSize: '1rem' }}>Opportunities</h3>
+                                            <textarea className="form-input" value={offseasonSwot.opportunities} onChange={(e) => setOffseasonSwot({ ...offseasonSwot, opportunities: e.target.value })} placeholder="What opportunities can we take advantage of?" rows={6} style={{ resize: 'vertical' }} />
+                                        </div>
+                                        <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #f59e0b' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#f59e0b', fontSize: '1rem' }}>Threats</h3>
+                                            <textarea className="form-input" value={offseasonSwot.threats} onChange={(e) => setOffseasonSwot({ ...offseasonSwot, threats: e.target.value })} placeholder="What challenges do we face? What obstacles must we overcome?" rows={6} style={{ resize: 'vertical' }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {view === 'offseason-meetings' && (
+                                <div style={{ padding: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Icon name="Calendar" size={24} /> Offseason Meeting Schedule
+                                        </h2>
+                                        <button className="btn btn-primary" onClick={() => setOffseasonMeetings([...offseasonMeetings, { id: Date.now().toString(), title: '', date: '', time: '', location: '', notes: '' }])}>
+                                            <Icon name="Plus" size={16} /> Add Meeting
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {offseasonMeetings.length === 0 && (
+                                            <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem' }}>No meetings scheduled yet. Click "Add Meeting" to get started.</p>
+                                        )}
+                                        {offseasonMeetings.map((meeting, idx) => (
+                                            <div key={meeting.id} className="card" style={{ padding: '1rem' }}>
+                                                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                                                    <input type="text" className="form-input" value={meeting.title} onChange={(e) => { const u = [...offseasonMeetings]; u[idx] = { ...meeting, title: e.target.value }; setOffseasonMeetings(u); }} placeholder="Meeting Title" style={{ flex: 2, minWidth: '200px' }} />
+                                                    <input type="date" className="form-input" value={meeting.date} onChange={(e) => { const u = [...offseasonMeetings]; u[idx] = { ...meeting, date: e.target.value }; setOffseasonMeetings(u); }} style={{ width: '150px' }} />
+                                                    <input type="time" className="form-input" value={meeting.time} onChange={(e) => { const u = [...offseasonMeetings]; u[idx] = { ...meeting, time: e.target.value }; setOffseasonMeetings(u); }} style={{ width: '120px' }} />
+                                                    <input type="text" className="form-input" value={meeting.location} onChange={(e) => { const u = [...offseasonMeetings]; u[idx] = { ...meeting, location: e.target.value }; setOffseasonMeetings(u); }} placeholder="Location" style={{ flex: 1, minWidth: '150px' }} />
+                                                    <button onClick={() => setOffseasonMeetings(offseasonMeetings.filter(m => m.id !== meeting.id))} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}><Icon name="Trash2" size={16} /></button>
+                                                </div>
+                                                <textarea className="form-input" value={meeting.notes} onChange={(e) => { const u = [...offseasonMeetings]; u[idx] = { ...meeting, notes: e.target.value }; setOffseasonMeetings(u); }} placeholder="Agenda / Notes..." rows={2} style={{ resize: 'vertical', fontSize: '0.9rem' }} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {view === 'offseason-research' && (
+                                <div style={{ padding: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Icon name="Search" size={24} /> Offseason Research
+                                        </h2>
+                                        {currentUser?.roles?.includes('Head Coach') && (
+                                            <button className="btn btn-primary" onClick={() => setOffseasonResearch([...offseasonResearch, { id: Date.now().toString(), coachId: '', coachName: '', topic: '', sources: '', notes: '', status: 'In Progress' }])}>
+                                                <Icon name="Plus" size={16} /> Add Research Topic
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                        Track what each coach is researching during the offseason and where they plan to learn about it.
+                                    </p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {offseasonResearch.length === 0 && (
+                                            <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem' }}>No research topics yet.</p>
+                                        )}
+                                        {offseasonResearch.map((item, idx) => {
+                                            const canEdit = currentUser?.roles?.includes('Head Coach') || currentUser?.id === item.coachId;
+                                            return (
+                                                <div key={item.id} className="card" style={{ padding: '1rem' }}>
+                                                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
+                                                        <select className="form-select" value={item.coachId} onChange={(e) => { if (!canEdit) return; const coach = staff.find(s => s.id === e.target.value); const u = [...offseasonResearch]; u[idx] = { ...item, coachId: e.target.value, coachName: coach?.name || '' }; setOffseasonResearch(u); }} style={{ width: '180px' }} disabled={!currentUser?.roles?.includes('Head Coach')}>
+                                                            <option value="">Select Coach...</option>
+                                                            {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                        </select>
+                                                        <input type="text" className="form-input" value={item.topic} onChange={(e) => { if (!canEdit) return; const u = [...offseasonResearch]; u[idx] = { ...item, topic: e.target.value }; setOffseasonResearch(u); }} placeholder="Research Topic" style={{ flex: 1 }} readOnly={!canEdit} />
+                                                        <select className="form-select" value={item.status} onChange={(e) => { if (!canEdit) return; const u = [...offseasonResearch]; u[idx] = { ...item, status: e.target.value }; setOffseasonResearch(u); }} style={{ width: '130px' }} disabled={!canEdit}>
+                                                            <option value="In Progress">In Progress</option>
+                                                            <option value="Completed">Completed</option>
+                                                            <option value="On Hold">On Hold</option>
+                                                        </select>
+                                                        {currentUser?.roles?.includes('Head Coach') && (
+                                                            <button onClick={() => setOffseasonResearch(offseasonResearch.filter(r => r.id !== item.id))} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}><Icon name="Trash2" size={16} /></button>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ marginBottom: '0.5rem' }}>
+                                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem', display: 'block' }}>Where will you learn about this? (clinics, videos, books, etc.)</label>
+                                                        <textarea className="form-input" value={item.sources} onChange={(e) => { if (!canEdit) return; const u = [...offseasonResearch]; u[idx] = { ...item, sources: e.target.value }; setOffseasonResearch(u); }} placeholder="Sources: clinics, YouTube channels, books, websites..." rows={2} style={{ resize: 'vertical', fontSize: '0.9rem' }} readOnly={!canEdit} />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem', display: 'block' }}>Notes / Findings</label>
+                                                        <textarea className="form-input" value={item.notes} onChange={(e) => { if (!canEdit) return; const u = [...offseasonResearch]; u[idx] = { ...item, notes: e.target.value }; setOffseasonResearch(u); }} placeholder="Key takeaways, notes, ideas to implement..." rows={3} style={{ resize: 'vertical', fontSize: '0.9rem' }} readOnly={!canEdit} />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                            {view === 'end-of-season-reports' && (
+                                <div style={{ padding: '1rem' }}>
+                                    <h2 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Icon name="FileBarChart" size={24} /> End of Season Reports
+                                    </h2>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                        Document lessons learned, stats review, and areas for improvement from the completed season.
+                                    </p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div className="card" style={{ padding: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}><Icon name="Trophy" size={16} /> Season Highlights</h3>
+                                            <textarea className="form-input" value={endOfSeasonReports.highlights || ''} onChange={(e) => setEndOfSeasonReports({ ...endOfSeasonReports, highlights: e.target.value })} placeholder="What went well? Key wins, improvements, standout performances..." rows={5} style={{ resize: 'vertical' }} />
+                                        </div>
+                                        <div className="card" style={{ padding: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}><Icon name="Target" size={16} /> Areas for Improvement</h3>
+                                            <textarea className="form-input" value={endOfSeasonReports.improvements || ''} onChange={(e) => setEndOfSeasonReports({ ...endOfSeasonReports, improvements: e.target.value })} placeholder="What needs work? Recurring issues, areas to focus on..." rows={5} style={{ resize: 'vertical' }} />
+                                        </div>
+                                        <div className="card" style={{ padding: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}><Icon name="Zap" size={16} /> Offense Review</h3>
+                                            <textarea className="form-input" value={endOfSeasonReports.offense || ''} onChange={(e) => setEndOfSeasonReports({ ...endOfSeasonReports, offense: e.target.value })} placeholder="Offensive stats, tendencies, what worked, what didn't..." rows={5} style={{ resize: 'vertical' }} />
+                                        </div>
+                                        <div className="card" style={{ padding: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}><Icon name="Shield" size={16} /> Defense Review</h3>
+                                            <textarea className="form-input" value={endOfSeasonReports.defense || ''} onChange={(e) => setEndOfSeasonReports({ ...endOfSeasonReports, defense: e.target.value })} placeholder="Defensive stats, tendencies, what worked, what didn't..." rows={5} style={{ resize: 'vertical' }} />
+                                        </div>
+                                        <div className="card" style={{ padding: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}><Icon name="Star" size={16} /> Special Teams Review</h3>
+                                            <textarea className="form-input" value={endOfSeasonReports.specialTeams || ''} onChange={(e) => setEndOfSeasonReports({ ...endOfSeasonReports, specialTeams: e.target.value })} placeholder="Special teams stats, what worked, what didn't..." rows={5} style={{ resize: 'vertical' }} />
+                                        </div>
+                                        <div className="card" style={{ padding: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}><Icon name="Users" size={16} /> Personnel Notes</h3>
+                                            <textarea className="form-input" value={endOfSeasonReports.personnel || ''} onChange={(e) => setEndOfSeasonReports({ ...endOfSeasonReports, personnel: e.target.value })} placeholder="Returning players, graduating seniors, recruiting needs..." rows={5} style={{ resize: 'vertical' }} />
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                             {view === 'coaches-notes' && (() => {
                                 const NOTE_CATEGORIES = [
