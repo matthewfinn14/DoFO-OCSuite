@@ -12710,7 +12710,7 @@
                                     <tr
                                         style={{
                                             borderBottom: '1px solid var(--border)',
-                                            backgroundColor: selectedSegmentId === 'WARMUP' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                                            backgroundColor: selectedSegmentId === 'WARMUP' ? 'rgba(56, 189, 248, 0.1)' : 'var(--surface)',
                                             cursor: 'pointer'
                                         }}
                                         onClick={() => setSelectedSegmentId('WARMUP')}
@@ -14416,7 +14416,7 @@
                                         <label className="form-label" style={{ color: 'var(--accent)' }}>Offense Roles</label>
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             {OFFENSE_TAGS.map(tag => (
-                                                <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.offenseRoles.includes(tag) ? 'var(--highlight)' : 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.offenseRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
+                                                <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.offenseRoles.includes(tag) ? 'var(--highlight)' : 'var(--surface)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.offenseRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
                                                     <input type="checkbox" checked={newPlayer.offenseRoles.includes(tag)} onChange={() => toggleTag('offenseRoles', tag)} style={{ display: 'none' }} />
                                                     {tag}
                                                 </label>
@@ -14427,7 +14427,7 @@
                                         <label className="form-label" style={{ color: 'var(--accent)' }}>Defense Roles</label>
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             {DEFENSE_TAGS.map(tag => (
-                                                <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.defenseRoles.includes(tag) ? 'var(--highlight)' : 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.defenseRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
+                                                <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.defenseRoles.includes(tag) ? 'var(--highlight)' : 'var(--surface)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.defenseRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
                                                     <input type="checkbox" checked={newPlayer.defenseRoles.includes(tag)} onChange={() => toggleTag('defenseRoles', tag)} style={{ display: 'none' }} />
                                                     {tag}
                                                 </label>
@@ -14438,7 +14438,7 @@
                                         <label className="form-label" style={{ color: 'var(--accent)' }}>Special Teams</label>
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             {SPECIAL_TAGS.map(tag => (
-                                                <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.specialRoles.includes(tag) ? 'var(--highlight)' : 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.specialRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
+                                                <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer', background: newPlayer.specialRoles.includes(tag) ? 'var(--highlight)' : 'var(--surface)', padding: '4px 8px', borderRadius: '4px', border: newPlayer.specialRoles.includes(tag) ? '1px solid var(--accent)' : '1px solid transparent' }}>
                                                     <input type="checkbox" checked={newPlayer.specialRoles.includes(tag)} onChange={() => toggleTag('specialRoles', tag)} style={{ display: 'none' }} />
                                                     {tag}
                                                 </label>
@@ -14541,7 +14541,7 @@
                                         <td style={{ padding: '0.75rem 0.5rem' }}>
                                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                                                 {(player.offenseRoles || []).map(t => (
-                                                    <span key={t} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{t}</span>
+                                                    <span key={t} style={{ fontSize: '0.7rem', background: 'var(--surface)', padding: '2px 6px', borderRadius: '4px' }}>{t}</span>
                                                 ))}
                                                 {(player.defenseRoles || []).map(t => (
                                                     <span key={t} style={{ fontSize: '0.7rem', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 6px', borderRadius: '4px', color: '#fca5a5' }}>{t}</span>
@@ -15817,7 +15817,7 @@
 
                     {/* Player Availability Tracker */}
                     <div style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                        backgroundColor: 'var(--surface)',
                         border: '1px solid var(--border)',
                         borderRadius: '8px',
                         padding: '1.5rem',
@@ -16007,7 +16007,7 @@
                                 border: '1px solid var(--border)',
                                 borderRadius: '8px',
                                 padding: '1rem',
-                                backgroundColor: 'rgba(255, 255, 255, 0.02)'
+                                backgroundColor: 'var(--surface)'
                             }}>
                                 <DepthChart
                                     roster={roster}
@@ -16637,7 +16637,7 @@
                                 height: '1224px',
                                 border: '2px dashed rgba(100, 160, 255, 0.5)',
                                 borderRadius: '4px',
-                                background: 'rgba(255, 255, 255, 0.03)',
+                                background: 'var(--surface)',
                                 pointerEvents: 'none',
                                 zIndex: 0
                             }}>
@@ -16738,7 +16738,7 @@
                                                             border: '1px solid var(--border)',
                                                             borderRadius: '4px',
                                                             fontSize: '0.75rem',
-                                                            background: 'rgba(255,255,255,0.1)',
+                                                            background: 'var(--surface)',
                                                             color: 'var(--text-secondary)'
                                                         }}
                                                     />
@@ -17709,7 +17709,7 @@
                                                                     <span key={idx} style={{
                                                                         fontSize: '0.8rem',
                                                                         padding: '0.25rem 0.5rem',
-                                                                        background: 'rgba(255,255,255,0.05)',
+                                                                        background: 'var(--surface)',
                                                                         borderRadius: '4px',
                                                                         color: 'var(--text-primary)'
                                                                     }}>
@@ -18552,7 +18552,7 @@
                             userSelect: 'none'
                         }}
                         className="nav-category-header"
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -19757,7 +19757,7 @@
 
                         <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                <thead style={{ background: 'var(--surface)' }}>
                                     <tr>
                                         <th style={{ padding: '1rem', textAlign: 'left' }}>Day</th>
                                         <th style={{ padding: '1rem', textAlign: 'center' }}>Daily Plan</th>
@@ -19797,7 +19797,7 @@
                                     ))}
                                 </tbody>
                             </table>
-                            <div style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                            <div style={{ padding: '1.5rem', background: 'var(--surface)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                                 <button className="btn btn-secondary" onClick={() => setBatchSelection({
                                     Monday: { plan: false, script: false, cards: false },
                                     Tuesday: { plan: false, script: false, cards: false },
@@ -20427,7 +20427,7 @@
                                                 }));
                                             }}
                                             style={{
-                                                background: 'rgba(255,255,255,0.1)',
+                                                background: 'var(--surface)',
                                                 border: '1px solid rgba(255,255,255,0.2)',
                                                 color: 'white',
                                                 padding: '2px 8px',
@@ -21559,7 +21559,7 @@
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    background: 'rgba(255,255,255,0.1)',
+                                    background: 'var(--surface)',
                                     border: 'none',
                                     borderRadius: '6px',
                                     color: '#94a3b8',
@@ -21567,7 +21567,7 @@
                                     transition: 'all 0.2s'
                                 }}
                                 onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.2)'}
-                                onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                                onMouseOut={(e) => e.target.style.background = 'var(--surface)'}
                             >
                                 <Icon name="ChevronRight" size={20} />
                             </button>
@@ -23800,7 +23800,7 @@
                                 fontSize: '0.75rem',
                                 border: '1px dashed var(--border)',
                                 borderRadius: '3px',
-                                background: 'rgba(255,255,255,0.1)'
+                                background: 'var(--surface)'
                             }}
                         />
                         {showDropdown && searchTerm && (
@@ -29134,7 +29134,7 @@
                                 {/* Right: Controls (Scale, Print, Close) */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
                                     {/* Scale Dropdown */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.75rem', borderRadius: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', padding: '0.25rem 0.75rem', borderRadius: '6px' }}>
                                         <label style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 500 }}>Scale:</label>
                                         <select
                                             value={printScale}
@@ -29157,7 +29157,7 @@
                                     </div>
 
                                     {/* Orientation Toggle */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem', borderRadius: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'var(--surface)', padding: '0.25rem', borderRadius: '6px' }}>
                                         <button
                                             onClick={() => setPrintOrientation('portrait')}
                                             style={{
@@ -29239,7 +29239,7 @@
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             borderRadius: '50%',
-                                            background: 'rgba(255,255,255,0.1)',
+                                            background: 'var(--surface)',
                                             color: 'white',
                                             border: 'none'
                                         }}
@@ -29775,7 +29775,7 @@
                                 {ROLES.map(role => {
                                     const isHC = role === 'Head Coach';
                                     return (
-                                        <tr key={role} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <tr key={role} style={{ borderBottom: '1px solid var(--border)' }}>
                                             <td style={{ padding: '0.75rem 1rem', fontWeight: 'bold' }}>{role}</td>
                                             {FEATURES.map(feature => {
                                                 const rolePerms = permissions[role] || DEFAULT_PERMISSIONS[role] || {};
@@ -29783,7 +29783,7 @@
                                                 const state = getPermissionState(p);
 
                                                 const stateStyles = {
-                                                    none: { bg: 'rgba(255,255,255,0.03)', border: '1px solid transparent', color: 'var(--text-secondary)', label: '—' },
+                                                    none: { bg: 'var(--surface)', border: '1px solid transparent', color: 'var(--text-secondary)', label: '—' },
                                                     view: { bg: 'rgba(59, 130, 246, 0.15)', border: '1px solid #3b82f6', color: '#3b82f6', label: 'View' },
                                                     edit: { bg: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', color: '#22c55e', label: 'Edit' }
                                                 };
@@ -30563,7 +30563,7 @@
                                 <input
                                     type="date"
                                     className="form-input"
-                                    style={{ width: 'auto', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--accent)' }}
+                                    style={{ width: 'auto', background: 'var(--surface)', color: 'white', border: '1px solid var(--accent)' }}
                                     value={week.date || ''}
                                     onChange={(e) => onUpdateWeek(week.id, 'date', e.target.value)}
                                 />
@@ -30574,7 +30574,7 @@
                             <div className="no-print">
                                 <textarea
                                     className="form-input"
-                                    style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', textAlign: 'center', fontSize: '1.25rem', fontWeight: 'bold' }}
+                                    style={{ background: 'var(--surface)', color: 'white', border: 'none', textAlign: 'center', fontSize: '1.25rem', fontWeight: 'bold' }}
                                     value={overview.messageOfWeek || ''}
                                     placeholder="Enter Message of the Week..."
                                     onChange={(e) => onUpdateWeek(week.id, 'overview', { ...overview, messageOfWeek: e.target.value })}
@@ -31260,7 +31260,7 @@
                                 }
                             }
                         }}
-                        style={{ width: '100%', fontSize: '0.85rem', padding: '0.25rem', marginTop: '0.25rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                        style={{ width: '100%', fontSize: '0.85rem', padding: '0.25rem', marginTop: '0.25rem', background: 'var(--surface)', border: '1px solid var(--border)' }}
                     >
                         {memberships.map(m => (
                             <option key={m.id} value={m.id}>
@@ -38983,8 +38983,8 @@
                                                 width: '100%',
                                                 fontSize: '0.8rem',
                                                 padding: '0.4rem',
-                                                background: 'rgba(255,255,255,0.05)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                background: 'var(--surface)',
+                                                border: '1px solid var(--border)',
                                                 color: 'var(--accent)'
                                             }}
                                         >
@@ -38995,14 +38995,14 @@
                                     </div>
                                 )}
 
-                                {!sidebarCollapsed && <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', marginTop: '0.5rem', marginBottom: '0.5rem' }}></div>}
+                                {!sidebarCollapsed && <div style={{ borderBottom: '1px solid var(--border)', marginTop: '0.5rem', marginBottom: '0.5rem' }}></div>}
                             </div>
                             <nav style={{ flex: 1, overflowY: 'auto' }}>
 
                                 {/* Week Selector Section (Phase Breakdown) */}
                                 {!sidebarCollapsed && (
                                     <>
-                                        <div style={{ padding: '0 0.5rem 1.5rem 0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }}>
+                                        <div style={{ padding: '0 0.5rem 1.5rem 0.5rem', borderBottom: '1px solid var(--border)', marginBottom: '1rem' }}>
                                             <div style={{ marginBottom: '1rem' }}>
                                                 <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block' }}>
                                                     Phases / Weeks
@@ -39100,9 +39100,9 @@
                                                             borderRadius: '6px',
                                                             transition: 'background 0.2s',
                                                             userSelect: 'none',
-                                                            background: view === 'setup' ? 'rgba(255,255,255,0.05)' : 'transparent'
+                                                            background: view === 'setup' ? 'var(--surface)' : 'transparent'
                                                         }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
                                                         onMouseLeave={e => { if (view !== 'setup') e.currentTarget.style.background = 'transparent'; }}
                                                     >
                                                         <Icon name="Settings" size={18} style={{ marginRight: '0.5rem' }} />
@@ -39128,9 +39128,9 @@
                                                             borderRadius: '6px',
                                                             transition: 'background 0.2s',
                                                             userSelect: 'none',
-                                                            background: view === 'playbook' ? 'rgba(255,255,255,0.05)' : 'transparent'
+                                                            background: view === 'playbook' ? 'var(--surface)' : 'transparent'
                                                         }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
                                                         onMouseLeave={e => { if (view !== 'playbook') e.currentTarget.style.background = 'transparent'; }}
                                                     >
                                                         <Icon name="Book" size={18} style={{ marginRight: '0.5rem' }} />
@@ -39191,7 +39191,7 @@
                                 {/* EQUIPMENT CATEGORY */}
 
 
-                                <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                     {(currentUser?.roles?.includes('Head Coach') || currentUser?.roles?.includes('Team Admin')) && (
                                         <button
                                             className={`nav-item ${view === 'settings' ? 'active' : ''}`}
