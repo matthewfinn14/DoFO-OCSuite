@@ -40114,7 +40114,8 @@
             }
 
             // ACCESS REQUEST GATE: Show appropriate screen based on request status
-            if (accessRequestStatus.checked && !schoolSetupData.showWizard) {
+            // Site admins bypass access request system entirely
+            if (accessRequestStatus.checked && !schoolSetupData.showWizard && !isSiteAdmin) {
                 // No request yet - show form
                 if (accessRequestStatus.status === null) {
                     return (
@@ -40278,7 +40279,7 @@
             return (
                 <PlayDetailsModalContext.Provider value={{ openPlayDetails }}>
                     <div className="app-container">
-                        {schoolSetupData.showWizard && !schoolName && (
+                        {schoolSetupData.showWizard && !schoolName && !isSiteAdmin && (
                             <div className="onboarding-wizard-wrapper">
                                 <SchoolOnboardingWizard
                                     user={authUser}
