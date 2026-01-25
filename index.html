@@ -4564,12 +4564,17 @@
                                         </select>
                                     </div>
 
-                                    {/* 2. Select/Move */}
+                                    {/* 2. Save Formation */}
+                                    <button className="btn btn-secondary" onClick={saveAsFormationTemplate} title="Save as Formation" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#0891b2', backgroundColor: '#ecfeff', border: '1px solid #a5f3fc' }}>
+                                        <Icon name="Layout" size={14} /><span style={{ fontSize: '0.8rem' }}>Save Formation</span>
+                                    </button>
+
+                                    {/* 3. Select/Move */}
                                     <button className={`btn ${selectedTool === 'select' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSelectedTool('select')} title="Select / Move" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b' }}>
                                         <Icon name="MousePointer" size={16} /><span style={{ fontSize: '0.8rem' }}>Select</span>
                                     </button>
 
-                                    {/* 3. Line Style & End Buttons */}
+                                    {/* 4. Line Style & End Buttons */}
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#fef3c7', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #fcd34d' }}>
                                         <span style={{ fontSize: '0.65rem', color: '#92400e', fontWeight: 'bold' }}>STYLE</span>
                                         <button onClick={() => { setSelectedTool('line'); setLineStyle('solid'); }} title="Solid" style={{ padding: '0.2rem 0.4rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && lineStyle === 'solid' ? '#f59e0b' : 'white', color: selectedTool === 'line' && lineStyle === 'solid' ? 'white' : '#1e293b', border: '1px solid #fcd34d' }}>
@@ -4589,14 +4594,9 @@
                                         <button onClick={() => { setSelectedTool('line'); setEndType('none'); }} title="Plain" style={{ padding: '0.2rem 0.35rem', borderRadius: '3px', cursor: 'pointer', background: selectedTool === 'line' && endType === 'none' ? '#f59e0b' : 'white', color: selectedTool === 'line' && endType === 'none' ? 'white' : '#1e293b', border: '1px solid #fcd34d', fontSize: '0.75rem' }}>—</button>
                                     </div>
 
-                                    {/* 4. Flip */}
+                                    {/* 5. Flip */}
                                     <button className="btn btn-secondary" onClick={flipFormation} title="Flip Left/Right" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#1e293b', backgroundColor: 'white', border: '1px solid #cbd5e1' }}>
                                         <Icon name="RefreshCw" size={14} /><span style={{ fontSize: '0.8rem' }}>Flip</span>
-                                    </button>
-
-                                    {/* 5. Save Formation */}
-                                    <button className="btn btn-secondary" onClick={saveAsFormationTemplate} title="Save as Formation" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.25rem', alignItems: 'center', color: '#0891b2', backgroundColor: '#ecfeff', border: '1px solid #a5f3fc' }}>
-                                        <Icon name="Layout" size={14} /><span style={{ fontSize: '0.8rem' }}>Save Formation</span>
                                     </button>
 
                                     {/* 6. Undo, Redo, Delete */}
@@ -4606,7 +4606,7 @@
                                         <button className={`btn ${selectedTool === 'delete' ? 'btn-danger' : 'btn-secondary'}`} onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }} title="Delete" style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', color: selectedTool === 'delete' ? 'white' : '#ef4444', backgroundColor: selectedTool === 'delete' ? '#ef4444' : 'white', border: '1px solid #fca5a5' }}><Icon name="Trash" size={14} /></button>
                                     </div>
 
-                                    {/* 7. Cancel & Save */}
+                                    {/* 7. Cancel & Save (pushed to far right) */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                         <button className="btn btn-secondary" onClick={onCancel} style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', color: '#64748b', background: 'white', border: '1px solid #cbd5e1' }}>Cancel</button>
                                         <button className="btn btn-primary" onClick={() => onSave({ elements })} style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', color: 'white', backgroundColor: '#22c55e', fontWeight: 'bold', border: 'none' }}>
