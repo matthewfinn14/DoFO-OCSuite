@@ -2900,6 +2900,7 @@
                 case "Pencil": return <svg {...commonProps}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>;
                 case "Trash2": return <svg {...commonProps}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>;
                 case "Heart": return <svg {...commonProps}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>;
+                case "Construction": return <svg {...commonProps}><rect x="2" y="6" width="20" height="8" rx="1" /><path d="M17 14v7" /><path d="M7 14v7" /><path d="M17 3v3" /><path d="M7 3v3" /><path d="M10 14L2 6" /><path d="M14 6l8 8" /></svg>;
                 case "Code": return <svg {...commonProps}><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>;
                 case "Grid": return <svg {...commonProps}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>;
                 case "Tag": return <svg {...commonProps}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>;
@@ -17497,36 +17498,175 @@
         };
 
         const UserGuide = () => {
+            const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'roadmap'
+
             return (
-                <div className="card" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-                    <h1 style={{ marginBottom: '2rem' }}><Icon name="HelpCircle" size={32} /> User Guide</h1>
+                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '1rem' }}>
+                    {/* Tabs */}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                        <button
+                            onClick={() => setActiveTab('guide')}
+                            className={activeTab === 'guide' ? 'btn btn-primary' : 'btn btn-secondary'}
+                            style={{ padding: '0.75rem 1.5rem' }}
+                        >
+                            <Icon name="HelpCircle" size={18} /> How to Use
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('roadmap')}
+                            className={activeTab === 'roadmap' ? 'btn btn-primary' : 'btn btn-secondary'}
+                            style={{ padding: '0.75rem 1.5rem' }}
+                        >
+                            <Icon name="Construction" size={18} /> Under Construction
+                        </button>
+                    </div>
 
-                    <section style={{ marginBottom: '3rem' }}>
-                        <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Head Coach Usage</h2>
-                        <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-                            <li><strong>Staff Management:</strong> Use "Task Assigner" and "Staff & Roles" to delegate responsibilities to your assistants.</li>
-                            <li><strong>Weekly Schedule:</strong> Monitor the "Active Week" timeline to ensure the team is on track for the upcoming opponent.</li>
-                            <li><strong>Travel & Logistics:</strong> Use the "Travel Roster" to manage personnel for away games.</li>
-                            <li><strong>Oversight:</strong> View all depth charts and practice plans to ensure alignment with team goals.</li>
-                        </ul>
-                    </section>
+                    {activeTab === 'guide' && (
+                        <div className="card" style={{ padding: '2rem' }}>
+                            <h1 style={{ marginBottom: '2rem' }}><Icon name="HelpCircle" size={32} /> User Guide</h1>
 
-                    <section style={{ marginBottom: '3rem' }}>
-                        <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Offensive Coordinator Usage</h2>
-                        <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-                            <li><strong>Playbook:</strong> Add and organize plays with tags (Formation, Concept, Situation). Use batch delete to clean up old plays.</li>
-                            <li><strong>Game Planning:</strong> Build your "Situations and Scripts" by tagging plays with specific situations (e.g., "3rd & Long").</li>
-                            <li><strong>Practice Scripts:</strong> Generate scripts based on your installed playbook and daily focus.</li>
-                            <li><strong>In-Game:</strong> Use the "OC Call Sheet" on the tablet app for real-time play calling and tracking.</li>
-                        </ul>
-                    </section>
+                            <section style={{ marginBottom: '3rem' }}>
+                                <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Head Coach Usage</h2>
+                                <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                                    <li><strong>Staff Management:</strong> Use "Task Assigner" and "Staff & Roles" to delegate responsibilities to your assistants.</li>
+                                    <li><strong>Weekly Schedule:</strong> Monitor the "Active Week" timeline to ensure the team is on track for the upcoming opponent.</li>
+                                    <li><strong>Travel & Logistics:</strong> Use the "Travel Roster" to manage personnel for away games.</li>
+                                    <li><strong>Oversight:</strong> View all depth charts and practice plans to ensure alignment with team goals.</li>
+                                </ul>
+                            </section>
 
-                    <section style={{ marginBottom: '3rem' }}>
-                        <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Position Coach Usage</h2>
-                        <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-                            <li><strong>Depth Charts:</strong> Manage rotation and depth for your unit.</li>
-                        </ul>
-                    </section>
+                            <section style={{ marginBottom: '3rem' }}>
+                                <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Offensive Coordinator Usage</h2>
+                                <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                                    <li><strong>Playbook:</strong> Add and organize plays with tags (Formation, Concept, Situation). Use batch delete to clean up old plays.</li>
+                                    <li><strong>Game Planning:</strong> Build your "Situations and Scripts" by tagging plays with specific situations (e.g., "3rd & Long").</li>
+                                    <li><strong>Practice Scripts:</strong> Generate scripts based on your installed playbook and daily focus.</li>
+                                    <li><strong>In-Game:</strong> Use the "OC Call Sheet" on the tablet app for real-time play calling and tracking.</li>
+                                </ul>
+                            </section>
+
+                            <section style={{ marginBottom: '3rem' }}>
+                                <h2 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Position Coach Usage</h2>
+                                <ul style={{ lineHeight: '1.6', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                                    <li><strong>Depth Charts:</strong> Manage rotation and depth for your unit.</li>
+                                </ul>
+                            </section>
+                        </div>
+                    )}
+
+                    {activeTab === 'roadmap' && (
+                        <div>
+                            <div className="card" style={{ padding: '2rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, var(--bg-panel) 0%, var(--surface) 100%)', borderLeft: '4px solid var(--accent)' }}>
+                                <h1 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <Icon name="Construction" size={32} color="var(--accent)" /> Under Construction
+                                </h1>
+                                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.1rem' }}>
+                                    The DoFO Suite is being built in phases. Here's what's available now and what's coming next.
+                                </p>
+                            </div>
+
+                            {/* Phase 1: OC Suite - Current */}
+                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #22c55e' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                    <div style={{ background: '#22c55e', padding: '0.5rem', borderRadius: '8px' }}>
+                                        <Icon name="CheckCircle" size={24} color="white" />
+                                    </div>
+                                    <div>
+                                        <h2 style={{ margin: 0, color: '#22c55e' }}>Phase 1: OC Suite</h2>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Current Build</span>
+                                    </div>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                    The Offensive Coordinator Suite provides comprehensive tools for game planning and play management.
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                    {[
+                                        { icon: 'Book', label: 'Master Playbook', desc: 'Organize all plays' },
+                                        { icon: 'Clipboard', label: 'Game Planner', desc: 'Situational call sheets' },
+                                        { icon: 'FileText', label: 'Practice Scripts', desc: 'Daily practice plans' },
+                                        { icon: 'Grid', label: 'Wristband Builder', desc: 'Print play cards' },
+                                        { icon: 'Users', label: 'Depth Charts', desc: 'Manage rotations' },
+                                        { icon: 'Layers', label: 'Install Manager', desc: 'Weekly installs' },
+                                        { icon: 'Target', label: 'Program Alignment', desc: 'Mission & philosophy' },
+                                        { icon: 'BarChart2', label: 'Player Touches', desc: 'Track involvement' },
+                                        { icon: 'Settings', label: 'Formation Builder', desc: 'Visual diagrams' },
+                                        { icon: 'Layers', label: 'Program Levels', desc: 'JV/Freshman management' }
+                                    ].map((item, idx) => (
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px' }}>
+                                            <Icon name={item.icon} size={16} color="#22c55e" />
+                                            <div>
+                                                <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Phase 2: HC Suite - Coming Next */}
+                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #f59e0b', opacity: 0.9 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                    <div style={{ background: '#f59e0b', padding: '0.5rem', borderRadius: '8px' }}>
+                                        <Icon name="Clock" size={24} color="white" />
+                                    </div>
+                                    <div>
+                                        <h2 style={{ margin: 0, color: '#f59e0b' }}>Phase 2: HC Suite</h2>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Coming Next</span>
+                                    </div>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                    The Head Coach Suite adds program management tools for running the entire football operation.
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                    {[
+                                        { icon: 'Package', label: 'Inventory Management', desc: 'Track equipment & gear' },
+                                        { icon: 'Calendar', label: 'Annual Calendar', desc: 'Year-round planning' },
+                                        { icon: 'CheckSquare', label: 'Staff Tasks', desc: 'Assign & track duties' },
+                                        { icon: 'UserCheck', label: 'Attendance App', desc: 'Track player attendance' },
+                                        { icon: 'Film', label: 'Drill Library', desc: 'Organize practice drills' }
+                                    ].map((item, idx) => (
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.7 }}>
+                                            <Icon name={item.icon} size={16} color="#f59e0b" />
+                                            <div>
+                                                <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Phase 3: Field Apps - Final Phase */}
+                            <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #3b82f6', opacity: 0.8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                    <div style={{ background: '#3b82f6', padding: '0.5rem', borderRadius: '8px' }}>
+                                        <Icon name="Smartphone" size={24} color="white" />
+                                    </div>
+                                    <div>
+                                        <h2 style={{ margin: 0, color: '#3b82f6' }}>Phase 3: Field Apps</h2>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Final Phase</span>
+                                    </div>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                    Mobile and tablet apps for players, practice field, and in-game sideline use.
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                    {[
+                                        { icon: 'User', label: 'Player App', desc: 'Playbook access for players' },
+                                        { icon: 'Megaphone', label: 'Practice App', desc: 'Field-side practice tools' },
+                                        { icon: 'Zap', label: 'In-Game App', desc: 'Sideline play calling' }
+                                    ].map((item, idx) => (
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.6 }}>
+                                            <Icon name={item.icon} size={16} color="#3b82f6" />
+                                            <div>
+                                                <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -39995,27 +40135,33 @@
                                                             ))}
                                                     </CollapsibleCategory>
 
-                                                    {/* Sub-Levels (JV, Freshman, etc.) */}
-                                                    {programLevels.length > 0 && (
-                                                        <CollapsibleCategory title="SUB-LEVELS" icon="Layers" defaultOpen={false}>
-                                                            {programLevels.map(level => {
-                                                                const canEdit = currentUser?.roles?.includes('Head Coach') || (level.staffPermissions || []).includes(currentUser?.id);
-                                                                return (
-                                                                    <button
-                                                                        key={level.id}
-                                                                        className={`nav-item ${activeLevelId === level.id ? 'active' : ''}`}
-                                                                        onClick={() => { setActiveLevelId(level.id); setView('sublevel-view'); }}
-                                                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                                                                    >
-                                                                        <Icon name={canEdit ? "Edit3" : "Eye"} size={12} />
-                                                                        {level.name}
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </CollapsibleCategory>
-                                                    )}
                                                 </div>
                                             </div>
+
+                                            {/* Sub-Levels Section (JV, Freshman, Scout Team, etc.) */}
+                                            {programLevels.length > 0 && (
+                                                <div style={{ marginBottom: '1rem' }}>
+                                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block' }}>
+                                                        Sub-Levels
+                                                    </label>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                        {programLevels.map(level => {
+                                                            const canEdit = currentUser?.roles?.includes('Head Coach') || (level.staffPermissions || []).includes(currentUser?.id);
+                                                            return (
+                                                                <CollapsibleCategory
+                                                                    key={level.id}
+                                                                    title={level.name.toUpperCase()}
+                                                                    icon={canEdit ? "Edit3" : "Eye"}
+                                                                    defaultOpen={activeLevelId === level.id}
+                                                                    onTitleClick={() => { setActiveLevelId(level.id); setView('sublevel-view'); }}
+                                                                >
+                                                                    {/* Sub-level content could go here - depth chart, roster, etc. */}
+                                                                </CollapsibleCategory>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
 
 
 
