@@ -18991,6 +18991,7 @@
             const [isQuickAddOpen, setIsQuickAddOpen] = useState(false); // Modal state for parser
             const [showImportModal, setShowImportModal] = useState(false);
             const [importSourceWeekId, setImportSourceWeekId] = useState('');
+            const [activeInstallTab, setActiveInstallTab] = useState('OFFENSE'); // 'OFFENSE' | 'DEFENSE' | 'SPECIAL_TEAMS'
 
             // Quick Parser State
             const [assignmentModalState, setAssignmentModalState] = useState(null); // { playId, x, y }
@@ -19561,6 +19562,43 @@
                             </div>
                         </div>
 
+                        {/* Phase Tabs */}
+                        <div style={{
+                            padding: '0 1.5rem',
+                            borderBottom: '1px solid var(--border)',
+                            background: 'var(--bg-panel)',
+                            display: 'flex',
+                            gap: '0'
+                        }}>
+                            {[
+                                { id: 'OFFENSE', label: 'Offense', icon: 'Crosshair' },
+                                { id: 'DEFENSE', label: 'Defense', icon: 'Shield' },
+                                { id: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Zap' }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveInstallTab(tab.id)}
+                                    style={{
+                                        padding: '0.75rem 1.5rem',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        borderBottom: activeInstallTab === tab.id ? '3px solid var(--accent)' : '3px solid transparent',
+                                        color: activeInstallTab === tab.id ? 'var(--accent)' : 'var(--text-secondary)',
+                                        fontWeight: activeInstallTab === tab.id ? '600' : '500',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '0.9rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <Icon name={tab.icon} size={16} />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
                         {showImportModal && (
                             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
                                 <div className="card" style={{ width: '400px', padding: '1.5rem', background: 'white', color: 'black' }}>
@@ -19863,7 +19901,7 @@
                                     paddingRight: '0.5rem',
                                     minWidth: 0 // Allow flex item to shrink
                                 }}>
-                                    {effectiveBuckets.filter(b => !b.categoryId).map(bucket => {
+                                    {effectiveBuckets.filter(b => !b.categoryId && b.phase === activeInstallTab).map(bucket => {
                                         const bucketPlays = hydratedInstall.filter(p => p.bucketId === bucket.id);
 
                                         // Group plays by concept family
