@@ -35673,6 +35673,10 @@
             const [offseasonResearch, setOffseasonResearch] = useLocalStorage('oc-dashboard-offseason-research', []);
             const [endOfSeasonReports, setEndOfSeasonReports] = useLocalStorage('oc-dashboard-end-of-season-reports', {});
 
+            // Program Levels (JV, Freshman, Scout Team, etc.)
+            const [programLevels, setProgramLevels] = useLocalStorage('oc-dashboard-program-levels', []);
+            const [activeLevelId, setActiveLevelId] = useState(null);
+
             // Access Config for Permissions (Paying Admin Check)
             const [appAccessConfig, setAppAccessConfig] = useState({});
             useEffect(() => {
@@ -37012,6 +37016,158 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // LEVELS Setup - Program sub-levels (JV, Freshman, Scout Team, etc.)
+                if (phase === 'LEVELS') {
+                    const addLevel = () => {
+                        const name = prompt('Enter level name (e.g., "JV", "Freshman", "Scout Team"):');
+                        if (name && name.trim()) {
+                            const newLevel = {
+                                id: 'level_' + Date.now(),
+                                name: name.trim(),
+                                staffPermissions: [], // Array of staff IDs who can edit
+                                enabledTools: {
+                                    playbook: true,
+                                    depthChart: true,
+                                    practiceScripts: true,
+                                    gamePlan: false,
+                                    wristband: false
+                                },
+                                weekData: {
+                                    plays: [],
+                                    depthChart: {},
+                                    practiceScripts: [],
+                                    gamePlan: {}
+                                }
+                            };
+                            setProgramLevels([...programLevels, newLevel]);
+                        }
+                    };
+
+                    const updateLevel = (levelId, updates) => {
+                        setProgramLevels(programLevels.map(l => l.id === levelId ? { ...l, ...updates } : l));
+                    };
+
+                    const deleteLevel = (levelId) => {
+                        if (confirm('Delete this level? This will remove all associated data.')) {
+                            setProgramLevels(programLevels.filter(l => l.id !== levelId));
+                        }
+                    };
+
+                    const toggleStaffPermission = (levelId, staffId) => {
+                        const level = programLevels.find(l => l.id === levelId);
+                        if (!level) return;
+                        const perms = level.staffPermissions || [];
+                        const newPerms = perms.includes(staffId)
+                            ? perms.filter(id => id !== staffId)
+                            : [...perms, staffId];
+                        updateLevel(levelId, { staffPermissions: newPerms });
+                    };
+
+                    const toggleTool = (levelId, tool) => {
+                        const level = programLevels.find(l => l.id === levelId);
+                        if (!level) return;
+                        updateLevel(levelId, {
+                            enabledTools: { ...level.enabledTools, [tool]: !level.enabledTools[tool] }
+                        });
+                    };
+
+                    return (
+                        <div className="card" style={{ maxWidth: '1000px', margin: '2rem auto', padding: '0', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h1 style={{ margin: 0 }}>Program Levels</h1>
+                                    <p style={{ opacity: 0.7, margin: '0.5rem 0 0 0' }}>Define sub-levels of your varsity program (JV, Freshman, Scout Team, etc.)</p>
+                                </div>
+                                <button className="btn btn-primary" onClick={addLevel}>
+                                    <Icon name="Plus" size={16} /> Add Level
+                                </button>
+                            </div>
+
+                            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
+                                {programLevels.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                        <Icon name="Layers" size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                                        <p style={{ fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>No program levels defined</p>
+                                        <p style={{ fontSize: '0.9rem', margin: 0 }}>Add levels like JV, Freshman, or Scout Team to organize your program.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {programLevels.map(level => (
+                                            <div key={level.id} style={{ background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                                                {/* Level Header */}
+                                                <div style={{ padding: '1rem 1.5rem', background: 'var(--bg-input)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <Icon name="Layers" size={20} color="var(--accent)" />
+                                                        <input
+                                                            type="text"
+                                                            className="form-input"
+                                                            value={level.name}
+                                                            onChange={(e) => updateLevel(level.id, { name: e.target.value })}
+                                                            style={{ fontWeight: '600', fontSize: '1.1rem', background: 'transparent', border: 'none', padding: '0.25rem 0.5rem', width: '200px' }}
+                                                        />
+                                                    </div>
+                                                    <button onClick={() => deleteLevel(level.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.25rem' }}>
+                                                        <Icon name="Trash2" size={18} />
+                                                    </button>
+                                                </div>
+
+                                                <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                                    {/* Staff Permissions */}
+                                                    <div>
+                                                        <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <Icon name="UserCheck" size={16} /> Staff with Edit Access
+                                                        </h4>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto' }}>
+                                                            {staff.length === 0 ? (
+                                                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>No staff members defined</p>
+                                                            ) : staff.map(s => (
+                                                                <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={(level.staffPermissions || []).includes(s.id)}
+                                                                        onChange={() => toggleStaffPermission(level.id, s.id)}
+                                                                    />
+                                                                    {s.name} {s.role && <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>({s.role})</span>}
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Enabled Tools */}
+                                                    <div>
+                                                        <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <Icon name="Settings" size={16} /> Enabled Features
+                                                        </h4>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            {[
+                                                                { key: 'playbook', label: 'Playbook', icon: 'Book' },
+                                                                { key: 'depthChart', label: 'Depth Chart', icon: 'Users' },
+                                                                { key: 'practiceScripts', label: 'Practice Scripts', icon: 'FileText' },
+                                                                { key: 'gamePlan', label: 'Game Planner', icon: 'Clipboard' },
+                                                                { key: 'wristband', label: 'Wristband Builder', icon: 'Grid' }
+                                                            ].map(tool => (
+                                                                <label key={tool.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={level.enabledTools?.[tool.key] ?? false}
+                                                                        onChange={() => toggleTool(level.id, tool.key)}
+                                                                    />
+                                                                    <Icon name={tool.icon} size={14} />
+                                                                    {tool.label}
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
@@ -39838,11 +39994,28 @@
                                                                 </CollapsibleCategory>
                                                             ))}
                                                     </CollapsibleCategory>
+
+                                                    {/* Sub-Levels (JV, Freshman, etc.) */}
+                                                    {programLevels.length > 0 && (
+                                                        <CollapsibleCategory title="SUB-LEVELS" icon="Layers" defaultOpen={false}>
+                                                            {programLevels.map(level => {
+                                                                const canEdit = currentUser?.roles?.includes('Head Coach') || (level.staffPermissions || []).includes(currentUser?.id);
+                                                                return (
+                                                                    <button
+                                                                        key={level.id}
+                                                                        className={`nav-item ${activeLevelId === level.id ? 'active' : ''}`}
+                                                                        onClick={() => { setActiveLevelId(level.id); setView('sublevel-view'); }}
+                                                                        style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                                    >
+                                                                        <Icon name={canEdit ? "Edit3" : "Eye"} size={12} />
+                                                                        {level.name}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </CollapsibleCategory>
+                                                    )}
                                                 </div>
                                             </div>
-
-
-
 
 
 
@@ -40182,6 +40355,7 @@
                                     }}>
                                         {[
                                             { key: 'TEAM', label: 'Team', icon: 'Home' },
+                                            { key: 'LEVELS', label: 'Levels', icon: 'Layers' },
                                             { key: 'OFFENSE', label: 'Offense', icon: 'Zap' },
                                             { key: 'DEFENSE', label: 'Defense', icon: 'Shield' },
                                             { key: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Target' },
@@ -41531,6 +41705,126 @@
                                     </div>
                                 </div>
                             )}
+                            {view === 'sublevel-view' && (() => {
+                                const activeLevel = programLevels.find(l => l.id === activeLevelId);
+                                if (!activeLevel) {
+                                    return (
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                            <p>Select a sub-level from the sidebar to view it.</p>
+                                        </div>
+                                    );
+                                }
+                                const canEdit = currentUser?.roles?.includes('Head Coach') || (activeLevel.staffPermissions || []).includes(currentUser?.id);
+                                const enabledTools = activeLevel.enabledTools || {};
+
+                                return (
+                                    <div style={{ padding: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                            <div>
+                                                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Icon name="Layers" size={24} color="var(--accent)" /> {activeLevel.name}
+                                                </h2>
+                                                <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>
+                                                    {canEdit ? 'You have edit access to this level' : 'View only'}
+                                                </p>
+                                            </div>
+                                            {canEdit && (
+                                                <span style={{ background: 'var(--success)', color: 'white', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                    <Icon name="Edit3" size={12} /> Editor
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Quick Links to Enabled Tools */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                                            {enabledTools.playbook && (
+                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Playbook for ' + activeLevel.name + ' - Coming soon!')}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <div style={{ background: 'var(--accent)', padding: '0.5rem', borderRadius: '8px' }}>
+                                                            <Icon name="Book" size={20} color="white" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Playbook</h4>
+                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Manage plays</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {enabledTools.depthChart && (
+                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Depth Chart for ' + activeLevel.name + ' - Coming soon!')}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <div style={{ background: '#3b82f6', padding: '0.5rem', borderRadius: '8px' }}>
+                                                            <Icon name="Users" size={20} color="white" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Depth Chart</h4>
+                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Player positions</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {enabledTools.practiceScripts && (
+                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Practice Scripts for ' + activeLevel.name + ' - Coming soon!')}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <div style={{ background: '#22c55e', padding: '0.5rem', borderRadius: '8px' }}>
+                                                            <Icon name="FileText" size={20} color="white" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Practice Scripts</h4>
+                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Practice plans</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {enabledTools.gamePlan && (
+                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Game Planner for ' + activeLevel.name + ' - Coming soon!')}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <div style={{ background: '#f59e0b', padding: '0.5rem', borderRadius: '8px' }}>
+                                                            <Icon name="Clipboard" size={20} color="white" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Game Planner</h4>
+                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Game strategy</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {enabledTools.wristband && (
+                                                <div className="card" style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => alert('Wristband Builder for ' + activeLevel.name + ' - Coming soon!')}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <div style={{ background: '#ec4899', padding: '0.5rem', borderRadius: '8px' }}>
+                                                            <Icon name="Grid" size={20} color="white" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Wristband</h4>
+                                                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Play cards</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Staff with Access */}
+                                        <div className="card" style={{ padding: '1rem' }}>
+                                            <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem' }}><Icon name="UserCheck" size={16} /> Staff with Edit Access</h3>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                {(activeLevel.staffPermissions || []).length === 0 ? (
+                                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', margin: 0 }}>No staff assigned (Head Coach only)</p>
+                                                ) : (
+                                                    (activeLevel.staffPermissions || []).map(staffId => {
+                                                        const staffMember = staff.find(s => s.id === staffId);
+                                                        return staffMember ? (
+                                                            <span key={staffId} style={{ background: 'var(--surface)', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.85rem' }}>
+                                                                {staffMember.name}
+                                                            </span>
+                                                        ) : null;
+                                                    })
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                             {view === 'coaches-notes' && (() => {
                                 const NOTE_CATEGORIES = [
                                     { key: 'emphasis', label: 'Emphasis / Focus' },
