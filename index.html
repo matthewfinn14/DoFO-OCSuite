@@ -3460,31 +3460,30 @@
 
                 if (mode === 'wiz-skill') {
                     // Skill Wiz Default (11 Players)
-                    // OL is smaller text to match skill player icon size (~24px)
-                    // "Behind the LOS" -> Push Y down.
-                    // WIZ Card visible area: y=60 to y=520 (460px)
-                    // Position LOS at y=400 to allow ~340px above for routes (~17 yards) and ~120px below for backfield (~6 yards)
-                    const wizLos = 400;
+                    // Editor viewBox is 0 0 754 445 for wiz-card mode
+                    // Position LOS at y=300 to allow ~300px above for routes (~15 yards) and ~145px below for backfield
+                    const wizCenter = 377; // 754/2 for wiz-card viewBox width
+                    const wizLos = 300;
                     const initialSize = 24; // Reduced from 40 to match skill player circles
                     const spacing = 40;
-                    const olY = wizLos + 20; // Push down 20px (stays within y=520)
+                    const olY = wizLos + 15;
 
                     return [
                         // OL
-                        { id: Date.now() + 1, type: 'player', points: [{ x: center, y: olY }], color: getColor('C', cOL), label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-                        { id: Date.now() + 2, type: 'player', points: [{ x: center - spacing, y: olY }], color: getColor('LG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-                        { id: Date.now() + 3, type: 'player', points: [{ x: center + spacing, y: olY }], color: getColor('RG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-                        { id: Date.now() + 4, type: 'player', points: [{ x: center - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-                        { id: Date.now() + 5, type: 'player', points: [{ x: center + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', cOL), label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+                        { id: Date.now() + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
                         // Skill Players - Use position colors
-                        // QB at shotgun depth (60px behind LOS, stays within visible area)
-                        { id: Date.now() + 6, type: 'player', points: [{ x: center, y: wizLos + 60 }], color: getColor('QB', cQB), label: positionNames['QB'] || 'Q', shape: 'circle', variant: 'filled' },
-                        // RB closer to QB (at y=460, within visible bounds)
-                        { id: Date.now() + 7, type: 'player', points: [{ x: center - 60, y: wizLos + 60 }], color: getColor('RB', '#3b82f6'), label: positionNames['RB'] || 'B', shape: 'circle', variant: 'filled' },
-                        { id: Date.now() + 8, type: 'player', points: [{ x: 100, y: wizLos + 10 }], color: getColor('X', '#a855f7'), label: positionNames['X'] || 'X', shape: 'circle', variant: 'filled' },
-                        { id: Date.now() + 9, type: 'player', points: [{ x: 700, y: wizLos + 10 }], color: getColor('Z', '#22c55e'), label: positionNames['Z'] || 'Z', shape: 'circle', variant: 'filled' },
-                        { id: Date.now() + 10, type: 'player', points: [{ x: 200, y: wizLos + 25 }], color: getColor('A', '#ef4444'), label: positionNames['A'] || 'A', shape: 'circle', variant: 'filled' },
-                        { id: Date.now() + 11, type: 'player', points: [{ x: center + 120, y: wizLos + 10 }], color: getColor('Y', '#eab308'), label: positionNames['Y'] || 'Y', shape: 'circle', variant: 'filled' },
+                        // QB at shotgun depth (60px behind LOS)
+                        { id: Date.now() + 6, type: 'player', points: [{ x: wizCenter, y: wizLos + 60 }], color: getColor('QB', cQB), label: positionNames['QB'] || 'Q', shape: 'circle', variant: 'filled' },
+                        // RB next to QB
+                        { id: Date.now() + 7, type: 'player', points: [{ x: wizCenter - 60, y: wizLos + 60 }], color: getColor('RB', '#3b82f6'), label: positionNames['RB'] || 'B', shape: 'circle', variant: 'filled' },
+                        { id: Date.now() + 8, type: 'player', points: [{ x: 80, y: wizLos + 10 }], color: getColor('X', '#a855f7'), label: positionNames['X'] || 'X', shape: 'circle', variant: 'filled' },
+                        { id: Date.now() + 9, type: 'player', points: [{ x: 674, y: wizLos + 10 }], color: getColor('Z', '#22c55e'), label: positionNames['Z'] || 'Z', shape: 'circle', variant: 'filled' },
+                        { id: Date.now() + 10, type: 'player', points: [{ x: 170, y: wizLos + 25 }], color: getColor('A', '#ef4444'), label: positionNames['A'] || 'A', shape: 'circle', variant: 'filled' },
+                        { id: Date.now() + 11, type: 'player', points: [{ x: wizCenter + 120, y: wizLos + 10 }], color: getColor('Y', '#eab308'), label: positionNames['Y'] || 'Y', shape: 'circle', variant: 'filled' },
                     ];
                 }
 
