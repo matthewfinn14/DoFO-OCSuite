@@ -40203,43 +40203,32 @@
                                         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.5rem' }}>
                                             <Icon name="Target" size={24} /> Alignment Dashboard
                                         </h1>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Season Motto:</span>
-                                            <input type="text" className="form-input" value={seasonMotto} onChange={(e) => setSeasonMotto(e.target.value)} placeholder="e.g., 'All In'" style={{ width: '200px', padding: '0.3rem 0.6rem', fontSize: '0.9rem', fontWeight: '600', fontStyle: 'italic' }} />
-                                        </div>
                                     </div>
 
-                                    {/* Head Coach Notes - TOP */}
-                                    <div className="card" style={{ padding: '0.75rem', marginBottom: '0.75rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
-                                                <Icon name="MessageSquare" size={16} /> Head Coach Notes
-                                            </h3>
-                                            <button
-                                                className="btn btn-primary"
-                                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
-                                                onClick={() => setStaffNotes([
-                                                    { id: Date.now().toString(), text: '', date: new Date().toISOString().split('T')[0], author: currentUser?.displayName || 'Head Coach' },
-                                                    ...staffNotes
-                                                ])}
-                                            >
-                                                <Icon name="Plus" size={12} /> Add
-                                            </button>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '150px', overflowY: 'auto' }}>
-                                            {staffNotes.length === 0 && (
-                                                <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem', margin: 0, fontSize: '0.8rem' }}>No notes yet</p>
-                                            )}
-                                            {staffNotes.map((note, idx) => (
-                                                <div key={note.id} style={{ background: 'var(--surface)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                                        <input type="date" className="form-input" value={note.date?.split('T')[0] || ''} onChange={(e) => { const u = [...staffNotes]; u[idx] = { ...note, date: e.target.value }; setStaffNotes(u); }} style={{ width: '130px', padding: '0.2rem 0.4rem', fontSize: '0.75rem' }} />
-                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>— {note.author}</span>
-                                                        <button className="btn-icon" onClick={() => setStaffNotes(staffNotes.filter(n => n.id !== note.id))} style={{ color: '#ef4444', padding: '2px', marginLeft: 'auto' }}><Icon name="X" size={12} /></button>
-                                                    </div>
-                                                    <textarea className="form-input" value={note.text} onChange={(e) => { const u = [...staffNotes]; u[idx] = { ...note, text: e.target.value }; setStaffNotes(u); }} placeholder="Write your note..." rows={1} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
-                                                </div>
-                                            ))}
+                                    {/* Season Theme - TOP */}
+                                    <div className="card" style={{ padding: '1rem', marginBottom: '0.75rem', background: 'linear-gradient(135deg, var(--bg-panel) 0%, var(--surface) 100%)', borderLeft: '4px solid var(--accent)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Icon name="Megaphone" size={20} color="var(--accent)" />
+                                                <span style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Season Theme:</span>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={seasonMotto}
+                                                onChange={(e) => setSeasonMotto(e.target.value)}
+                                                placeholder="e.g., 'All In', 'Championship Mindset', 'Finish Strong'"
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '0.5rem 0.75rem',
+                                                    fontSize: '1.25rem',
+                                                    fontWeight: '700',
+                                                    fontStyle: 'italic',
+                                                    textAlign: 'center',
+                                                    background: 'transparent',
+                                                    border: '1px dashed var(--border)'
+                                                }}
+                                            />
                                         </div>
                                     </div>
 
