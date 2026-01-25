@@ -35658,7 +35658,16 @@
             const [positionBigThreeAssignments, setPositionBigThreeAssignments] = useLocalStorage('oc-dashboard-position-big-three-assignments', {});
             const [customBigThreeGroups, setCustomBigThreeGroups] = useLocalStorage('oc-dashboard-custom-big-three-groups', []);
             // Offseason-specific state
-            const [offseasonSwot, setOffseasonSwot] = useLocalStorage('oc-dashboard-offseason-swot', { strengths: '', weaknesses: '', opportunities: '', threats: '' });
+            const [offseasonSwot, setOffseasonSwot] = useLocalStorage('oc-dashboard-offseason-swot', {
+                culture: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
+                practice: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
+                athletic: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
+                roster: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
+                offense: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
+                defense: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
+                specialTeams: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
+                gameDay: { strengths: '', weaknesses: '', opportunities: '', threats: '' }
+            });
             const [offseasonMeetings, setOffseasonMeetings] = useLocalStorage('oc-dashboard-offseason-meetings', []);
             const [offseasonResearch, setOffseasonResearch] = useLocalStorage('oc-dashboard-offseason-research', []);
             const [endOfSeasonReports, setEndOfSeasonReports] = useLocalStorage('oc-dashboard-end-of-season-reports', {});
@@ -41257,26 +41266,79 @@
                                         <Icon name="Target" size={24} /> SWOT Analysis
                                     </h2>
                                     <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                                        Evaluate the team's Strengths, Weaknesses, Opportunities, and Threats for the upcoming season.
+                                        Evaluate Strengths, Weaknesses, Opportunities, and Threats across different areas of the program.
                                     </p>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                        <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #22c55e' }}>
-                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#22c55e', fontSize: '1rem' }}>Strengths</h3>
-                                            <textarea className="form-input" value={offseasonSwot.strengths} onChange={(e) => setOffseasonSwot({ ...offseasonSwot, strengths: e.target.value })} placeholder="What are we good at? What advantages do we have?" rows={6} style={{ resize: 'vertical' }} />
-                                        </div>
-                                        <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #ef4444' }}>
-                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#ef4444', fontSize: '1rem' }}>Weaknesses</h3>
-                                            <textarea className="form-input" value={offseasonSwot.weaknesses} onChange={(e) => setOffseasonSwot({ ...offseasonSwot, weaknesses: e.target.value })} placeholder="Where do we need to improve? What are our limitations?" rows={6} style={{ resize: 'vertical' }} />
-                                        </div>
-                                        <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #3b82f6' }}>
-                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#3b82f6', fontSize: '1rem' }}>Opportunities</h3>
-                                            <textarea className="form-input" value={offseasonSwot.opportunities} onChange={(e) => setOffseasonSwot({ ...offseasonSwot, opportunities: e.target.value })} placeholder="What opportunities can we take advantage of?" rows={6} style={{ resize: 'vertical' }} />
-                                        </div>
-                                        <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #f59e0b' }}>
-                                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#f59e0b', fontSize: '1rem' }}>Threats</h3>
-                                            <textarea className="form-input" value={offseasonSwot.threats} onChange={(e) => setOffseasonSwot({ ...offseasonSwot, threats: e.target.value })} placeholder="What challenges do we face? What obstacles must we overcome?" rows={6} style={{ resize: 'vertical' }} />
-                                        </div>
-                                    </div>
+                                    {(() => {
+                                        const SWOT_CATEGORIES = [
+                                            { key: 'culture', label: 'Culture', icon: 'Heart', color: '#ec4899' },
+                                            { key: 'practice', label: 'Practice', icon: 'Megaphone', color: '#8b5cf6' },
+                                            { key: 'athletic', label: 'Athletic Development', icon: 'Zap', color: '#06b6d4' },
+                                            { key: 'roster', label: 'Roster', icon: 'Users', color: '#64748b' },
+                                            { key: 'offense', label: 'Offense', icon: 'Zap', color: '#ef4444' },
+                                            { key: 'defense', label: 'Defense', icon: 'Shield', color: '#3b82f6' },
+                                            { key: 'specialTeams', label: 'Special Teams', icon: 'Star', color: '#22c55e' },
+                                            { key: 'gameDay', label: 'Game Day', icon: 'Calendar', color: '#f59e0b' }
+                                        ];
+                                        const [activeSwotTab, setActiveSwotTab] = useState('culture');
+                                        const currentSwot = offseasonSwot[activeSwotTab] || { strengths: '', weaknesses: '', opportunities: '', threats: '' };
+                                        const updateSwot = (field, value) => {
+                                            setOffseasonSwot({
+                                                ...offseasonSwot,
+                                                [activeSwotTab]: { ...currentSwot, [field]: value }
+                                            });
+                                        };
+                                        const activeCategory = SWOT_CATEGORIES.find(c => c.key === activeSwotTab);
+                                        return (
+                                            <>
+                                                {/* Category Tabs */}
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                                                    {SWOT_CATEGORIES.map(cat => (
+                                                        <button
+                                                            key={cat.key}
+                                                            onClick={() => setActiveSwotTab(cat.key)}
+                                                            className={activeSwotTab === cat.key ? 'btn btn-primary' : 'btn btn-secondary'}
+                                                            style={{
+                                                                padding: '0.5rem 0.75rem',
+                                                                fontSize: '0.8rem',
+                                                                background: activeSwotTab === cat.key ? cat.color : 'transparent',
+                                                                borderColor: cat.color,
+                                                                color: activeSwotTab === cat.key ? 'white' : cat.color
+                                                            }}
+                                                        >
+                                                            <Icon name={cat.icon} size={14} /> {cat.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                {/* Active Category Header */}
+                                                <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: 'var(--surface)', borderRadius: 'var(--radius)', borderLeft: `4px solid ${activeCategory?.color}` }}>
+                                                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: activeCategory?.color, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <Icon name={activeCategory?.icon} size={20} /> {activeCategory?.label} SWOT
+                                                    </h3>
+                                                </div>
+
+                                                {/* SWOT Grid */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                    <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #22c55e' }}>
+                                                        <h3 style={{ margin: '0 0 0.5rem 0', color: '#22c55e', fontSize: '1rem' }}>Strengths</h3>
+                                                        <textarea className="form-input" value={currentSwot.strengths} onChange={(e) => updateSwot('strengths', e.target.value)} placeholder="What are we good at? What advantages do we have?" rows={5} style={{ resize: 'vertical' }} />
+                                                    </div>
+                                                    <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #ef4444' }}>
+                                                        <h3 style={{ margin: '0 0 0.5rem 0', color: '#ef4444', fontSize: '1rem' }}>Weaknesses</h3>
+                                                        <textarea className="form-input" value={currentSwot.weaknesses} onChange={(e) => updateSwot('weaknesses', e.target.value)} placeholder="Where do we need to improve? What are our limitations?" rows={5} style={{ resize: 'vertical' }} />
+                                                    </div>
+                                                    <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #3b82f6' }}>
+                                                        <h3 style={{ margin: '0 0 0.5rem 0', color: '#3b82f6', fontSize: '1rem' }}>Opportunities</h3>
+                                                        <textarea className="form-input" value={currentSwot.opportunities} onChange={(e) => updateSwot('opportunities', e.target.value)} placeholder="What opportunities can we take advantage of?" rows={5} style={{ resize: 'vertical' }} />
+                                                    </div>
+                                                    <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #f59e0b' }}>
+                                                        <h3 style={{ margin: '0 0 0.5rem 0', color: '#f59e0b', fontSize: '1rem' }}>Threats</h3>
+                                                        <textarea className="form-input" value={currentSwot.threats} onChange={(e) => updateSwot('threats', e.target.value)} placeholder="What challenges do we face? What obstacles must we overcome?" rows={5} style={{ resize: 'vertical' }} />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             )}
                             {view === 'offseason-meetings' && (
