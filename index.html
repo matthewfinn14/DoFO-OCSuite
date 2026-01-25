@@ -2898,6 +2898,7 @@
 
                 // -- Settings & UI Fixes --
                 case "Mail": return <svg {...commonProps}><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>;
+                case "CreditCard": return <svg {...commonProps}><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>;
                 case "Archive": return <svg {...commonProps}><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>;
                 case "Phone": return <svg {...commonProps}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>;
                 case "Edit2": return <svg {...commonProps}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>;
@@ -18387,62 +18388,112 @@
                 <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <h2>Settings</h2>
+                        <h2>Account Settings</h2>
                         <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-panel)', padding: '0.25rem', borderRadius: '8px' }}>
                             <button className="btn" style={{ backgroundColor: activeTab === 'general' ? 'var(--accent)' : 'transparent', color: activeTab === 'general' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('general')}>General</button>
-                            {currentSchoolId && (
-                                <button className="btn" style={{ backgroundColor: activeTab === 'members' ? 'var(--accent)' : 'transparent', color: activeTab === 'members' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('members')}>Members</button>
-                            )}
-                            {(isAdmin || members.find(m => m.uid === currentUser.uid)?.role === 'admin') && (
-                                <button className="btn" style={{ backgroundColor: activeTab === 'billing' ? 'var(--accent)' : 'transparent', color: activeTab === 'billing' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('billing')}>Billing</button>
-                            )}
+                            <button className="btn" style={{ backgroundColor: activeTab === 'billing' ? 'var(--accent)' : 'transparent', color: activeTab === 'billing' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('billing')}>Billing & Account</button>
                         </div>
                     </div>
 
-                    {activeTab === 'members' && currentSchoolId && (
-                        <div className="animation-fade-in card">
-                            {/* Domain Management UI */}
-                            {(isAdmin || members.find(m => m.uid === currentUser.uid)?.role === 'admin') && (
-                                <div style={{ borderTop: 'none', paddingTop: 0, marginTop: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
-                                        <div>
-                                            <h3 style={{ margin: 0 }}>Approved Domains</h3>
-                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '0.25rem 0 0 0' }}>
-                                                Auto-join users with these email domains.
-                                            </p>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <input
-                                                placeholder="e.g. myschool.edu"
-                                                className="form-input"
-                                                value={newDomain}
-                                                onChange={e => setNewDomain(e.target.value)}
-                                                style={{ minWidth: '200px' }}
-                                            />
-                                            <button className="btn btn-primary" onClick={handleAddDomain}>Add</button>
-                                        </div>
+                    {activeTab === 'billing' && (
+                        <div className="animation-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            {/* Account Information */}
+                            <div className="card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                    <Icon name="User" size={24} color="var(--accent)" />
+                                    <h3 style={{ margin: 0 }}>Account Information</h3>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>School/Organization</label>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>{billingInfo?.schoolName || 'Not Set'}</p>
                                     </div>
-
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                        {claimedDomains.map((d, idx) => (
-                                            <div key={idx} style={{
-                                                background: 'var(--bg-main)', border: '1px solid var(--border)',
-                                                padding: '0.5rem 1rem', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '0.5rem'
-                                            }}>
-                                                <span style={{ fontWeight: 500 }}>@{d}</span>
-                                                <button
-                                                    onClick={() => handleRemoveDomain(d)}
-                                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                                                    title="Remove Domain"
-                                                >
-                                                    <div style={{ fontSize: '1.2rem', lineHeight: 1 }}>&times;</div>
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {claimedDomains.length === 0 && <span style={{ opacity: 0.5, fontSize: '0.9rem' }}>No domains claimed yet. Users must be invited manually.</span>}
+                                    <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account Email</label>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>{currentUser?.email || 'N/A'}</p>
+                                    </div>
+                                    <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account ID</label>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '500', fontSize: '0.9rem', fontFamily: 'monospace' }}>{currentSchoolId || 'N/A'}</p>
+                                    </div>
+                                    <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account Created</label>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>{billingInfo?.createdAt ? new Date(billingInfo.createdAt).toLocaleDateString() : 'N/A'}</p>
                                     </div>
                                 </div>
-                            )}
+                            </div>
+
+                            {/* Subscription Status */}
+                            <div className="card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                    <Icon name="CreditCard" size={24} color="var(--accent)" />
+                                    <h3 style={{ margin: 0 }}>Subscription Status</h3>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                                    <div style={{ padding: '1.25rem', background: currentPlanStatus?.includes('PREMIUM') ? 'rgba(34, 197, 94, 0.1)' : 'var(--surface)', borderRadius: '8px', border: currentPlanStatus?.includes('PREMIUM') ? '1px solid #22c55e' : '1px solid var(--border)' }}>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Plan</label>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '700', fontSize: '1.25rem', color: currentPlanStatus?.includes('PREMIUM') ? '#22c55e' : 'var(--text-primary)' }}>
+                                            {currentPlanStatus?.includes('PREMIUM') ? 'Premium' : currentPlanStatus === 'PREMIUM_TRIAL' ? 'Trial' : 'Free'}
+                                        </p>
+                                    </div>
+                                    <div style={{ padding: '1.25rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</label>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>
+                                            {billingInfo?.status === 'active' ? '✓ Active' : billingInfo?.status || 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div style={{ padding: '1.25rem', background: 'var(--surface)', borderRadius: '8px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Renewal Date</label>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>
+                                            {billingInfo?.subscriptionEndsAt ? new Date(billingInfo.subscriptionEndsAt).toLocaleDateString() : billingInfo?.trialEndsAt ? new Date(billingInfo.trialEndsAt).toLocaleDateString() : 'N/A'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Promo Code Section */}
+                                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                                    <h4 style={{ margin: '0 0 0.75rem 0' }}>Have a Promo Code?</h4>
+                                    <div style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px' }}>
+                                        <input
+                                            className="form-input"
+                                            placeholder="Enter promo code"
+                                            value={promoCode}
+                                            onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                                            style={{ flex: 1 }}
+                                        />
+                                        <button className="btn btn-primary" onClick={handleRedeemPromo} disabled={redeeming || !promoCode}>
+                                            {redeeming ? 'Redeeming...' : 'Redeem'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Invoice Request */}
+                            <div className="card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                    <Icon name="FileText" size={24} color="var(--accent)" />
+                                    <h3 style={{ margin: 0 }}>Invoice & Billing Support</h3>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                    Need an invoice for your records or to submit for reimbursement? Contact our billing team.
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <a
+                                        href={`mailto:billing@dofo.app?subject=Invoice Request - ${billingInfo?.schoolName || 'Account'}&body=Account ID: ${currentSchoolId}%0D%0ASchool: ${billingInfo?.schoolName || 'N/A'}%0D%0AEmail: ${currentUser?.email}%0D%0A%0D%0APlease send an invoice for our subscription.`}
+                                        className="btn btn-primary"
+                                        style={{ textDecoration: 'none' }}
+                                    >
+                                        <Icon name="Mail" size={16} style={{ marginRight: '0.5rem' }} /> Request Invoice
+                                    </a>
+                                    <a
+                                        href="mailto:support@dofo.app?subject=Billing Support"
+                                        className="btn btn-secondary"
+                                        style={{ textDecoration: 'none' }}
+                                    >
+                                        <Icon name="HelpCircle" size={16} style={{ marginRight: '0.5rem' }} /> Billing Support
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -40144,7 +40195,7 @@
                                             style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem' }}
                                         >
                                             <Icon name="Settings" size={16} />
-                                            {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Settings</span>}
+                                            {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Account Settings</span>}
                                         </button>
                                     )}
                                     {/* Site Admin - only visible to site admins */}
