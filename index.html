@@ -10063,7 +10063,7 @@
                         {/* Header Tabs */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                {['staples', 'card1', 'card2', 'card3', 'card4', 'card5', 'card6'].map(id => (
+                                {['card1', 'card2', 'card3', 'card4', 'card5', 'card6', 'staples'].map(id => (
                                     <button
                                         key={id}
                                         onClick={() => setSelectedCardId(id)}
@@ -10212,7 +10212,7 @@
                                         placeholder="1"
                                     />
                                 </div>
-                                {(activeCard.type === 'standard' || activeCard.type === 'audible') && (
+                                {(activeCard.type === 'standard') && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Color:</label>
                                         <select
@@ -10338,8 +10338,6 @@
                                                 )}
                                             </div>
                                         </div>
-                                    ) : activeCard.type === 'audible' ? (
-                                        renderAudibleTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
                                     ) : (
                                         renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
                                     )}
@@ -10421,10 +10419,7 @@
                                                 </div>
                                                 {/* Content */}
                                                 <div className="print-card-content">
-                                                    {activeCard.type === 'audible'
-                                                        ? renderAudibleTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
-                                                        : renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
-                                                    }
+                                                        {renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'print-view', selectedCardId, activeCard.opp || activeCard.opponent || '')}
                                                 </div>
                                             </>
                                         </div>
