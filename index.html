@@ -38342,28 +38342,11 @@
 
                             {setupTab === 'practice-templates' && (
                                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                        <div>
-                                            <h3 style={{ margin: 0 }}>Practice Templates</h3>
-                                            <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7 }}>Save and reuse practice plan templates for your team.</p>
-                                        </div>
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={() => {
-                                                const name = prompt("Template Name:");
-                                                if (name) {
-                                                    const newTemplate = {
-                                                        id: Date.now().toString(),
-                                                        name,
-                                                        createdAt: new Date().toISOString(),
-                                                        segments: []
-                                                    };
-                                                    setPracticeTemplates([...practiceTemplates, newTemplate]);
-                                                }
-                                            }}
-                                        >
-                                            <Icon name="Plus" size={16} /> New Template
-                                        </button>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <h3 style={{ margin: 0 }}>Practice Templates</h3>
+                                        <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7 }}>
+                                            Templates are saved from Practice Planner. Use "Save as Template" in any week's practice plan to add templates here.
+                                        </p>
                                     </div>
 
                                     {practiceTemplates.length === 0 ? (
@@ -38462,31 +38445,11 @@
 
                             {setupTab === 'gameplan-templates' && (
                                 <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                        <div>
-                                            <h3 style={{ margin: 0 }}>Game Plan Templates</h3>
-                                            <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                Save and reuse call sheet layouts, situation scripts, and game plan structures.
-                                            </p>
-                                        </div>
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={() => {
-                                                const name = prompt("Template Name:");
-                                                if (name) {
-                                                    const newTemplate = {
-                                                        id: Date.now().toString(),
-                                                        name,
-                                                        createdAt: new Date().toISOString(),
-                                                        type: 'gameplan',
-                                                        data: {}
-                                                    };
-                                                    setGameplanTemplates([...gameplanTemplates, newTemplate]);
-                                                }
-                                            }}
-                                        >
-                                            <Icon name="Plus" size={16} /> New Template
-                                        </button>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <h3 style={{ margin: 0 }}>Game Plan Templates</h3>
+                                        <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                            Templates are saved from Game Planner. Use "Save as Template" in any week's game plan to add templates here.
+                                        </p>
                                     </div>
 
                                     {gameplanTemplates.length === 0 ? (
