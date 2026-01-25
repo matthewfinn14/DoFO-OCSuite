@@ -84,13 +84,13 @@
     <!-- Firebase Initialization -->
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyChvjfVMQ_jrAt7C08pLTreckUIizKFKis",
-            authDomain: "dofo-c3fbe.firebaseapp.com",
-            projectId: "dofo-c3fbe",
-            storageBucket: "dofo-c3fbe.firebasestorage.app",
-            messagingSenderId: "953198874702",
-            appId: "1:953198874702:web:025100b11c243f73f9731f",
-            measurementId: "G-LCFEPZ57EJ"
+            apiKey: "AIzaSyCkhw8oHLkLURwmJyjlkBlIgx1TUzH8IrU",
+            authDomain: "dofo-oc-suite.firebaseapp.com",
+            projectId: "dofo-oc-suite",
+            storageBucket: "dofo-oc-suite.firebasestorage.app",
+            messagingSenderId: "620991340354",
+            appId: "1:620991340354:web:1673825ec67d1875a3f2db",
+            measurementId: "G-ET6K18RG1Z"
         };
 
         // Initialize Firebase
@@ -31192,207 +31192,8 @@
 
         const DEFAULT_STAFF_2025 = [];
 
-        // Default Formation Presets
-        const DEFAULT_FORMATIONS = [
-            {
-                id: 'blue',
-                name: 'Blue',
-                description: '2x2 Spread - Balanced receivers',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'RB', x: 50, y: 65 },
-                    { label: 'X', x: 10, y: 52 },
-                    { label: 'Z', x: 90, y: 52 },
-                    { label: 'A', x: 70, y: 56 },
-                    { label: 'Y', x: 30, y: 56 }
-                ]
-            },
-            {
-                id: 'red',
-                name: 'Red',
-                description: '3x1 Spread - Trips right',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'RB', x: 50, y: 65 },
-                    { label: 'X', x: 10, y: 52 },
-                    { label: 'Z', x: 90, y: 52 },
-                    { label: 'A', x: 80, y: 52 },
-                    { label: 'Y', x: 85, y: 56 }
-                ]
-            },
-            {
-                id: 'green',
-                name: 'Green',
-                description: '2x2 Spread with tight slot',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'RB', x: 50, y: 65 },
-                    { label: 'X', x: 10, y: 52 },
-                    { label: 'Z', x: 90, y: 52 },
-                    { label: 'A', x: 68, y: 53 },
-                    { label: 'Y', x: 32, y: 53 }
-                ]
-            },
-            {
-                id: 'orange',
-                name: 'Orange',
-                description: 'Empty backfield 3x2',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'X', x: 10, y: 52 },
-                    { label: 'Z', x: 90, y: 52 },
-                    { label: 'A', x: 80, y: 52 },
-                    { label: 'Y', x: 30, y: 56 },
-                    { label: 'F', x: 70, y: 60 }
-                ]
-            },
-            {
-                id: 'diamond_rt',
-                name: 'Diamond Rt',
-                description: 'Diamond formation right',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'WR', x: 55, y: 45 },
-                    { label: 'WR', x: 40, y: 58 },
-                    { label: 'WR', x: 70, y: 58 },
-                    { label: 'WR', x: 55, y: 72 },
-                    { label: 'X', x: 10, y: 52 }
-                ]
-            },
-            {
-                id: 'diamond_lt',
-                name: 'Diamond Lt',
-                description: 'Diamond formation left',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'WR', x: 45, y: 45 },
-                    { label: 'WR', x: 30, y: 58 },
-                    { label: 'WR', x: 60, y: 58 },
-                    { label: 'WR', x: 45, y: 72 },
-                    { label: 'Z', x: 90, y: 52 }
-                ]
-            },
-            {
-                id: 'bunch_rt',
-                name: 'Bunch Rt',
-                description: 'Bunched receivers right',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'RB', x: 50, y: 65 },
-                    { label: 'X', x: 10, y: 52 },
-                    { label: 'WR', x: 78, y: 52 },
-                    { label: 'WR', x: 83, y: 52 },
-                    { label: 'WR', x: 88, y: 50 }
-                ]
-            },
-            {
-                id: 'bunch_lt',
-                name: 'Bunch Lt',
-                description: 'Bunched receivers left',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'RB', x: 50, y: 65 },
-                    { label: 'Z', x: 90, y: 52 },
-                    { label: 'WR', x: 22, y: 52 },
-                    { label: 'WR', x: 17, y: 52 },
-                    { label: 'WR', x: 12, y: 50 }
-                ]
-            },
-            {
-                id: 'bright',
-                name: 'Bright',
-                description: 'Tight formation with TE',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'RB', x: 50, y: 65 },
-                    { label: 'TE', x: 70, y: 52 },
-                    { label: 'X', x: 10, y: 52 },
-                    { label: 'Z', x: 90, y: 52 },
-                    { label: 'A', x: 80, y: 54 }
-                ]
-            },
-            {
-                id: 'rip',
-                name: 'Rip',
-                description: 'Rip formation',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'RB', x: 50, y: 65 },
-                    { label: 'X', x: 12, y: 52 },
-                    { label: 'Z', x: 88, y: 52 },
-                    { label: 'A', x: 72, y: 55 },
-                    { label: 'Y', x: 28, y: 55 }
-                ]
-            },
-            {
-                id: 'gold',
-                name: 'Gold',
-                description: 'Gold formation',
-                positions: [
-                    { label: 'LT', x: 35, y: 52 },
-                    { label: 'LG', x: 42, y: 52 },
-                    { label: 'C', x: 50, y: 52 },
-                    { label: 'RG', x: 58, y: 52 },
-                    { label: 'RT', x: 65, y: 52 },
-                    { label: 'QB', x: 50, y: 58 },
-                    { label: 'RB', x: 50, y: 65 },
-                    { label: 'X', x: 10, y: 52 },
-                    { label: 'Z', x: 90, y: 52 },
-                    { label: 'A', x: 75, y: 56 },
-                    { label: 'Y', x: 25, y: 56 }
-                ]
-            }
-        ];
+        // Default Formation Presets - Empty for fresh start (admin can push templates later)
+        const DEFAULT_FORMATIONS = [];
 
 
         const GradingModal = ({ cell, currentData, onClose, onSave }) => {
@@ -35235,6 +35036,16 @@
                                 // Clear Invite Data just in case
                                 setInviteData(null);
                                 // Optional: You could reset other states here if needed, but Wizard hides them.
+                            } else {
+                                // FIX: Reload page once after Firebase data loads to sync React state with localStorage
+                                // This ensures React state is initialized from the freshly-loaded Firebase data
+                                const sessionKey = `firebase_loaded_${authUser.uid}`;
+                                if (!sessionStorage.getItem(sessionKey)) {
+                                    sessionStorage.setItem(sessionKey, 'true');
+                                    console.log("Firebase data loaded - reloading to sync React state");
+                                    window.location.reload();
+                                    return;
+                                }
                             }
                         } catch (e) {
                             console.error("Critical Load Error", e);
@@ -40593,9 +40404,9 @@
                                         {!sidebarCollapsed && <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>PRINT CENTER</span>}
                                     </button>
                                 )}
-                                {/* PERSONNEL */}
+                                {/* STAFF & ROSTER */}
                                 {currentPermissions.staff.view && (
-                                    <CollapsibleCategory title="PERSONNEL" icon="Users" defaultOpen={false}>
+                                    <CollapsibleCategory title="STAFF & ROSTER" icon="Users" defaultOpen={false}>
                                         <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
                                             <Icon name="UserCog" size={16} style={{ marginRight: '8px' }} /> Staff & Roles
                                         </button>
