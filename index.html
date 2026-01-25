@@ -1842,6 +1842,52 @@
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
 
+            // Site Admin check
+            const isSiteAdmin = user?.email && ['admin@digitaldofo.com', 'matthewfinn14@gmail.com'].includes(user.email.toLowerCase());
+            const [adminMode, setAdminMode] = useState(null); // null, 'select', 'create'
+            const [allSchools, setAllSchools] = useState([]);
+            const [selectedSchoolId, setSelectedSchoolId] = useState('');
+
+            // Load all schools for site admin
+            useEffect(() => {
+                if (isSiteAdmin) {
+                    window.db.collection('schools').get().then(snapshot => {
+                        const schools = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setAllSchools(schools);
+                    });
+                }
+            }, [isSiteAdmin]);
+
+            // Handle site admin selecting existing school
+            const handleSelectSchool = async () => {
+                if (!selectedSchoolId) {
+                    setError('Please select a school');
+                    return;
+                }
+                setLoading(true);
+                try {
+                    // Create/update user document with selected school
+                    await window.db.collection('users').doc(user.uid).set({
+                        schoolId: selectedSchoolId,
+                        email: user.email,
+                        role: 'Site Admin'
+                    }, { merge: true });
+
+                    // Create membership
+                    await window.db.collection('users').doc(user.uid).collection('memberships').doc(selectedSchoolId).set({
+                        role: 'Site Admin',
+                        joinedAt: new Date().toISOString(),
+                        status: 'active'
+                    });
+
+                    localStorage.setItem('hc_school_id', selectedSchoolId);
+                    onComplete(selectedSchoolId);
+                } catch (err) {
+                    setError('Failed to select school: ' + err.message);
+                }
+                setLoading(false);
+            };
+
             // Data State - Pre-populate from access request if available
             const [schoolName, setSchoolName] = useState(requestData?.schoolName || '');
             const [mascot, setMascot] = useState('');
@@ -1981,8 +2027,56 @@
 
                         {error && <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>{error}</div>}
 
-                        {/* Single Step Form */}
-                        <div>
+                        {/* Site Admin: Choose Mode */}
+                        {isSiteAdmin && !adminMode && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '8px', border: '1px solid #22c55e' }}>
+                                    <p style={{ color: '#22c55e', margin: '0 0 0.5rem 0', fontWeight: 'bold' }}>🛡️ Site Admin Detected</p>
+                                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.9rem' }}>You can select an existing school or create a new one.</p>
+                                </div>
+                                <button
+                                    onClick={() => setAdminMode('select')}
+                                    style={{ width: '100%', padding: '1rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}
+                                >
+                                    Select Existing School ({allSchools.length} available)
+                                </button>
+                                <button
+                                    onClick={() => setAdminMode('create')}
+                                    style={{ width: '100%', padding: '1rem', background: '#475569', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}
+                                >
+                                    Create New School
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Site Admin: Select School */}
+                        {isSiteAdmin && adminMode === 'select' && (
+                            <div>
+                                <button onClick={() => setAdminMode(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginBottom: '1rem' }}>← Back</button>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>Select School</label>
+                                <select
+                                    value={selectedSchoolId}
+                                    onChange={e => setSelectedSchoolId(e.target.value)}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', background: '#0f172a', border: '1px solid #475569', color: 'white', marginBottom: '1rem' }}
+                                >
+                                    <option value="">-- Choose a school --</option>
+                                    {allSchools.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name || s.id} {s.joinCode ? `(${s.joinCode})` : ''}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={handleSelectSchool}
+                                    disabled={loading || !selectedSchoolId}
+                                    style={{ width: '100%', padding: '0.75rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}
+                                >
+                                    {loading ? 'Connecting...' : 'Connect to School'}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Single Step Form - Show for non-admins or admin in create mode */}
+                        {(!isSiteAdmin || adminMode === 'create') && <div>
+                            {isSiteAdmin && <button onClick={() => setAdminMode(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginBottom: '1rem' }}>← Back</button>}
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>School Name</label>
                                 <input
@@ -2040,7 +2134,7 @@
                             >
                                 {loading ? 'Creating School...' : 'Complete Setup'}
                             </button>
-                        </div>
+                        </div>}
                     </div>
                 </div>
             )
