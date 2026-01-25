@@ -4531,16 +4531,14 @@
                                 <>
                                     {/* 1. Blue Box: Personnel, Formation, Add Player */}
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#e0f2fe', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
-                                        {personnelGroupings.length > 0 && (
-                                            <select
-                                                onChange={(e) => { if (e.target.value) { loadPersonnelGrouping(e.target.value); e.target.value = ''; } }}
-                                                defaultValue=""
-                                                style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}
-                                            >
-                                                <option value="">Personnel...</option>
-                                                {personnelGroupings.map(g => (<option key={g.id} value={g.id}>{g.code} - {g.name}</option>))}
-                                            </select>
-                                        )}
+                                        <select
+                                            onChange={(e) => { if (e.target.value) { loadPersonnelGrouping(e.target.value); e.target.value = ''; } }}
+                                            defaultValue=""
+                                            style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}
+                                        >
+                                            <option value="">Personnel...</option>
+                                            {(personnelGroupings || []).map(g => (<option key={g.id} value={g.id}>{g.code} - {g.name}</option>))}
+                                        </select>
                                         {formations.length > 0 && (
                                             <select value={selectedFormationId} onChange={(e) => { setSelectedFormationId(e.target.value); if (e.target.value) loadFormation(e.target.value); }} style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}>
                                                 <option value="">Formation...</option>
