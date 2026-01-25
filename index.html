@@ -11026,6 +11026,43 @@
                         )
                     }
 
+                    {/* Coach Big 3 - Show when filtered by specific coach */}
+                    {coachFilter && coachFilter !== 'ALL' && (() => {
+                        const coach = staff?.find(s => s.id === coachFilter);
+                        if (!coach || !coach.big3 || coach.big3.every(b => !b)) return null;
+                        return (
+                            <div style={{
+                                border: '2px solid #000',
+                                padding: '0.5rem 1rem',
+                                marginBottom: '1rem',
+                                background: '#fef3c7',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '1.5rem'
+                            }}>
+                                <div style={{ fontWeight: 'bold', fontSize: '1rem', whiteSpace: 'nowrap' }}>
+                                    {coach.name}'s BIG 3:
+                                </div>
+                                <div style={{ display: 'flex', gap: '1.5rem', flex: 1 }}>
+                                    {coach.big3.filter(b => b).map((item, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{
+                                                width: '22px', height: '22px',
+                                                background: '#000', color: '#fef3c7',
+                                                borderRadius: '50%', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                fontWeight: 'bold', fontSize: '0.85rem'
+                                            }}>
+                                                {i + 1}
+                                            </span>
+                                            <span style={{ fontWeight: '500' }}>{item}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Main Schedule Table */}
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
                         <thead>
@@ -15594,6 +15631,43 @@
                                                 <div style={{ gridColumn: '1 / -1', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No special teams assigned</div>
                                             )}
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Big 3 Section */}
+                                <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                                    <h4 style={{ color: 'var(--accent)', marginBottom: '1rem', textTransform: 'uppercase', fontSize: '0.85rem', letterSpacing: '1px' }}>
+                                        BIG 3 - Practice Focus Points
+                                    </h4>
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                        These priorities will appear on practice plans when filtered by this coach.
+                                    </p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {[0, 1, 2].map(idx => (
+                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <span style={{
+                                                    width: '28px', height: '28px',
+                                                    background: 'var(--accent)', color: 'black',
+                                                    borderRadius: '50%', display: 'flex',
+                                                    alignItems: 'center', justifyContent: 'center',
+                                                    fontWeight: 'bold', fontSize: '0.9rem'
+                                                }}>
+                                                    {idx + 1}
+                                                </span>
+                                                <input
+                                                    className="form-input"
+                                                    style={{ flex: 1 }}
+                                                    placeholder={`Focus point ${idx + 1}...`}
+                                                    value={(selectedCoach.big3 || [])[idx] || ''}
+                                                    onChange={e => {
+                                                        const newBig3 = [...(selectedCoach.big3 || ['', '', ''])];
+                                                        newBig3[idx] = e.target.value;
+                                                        updateMember(selectedCoach.id, 'big3', newBig3);
+                                                        setSelectedCoach({ ...selectedCoach, big3: newBig3 });
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
