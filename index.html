@@ -35605,6 +35605,11 @@
             const [stWeeklyGoals, setStWeeklyGoals] = useLocalStorage('oc-dashboard-st-weekly-goals', []);
             const [staffNotes, setStaffNotes] = useLocalStorage('oc-dashboard-staff-notes', []);
             const [weeklyCoachesNotes, setWeeklyCoachesNotes] = useLocalStorage('oc-dashboard-weekly-coaches-notes', {});
+            const [positionBigThree, setPositionBigThree] = useLocalStorage('oc-dashboard-position-big-three', {
+                QB: ['', '', ''], RB: ['', '', ''], WR: ['', '', ''], TE: ['', '', ''], OL: ['', '', ''],
+                DL: ['', '', ''], LB: ['', '', ''], DB: ['', '', ''],
+                KO: ['', '', ''], KOR: ['', '', ''], PUNT: ['', '', ''], PR: ['', '', ''], FG: ['', '', ''], FGB: ['', '', '']
+            });
 
             // Access Config for Permissions (Paying Admin Check)
             const [appAccessConfig, setAppAccessConfig] = useState({});
@@ -40377,9 +40382,109 @@
                                     </div>
 
                                     {/* Coaches' Expectations */}
-                                    <div className="card" style={{ padding: '0.75rem' }}>
+                                    <div className="card" style={{ padding: '0.75rem', marginBottom: '0.75rem' }}>
                                         <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="UserCheck" size={14} /> Coaches' Expectations</h3>
                                         <textarea className="form-input" value={coachesExpectations} onChange={(e) => setCoachesExpectations(e.target.value)} placeholder="What do we expect from our coaches?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                    </div>
+
+                                    {/* Position Group Big Three */}
+                                    <div className="card" style={{ padding: '0.75rem' }}>
+                                        <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Icon name="Target" size={16} /> Position Group "Big Three" Emphasis
+                                        </h3>
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.75rem', marginTop: 0 }}>
+                                            Each position group's top 3 focus areas for the season.
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                                            {/* Offense */}
+                                            <div>
+                                                <h4 style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.5rem', borderBottom: '2px solid #ef4444', paddingBottom: '0.25rem' }}>Offense</h4>
+                                                {['QB', 'RB', 'WR', 'TE', 'OL'].map(pos => (
+                                                    <div key={pos} style={{ marginBottom: '0.5rem' }}>
+                                                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent)', marginBottom: '0.2rem' }}>{pos}</div>
+                                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                            {[0, 1, 2].map(i => (
+                                                                <input
+                                                                    key={i}
+                                                                    type="text"
+                                                                    className="form-input"
+                                                                    value={positionBigThree[pos]?.[i] || ''}
+                                                                    onChange={(e) => {
+                                                                        const updated = { ...positionBigThree };
+                                                                        if (!updated[pos]) updated[pos] = ['', '', ''];
+                                                                        updated[pos][i] = e.target.value;
+                                                                        setPositionBigThree(updated);
+                                                                    }}
+                                                                    placeholder={`#${i + 1}`}
+                                                                    style={{ flex: 1, padding: '0.2rem 0.4rem', fontSize: '0.7rem', minWidth: 0 }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {/* Defense */}
+                                            <div>
+                                                <h4 style={{ fontSize: '0.85rem', color: '#3b82f6', marginBottom: '0.5rem', borderBottom: '2px solid #3b82f6', paddingBottom: '0.25rem' }}>Defense</h4>
+                                                {['DL', 'LB', 'DB'].map(pos => (
+                                                    <div key={pos} style={{ marginBottom: '0.5rem' }}>
+                                                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent)', marginBottom: '0.2rem' }}>{pos}</div>
+                                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                            {[0, 1, 2].map(i => (
+                                                                <input
+                                                                    key={i}
+                                                                    type="text"
+                                                                    className="form-input"
+                                                                    value={positionBigThree[pos]?.[i] || ''}
+                                                                    onChange={(e) => {
+                                                                        const updated = { ...positionBigThree };
+                                                                        if (!updated[pos]) updated[pos] = ['', '', ''];
+                                                                        updated[pos][i] = e.target.value;
+                                                                        setPositionBigThree(updated);
+                                                                    }}
+                                                                    placeholder={`#${i + 1}`}
+                                                                    style={{ flex: 1, padding: '0.2rem 0.4rem', fontSize: '0.7rem', minWidth: 0 }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {/* Special Teams */}
+                                            <div>
+                                                <h4 style={{ fontSize: '0.85rem', color: '#22c55e', marginBottom: '0.5rem', borderBottom: '2px solid #22c55e', paddingBottom: '0.25rem' }}>Special Teams</h4>
+                                                {[
+                                                    { key: 'KO', label: 'Kickoff' },
+                                                    { key: 'KOR', label: 'KO Return' },
+                                                    { key: 'PUNT', label: 'Punt' },
+                                                    { key: 'PR', label: 'Punt Return' },
+                                                    { key: 'FG', label: 'FG / PAT' },
+                                                    { key: 'FGB', label: 'FG Block' }
+                                                ].map(unit => (
+                                                    <div key={unit.key} style={{ marginBottom: '0.5rem' }}>
+                                                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent)', marginBottom: '0.2rem' }}>{unit.label}</div>
+                                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                            {[0, 1, 2].map(i => (
+                                                                <input
+                                                                    key={i}
+                                                                    type="text"
+                                                                    className="form-input"
+                                                                    value={positionBigThree[unit.key]?.[i] || ''}
+                                                                    onChange={(e) => {
+                                                                        const updated = { ...positionBigThree };
+                                                                        if (!updated[unit.key]) updated[unit.key] = ['', '', ''];
+                                                                        updated[unit.key][i] = e.target.value;
+                                                                        setPositionBigThree(updated);
+                                                                    }}
+                                                                    placeholder={`#${i + 1}`}
+                                                                    style={{ flex: 1, padding: '0.2rem 0.4rem', fontSize: '0.7rem', minWidth: 0 }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
