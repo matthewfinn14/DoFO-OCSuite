@@ -4656,6 +4656,107 @@
                                 </div>
                             )}
 
+                            {/* --- WIZ Skill: Line Style & Endpoints --- */}
+                            {mode === 'wiz-skill' && !formationOnly && (
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', background: '#fef3c7', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #fcd34d' }}>
+                                    {/* Line Style Buttons */}
+                                    <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.65rem', color: '#92400e', fontWeight: 'bold', marginRight: '0.25rem' }}>STYLE</span>
+                                        <button
+                                            onClick={() => { setSelectedTool('line'); setLineStyle('solid'); }}
+                                            title="Solid Line"
+                                            style={{
+                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
+                                                background: selectedTool === 'line' && lineStyle === 'solid' ? '#f59e0b' : 'white',
+                                                color: selectedTool === 'line' && lineStyle === 'solid' ? 'white' : '#1e293b',
+                                                border: '1px solid #fcd34d'
+                                            }}
+                                        >
+                                            <span style={{ display: 'inline-block', width: '20px', borderBottom: '2px solid currentColor' }}></span>
+                                        </button>
+                                        <button
+                                            onClick={() => { setSelectedTool('line'); setLineStyle('dashed'); }}
+                                            title="Dashed Line"
+                                            style={{
+                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
+                                                background: selectedTool === 'line' && lineStyle === 'dashed' ? '#f59e0b' : 'white',
+                                                color: selectedTool === 'line' && lineStyle === 'dashed' ? 'white' : '#1e293b',
+                                                border: '1px solid #fcd34d'
+                                            }}
+                                        >
+                                            <span style={{ display: 'inline-block', width: '20px', borderBottom: '2px dashed currentColor' }}></span>
+                                        </button>
+                                        <button
+                                            onClick={() => { setSelectedTool('line'); setLineStyle('zigzag'); }}
+                                            title="Zigzag Line"
+                                            style={{
+                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
+                                                background: selectedTool === 'line' && lineStyle === 'zigzag' ? '#f59e0b' : 'white',
+                                                color: selectedTool === 'line' && lineStyle === 'zigzag' ? 'white' : '#1e293b',
+                                                border: '1px solid #fcd34d'
+                                            }}
+                                        >
+                                            <svg width="20" height="10" viewBox="0 0 20 10" style={{ display: 'block' }}>
+                                                <path d="M0,5 L4,2 L8,8 L12,2 L16,8 L20,5" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div style={{ width: '1px', height: '20px', background: '#fcd34d' }}></div>
+                                    {/* Endpoint Buttons */}
+                                    <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.65rem', color: '#92400e', fontWeight: 'bold', marginRight: '0.25rem' }}>END</span>
+                                        <button
+                                            onClick={() => { setSelectedTool('line'); setEndType('arrow'); }}
+                                            title="Arrow (Routes)"
+                                            style={{
+                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
+                                                background: selectedTool === 'line' && endType === 'arrow' ? '#f59e0b' : 'white',
+                                                color: selectedTool === 'line' && endType === 'arrow' ? 'white' : '#1e293b',
+                                                border: '1px solid #fcd34d'
+                                            }}
+                                        >
+                                            →
+                                        </button>
+                                        <button
+                                            onClick={() => { setSelectedTool('line'); setEndType('t'); }}
+                                            title="T-Block (Blocking)"
+                                            style={{
+                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
+                                                background: selectedTool === 'line' && endType === 't' ? '#f59e0b' : 'white',
+                                                color: selectedTool === 'line' && endType === 't' ? 'white' : '#1e293b',
+                                                border: '1px solid #fcd34d'
+                                            }}
+                                        >
+                                            —|
+                                        </button>
+                                        <button
+                                            onClick={() => { setSelectedTool('line'); setEndType('dot'); }}
+                                            title="Dot (Play Fake)"
+                                            style={{
+                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
+                                                background: selectedTool === 'line' && endType === 'dot' ? '#f59e0b' : 'white',
+                                                color: selectedTool === 'line' && endType === 'dot' ? 'white' : '#1e293b',
+                                                border: '1px solid #fcd34d'
+                                            }}
+                                        >
+                                            •
+                                        </button>
+                                        <button
+                                            onClick={() => { setSelectedTool('line'); setEndType('none'); }}
+                                            title="No Endpoint"
+                                            style={{
+                                                padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer',
+                                                background: selectedTool === 'line' && endType === 'none' ? '#f59e0b' : 'white',
+                                                color: selectedTool === 'line' && endType === 'none' ? 'white' : '#1e293b',
+                                                border: '1px solid #fcd34d'
+                                            }}
+                                        >
+                                            —
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* --- WIZ O-Line Controls --- */}
                             {mode === 'wiz-oline' && !formationOnly && (
                                 <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', background: '#e0f2fe', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
