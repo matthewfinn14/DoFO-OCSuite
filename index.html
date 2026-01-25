@@ -33719,9 +33719,16 @@
                         if (!inviteData && !schoolId) {
                             console.log("DEBUG: User has no memberships. Checking access request status...");
 
-                            // Check for existing access request
+                            // Check for existing access request (force server fetch to avoid stale cache)
                             try {
-                                const requestDoc = await window.db.collection('access_requests').doc(authUser.email.toLowerCase()).get();
+                                let requestDoc;
+                                try {
+                                    requestDoc = await window.db.collection('access_requests').doc(authUser.email.toLowerCase()).get({ source: 'server' });
+                                } catch (serverErr) {
+                                    console.warn("Access request server fetch failed, fallback to cache:", serverErr);
+                                    requestDoc = await window.db.collection('access_requests').doc(authUser.email.toLowerCase()).get();
+                                }
+                                console.log("DEBUG: Access request doc exists:", requestDoc.exists, "data:", requestDoc.data());
 
                                 if (requestDoc.exists) {
                                     const requestData = requestDoc.data();
@@ -33751,13 +33758,18 @@
                                         console.log("Access request rejected.");
                                         setAccessRequestStatus({ checked: true, status: 'rejected', data: requestData });
                                         return;
+                                    } else {
+                                        // Unknown status - log it and treat as pending for safety
+                                        console.log("Access request has unknown status:", requestData.status);
+                                        setAccessRequestStatus({ checked: true, status: requestData.status || 'pending', data: requestData });
+                                        return;
                                     }
+                                } else {
+                                    // No request exists - show the request form
+                                    console.log("No access request found. Showing request form.");
+                                    setAccessRequestStatus({ checked: true, status: null, data: null });
+                                    return;
                                 }
-
-                                // No request exists - show the request form
-                                console.log("No access request found. Showing request form.");
-                                setAccessRequestStatus({ checked: true, status: null, data: null });
-                                return;
 
                             } catch (err) {
                                 console.error("Error checking access request:", err);
