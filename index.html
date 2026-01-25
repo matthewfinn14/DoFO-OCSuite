@@ -37683,47 +37683,57 @@
                 }
                 // Request approved - check if they already have a school, otherwise show wizard
                 if (accessRequestStatus.status === 'approved') {
-                    // Check if user already has a school before showing wizard
-                    const checkExistingSchool = async () => {
-                        try {
-                            const schoolsSnapshot = await window.db.collection('schools').get();
-                            for (const doc of schoolsSnapshot.docs) {
-                                const members = doc.data().memberList || [];
-                                const found = members.some(m =>
-                                    (typeof m === 'string' && m.toLowerCase() === authUser.email.toLowerCase()) ||
-                                    (m && m.email && m.email.toLowerCase() === authUser.email.toLowerCase())
-                                );
-                                if (found) {
-                                    console.log("User already has school:", doc.id, "- reloading to connect");
-                                    // They have a school - reload to trigger proper connection flow
-                                    window.location.reload();
-                                    return;
+                    // If school already in localStorage, skip this handler - let app render normally
+                    const existingSchoolId = localStorage.getItem('hc_school_id');
+                    if (existingSchoolId) {
+                        console.log("DEBUG: School already in localStorage, skipping approved handler");
+                        // Don't return anything - fall through to normal app rendering
+                    } else {
+                        // Check if user already has a school before showing wizard
+                        const checkExistingSchool = async () => {
+                            try {
+                                const schoolsSnapshot = await window.db.collection('schools').get();
+                                for (const doc of schoolsSnapshot.docs) {
+                                    const members = doc.data().memberList || [];
+                                    const found = members.some(m =>
+                                        (typeof m === 'string' && m.toLowerCase() === authUser.email.toLowerCase()) ||
+                                        (m && m.email && m.email.toLowerCase() === authUser.email.toLowerCase())
+                                    );
+                                    if (found) {
+                                        console.log("User already has school:", doc.id, "- saving to localStorage");
+                                        // Save to localStorage so next render skips this
+                                        const schoolData = doc.data();
+                                        localStorage.setItem('hc_school_id', doc.id);
+                                        localStorage.setItem('hc_school_name', schoolData.name || 'My School');
+                                        window.location.reload();
+                                        return;
+                                    }
                                 }
+                                // No existing school found - show wizard
+                                const newSchoolId = 'school_' + Date.now();
+                                setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                            } catch (err) {
+                                console.error("Error checking for existing school:", err);
+                                // On error, show wizard anyway
+                                const newSchoolId = 'school_' + Date.now();
+                                setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
                             }
-                            // No existing school found - show wizard
-                            const newSchoolId = 'school_' + Date.now();
-                            setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
-                        } catch (err) {
-                            console.error("Error checking for existing school:", err);
-                            // On error, show wizard anyway
-                            const newSchoolId = 'school_' + Date.now();
-                            setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                        };
+                        if (!schoolSetupData.showWizard) {
+                            checkExistingSchool();
                         }
-                    };
-                    if (!schoolSetupData.showWizard) {
-                        checkExistingSchool();
-                    }
-                    return (
-                        <div style={{
-                            height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
-                        }}>
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>Access Approved!</div>
-                                <div style={{ color: '#94a3b8' }}>Setting up your account...</div>
+                        return (
+                            <div style={{
+                                height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
+                            }}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>Access Approved!</div>
+                                    <div style={{ color: '#94a3b8' }}>Setting up your account...</div>
+                                </div>
                             </div>
-                        </div>
-                    );
+                        );
+                    }
                 }
                 // Request pending - show waiting screen
                 if (accessRequestStatus.status === 'pending') {
