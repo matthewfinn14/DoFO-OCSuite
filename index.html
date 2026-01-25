@@ -18590,17 +18590,17 @@
             };
 
             return (
-                <div style={{ marginBottom: '0.5rem' }}>
+                <div style={{ marginBottom: '0' }}>
                     <div
                         onClick={handleClick}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: nested ? '0.5rem 0.5rem 0.5rem 1.25rem' : '0.75rem 0.5rem',
+                            padding: nested ? '0.5rem 0.5rem 0.5rem 1.25rem' : '0.75rem 1rem',
                             cursor: 'pointer',
                             color: 'var(--text-secondary)',
-                            fontWeight: nested ? '500' : 'bold',
+                            fontWeight: nested ? '500' : '600',
                             fontSize: '0.9rem',
                             borderRadius: '6px',
                             transition: 'background 0.2s',
@@ -18610,16 +18610,16 @@
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             {icon && <Icon name={icon} size={nested ? 16 : 18} />}
                             <span style={{
                                 textTransform: nested ? 'none' : 'uppercase',
                                 letterSpacing: nested ? 'normal' : '0.05em',
-                                fontSize: nested ? '0.9rem' : '0.8rem'
+                                fontSize: nested ? '0.9rem' : 'inherit'
                             }}>{title}</span>
                         </div>
-                        <span style={{ fontSize: '0.8rem' }}>
-                            <Icon name={isOpen ? "ChevronDown" : "ChevronRight"} />
+                        <span style={{ fontSize: '0.75rem', marginRight: '0.25rem' }}>
+                            <Icon name={isOpen ? "ChevronDown" : "ChevronRight"} size={14} />
                         </span>
                     </div>
                     {isOpen && (
