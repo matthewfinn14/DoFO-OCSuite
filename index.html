@@ -4838,11 +4838,12 @@
         };
 
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, positionColors = {}, playSyntax = [], termLibrary = {}, playBuckets = [], playCategories = [], onAddFormation = () => { }, passProtections = [], setPassProtections = () => { }, runBlocking = [], setRunBlocking = () => { }, customTagCategories = [], setCustomTagCategories }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, initialPhase = 'OFFENSE', availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, positionColors = {}, playSyntax = [], termLibrary = {}, playBuckets = [], playCategories = [], onAddFormation = () => { }, passProtections = [], setPassProtections = () => { }, runBlocking = [], setRunBlocking = () => { }, customTagCategories = [], setCustomTagCategories }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
             const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'wiz-oline', 'wiz-skill', 'detailed'
             const [formData, setFormData] = useState({
+                phase: initialData?.phase || initialPhase, // OFFENSE, DEFENSE, SPECIAL_TEAMS
                 playCategory: '', // Existing field
                 bucketId: '', // [NEW] Play Bucket ID
                 formation: '',
@@ -35854,6 +35855,7 @@
             };
 
             // Filter Logic for Playbook View
+            const [playbookPhaseTab, setPlaybookPhaseTab] = useState('OFFENSE'); // 'OFFENSE' | 'DEFENSE' | 'SPECIAL_TEAMS'
             const [playbookFilters, setPlaybookFilters] = useState({
                 formation: '',
                 playCategory: '', // Bucket
@@ -36032,6 +36034,10 @@
                     return [];
                 }
                 return plays.filter(play => {
+                    // Phase filter - plays without phase default to OFFENSE
+                    const playPhase = play.phase || 'OFFENSE';
+                    const matchPhase = playPhase === playbookPhaseTab;
+
                     // Search term filter (name or formation)
                     const search = (searchTerm || '').toLowerCase().trim();
                     const matchSearch = !search ||
@@ -36049,7 +36055,7 @@
                         (TAG_CATEGORIES["Field Position"] && TAG_CATEGORIES["Field Position"].includes(playbookFilters.situation) && (play.tags || []).includes(playbookFilters.situation)) ||
                         (TAG_CATEGORIES["Down & Distance"] && TAG_CATEGORIES["Down & Distance"].includes(playbookFilters.situation) && (play.tags || []).includes(playbookFilters.situation));
 
-                    return matchSearch && matchFormation && matchPlayCategory && matchBucketId && matchTag && matchSituation;
+                    return matchPhase && matchSearch && matchFormation && matchPlayCategory && matchBucketId && matchTag && matchSituation;
                 });
             };
 
@@ -40176,6 +40182,7 @@
                                         onCancel={() => { setEditingPlay(null); setView('playbook'); }}
                                         onDelete={handleDeletePlay}
                                         initialData={editingPlay}
+                                        initialPhase={playbookPhaseTab}
                                         wizLibrary={wizLibrary}
                                         setWizLibrary={setWizLibrary}
                                         positionNames={positionNames}
@@ -40745,6 +40752,55 @@
                                                     <Icon name="PlusCircle" /> New Play
                                                 </button>
                                             </div>
+                                        </div>
+
+                                        {/* Phase Tabs */}
+                                        <div style={{
+                                            marginBottom: '1.5rem',
+                                            background: 'var(--bg-panel)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '8px',
+                                            display: 'flex',
+                                            overflow: 'hidden'
+                                        }}>
+                                            {[
+                                                { id: 'OFFENSE', label: 'Offense', icon: 'Crosshair', color: '#3b82f6' },
+                                                { id: 'DEFENSE', label: 'Defense', icon: 'Shield', color: '#ef4444' },
+                                                { id: 'SPECIAL_TEAMS', label: 'Special Teams', icon: 'Zap', color: '#f59e0b' }
+                                            ].map(tab => (
+                                                <button
+                                                    key={tab.id}
+                                                    onClick={() => setPlaybookPhaseTab(tab.id)}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '1rem 1.5rem',
+                                                        background: playbookPhaseTab === tab.id ? tab.color : 'transparent',
+                                                        border: 'none',
+                                                        borderRight: '1px solid var(--border)',
+                                                        color: playbookPhaseTab === tab.id ? 'white' : 'var(--text-secondary)',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.5rem',
+                                                        fontSize: '0.95rem',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    <Icon name={tab.icon} size={18} />
+                                                    {tab.label}
+                                                    <span style={{
+                                                        marginLeft: '0.5rem',
+                                                        padding: '0.15rem 0.5rem',
+                                                        background: playbookPhaseTab === tab.id ? 'rgba(255,255,255,0.2)' : 'var(--surface)',
+                                                        borderRadius: '12px',
+                                                        fontSize: '0.75rem'
+                                                    }}>
+                                                        {plays.filter(p => p.phase === tab.id || (!p.phase && tab.id === 'OFFENSE')).length}
+                                                    </span>
+                                                </button>
+                                            ))}
                                         </div>
 
                                         <div style={{
