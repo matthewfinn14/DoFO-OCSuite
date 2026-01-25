@@ -40495,32 +40495,34 @@
                                                             [{assignedName || (isHC ? 'assign' : 'none')}]
                                                         </button>
                                                     </div>
-                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                                                         {[0, 1, 2].map(i => (
-                                                            <input
-                                                                key={i}
-                                                                type="text"
-                                                                className="form-input"
-                                                                value={positionBigThree[posKey]?.[i] || ''}
-                                                                onChange={(e) => {
-                                                                    if (!canEdit) return;
-                                                                    const updated = { ...positionBigThree };
-                                                                    if (!updated[posKey]) updated[posKey] = ['', '', ''];
-                                                                    updated[posKey][i] = e.target.value;
-                                                                    setPositionBigThree(updated);
-                                                                }}
-                                                                placeholder={`#${i + 1}`}
-                                                                readOnly={!canEdit}
-                                                                style={{
-                                                                    flex: 1,
-                                                                    padding: '0.2rem 0.4rem',
-                                                                    fontSize: '0.7rem',
-                                                                    minWidth: 0,
-                                                                    opacity: canEdit ? 1 : 0.6,
-                                                                    cursor: canEdit ? 'text' : 'default',
-                                                                    background: canEdit ? 'var(--bg-input)' : 'var(--surface)'
-                                                                }}
-                                                            />
+                                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                                <span style={{ fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-secondary)', width: '1rem' }}>#{i + 1}</span>
+                                                                <input
+                                                                    type="text"
+                                                                    className="form-input"
+                                                                    value={positionBigThree[posKey]?.[i] || ''}
+                                                                    onChange={(e) => {
+                                                                        if (!canEdit) return;
+                                                                        const updated = { ...positionBigThree };
+                                                                        if (!updated[posKey]) updated[posKey] = ['', '', ''];
+                                                                        updated[posKey][i] = e.target.value;
+                                                                        setPositionBigThree(updated);
+                                                                    }}
+                                                                    placeholder=""
+                                                                    readOnly={!canEdit}
+                                                                    style={{
+                                                                        flex: 1,
+                                                                        padding: '0.2rem 0.4rem',
+                                                                        fontSize: '0.7rem',
+                                                                        minWidth: 0,
+                                                                        opacity: canEdit ? 1 : 0.6,
+                                                                        cursor: canEdit ? 'text' : 'default',
+                                                                        background: canEdit ? 'var(--bg-input)' : 'var(--surface)'
+                                                                    }}
+                                                                />
+                                                            </div>
                                                         ))}
                                                     </div>
                                                 </div>
