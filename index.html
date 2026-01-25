@@ -39572,7 +39572,7 @@
                                         {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>ALIGNMENT</span>}
                                     </button>
                                 )}
-                                {/* SETUP - Right under Alignment */}
+                                {/* SETUP */}
                                 {visibleFeatures.gameWeek?.enabled && visibleFeatures.gameWeek?.items?.schemeSetup && (
                                     <button
                                         className={`nav-item ${view === 'setup' ? 'active' : ''}`}
@@ -39587,11 +39587,73 @@
                                             justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                                             gap: '0.5rem',
                                             padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 0.75rem',
-                                            marginBottom: '0.25rem'
+                                            marginBottom: '0'
                                         }}
                                     >
                                         <Icon name="Settings" size={18} />
                                         {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>SETUP</span>}
+                                    </button>
+                                )}
+                                {/* MASTER PLAYBOOK */}
+                                {visibleFeatures.gameWeek?.enabled && visibleFeatures.gameWeek?.items?.playbook && (
+                                    <button
+                                        className={`nav-item ${view === 'playbook' ? 'active' : ''}`}
+                                        onClick={() => setView('playbook')}
+                                        style={{
+                                            width: '100%',
+                                            textAlign: 'left',
+                                            border: 'none',
+                                            background: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                            gap: '0.5rem',
+                                            padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 0.75rem',
+                                            marginBottom: '0'
+                                        }}
+                                    >
+                                        <Icon name="Book" size={18} />
+                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>MASTER PLAYBOOK</span>}
+                                    </button>
+                                )}
+                                {/* PERSONNEL */}
+                                {currentPermissions.staff.view && (
+                                    <CollapsibleCategory title="PERSONNEL" icon="Users" defaultOpen={false}>
+                                        <CollapsibleCategory title="Staff & Roles" icon="UserCog" defaultOpen={false} nested={true} onTitleClick={() => setView('staff-roster')}>
+                                            {currentUser && currentUser.roles && currentUser.roles.includes('Head Coach') && (
+                                                <button className={`nav-item ${view === 'permissions' ? 'active' : ''}`} onClick={() => setView('permissions')} style={{ paddingLeft: '3rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                                    <Icon name="Lock" size={16} style={{ marginRight: '8px' }} /> Permissions
+                                                </button>
+                                            )}
+                                        </CollapsibleCategory>
+                                        <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
+                                        </button>
+                                        <button className={`nav-item ${view === 'archive' ? 'active' : ''}`} onClick={() => setView('archive')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
+                                            <Icon name="Archive" size={16} style={{ marginRight: '8px' }} /> Archive
+                                        </button>
+                                    </CollapsibleCategory>
+                                )}
+                                {/* PRINT CENTER */}
+                                {currentPermissions.dashboard.view && (
+                                    <button
+                                        className={`nav-item ${view === 'print-hub' ? 'active' : ''}`}
+                                        onClick={() => setView('print-hub')}
+                                        style={{
+                                            width: '100%',
+                                            textAlign: 'left',
+                                            border: 'none',
+                                            background: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                            gap: '0.5rem',
+                                            padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 0.75rem',
+                                            marginBottom: '0.25rem'
+                                        }}
+                                    >
+                                        <Icon name="Printer" size={18} color="var(--accent)" />
+                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PRINT CENTER</span>}
                                     </button>
                                 )}
 
@@ -39708,81 +39770,14 @@
 
 
 
-                                            {/* MASTER PLAYBOOK */}
-                                            {visibleFeatures.gameWeek?.enabled && visibleFeatures.gameWeek?.items?.playbook && (
-                                                <div style={{ marginBottom: '0.5rem' }}>
-                                                    <div
-                                                        onClick={() => setView('playbook')}
-                                                        className="nav-category-header"
-                                                        style={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            padding: '0.75rem 0.5rem',
-                                                            cursor: 'pointer',
-                                                            color: view === 'playbook' ? 'var(--primary)' : 'var(--text-secondary)',
-                                                            fontWeight: 'bold',
-                                                            fontSize: '0.9rem',
-                                                            borderRadius: '6px',
-                                                            transition: 'background 0.2s',
-                                                            userSelect: 'none',
-                                                            background: view === 'playbook' ? 'var(--surface)' : 'transparent'
-                                                        }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
-                                                        onMouseLeave={e => { if (view !== 'playbook') e.currentTarget.style.background = 'transparent'; }}
-                                                    >
-                                                        <Icon name="Book" size={18} style={{ marginRight: '0.5rem' }} />
-                                                        <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.8rem' }}>Master Playbook</span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-
-
-                                            {/* PERSONNEL CATEGORY (Moved from top) */}
-                                            {currentPermissions.staff.view && (
-                                                <CollapsibleCategory title="Personnel" icon="Users" defaultOpen={false}>
-                                                    <button className={`nav-item ${view === 'staff-roster' ? 'active' : ''}`} onClick={() => setView('staff-roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="UserCog" size={16} style={{ marginRight: '8px' }} /> Staff & Roles
-                                                    </button>
-                                                    <button className={`nav-item ${view === 'roster' ? 'active' : ''}`} onClick={() => setView('roster')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Users" size={16} style={{ marginRight: '8px' }} /> Manage Roster
-                                                    </button>
-                                                    <button className={`nav-item ${view === 'archive' ? 'active' : ''}`} onClick={() => setView('archive')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                        <Icon name="Archive" size={16} style={{ marginRight: '8px' }} /> Archive
-                                                    </button>
-                                                    {currentUser && currentUser.roles && currentUser.roles.includes('Head Coach') && (
-                                                        <button className={`nav-item ${view === 'permissions' ? 'active' : ''}`} onClick={() => setView('permissions')} style={{ paddingLeft: '2rem', width: '100%', textAlign: 'left', border: 'none', background: 'none' }}>
-                                                            <Icon name="Lock" size={16} style={{ marginRight: '8px' }} /> Permissions
-                                                        </button>
-                                                    )}
-                                                </CollapsibleCategory>
-                                            )}
 
 
 
 
 
-                                            {currentPermissions.dashboard.view && (
-                                                <button
-                                                    className={`nav-item ${view === 'print-hub' ? 'active' : ''}`}
-                                                    onClick={() => setView('print-hub')}
-                                                    style={{
-                                                        width: '100%',
-                                                        textAlign: 'left',
-                                                        border: 'none',
-                                                        background: 'none',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                                                        gap: '0.75rem',
-                                                        padding: sidebarCollapsed ? '0.75rem 0' : '0.75rem 1rem',
-                                                        marginBottom: '0.5rem'
-                                                    }}
-                                                >
-                                                    <Icon name="Printer" size={18} color="var(--accent)" />
-                                                    {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PRINT CENTER</span>}
-                                                </button>
-                                            )}
+
+
+
 
                                         </div>
                                     </>
