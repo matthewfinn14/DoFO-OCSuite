@@ -35537,9 +35537,29 @@
                 let updated = [...playCategories];
                 let needsUpdate = false;
 
-                // Add phase to existing categories that don't have one (default to OFFENSE)
+                // Build lookup maps for known category IDs by phase
+                const defenseIds = new Set(DEFAULT_PLAY_CATEGORIES_BY_PHASE.DEFENSE.map(c => c.id));
+                const stIds = new Set(DEFAULT_PLAY_CATEGORIES_BY_PHASE.SPECIAL_TEAMS.map(c => c.id));
+
+                // Fix categories with wrong phase or missing phase
+                // Use ID matching to determine correct phase
                 updated = updated.map(cat => {
-                    if (!cat.phase) {
+                    // If it's a known Defense category, ensure phase is DEFENSE
+                    if (defenseIds.has(cat.id)) {
+                        if (cat.phase !== 'DEFENSE') {
+                            needsUpdate = true;
+                            return { ...cat, phase: 'DEFENSE' };
+                        }
+                    }
+                    // If it's a known Special Teams category, ensure phase is SPECIAL_TEAMS
+                    else if (stIds.has(cat.id)) {
+                        if (cat.phase !== 'SPECIAL_TEAMS') {
+                            needsUpdate = true;
+                            return { ...cat, phase: 'SPECIAL_TEAMS' };
+                        }
+                    }
+                    // For unknown categories without phase, default to OFFENSE
+                    else if (!cat.phase) {
                         needsUpdate = true;
                         return { ...cat, phase: 'OFFENSE' };
                     }
@@ -40979,28 +40999,32 @@
                                                 </div>
 
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Formation</label>
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                                                        {playbookPhaseTab === 'DEFENSE' ? 'Front' : playbookPhaseTab === 'SPECIAL_TEAMS' ? 'Package' : 'Formation'}
+                                                    </label>
                                                     <select
                                                         className="form-input"
                                                         value={playbookFilters.formation}
                                                         onChange={e => setPlaybookFilters({ ...playbookFilters, formation: e.target.value })}
                                                     >
-                                                        <option value="">All Formations</option>
-                                                        {Array.from(new Set(plays.map(p => p.formation).filter(Boolean))).sort().map(f => (
+                                                        <option value="">{playbookPhaseTab === 'DEFENSE' ? 'All Fronts' : playbookPhaseTab === 'SPECIAL_TEAMS' ? 'All Packages' : 'All Formations'}</option>
+                                                        {Array.from(new Set(plays.filter(p => (p.phase || 'OFFENSE') === playbookPhaseTab).map(p => p.formation).filter(Boolean))).sort().map(f => (
                                                             <option key={f} value={f}>{f}</option>
                                                         ))}
                                                     </select>
                                                 </div>
 
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Play Bucket</label>
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                                                        {playbookPhaseTab === 'DEFENSE' ? 'Category' : 'Play Bucket'}
+                                                    </label>
                                                     <select
                                                         className="form-input"
                                                         value={playbookFilters.playCategory}
                                                         onChange={e => setPlaybookFilters({ ...playbookFilters, playCategory: e.target.value })}
                                                     >
-                                                        <option value="">All Buckets</option>
-                                                        {playCategories.filter(c => c.phase === 'OFFENSE' || !c.phase).map(cat => (
+                                                        <option value="">All {playbookPhaseTab === 'DEFENSE' ? 'Categories' : 'Buckets'}</option>
+                                                        {playCategories.filter(c => (c.phase || 'OFFENSE') === playbookPhaseTab).map(cat => (
                                                             <option key={cat.id} value={cat.id}>{cat.label}</option>
                                                         ))}
                                                     </select>
@@ -41015,7 +41039,13 @@
                                                     >
                                                         <option value="">All Families</option>
                                                         {playBuckets
-                                                            .filter(bucket => !playbookFilters.playCategory || bucket.categoryId === playbookFilters.playCategory)
+                                                            .filter(bucket => {
+                                                                // Filter by selected category if any
+                                                                if (playbookFilters.playCategory && bucket.categoryId !== playbookFilters.playCategory) return false;
+                                                                // Filter by phase - only show buckets from categories in current phase
+                                                                const parentCat = playCategories.find(c => c.id === bucket.categoryId);
+                                                                return parentCat && (parentCat.phase || 'OFFENSE') === playbookPhaseTab;
+                                                            })
                                                             .map(bucket => (
                                                                 <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
                                                             ))}
