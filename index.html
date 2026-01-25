@@ -1234,28 +1234,74 @@
                             console.warn("School ID found but document missing.");
                         }
                     } else {
-                        // Check for Pending Invites (Auto-Join)
-                        console.log("No membership found. Checking for invites...");
+                        // No membership found - try to recover
+                        console.log("No membership found. Attempting recovery...");
                         const myEmail = window.auth.currentUser.email.toLowerCase();
-                        let inviteSchoolId = null;
 
+                        // STEP 1: Search ALL schools for this user's email in memberList
+                        console.log("Searching schools for user email in memberList...");
                         try {
-                            const inviteDoc = await window.db.collection('invites').doc(myEmail).get();
-                            if (inviteDoc.exists) {
-                                const inviteData = inviteDoc.data();
-                                console.log("Found invite for school:", inviteData.schoolId);
-                                inviteSchoolId = inviteData.schoolId;
+                            const schoolsSnapshot = await window.db.collection('schools').get();
+                            for (const schoolDoc of schoolsSnapshot.docs) {
+                                const schoolData = schoolDoc.data();
+                                const memberList = schoolData.memberList || [];
+                                const linkedEmail = schoolData.linkedAccessRequest;
 
-                                // Auto-create membership
-                                await userDocRef.collection('memberships').doc(inviteSchoolId).set({
-                                    role: inviteData.role || 'assistant',
-                                    joinedAt: new Date().toISOString(),
-                                    status: 'active'
-                                });
-                                activeSchoolId = inviteSchoolId;
+                                // Check if user's email is in memberList or linkedAccessRequest
+                                const isMember = memberList.some(m =>
+                                    m && m.email && m.email.toLowerCase() === myEmail
+                                );
+                                const isLinked = linkedEmail && linkedEmail.toLowerCase() === myEmail;
+
+                                if (isMember || isLinked) {
+                                    console.log("Found existing school for user:", schoolDoc.id, schoolData.name);
+
+                                    // Find user's role from memberList
+                                    const memberEntry = memberList.find(m =>
+                                        m && m.email && m.email.toLowerCase() === myEmail
+                                    );
+                                    const userRole = memberEntry?.role || (isLinked ? 'admin' : 'viewer');
+
+                                    // Auto-repair membership
+                                    await userDocRef.collection('memberships').doc(schoolDoc.id).set({
+                                        role: userRole,
+                                        joinedAt: new Date().toISOString(),
+                                        status: 'active',
+                                        repairedAt: new Date().toISOString()
+                                    });
+
+                                    // Update user doc with schoolId
+                                    await userDocRef.set({ schoolId: schoolDoc.id }, { merge: true });
+
+                                    activeSchoolId = schoolDoc.id;
+                                    console.log("Membership repaired for school:", schoolDoc.id);
+                                    break;
+                                }
                             }
                         } catch (err) {
-                            console.error("Error checking invites:", err);
+                            console.error("Error searching schools for recovery:", err);
+                        }
+
+                        // STEP 2: If still no school, check for invites
+                        if (!activeSchoolId) {
+                            console.log("No existing school found. Checking for invites...");
+                            try {
+                                const inviteDoc = await window.db.collection('invites').doc(myEmail).get();
+                                if (inviteDoc.exists) {
+                                    const inviteData = inviteDoc.data();
+                                    console.log("Found invite for school:", inviteData.schoolId);
+
+                                    // Auto-create membership
+                                    await userDocRef.collection('memberships').doc(inviteData.schoolId).set({
+                                        role: inviteData.role || 'assistant',
+                                        joinedAt: new Date().toISOString(),
+                                        status: 'active'
+                                    });
+                                    activeSchoolId = inviteData.schoolId;
+                                }
+                            } catch (err) {
+                                console.error("Error checking invites:", err);
+                            }
                         }
 
                         if (activeSchoolId) {
@@ -1278,10 +1324,66 @@
                         }
                     }
                 } else {
-                    // NEW: User Doc does not exist (New User or Deleted Doc).
-                    // WIPE LOCAL STORAGE to prevent "ghost" sessions from previous users on this device.
-                    clearAllLocalData();
-                    // Don't return, let execution continue so appData (empty) flows through to clear state
+                    // User Doc does not exist - but user might have an existing school!
+                    // Search schools for this user's email before treating as new user
+                    console.log("User doc not found. Searching schools for recovery...");
+                    const myEmail = window.auth.currentUser.email.toLowerCase();
+                    let recoveredSchoolId = null;
+
+                    try {
+                        const schoolsSnapshot = await window.db.collection('schools').get();
+                        for (const schoolDoc of schoolsSnapshot.docs) {
+                            const schoolData = schoolDoc.data();
+                            const memberList = schoolData.memberList || [];
+                            const linkedEmail = schoolData.linkedAccessRequest;
+
+                            const isMember = memberList.some(m =>
+                                m && m.email && m.email.toLowerCase() === myEmail
+                            );
+                            const isLinked = linkedEmail && linkedEmail.toLowerCase() === myEmail;
+
+                            if (isMember || isLinked) {
+                                console.log("RECOVERY: Found school for orphaned user:", schoolDoc.id, schoolData.name);
+                                recoveredSchoolId = schoolDoc.id;
+
+                                const memberEntry = memberList.find(m =>
+                                    m && m.email && m.email.toLowerCase() === myEmail
+                                );
+                                const userRole = memberEntry?.role || (isLinked ? 'admin' : 'viewer');
+
+                                // Create/repair user doc AND membership
+                                await userDocRef.set({
+                                    email: myEmail,
+                                    schoolId: recoveredSchoolId,
+                                    createdAt: new Date().toISOString(),
+                                    recoveredAt: new Date().toISOString()
+                                });
+
+                                await userDocRef.collection('memberships').doc(recoveredSchoolId).set({
+                                    role: userRole,
+                                    joinedAt: new Date().toISOString(),
+                                    status: 'active',
+                                    recoveredAt: new Date().toISOString()
+                                });
+
+                                // Load the school data
+                                localStorage.setItem('hc_school_id', recoveredSchoolId);
+                                appData = schoolData;
+                                isSchoolData = true;
+
+                                console.log("RECOVERY: User doc and membership repaired");
+                                break;
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Error during school recovery search:", err);
+                    }
+
+                    if (!recoveredSchoolId) {
+                        // Truly a new user - clear local data
+                        console.log("No existing school found. Treating as new user.");
+                        clearAllLocalData();
+                    }
                 }
 
                 console.log("Applying data to localStorage...", appData);
