@@ -40223,6 +40223,14 @@
                                         </button>
                                     )}
                                     <button
+                                        className={`nav-item ${view === 'roadmap' ? 'active' : ''}`}
+                                        onClick={() => setView('roadmap')}
+                                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem' }}
+                                    >
+                                        <Icon name="Construction" size={16} />
+                                        {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Under Construction</span>}
+                                    </button>
+                                    <button
                                         className={`nav-item ${view === 'help' ? 'active' : ''}`}
                                         onClick={() => setView('help')}
                                         style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem' }}
@@ -42181,6 +42189,121 @@
                             {/* Duplicate settings block removed */}
 
                             {view === 'help' && <UserGuide />}
+
+                            {view === 'roadmap' && (
+                                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '1rem' }}>
+                                    <div className="card" style={{ padding: '2rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, var(--bg-panel) 0%, var(--surface) 100%)', borderLeft: '4px solid var(--accent)' }}>
+                                        <h1 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <Icon name="Construction" size={32} color="var(--accent)" /> Under Construction
+                                        </h1>
+                                        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.1rem' }}>
+                                            The DoFO Suite is being built in phases. Here's what's available now and what's coming next.
+                                        </p>
+                                    </div>
+
+                                    {/* Phase 1: OC Suite - Current */}
+                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #22c55e' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                            <div style={{ background: '#22c55e', padding: '0.5rem', borderRadius: '8px' }}>
+                                                <Icon name="CheckCircle" size={24} color="white" />
+                                            </div>
+                                            <div>
+                                                <h2 style={{ margin: 0, color: '#22c55e' }}>Phase 1: OC Suite</h2>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Current Build</span>
+                                            </div>
+                                        </div>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                            The Offensive Coordinator Suite provides comprehensive tools for game planning and play management.
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                            {[
+                                                { icon: 'Book', label: 'Master Playbook', desc: 'Organize all plays' },
+                                                { icon: 'Clipboard', label: 'Game Planner', desc: 'Situational call sheets' },
+                                                { icon: 'FileText', label: 'Practice Scripts', desc: 'Daily practice plans' },
+                                                { icon: 'Grid', label: 'Wristband Builder', desc: 'Print play cards' },
+                                                { icon: 'Users', label: 'Depth Charts', desc: 'Manage rotations' },
+                                                { icon: 'Layers', label: 'Install Manager', desc: 'Weekly installs' },
+                                                { icon: 'Target', label: 'Program Alignment', desc: 'Mission & philosophy' },
+                                                { icon: 'BarChart2', label: 'Player Touches', desc: 'Track involvement' },
+                                                { icon: 'Settings', label: 'Formation Builder', desc: 'Visual diagrams' },
+                                                { icon: 'Layers', label: 'Program Levels', desc: 'JV/Freshman management' }
+                                            ].map((item, idx) => (
+                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px' }}>
+                                                    <Icon name={item.icon} size={16} color="#22c55e" />
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Phase 2: HC Suite - Coming Next */}
+                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #f59e0b' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                            <div style={{ background: '#f59e0b', padding: '0.5rem', borderRadius: '8px' }}>
+                                                <Icon name="Clock" size={24} color="white" />
+                                            </div>
+                                            <div>
+                                                <h2 style={{ margin: 0, color: '#f59e0b' }}>Phase 2: HC Suite</h2>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Coming Next</span>
+                                            </div>
+                                        </div>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                            Head Coach tools for program-wide management and coordination.
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                            {[
+                                                { icon: 'Package', label: 'Inventory Management', desc: 'Equipment tracking' },
+                                                { icon: 'Calendar', label: 'Annual Calendar', desc: 'Year-round planning' },
+                                                { icon: 'CheckSquare', label: 'Staff Tasks', desc: 'Assign & track duties' },
+                                                { icon: 'UserCheck', label: 'Attendance App', desc: 'Track participation' },
+                                                { icon: 'Play', label: 'Drill Library', desc: 'Practice resources' }
+                                            ].map((item, idx) => (
+                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.7 }}>
+                                                    <Icon name={item.icon} size={16} color="#f59e0b" />
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Phase 3: Field Apps - Final Phase */}
+                                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', borderLeft: '4px solid #6366f1' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                            <div style={{ background: '#6366f1', padding: '0.5rem', borderRadius: '8px' }}>
+                                                <Icon name="Smartphone" size={24} color="white" />
+                                            </div>
+                                            <div>
+                                                <h2 style={{ margin: 0, color: '#6366f1' }}>Phase 3: Field Apps</h2>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Final Phase</span>
+                                            </div>
+                                        </div>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                            Mobile applications for players, practice, and in-game use.
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                            {[
+                                                { icon: 'User', label: 'Player App', desc: 'Playbook on mobile' },
+                                                { icon: 'Activity', label: 'Practice App', desc: 'Live practice tools' },
+                                                { icon: 'Zap', label: 'In-Game App', desc: 'Real-time play calling' }
+                                            ].map((item, idx) => (
+                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'var(--surface)', borderRadius: '6px', opacity: 0.5 }}>
+                                                    <Icon name={item.icon} size={16} color="#6366f1" />
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.label}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.desc}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
 
 
