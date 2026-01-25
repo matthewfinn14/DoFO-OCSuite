@@ -37133,7 +37133,7 @@
                                             <Icon name="UserCheck" size={16} /> Personnel
                                         </button>
                                     )}
-                                    {/* 3. Formations */}
+                                    {/* 3. Formations / Fronts / Packages */}
                                     <button
                                         className={`btn-ghost`}
                                         style={{
@@ -37149,9 +37149,9 @@
                                         }}
                                         onClick={() => setSetupTab('formations')}
                                     >
-                                        <Icon name="LayoutGrid" size={16} /> Formations
+                                        <Icon name="LayoutGrid" size={16} /> {isDefense ? 'Fronts' : isST ? 'Packages' : 'Formations'}
                                     </button>
-                                    {/* 4. Play Buckets */}
+                                    {/* 4. Play Buckets / Categories */}
                                     <button
                                         className={`btn-ghost`}
                                         style={{
@@ -37167,9 +37167,9 @@
                                         }}
                                         onClick={() => setSetupTab('categories')}
                                     >
-                                        <Icon name="Tag" size={16} /> Play Buckets
+                                        <Icon name="Tag" size={16} /> {isDefense || isST ? 'Categories' : 'Play Buckets'}
                                     </button>
-                                    {/* 5. Concept Families */}
+                                    {/* 5. Concept Families / Variations */}
                                     <button
                                         className={`btn-ghost`}
                                         style={{
@@ -37185,7 +37185,7 @@
                                         }}
                                         onClick={() => setSetupTab('buckets')}
                                     >
-                                        <Icon name="Grid" size={16} /> Concept Families
+                                        <Icon name="Grid" size={16} /> {isDefense || isST ? 'Variations' : 'Concept Families'}
                                     </button>
                                     {/* 6. Glossary */}
                                     <button
