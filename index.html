@@ -1158,6 +1158,16 @@
             console.log("Local data COMPLETELY cleared (persisted sync flag).");
         };
 
+        // URL parameter to force reset localStorage (for admin troubleshooting)
+        if (window.location.search.includes('reset=true')) {
+            console.log("Force reset triggered via URL parameter");
+            localStorage.clear();
+            sessionStorage.clear();
+            // Remove the parameter and reload
+            window.history.replaceState({}, document.title, window.location.pathname);
+            window.location.reload();
+        }
+
         const loadUserDataFromFirestore = async (userId) => {
             try {
                 console.log("Loading user data from Firestore for user (Force Server):", userId);
