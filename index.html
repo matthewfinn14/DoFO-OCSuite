@@ -2284,6 +2284,8 @@
             const [requests, setRequests] = useState([]);
             const [loading, setLoading] = useState(true);
             const [filter, setFilter] = useState('pending'); // 'pending' | 'approved' | 'rejected' | 'all'
+            const [editingRequest, setEditingRequest] = useState(null);
+            const [editForm, setEditForm] = useState({ trialDays: '', accessExpiresAt: '', notes: '' });
 
             useEffect(() => {
                 const loadRequests = async () => {
@@ -2359,6 +2361,46 @@
                 } catch (err) {
                     console.error('Error rejecting:', err);
                     alert('Failed to reject. Check console.');
+                }
+            };
+
+            const handleEdit = (request) => {
+                setEditForm({
+                    trialDays: request.trialDays || '',
+                    accessExpiresAt: request.accessExpiresAt ? request.accessExpiresAt.split('T')[0] : '',
+                    notes: request.notes || ''
+                });
+                setEditingRequest(request);
+            };
+
+            const handleSaveEdit = async () => {
+                if (!editingRequest) return;
+                try {
+                    const updates = {
+                        notes: editForm.notes || ''
+                    };
+
+                    if (editForm.accessExpiresAt) {
+                        updates.accessExpiresAt = new Date(editForm.accessExpiresAt).toISOString();
+                        // Recalculate data deletion date (30 days after access expires)
+                        updates.dataExpiresAt = new Date(new Date(editForm.accessExpiresAt).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                    }
+
+                    if (editForm.trialDays) {
+                        updates.trialDays = parseInt(editForm.trialDays, 10);
+                    }
+
+                    await window.db.collection('access_requests').doc(editingRequest.id).update(updates);
+
+                    setRequests(prev => prev.map(r =>
+                        r.id === editingRequest.id ? { ...r, ...updates } : r
+                    ));
+
+                    setEditingRequest(null);
+                    alert('Access request updated successfully.');
+                } catch (err) {
+                    console.error('Error updating request:', err);
+                    alert('Failed to update. Check console.');
                 }
             };
 
@@ -2533,21 +2575,111 @@
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <span style={{
-                                                    padding: '0.5rem 1rem',
-                                                    background: request.status === 'approved' ? '#166534' : '#7f1d1d',
-                                                    color: request.status === 'approved' ? '#86efac' : '#fca5a5',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.85rem',
-                                                    textTransform: 'uppercase'
-                                                }}>
-                                                    {request.status}
-                                                </span>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                                                    <span style={{
+                                                        padding: '0.5rem 1rem',
+                                                        background: request.status === 'approved' ? '#166534' : '#7f1d1d',
+                                                        color: request.status === 'approved' ? '#86efac' : '#fca5a5',
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.85rem',
+                                                        textTransform: 'uppercase'
+                                                    }}>
+                                                        {request.status}
+                                                    </span>
+                                                    {request.status === 'approved' && (
+                                                        <button
+                                                            onClick={() => handleEdit(request)}
+                                                            style={{
+                                                                padding: '0.25rem 0.75rem',
+                                                                background: 'transparent',
+                                                                border: '1px solid var(--border)',
+                                                                color: 'var(--text-secondary)',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.75rem',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Edit Modal */}
+                    {editingRequest && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                        }}>
+                            <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', width: '100%', maxWidth: '450px' }}>
+                                <h3 style={{ margin: '0 0 1rem 0' }}>Edit Access Request</h3>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                    {editingRequest.name} ({editingRequest.email})
+                                </p>
+
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Trial Days</label>
+                                    <input
+                                        type="number"
+                                        value={editForm.trialDays}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, trialDays: e.target.value }))}
+                                        style={{
+                                            width: '100%', padding: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)',
+                                            borderRadius: '6px', color: 'var(--text)'
+                                        }}
+                                    />
+                                </div>
+
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Access Expires</label>
+                                    <input
+                                        type="date"
+                                        value={editForm.accessExpiresAt}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, accessExpiresAt: e.target.value }))}
+                                        style={{
+                                            width: '100%', padding: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)',
+                                            borderRadius: '6px', color: 'var(--text)'
+                                        }}
+                                    />
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                        Data will be deleted 30 days after this date.
+                                    </p>
+                                </div>
+
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Notes</label>
+                                    <textarea
+                                        value={editForm.notes}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                                        rows={2}
+                                        style={{
+                                            width: '100%', padding: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)',
+                                            borderRadius: '6px', color: 'var(--text)', resize: 'vertical'
+                                        }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                    <button
+                                        onClick={() => setEditingRequest(null)}
+                                        style={{ padding: '0.5rem 1rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveEdit}
+                                        style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                    >
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -37540,6 +37672,15 @@
                             onSubmit={(status) => setAccessRequestStatus({ checked: true, status, data: { email: authUser.email } })}
                         />
                     );
+                }
+                // Request approved - show school wizard (they need to create/finish their school)
+                if (accessRequestStatus.status === 'approved') {
+                    const newSchoolId = 'school_' + Date.now();
+                    // Trigger wizard display
+                    if (!schoolSetupData.showWizard) {
+                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                    }
+                    return null; // Will re-render with wizard
                 }
                 // Request pending - show waiting screen
                 if (accessRequestStatus.status === 'pending') {
