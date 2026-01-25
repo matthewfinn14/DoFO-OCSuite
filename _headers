@@ -1,0 +1,25 @@
+# Cache-Control headers for Cloudflare Pages
+# Ensures users always get fresh code without manual cache clearing
+
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/
+  Cache-Control: no-cache, must-revalidate
+
+# Static assets can be cached longer (if you add any in the future)
+/*.css
+  Cache-Control: public, max-age=86400
+
+/*.js
+  Cache-Control: public, max-age=86400
+
+# Images can be cached longer
+/*.png
+  Cache-Control: public, max-age=604800
+
+/*.jpg
+  Cache-Control: public, max-age=604800
+
+/*.svg
+  Cache-Control: public, max-age=604800
