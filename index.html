@@ -21119,6 +21119,7 @@
             const [expandedSections, setExpandedSections] = useState({});
             const [situationModalPlayId, setSituationModalPlayId] = useState(null);
             const [quickAddInputs, setQuickAddInputs] = useState({}); // { bucketId: 'input value' }
+            const [playBankPhase, setPlayBankPhase] = useState('OFFENSE'); // OFFENSE, DEFENSE, SPECIAL_TEAMS
 
             // Quick Add: Create play if not exists, then assign to bucket
             const handleQuickAddToBucket = (inputValue, bucketId) => {
@@ -21203,7 +21204,8 @@
 
             // Grouping for "Usage" Tab (Buckets Style)
             const usageData = useMemo(() => {
-                let filteredPlays = (plays || []).filter(p => !p.archived);
+                // Filter by phase first (plays without phase default to OFFENSE)
+                let filteredPlays = (plays || []).filter(p => !p.archived && (p.phase || 'OFFENSE') === playBankPhase);
                 const query = searchTerm.toLowerCase();
 
                 // Map of filtered plays for quick lookup
@@ -21251,7 +21253,7 @@
                 }
 
                 return categories;
-            }, [plays, playCategories, playBuckets, searchTerm]);
+            }, [plays, playCategories, playBuckets, searchTerm, playBankPhase]);
 
             const installData = useMemo(() => {
                 const installList = currentWeek?.installList || [];
@@ -21939,7 +21941,25 @@
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Icon name="Landmark" size={20} color="#cbd5e1" />
-                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', letterSpacing: '0.025em' }}>Play Bank</h3>
+                                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', letterSpacing: '0.025em' }}>PLAY BANK</h3>
+                                <select
+                                    value={playBankPhase}
+                                    onChange={(e) => setPlayBankPhase(e.target.value)}
+                                    style={{
+                                        background: '#334155',
+                                        border: '1px solid #475569',
+                                        borderRadius: '4px',
+                                        color: 'white',
+                                        fontSize: '0.75rem',
+                                        padding: '0.25rem 0.5rem',
+                                        cursor: 'pointer',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    <option value="OFFENSE">Offense</option>
+                                    <option value="DEFENSE">Defense</option>
+                                    <option value="SPECIAL_TEAMS">Special Teams</option>
+                                </select>
                             </div>
                             <button
                                 onClick={() => onToggle(false)}
