@@ -5451,7 +5451,7 @@
                                                 onChange={e => setFormData({ ...formData, playCategory: e.target.value, bucketId: '' })}
                                             >
                                                 <option value="">Select Category...</option>
-                                                {playCategories.map(cat => (
+                                                {playCategories.filter(c => c.phase === 'OFFENSE' || !c.phase).map(cat => (
                                                     <option key={cat.id} value={cat.id}>{cat.label}</option>
                                                 ))}
                                             </select>
@@ -7596,7 +7596,7 @@
                                     Bucket
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                    {playCategories.map(cat => {
+                                    {playCategories.filter(c => c.phase === 'OFFENSE' || !c.phase).map(cat => {
                                         const isSelected = play.bucketId === cat.id;
                                         return (
                                             <button
@@ -11167,7 +11167,7 @@
             );
         };
 
-        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, teamLogo, addToNextSlotRef, onNavigate }) => {
+        const PracticeScriptBuilder = ({ mode = 'plan', plays, plans, onUpdatePlans, onUpdateGamePlan, onUpdatePlay, staff, customFocusItems, addCustomFocusItem, user, isLocked, isSiteAdmin, segmentTypes = [], focusItems = [], segmentTypesMap = {}, focusItemsMap = {}, segmentSettings = {}, scriptPresets = [], gamePlan = {}, gamePlanLayouts = {}, playBuckets = [], playCategories = [], weeks = [], currentWeek = {}, onQuickAddPlay, setAppSidebarCollapsed, appSidebarCollapsed, closeSideMenuRef, roster, teamLogo, addToNextSlotRef, onNavigate, practiceTemplates = [], setPracticeTemplates }) => {
             console.log('PracticeScriptBuilder debug:', { currentWeek, teamLogo });
             const { openPlayDetails } = usePlayDetailsModal();
 
@@ -11353,9 +11353,13 @@
                 }
             };
 
-            // Merge hardcoded and global templates
+            // Merge hardcoded, team, and global templates
             const allTemplates = [
+                // Team templates first (marked with 📁)
+                ...practiceTemplates.map(t => ({ ...t, isTeam: true })),
+                // Then hardcoded defaults
                 ...CALENDAR_CONSTANTS.PRACTICE_TEMPLATES,
+                // Then global templates from admin (marked with 🌐)
                 ...globalTemplates
             ];
 
@@ -11521,19 +11525,57 @@
 
 
 
-            const saveAsGlobalTemplate = async () => {
-                const name = prompt("Enter a name for this Template:");
+            const saveAsTeamTemplate = () => {
+                const name = prompt("Enter a name for this template (e.g. 'Game Week - Monday', 'Camp Day 1'):");
                 if (!name) return;
 
-                const category = prompt("Enter a category (e.g. 'Monday', 'Situations', 'Base Install'):", selectedDay);
+                const category = prompt("Enter a category (e.g. 'Game Week', 'Camp', 'Spring Ball'):", "Game Week");
+
+                // Save segment structure including phase, focus, contact for reusability
+                const templateSegments = plan.segments.map(seg => ({
+                    type: seg.type,
+                    duration: seg.duration,
+                    situation: seg.situation || '',
+                    phase: seg.phase || 'ALL',
+                    focus: seg.focus || '',
+                    contact: seg.contact || '',
+                    hasScript: !!seg.hasScript
+                }));
+
+                const newTemplate = {
+                    id: Date.now().toString(),
+                    type: 'practice_plan',
+                    name: name,
+                    category: category || '',
+                    segments: templateSegments,
+                    createdAt: new Date().toISOString(),
+                    createdBy: user?.email || 'Unknown'
+                };
+
+                // Save to team's templates via prop
+                if (setPracticeTemplates) {
+                    setPracticeTemplates([...practiceTemplates, newTemplate]);
+                    alert(`Template "${name}" saved to your team!`);
+                } else {
+                    alert('Unable to save template - missing template handler');
+                }
+            };
+
+            // Legacy global save for admin use
+            const saveAsGlobalTemplate = async () => {
+                const name = prompt("Enter a name for this GLOBAL template:");
+                if (!name) return;
+
+                const category = prompt("Enter a category:", "Game Week");
 
                 try {
-                    // Sanitize segments for template (only keeping structure, not specific data like staffId or scripts if they are too specific, 
-                    // though user asked to save "it", so we keep types and durations and hasScript flag)
                     const templateSegments = plan.segments.map(seg => ({
                         type: seg.type,
                         duration: seg.duration,
                         situation: seg.situation || '',
+                        phase: seg.phase || 'ALL',
+                        focus: seg.focus || '',
+                        contact: seg.contact || '',
                         hasScript: !!seg.hasScript
                     }));
 
@@ -11541,29 +11583,24 @@
                         type: 'practice_plan',
                         name: name,
                         category: category || '',
-                        data: {
-                            segments: templateSegments
-                        },
+                        data: { segments: templateSegments },
                         createdAt: new Date().toISOString(),
                         createdBy: user?.email || 'Admin'
                     });
 
-                    alert(`Template "${name}" saved successfully!`);
+                    alert(`Global template "${name}" saved!`);
 
-                    // Trigger a re-fetch of global templates to update the dropdown immediately
-                    const fetchGlobalTemplates = async () => {
-                        const snapshot = await window.db.collection('global_templates')
-                            .where('type', '==', 'practice_plan')
-                            .get();
-                        const templates = snapshot.docs.map(doc => ({
-                            id: doc.id,
-                            name: doc.data().name,
-                            category: doc.data().category,
-                            segments: doc.data().data?.segments || []
-                        }));
-                        setGlobalTemplates(templates);
-                    };
-                    fetchGlobalTemplates();
+                    // Refresh global templates
+                    const snapshot = await window.db.collection('global_templates')
+                        .where('type', '==', 'practice_plan')
+                        .get();
+                    const templates = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        name: doc.data().name,
+                        category: doc.data().category,
+                        segments: doc.data().data?.segments || []
+                    }));
+                    setGlobalTemplates(templates);
 
                 } catch (err) {
                     console.error("Error saving global template:", err);
@@ -11582,6 +11619,9 @@
                         duration: seg.duration,
                         type: seg.type,
                         situation: seg.situation || '',
+                        phase: seg.phase || 'ALL',
+                        focus: seg.focus || '',
+                        contact: seg.contact || '',
                         notes: {},
                         script: [],
                         staffId: '',
@@ -12385,17 +12425,34 @@
                         document.body
                     )}
                     {/* Day Tabs */}
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', paddingBottom: '0.5rem', border: 'none', outline: 'none', boxShadow: 'none' }}>
-                        {days.map(day => (
-                            <button
-                                key={day}
-                                className={`btn ${selectedDay === day ? 'btn-primary' : 'btn-secondary'}`}
-                                onClick={() => { setSelectedDay(day); setSelectedSegmentId(null); }}
-                                style={{ textDecoration: 'none', border: 'none', outline: 'none', boxShadow: 'none' }}
-                            >
-                                {day}
-                            </button>
-                        ))}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', paddingBottom: '0.5rem', border: 'none', outline: 'none', boxShadow: 'none', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {days.map(day => (
+                                <button
+                                    key={day}
+                                    className={`btn ${selectedDay === day ? 'btn-primary' : 'btn-secondary'}`}
+                                    onClick={() => { setSelectedDay(day); setSelectedSegmentId(null); }}
+                                    style={{ textDecoration: 'none', border: 'none', outline: 'none', boxShadow: 'none' }}
+                                >
+                                    {day}
+                                </button>
+                            ))}
+                        </div>
+                        <button className="btn btn-secondary"
+                            style={{
+                                height: '36px',
+                                padding: '0 1rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '6px',
+                                gap: '0.5rem'
+                            }}
+                            onClick={() => window.print()}
+                            title="Print Schedule"
+                        >
+                            <Icon name="Printer" size={16} /> Print
+                        </button>
                     </div>
 
                     <div className="practice-flex-container" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -12404,14 +12461,6 @@
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                                 <h2>{selectedDay} Schedule</h2>
                                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                    {/* Side Menu Toggle */}
-                                    <button
-                                        className={`btn ${showSideMenu ? 'btn-primary' : 'btn-secondary'}`}
-                                        onClick={() => setShowSideMenu(!showSideMenu)}
-                                    >
-                                        {showSideMenu ? 'Hide Plays' : 'Play Menu'}
-                                    </button>
-
                                     {/* Template & Global Admin */}
                                     {!isLocked && (
                                         <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -12434,15 +12483,15 @@
                                             >
                                                 <option value="" disabled>Load Template...</option>
                                                 {allTemplates.map(t => (
-                                                    <option key={t.name} value={t.name}>
-                                                        {t.id ? '🌐 ' : '📋 '}{t.name}{t.category ? ` (${t.category})` : ''}
+                                                    <option key={t.id || t.name} value={t.name}>
+                                                        {t.isTeam ? '📁 ' : t.id ? '🌐 ' : '📋 '}{t.name}{t.category ? ` (${t.category})` : ''}
                                                     </option>
                                                 ))}
                                             </select>
                                             <button
                                                 className="btn btn-secondary"
-                                                onClick={saveAsGlobalTemplate}
-                                                title="Save as Template"
+                                                onClick={saveAsTeamTemplate}
+                                                title="Save current practice plan as a reusable template for your team"
                                                 style={{
                                                     height: '36px',
                                                     padding: '0 0.75rem',
@@ -12453,7 +12502,7 @@
                                                     borderRadius: '6px'
                                                 }}
                                             >
-                                                <Icon name="Save" size={14} />
+                                                <Icon name="Save" size={14} /> Save Template
                                             </button>
                                         </div>
                                     )}
@@ -12638,31 +12687,6 @@
                                         return null;
                                     })()}
 
-                                    <button className="btn btn-secondary"
-                                        style={{
-                                            height: '36px',
-                                            padding: '0 1rem',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            borderRadius: '6px'
-                                        }}
-                                        onClick={() => {
-                                            if (typeof includePlayCards !== 'undefined' && includePlayCards) {
-                                                const visibleSegments = plan.segments.filter(seg => selectedCoachFilter === 'ALL' || seg.staffId === selectedCoachFilter);
-                                                const urlsToOpen = new Set();
-                                                visibleSegments.forEach(seg => {
-                                                    if (scoutCardUrls[seg.id]) {
-                                                        urlsToOpen.add(scoutCardUrls[seg.id]);
-                                                    }
-                                                });
-                                                if (plan.warmupScoutCard && scoutCardUrls['WARMUP'] && (selectedCoachFilter === 'ALL' || plan.warmupStaffId === selectedCoachFilter)) {
-                                                    urlsToOpen.add(scoutCardUrls['WARMUP']);
-                                                }
-                                                urlsToOpen.forEach(url => window.open(url, '_blank'));
-                                            }
-                                            window.print();
-                                        }} title="Print Schedule">🖨️</button>
                                 </div>
                             </div>
 
@@ -13668,11 +13692,62 @@
         };
 
 
-        const PregameTimeline = ({ plan = {}, onUpdatePlan, teamLogo, staff, user, isLocked }) => {
+        const PregameTimeline = ({ plan = {}, onUpdatePlan, teamLogo, staff, user, isLocked, pregameTemplates = [], setPregameTemplates }) => {
             const [kickoffTime, setKickoffTime] = useState(plan?.kickoffTime || '19:00');
             const [selectedCoachFilter, setSelectedCoachFilter] = useState('ALL');
             const [selectedNotesCoach, setSelectedNotesCoach] = useState('ALL_COACHES');
             const [notesModalSegmentId, setNotesModalSegmentId] = useState(null);
+
+            // Save current pregame plan as a template
+            const saveAsTemplate = () => {
+                const name = prompt("Enter a name for this template (e.g. 'Home Game', 'Away Game', 'Night Game'):");
+                if (!name) return;
+
+                const templateSegments = (plan.segments || []).map(seg => ({
+                    duration: seg.duration,
+                    activity: seg.activity,
+                    location: seg.location || ''
+                }));
+
+                const newTemplate = {
+                    id: Date.now().toString(),
+                    name: name,
+                    kickoffTime: kickoffTime,
+                    segments: templateSegments,
+                    createdAt: new Date().toISOString(),
+                    createdBy: user?.email || 'Unknown'
+                };
+
+                if (setPregameTemplates) {
+                    setPregameTemplates([...pregameTemplates, newTemplate]);
+                    alert(`Template "${name}" saved!`);
+                }
+            };
+
+            // Load a template
+            const loadTemplate = (templateId) => {
+                const template = pregameTemplates.find(t => t.id === templateId);
+                if (!template) return;
+
+                if (confirm(`Load "${template.name}"? This will overwrite the current pregame plan.`)) {
+                    const newSegments = template.segments.map(seg => ({
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        startTime: '17:00', // Will be recalculated
+                        duration: seg.duration,
+                        activity: seg.activity,
+                        location: seg.location || '',
+                        notes: {},
+                        staffId: ''
+                    }));
+
+                    onUpdatePlan({
+                        ...plan,
+                        kickoffTime: template.kickoffTime || '19:00',
+                        segments: newSegments
+                    });
+                    setKickoffTime(template.kickoffTime || '19:00');
+                }
+            };
 
             // Helper function to migrate old notes format to new format
             const migrateSegmentNotes = (segment) => {
@@ -13786,6 +13861,33 @@
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                         <h2>Pre-game Timeline</h2>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            {/* Template Controls */}
+                            {setPregameTemplates && (
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <select
+                                        className="form-select"
+                                        style={{ width: 'auto', minWidth: '150px' }}
+                                        onChange={(e) => {
+                                            if (e.target.value) loadTemplate(e.target.value);
+                                            e.target.value = '';
+                                        }}
+                                        defaultValue=""
+                                    >
+                                        <option value="" disabled>Load Template...</option>
+                                        {pregameTemplates.map(t => (
+                                            <option key={t.id} value={t.id}>📁 {t.name}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={saveAsTemplate}
+                                        title="Save current pregame plan as a reusable template"
+                                        disabled={!plan.segments || plan.segments.length === 0}
+                                    >
+                                        <Icon name="Save" size={14} /> Save Template
+                                    </button>
+                                </div>
+                            )}
                             <div>
                                 <label style={{ marginRight: '0.5rem', fontWeight: 'bold' }}>Kickoff:</label>
                                 <input
@@ -16341,40 +16443,12 @@
             // Get base defaults
             const baseDefaults = FORMATIONS[baseChartType] || FORMATIONS['OFFENSE'];
 
-            // For OFFENSE charts, auto-include positions from personnel groupings
-            const personnelPositions = [];
-            if (baseChartType === 'OFFENSE' && Array.isArray(personnelGroupings)) {
-                const allPersonnelPositions = new Set();
-                personnelGroupings.forEach(grouping => {
-                    (grouping.positions || []).forEach(pos => allPersonnelPositions.add(pos));
-                });
-                // Get positions that are in personnel groupings but not in base defaults or custom positions
-                const existingKeys = new Set([
-                    ...baseDefaults.map(p => p.key),
-                    ...phaseCustomPositions.map(p => p.key)
-                ]);
-                let personnelIdx = 0;
-                allPersonnelPositions.forEach(posKey => {
-                    if (!existingKeys.has(posKey)) {
-                        personnelPositions.push({
-                            id: `PERSONNEL_${baseChartType}_${posKey}`,
-                            key: posKey,
-                            defaultName: posKey,
-                            x: 1420, // Default x position (right side)
-                            y: 300 + (personnelIdx * 200), // Staggered y positions
-                            isPersonnel: true
-                        });
-                        personnelIdx++;
-                    }
-                });
-            }
-
             // Filter out Hidden defaults
             const currentHidden = hiddenPositions[setupPhase] || [];
             const filteredDefaults = baseDefaults.filter(pos => !currentHidden.includes(pos.key));
 
-            // Combine: base defaults + custom positions + personnel grouping positions
-            const availablePositions = [...filteredDefaults, ...formattedCustomPositions, ...personnelPositions];
+            // Combine: base defaults + custom positions only (personnel groupings select from these)
+            const availablePositions = [...filteredDefaults, ...formattedCustomPositions];
 
             // Merge with saved layout
             const positions = availablePositions.map(pos => {
@@ -16635,23 +16709,47 @@
                                 left: '20px',
                                 width: '1584px',
                                 height: '1224px',
-                                border: '2px dashed rgba(100, 160, 255, 0.5)',
-                                borderRadius: '4px',
-                                background: 'var(--surface)',
+                                border: '3px solid rgba(59, 130, 246, 0.6)',
+                                borderRadius: '8px',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                boxShadow: 'inset 0 0 0 1px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.1)',
                                 pointerEvents: 'none',
                                 zIndex: 0
                             }}>
+                                {/* Top label */}
                                 <div style={{
                                     position: 'absolute',
-                                    top: '-24px',
-                                    left: '0',
-                                    fontSize: '0.7rem',
-                                    color: 'rgba(100, 160, 255, 0.7)',
+                                    top: '-28px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    fontSize: '0.75rem',
+                                    color: 'rgba(59, 130, 246, 0.9)',
                                     fontWeight: '600',
                                     textTransform: 'uppercase',
-                                    letterSpacing: '0.05em'
+                                    letterSpacing: '0.05em',
+                                    background: 'var(--bg-panel)',
+                                    padding: '2px 12px',
+                                    borderRadius: '4px',
+                                    border: '1px solid rgba(59, 130, 246, 0.4)'
                                 }}>
-                                    📄 Page Guide (print at ~65% scale to fit letter size)
+                                    Printable Area (Letter Size)
+                                </div>
+                                {/* Corner markers */}
+                                <div style={{ position: 'absolute', top: '-3px', left: '-3px', width: '20px', height: '20px', borderTop: '4px solid #3b82f6', borderLeft: '4px solid #3b82f6', borderRadius: '4px 0 0 0' }}></div>
+                                <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '20px', height: '20px', borderTop: '4px solid #3b82f6', borderRight: '4px solid #3b82f6', borderRadius: '0 4px 0 0' }}></div>
+                                <div style={{ position: 'absolute', bottom: '-3px', left: '-3px', width: '20px', height: '20px', borderBottom: '4px solid #3b82f6', borderLeft: '4px solid #3b82f6', borderRadius: '0 0 0 4px' }}></div>
+                                <div style={{ position: 'absolute', bottom: '-3px', right: '-3px', width: '20px', height: '20px', borderBottom: '4px solid #3b82f6', borderRight: '4px solid #3b82f6', borderRadius: '0 0 4px 0' }}></div>
+                                {/* Bottom hint */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '-28px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    fontSize: '0.65rem',
+                                    color: 'rgba(148, 163, 184, 0.8)',
+                                    whiteSpace: 'nowrap'
+                                }}>
+                                    Keep positions inside this box for printing
                                 </div>
                             </div>
 
@@ -16708,7 +16806,7 @@
                                                 onClick={(e) => e.stopPropagation()} // Prevent drag start
                                             />
                                         ) : (
-                                            <div style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '4px' }}>
+                                            <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#fff', marginBottom: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                                                 {pos.name}
                                             </div>
                                         )}
@@ -17278,19 +17376,17 @@
                                     </div>
                                 </div>
 
-                                <div style={{ flex: 1, minHeight: '400px' }}>
+                                <div style={{ flex: 1 }}>
                                     <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Player Positions</label>
 
-                                    {/* Preview SVG - 15.07:8.89 aspect ratio (WIZ diagram proportions) */}
+                                    {/* Preview SVG - compact view */}
                                     {(() => {
                                         // Same constants as positionsToElements for consistency
                                         const LOS_PIXEL_Y = 380;
                                         const CANVAS_WIDTH = 754;
                                         const SCALE = 4;
 
-                                        // Fixed viewBox with 15.07:8.89 aspect ratio (width 754, height 445)
                                         const viewWidth = 754;
-                                        const viewHeight = 445;
 
                                         // Calculate player positions using same formula as diagrammer
                                         const playerPositions = editingFormation.positions.map(pos => ({
@@ -17304,17 +17400,17 @@
                                         // LOS should be 25px above the top of the topmost player
                                         const losDrawY = topPlayerY - 25;
 
-                                        // Center the formation vertically in the viewBox
+                                        // Calculate tight viewBox around actual content
                                         const maxPlayerY = Math.max(...playerPositions.map(p => p.pixelY));
-                                        const formationHeight = (maxPlayerY + 20) - (losDrawY - 20);
-                                        const viewY = losDrawY - 20 - (viewHeight - formationHeight) / 2;
+                                        const viewY = losDrawY - 30; // 30px padding above LOS
+                                        const viewHeight = (maxPlayerY + 50) - viewY; // 50px padding below deepest player
 
                                         return (
                                             <svg
                                                 width="100%"
                                                 viewBox={`0 ${viewY} ${viewWidth} ${viewHeight}`}
                                                 preserveAspectRatio="xMidYMid meet"
-                                                style={{ border: '2px solid #cbd5e1', borderRadius: '8px', background: '#f9f9f9', marginBottom: '1rem', aspectRatio: '15.07 / 8.89' }}
+                                                style={{ border: '2px solid #cbd5e1', borderRadius: '8px', background: '#f9f9f9', marginBottom: '1rem', maxHeight: '250px' }}
                                             >
                                                 {/* LOS drawn above the players */}
                                                 <line x1="20" y1={losDrawY} x2={viewWidth - 20} y2={losDrawY} stroke="#000" strokeWidth="3" />
@@ -33536,6 +33632,39 @@
             { id: 'screen', label: 'Screen', color: '#8b5cf6', textColor: '#ffffff' }
         ];
 
+        // Phase-specific default play categories/buckets
+        const DEFAULT_PLAY_CATEGORIES_BY_PHASE = {
+            OFFENSE: [
+                { id: 'insideruns', label: 'INSIDE RUN', color: '#141fbd', phase: 'OFFENSE' },
+                { id: 'perimeterruns', label: 'PERIMETER RUN', color: '#6226ed', phase: 'OFFENSE' },
+                { id: 'quickpass', label: 'QUICK PASS', color: '#0fe628', phase: 'OFFENSE' },
+                { id: 'rpo', label: 'FIT RPO', color: '#94a3b8', phase: 'OFFENSE' },
+                { id: 'flowrpo', label: 'FLOW RPO', color: '#94a3b8', phase: 'OFFENSE' },
+                { id: 'intermediatepass', label: 'DROP BACK - INTERMEDIATE', color: '#e8ec22', phase: 'OFFENSE' },
+                { id: 'shotpass', label: 'DROP BACK - SHOT', color: '#9b0303', phase: 'OFFENSE' },
+                { id: 'screen', label: 'SCREEN', color: '#eb5e00', phase: 'OFFENSE' },
+                { id: 'gadget', label: 'GADGET', color: '#00ccaa', phase: 'OFFENSE' },
+                { id: 'playactionpass', label: 'PLAY ACTION PASS', color: '#b500b8', phase: 'OFFENSE' },
+                { id: 'sprintoutrolls', label: 'SPRINTOUT/ROLLS', color: '#94a3b8', phase: 'OFFENSE' },
+            ],
+            DEFENSE: [
+                { id: 'fronts', label: 'FRONTS', color: '#ef4444', phase: 'DEFENSE' },
+                { id: 'coverages', label: 'COVERAGES', color: '#3b82f6', phase: 'DEFENSE' },
+                { id: 'blitzes', label: 'BLITZES', color: '#f97316', phase: 'DEFENSE' },
+                { id: 'stunts', label: 'STUNTS/GAMES', color: '#8b5cf6', phase: 'DEFENSE' },
+                { id: 'alignments', label: 'ALIGNMENTS', color: '#22c55e', phase: 'DEFENSE' },
+                { id: 'adjustments', label: 'ADJUSTMENTS', color: '#06b6d4', phase: 'DEFENSE' },
+            ],
+            SPECIAL_TEAMS: [
+                { id: 'kickoff', label: 'KICKOFF', color: '#3b82f6', phase: 'SPECIAL_TEAMS' },
+                { id: 'kickreturn', label: 'KICK RETURN', color: '#22c55e', phase: 'SPECIAL_TEAMS' },
+                { id: 'punt', label: 'PUNT', color: '#f97316', phase: 'SPECIAL_TEAMS' },
+                { id: 'puntreturn', label: 'PUNT RETURN/BLOCK', color: '#8b5cf6', phase: 'SPECIAL_TEAMS' },
+                { id: 'fieldgoal', label: 'FIELD GOAL/PAT', color: '#eab308', phase: 'SPECIAL_TEAMS' },
+                { id: 'fgblock', label: 'FG/PAT BLOCK', color: '#ef4444', phase: 'SPECIAL_TEAMS' },
+            ]
+        };
+
         // Personnel Packages Configuration
         const DEFAULT_PERSONNEL_GROUPINGS = [
             { id: 'pers_10', code: '10', name: '10 Personnel', description: '1 RB, 0 TE, 4 WR', positions: ['QB', 'RB', 'X', 'Z', 'Y', 'A'] },
@@ -35063,6 +35192,8 @@
             });
 
             const [practiceTemplates, setPracticeTemplates] = useLocalStorage('oc-dashboard-practice-templates', []);
+            const [gameplanTemplates, setGameplanTemplates] = useLocalStorage('oc-dashboard-gameplan-templates', []);
+            const [pregameTemplates, setPregameTemplates] = useLocalStorage('oc-dashboard-pregame-templates', []);
 
             useEffect(() => {
                 localStorage.setItem('oc-dashboard-segment-settings', JSON.stringify(practiceSegmentSettings));
@@ -35622,6 +35753,39 @@
                 }
             }, [plays]);
 
+            // AUTO-MIGRATION: Add phase to existing playCategories and seed Defense/ST defaults
+            useEffect(() => {
+                let updated = [...playCategories];
+                let needsUpdate = false;
+
+                // Add phase to existing categories that don't have one (default to OFFENSE)
+                updated = updated.map(cat => {
+                    if (!cat.phase) {
+                        needsUpdate = true;
+                        return { ...cat, phase: 'OFFENSE' };
+                    }
+                    return cat;
+                });
+
+                // Check if we need to seed Defense categories
+                const hasDefense = updated.some(c => c.phase === 'DEFENSE');
+                if (!hasDefense) {
+                    needsUpdate = true;
+                    updated = [...updated, ...DEFAULT_PLAY_CATEGORIES_BY_PHASE.DEFENSE];
+                }
+
+                // Check if we need to seed Special Teams categories
+                const hasST = updated.some(c => c.phase === 'SPECIAL_TEAMS');
+                if (!hasST) {
+                    needsUpdate = true;
+                    updated = [...updated, ...DEFAULT_PLAY_CATEGORIES_BY_PHASE.SPECIAL_TEAMS];
+                }
+
+                if (needsUpdate) {
+                    console.log('Migrating playCategories to include phase field and seeding Defense/ST defaults...');
+                    setPlayCategories(updated);
+                }
+            }, []);
 
             // Script Presets (Dynamic Script Templates)
             const [scriptPresets, setScriptPresets] = useLocalStorage('oc-dashboard-script-presets', [
@@ -36683,7 +36847,7 @@
                             <p style={{ opacity: 0.7, margin: '0.5rem 0 0 0' }}>Configure your {phaseTitle.toLowerCase()} language, positions, and terminology.</p>
                         </div>
 
-                        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: '#1e293b', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)', flexWrap: 'wrap' }}>
                             {isPractice ? (
                                 <>
                                     {/* Practice Tab - Practice Lists */}
@@ -36739,6 +36903,42 @@
                                         onClick={() => setSetupTab('practice-templates')}
                                     >
                                         <Icon name="Calendar" size={16} /> Practice Templates
+                                    </button>
+                                    {/* Game Plan Templates */}
+                                    <button
+                                        className={`btn-ghost`}
+                                        style={{
+                                            borderRadius: 0,
+                                            padding: '1rem 1.5rem',
+                                            borderBottom: setupTab === 'gameplan-templates' ? '3px solid var(--accent)' : '3px solid transparent',
+                                            fontWeight: setupTab === 'gameplan-templates' ? 'bold' : 'normal',
+                                            color: setupTab === 'gameplan-templates' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            background: 'transparent',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem'
+                                        }}
+                                        onClick={() => setSetupTab('gameplan-templates')}
+                                    >
+                                        <Icon name="LayoutDashboard" size={16} /> Game Plan Templates
+                                    </button>
+                                    {/* Pregame Timeline Templates */}
+                                    <button
+                                        className={`btn-ghost`}
+                                        style={{
+                                            borderRadius: 0,
+                                            padding: '1rem 1.5rem',
+                                            borderBottom: setupTab === 'pregame-templates' ? '3px solid var(--accent)' : '3px solid transparent',
+                                            fontWeight: setupTab === 'pregame-templates' ? 'bold' : 'normal',
+                                            color: setupTab === 'pregame-templates' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            background: 'transparent',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem'
+                                        }}
+                                        onClick={() => setSetupTab('pregame-templates')}
+                                    >
+                                        <Icon name="Clock" size={16} /> Pregame Templates
                                     </button>
                                 </>
                             ) : (
@@ -36861,23 +37061,23 @@
                             {setupTab === 'categories' && (
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                        <h3 style={{ margin: 0 }}>Play Buckets</h3>
+                                        <h3 style={{ margin: 0 }}>{phase === 'DEFENSE' ? 'Defensive Categories' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Categories' : 'Play Buckets'}</h3>
                                         <button className="btn btn-primary" onClick={() => {
                                             const label = prompt("New Category Label:");
                                             if (label) {
                                                 const id = label.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                                if (playCategories.some(c => c.id === id)) {
-                                                    alert("Bucket ID already exists.");
+                                                if (playCategories.some(c => c.id === id && c.phase === phase)) {
+                                                    alert("Category ID already exists for this phase.");
                                                     return;
                                                 }
-                                                setPlayCategories([...playCategories, { id, label, color: 'gray' }]);
+                                                setPlayCategories([...playCategories, { id, label, color: '#94a3b8', phase }]);
                                             }
                                         }}>
-                                            <Icon name="Plus" size={16} /> Add Bucket
+                                            <Icon name="Plus" size={16} /> Add {phase === 'DEFENSE' ? 'Category' : phase === 'SPECIAL_TEAMS' ? 'Category' : 'Bucket'}
                                         </button>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                                        {playCategories.map((cat, idx) => (
+                                        {playCategories.filter(c => c.phase === phase || (!c.phase && phase === 'OFFENSE')).map((cat, idx) => (
                                             <div key={cat.id} className="card" style={{ padding: '1rem' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
@@ -36934,8 +37134,8 @@
                                             </div>
                                         ))}
                                     </div>
-                                    <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem', color: '#64748b' }}>
-                                        <p style={{ margin: 0 }}><strong>Note:</strong> These buckets define the high-level organization (e.g. Run, Pass, RPO).</p>
+                                    <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--surface)', borderRadius: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                        <p style={{ margin: 0 }}><strong>Note:</strong> {phase === 'DEFENSE' ? 'These categories organize your defensive scheme (e.g. Fronts, Coverages, Blitzes).' : phase === 'SPECIAL_TEAMS' ? 'These categories organize your special teams units.' : 'These buckets define the high-level organization (e.g. Run, Pass, RPO).'}</p>
                                     </div>
                                 </div>
                             )}
@@ -36943,14 +37143,14 @@
                             {setupTab === 'buckets' && (
                                 <div style={{ padding: '2rem' }}>
                                     <div style={{ marginBottom: '2rem' }}>
-                                        <h3 style={{ margin: 0 }}>Concept Families</h3>
+                                        <h3 style={{ margin: 0 }}>{phase === 'DEFENSE' ? 'Defensive Concept Families' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Variations' : 'Concept Families'}</h3>
                                         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                                            Manage your concept families within each bucket.
+                                            {phase === 'DEFENSE' ? 'Manage variations within each defensive category.' : phase === 'SPECIAL_TEAMS' ? 'Manage variations within each special teams unit.' : 'Manage your concept families within each bucket.'}
                                         </p>
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                                        {playCategories.map(bucket => {
+                                        {playCategories.filter(c => c.phase === phase || (!c.phase && phase === 'OFFENSE')).map(bucket => {
                                             // Derive families from plays in this bucket
                                             // Ensure we match using bucketId OR categoryId, preferring bucketId if it matches the bucket's ID
                                             const bucketPlays = plays.filter(p => p.bucketId === bucket.id);
@@ -37165,7 +37365,7 @@
                                                             justifyContent: 'center',
                                                             boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
                                                         }}>
-                                                            <Icon name="Palette" size={16} style={{ color: 'rgba(255,255,255,0.7)' }} />
+                                                            <Icon name="Edit" size={16} style={{ color: 'rgba(255,255,255,0.7)' }} />
                                                         </div>
                                                     </div>
                                                     <input
@@ -37677,7 +37877,7 @@
                                                     </div>
                                                     <div style={{ padding: '12px 16px' }}>
                                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                                            {playCategories.map(cat => (
+                                                            {playCategories.filter(c => c.phase === phase || (!c.phase && phase === 'OFFENSE')).map(cat => (
                                                                 <div
                                                                     key={cat.id}
                                                                     style={{
@@ -38030,7 +38230,7 @@
                                                                 }}
                                                             />
                                                             <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                                                {template.segments?.length || 0} segments
+                                                                {template.segments?.length || 0} segments {template.category && `• ${template.category}`}
                                                             </p>
                                                         </div>
                                                         <button
@@ -38045,8 +38245,228 @@
                                                             <Icon name="Trash2" size={16} />
                                                         </button>
                                                     </div>
+                                                    {template.segments && template.segments.length > 0 && (
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', maxHeight: '60px', overflow: 'hidden' }}>
+                                                            {template.segments.slice(0, 5).map((seg, i) => (
+                                                                <span key={i} style={{ display: 'inline-block', background: 'var(--surface)', padding: '2px 6px', borderRadius: '4px', marginRight: '4px', marginBottom: '4px' }}>
+                                                                    {seg.type} ({seg.duration}m)
+                                                                </span>
+                                                            ))}
+                                                            {template.segments.length > 5 && <span>+{template.segments.length - 5} more</span>}
+                                                        </div>
+                                                    )}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                            Created {new Date(template.createdAt).toLocaleDateString()}
+                                                        </div>
+                                                        {isSiteAdmin && (
+                                                            <button
+                                                                className="btn btn-sm"
+                                                                style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'var(--accent)', color: 'var(--btn-primary-text)' }}
+                                                                onClick={async () => {
+                                                                    if (!window.db) return alert('Database not available');
+                                                                    if (!confirm(`Push "${template.name}" as a global template available to all teams?`)) return;
+                                                                    try {
+                                                                        await window.db.collection('global_templates').add({
+                                                                            type: 'practice_plan',
+                                                                            name: template.name,
+                                                                            category: template.category || '',
+                                                                            data: { segments: template.segments },
+                                                                            createdAt: new Date().toISOString(),
+                                                                            createdBy: currentUser?.email || 'Admin'
+                                                                        });
+                                                                        alert(`"${template.name}" is now available globally!`);
+                                                                    } catch (err) {
+                                                                        console.error(err);
+                                                                        alert('Error pushing template');
+                                                                    }
+                                                                }}
+                                                                title="Make this template available to all teams"
+                                                            >
+                                                                🌐 Push Global
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {setupTab === 'gameplan-templates' && (
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0 }}>Game Plan Templates</h3>
+                                            <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                Save and reuse call sheet layouts, situation scripts, and game plan structures.
+                                            </p>
+                                        </div>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={() => {
+                                                const name = prompt("Template Name:");
+                                                if (name) {
+                                                    const newTemplate = {
+                                                        id: Date.now().toString(),
+                                                        name,
+                                                        createdAt: new Date().toISOString(),
+                                                        type: 'gameplan',
+                                                        data: {}
+                                                    };
+                                                    setGameplanTemplates([...gameplanTemplates, newTemplate]);
+                                                }
+                                            }}
+                                        >
+                                            <Icon name="Plus" size={16} /> New Template
+                                        </button>
+                                    </div>
+
+                                    {gameplanTemplates.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)', background: 'var(--surface)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                                            <Icon name="LayoutDashboard" size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                                            <p style={{ fontWeight: 600 }}>No game plan templates yet</p>
+                                            <p style={{ fontSize: '0.9rem' }}>Save call sheet layouts and situation scripts to reuse across weeks and seasons.</p>
+                                            <p style={{ fontSize: '0.85rem', marginTop: '1rem', color: 'var(--text-muted)' }}>
+                                                Tip: Use "Copy Game Plan from Previous Week" in Game Planner to duplicate your setup.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                                            {gameplanTemplates.map((template, idx) => (
+                                                <div key={template.id} className="card" style={{ padding: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                                                        <div>
+                                                            <input
+                                                                type="text"
+                                                                value={template.name}
+                                                                onChange={(e) => {
+                                                                    const updated = [...gameplanTemplates];
+                                                                    updated[idx] = { ...template, name: e.target.value };
+                                                                    setGameplanTemplates(updated);
+                                                                }}
+                                                                style={{
+                                                                    fontWeight: 'bold',
+                                                                    fontSize: '1rem',
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    color: 'var(--text-primary)',
+                                                                    padding: 0
+                                                                }}
+                                                            />
+                                                            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                                {template.type === 'gameplan' ? 'Game Plan Structure' : 'Call Sheet Layout'}
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            className="btn-icon"
+                                                            onClick={() => {
+                                                                if (confirm(`Delete "${template.name}"?`)) {
+                                                                    setGameplanTemplates(gameplanTemplates.filter(t => t.id !== template.id));
+                                                                }
+                                                            }}
+                                                            style={{ color: '#ef4444' }}
+                                                        >
+                                                            <Icon name="Trash2" size={16} />
+                                                        </button>
+                                                    </div>
                                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                                         Created {new Date(template.createdAt).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {setupTab === 'pregame-templates' && (
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0 }}>Pregame Timeline Templates</h3>
+                                            <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                Save and reuse pregame warmup schedules and timelines.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {pregameTemplates.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)', background: 'var(--surface)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                                            <Icon name="Clock" size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                                            <p style={{ fontWeight: 600 }}>No pregame templates yet</p>
+                                            <p style={{ fontSize: '0.9rem' }}>Go to the Pregame view and click "Save Template" to create reusable timelines.</p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                                            {pregameTemplates.map((template, idx) => (
+                                                <div key={template.id} className="card" style={{ padding: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                                                        <div>
+                                                            <input
+                                                                type="text"
+                                                                value={template.name}
+                                                                onChange={(e) => {
+                                                                    const updated = [...pregameTemplates];
+                                                                    updated[idx] = { ...template, name: e.target.value };
+                                                                    setPregameTemplates(updated);
+                                                                }}
+                                                                style={{
+                                                                    fontWeight: 'bold',
+                                                                    fontSize: '1rem',
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    color: 'var(--text-primary)',
+                                                                    padding: 0
+                                                                }}
+                                                            />
+                                                            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                                {template.segments?.length || 0} activities • Kickoff: {template.kickoffTime || '19:00'}
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            className="btn-icon"
+                                                            onClick={() => {
+                                                                if (confirm(`Delete "${template.name}"?`)) {
+                                                                    setPregameTemplates(pregameTemplates.filter(t => t.id !== template.id));
+                                                                }
+                                                            }}
+                                                            style={{ color: '#ef4444' }}
+                                                        >
+                                                            <Icon name="Trash2" size={16} />
+                                                        </button>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                            Created {new Date(template.createdAt).toLocaleDateString()}
+                                                        </div>
+                                                        {isSiteAdmin && (
+                                                            <button
+                                                                className="btn btn-sm"
+                                                                style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'var(--accent)', color: 'var(--btn-primary-text)' }}
+                                                                onClick={async () => {
+                                                                    if (!window.db) return alert('Database not available');
+                                                                    if (!confirm(`Push "${template.name}" as a global template available to all teams?`)) return;
+                                                                    try {
+                                                                        await window.db.collection('global_templates').add({
+                                                                            type: 'pregame_timeline',
+                                                                            name: template.name,
+                                                                            data: { kickoffTime: template.kickoffTime, segments: template.segments },
+                                                                            createdAt: new Date().toISOString(),
+                                                                            createdBy: currentUser?.email || 'Admin'
+                                                                        });
+                                                                        alert(`"${template.name}" is now available globally!`);
+                                                                    } catch (err) {
+                                                                        console.error(err);
+                                                                        alert('Error pushing template');
+                                                                    }
+                                                                }}
+                                                                title="Make this template available to all teams"
+                                                            >
+                                                                🌐 Push Global
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -38393,7 +38813,7 @@
                                                 ]);
                                             }}
                                         >
-                                            <Icon name="Plus" size={16} /> Add Personnel
+                                            <Icon name="Plus" size={16} /> Add Personnel Grouping
                                         </button>
                                     </div>
 
@@ -39282,7 +39702,7 @@
                             {view === 'staff-meeting' && (
                                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', padding: '1rem' }}>
                                     {/* Header */}
-                                    <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: 'white' }}>
+                                    <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, #1e3a5f 0%, #0369a1 100%)', color: 'white' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                                             <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 <Icon name="LayoutDashboard" size={28} />
@@ -39310,7 +39730,7 @@
                                             )}
                                             <div>
                                                 <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Practice Plans</div>
-                                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{currentWeek.practicePlans?.length || 0}</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{Object.keys(currentWeek.practicePlans || {}).length}</div>
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>Active Players</div>
@@ -39336,7 +39756,7 @@
                                             <Icon name="Zap" size={20} />
                                             Quick Links
                                         </h3>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                                             <button onClick={() => setView('practice')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                                                     <Icon name="Megaphone" size={18} style={{ color: 'var(--text-primary)' }} />
@@ -39350,13 +39770,6 @@
                                                     <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>Install Manager</span>
                                                 </div>
                                                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Manage weekly installations</div>
-                                            </button>
-                                            <button onClick={() => setView('scouting')} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                    <Icon name="Search" size={18} style={{ color: 'var(--text-primary)' }} />
-                                                    <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>Scouting</span>
-                                                </div>
-                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Scout opponent tendencies</div>
                                             </button>
                                             <button onClick={() => { setView('depth'); setDepthChartType('OFFENSE'); }} className="card" style={{ padding: '1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.2s' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -39829,7 +40242,7 @@
                                                         onChange={e => setPlaybookFilters({ ...playbookFilters, playCategory: e.target.value })}
                                                     >
                                                         <option value="">All Buckets</option>
-                                                        {playCategories.map(cat => (
+                                                        {playCategories.filter(c => c.phase === 'OFFENSE' || !c.phase).map(cat => (
                                                             <option key={cat.id} value={cat.id}>{cat.label}</option>
                                                         ))}
                                                     </select>
@@ -40142,6 +40555,8 @@
                                     onQuickAddPlay={handleQuickAddPlay}
                                     addToNextSlotRef={addToNextSlotRef}
                                     onNavigate={setView}
+                                    practiceTemplates={practiceTemplates}
+                                    setPracticeTemplates={setPracticeTemplates}
                                 />
                             )}
                             {view === 'pregame' && (
@@ -40152,6 +40567,8 @@
                                     staff={staff}
                                     user={currentUser}
                                     isLocked={currentWeek.isLocked}
+                                    pregameTemplates={pregameTemplates}
+                                    setPregameTemplates={setPregameTemplates}
                                 />
                             )}
                             {view === 'game-week-overview' && (
@@ -40192,6 +40609,8 @@
                                     teamLogo={teamLogo}
                                     currentWeek={currentWeek}
                                     addToNextSlotRef={addToNextSlotRef}
+                                    practiceTemplates={practiceTemplates}
+                                    setPracticeTemplates={setPracticeTemplates}
                                 />
                             )}
                             {/* REMOVED: coach-app view */}
