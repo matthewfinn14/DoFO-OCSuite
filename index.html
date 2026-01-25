@@ -29208,15 +29208,15 @@
         ];
 
         const FEATURES = [
-            { id: 'dashboard', label: 'Program Dashboard (Focus/Injuries)' },
-            { id: 'playbook', label: 'Playbook' },
-            { id: 'callsheet', label: 'Call Sheet & Game Planning' },
-            { id: 'install', label: 'Install Schedule' },
-            { id: 'scripts', label: 'Practice Scripts' },
-            { id: 'depth', label: 'Depth Charts' },
-            { id: 'recruiting', label: 'Recruiting Board' },
-            { id: 'staff', label: 'Staff Management' },
-            { id: 'settings', label: 'Settings & Config' }
+            { id: 'dashboard', label: 'Dashboard', fullLabel: 'Program Dashboard' },
+            { id: 'playbook', label: 'Playbook', fullLabel: 'Master Playbook' },
+            { id: 'callsheet', label: 'Game Plan', fullLabel: 'Call Sheet & Game Planning' },
+            { id: 'install', label: 'Install', fullLabel: 'Install Schedule' },
+            { id: 'scripts', label: 'Scripts', fullLabel: 'Practice Scripts' },
+            { id: 'depth', label: 'Depth', fullLabel: 'Depth Charts' },
+            { id: 'recruiting', label: 'Recruiting', fullLabel: 'Recruiting Board' },
+            { id: 'staff', label: 'Staff', fullLabel: 'Staff Management' },
+            { id: 'settings', label: 'Settings', fullLabel: 'Settings & Config' }
         ];
 
         const DEFAULT_PERMISSIONS = {
@@ -29622,95 +29622,112 @@
             );
         };
         const PermissionsView = ({ permissions, onUpdatePermissions, onResetDefaults }) => {
-            const togglePermission = (role, featureId, type) => {
+            // Cycle through: none -> view -> edit -> none
+            const cyclePermission = (role, featureId) => {
                 const newPermissions = JSON.parse(JSON.stringify(permissions));
                 if (!newPermissions[role]) newPermissions[role] = {};
                 if (!newPermissions[role][featureId]) newPermissions[role][featureId] = { view: false, edit: false };
 
-                newPermissions[role][featureId][type] = !newPermissions[role][featureId][type];
-
-                // Logic: If edit is true, view must be true
-                if (type === 'edit' && newPermissions[role][featureId].edit) {
-                    newPermissions[role][featureId].view = true;
-                }
-                // Logic: If view is false, edit must be false
-                if (type === 'view' && !newPermissions[role][featureId].view) {
-                    newPermissions[role][featureId].edit = false;
+                const p = newPermissions[role][featureId];
+                if (!p.view && !p.edit) {
+                    // none -> view
+                    p.view = true;
+                    p.edit = false;
+                } else if (p.view && !p.edit) {
+                    // view -> edit
+                    p.view = true;
+                    p.edit = true;
+                } else {
+                    // edit -> none
+                    p.view = false;
+                    p.edit = false;
                 }
 
                 onUpdatePermissions(newPermissions);
+            };
+
+            const getPermissionState = (p) => {
+                if (!p.view && !p.edit) return 'none';
+                if (p.view && !p.edit) return 'view';
+                return 'edit';
             };
 
             return (
                 <div style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                         <div>
-                            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Permissions Management</h1>
-                            <div style={{ color: 'var(--text-secondary)' }}>Configure View and Edit access for each staff role.</div>
+                            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Permissions</h1>
+                            <div style={{ color: 'var(--text-secondary)' }}>Click cells to cycle: None → View → Edit</div>
                         </div>
                         <button className="btn btn-outline" onClick={onResetDefaults}>
-                            <Icon name="RotateCcw" size={16} /> Reset to Defaults
+                            <Icon name="RotateCcw" size={16} /> Reset
                         </button>
                     </div>
 
                     <div className="card" style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
                             <thead>
                                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Feature</th>
-                                    {ROLES.map(role => (
-                                        <th key={role} style={{ textAlign: 'center', padding: '1rem', minWidth: '120px' }}>
-                                            {role.replace(' Coordinator', ' Coord.')}
+                                    <th style={{ textAlign: 'left', padding: '0.75rem 1rem', minWidth: '140px' }}>Role</th>
+                                    {FEATURES.map(feature => (
+                                        <th key={feature.id} style={{ textAlign: 'center', padding: '0.75rem 0.5rem', fontSize: '0.8rem', minWidth: '70px' }} title={feature.fullLabel}>
+                                            {feature.label}
                                         </th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody>
-                                {FEATURES.map(feature => (
-                                    <tr key={feature.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <td style={{ padding: '1rem', fontWeight: 'bold' }}>{feature.label}</td>
-                                        {ROLES.map(role => {
-                                            const rolePerms = permissions[role] || DEFAULT_PERMISSIONS[role] || { view: false, edit: false };
-                                            const p = rolePerms[feature.id] || { view: false, edit: false };
-                                            const isHC = role === 'Head Coach';
+                                {ROLES.map(role => {
+                                    const isHC = role === 'Head Coach';
+                                    return (
+                                        <tr key={role} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <td style={{ padding: '0.75rem 1rem', fontWeight: 'bold' }}>{role}</td>
+                                            {FEATURES.map(feature => {
+                                                const rolePerms = permissions[role] || DEFAULT_PERMISSIONS[role] || {};
+                                                const p = rolePerms[feature.id] || { view: false, edit: false };
+                                                const state = getPermissionState(p);
 
-                                            return (
-                                                <td key={`${role}-${feature.id}`} style={{ padding: '1rem', textAlign: 'center' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                                                const stateStyles = {
+                                                    none: { bg: 'rgba(255,255,255,0.03)', border: '1px solid transparent', color: 'var(--text-secondary)', label: '—' },
+                                                    view: { bg: 'rgba(59, 130, 246, 0.15)', border: '1px solid #3b82f6', color: '#3b82f6', label: 'View' },
+                                                    edit: { bg: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', color: '#22c55e', label: 'Edit' }
+                                                };
+                                                const s = stateStyles[state];
+
+                                                return (
+                                                    <td key={`${role}-${feature.id}`} style={{ padding: '0.5rem', textAlign: 'center' }}>
                                                         <button
-                                                            onClick={() => !isHC && togglePermission(role, feature.id, 'view')}
-                                                            title="Toggle View"
+                                                            onClick={() => !isHC && cyclePermission(role, feature.id)}
                                                             style={{
-                                                                background: p.view ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-                                                                border: p.view ? '1px solid #3b82f6' : '1px solid transparent',
-                                                                color: p.view ? '#3b82f6' : 'var(--text-secondary)',
-                                                                padding: '4px 8px', borderRadius: '4px', cursor: isHC ? 'default' : 'pointer',
-                                                                opacity: isHC ? 0.5 : 1
+                                                                background: s.bg,
+                                                                border: s.border,
+                                                                color: s.color,
+                                                                padding: '4px 8px',
+                                                                borderRadius: '4px',
+                                                                cursor: isHC ? 'default' : 'pointer',
+                                                                opacity: isHC ? 0.5 : 1,
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: '600',
+                                                                minWidth: '50px'
                                                             }}
+                                                            title={isHC ? 'Head Coach has full access' : `Click to change (${feature.fullLabel})`}
                                                         >
-                                                            View
+                                                            {s.label}
                                                         </button>
-                                                        <button
-                                                            onClick={() => !isHC && togglePermission(role, feature.id, 'edit')}
-                                                            title="Toggle Edit"
-                                                            style={{
-                                                                background: p.edit ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.05)',
-                                                                border: p.edit ? '1px solid #22c55e' : '1px solid transparent',
-                                                                color: p.edit ? '#22c55e' : 'var(--text-secondary)',
-                                                                padding: '4px 8px', borderRadius: '4px', cursor: isHC ? 'default' : 'pointer',
-                                                                opacity: isHC ? 0.5 : 1
-                                                            }}
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div style={{ marginTop: '1rem', display: 'flex', gap: '1.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        <span><span style={{ color: 'var(--text-secondary)' }}>—</span> No Access</span>
+                        <span><span style={{ color: '#3b82f6' }}>View</span> Can view only</span>
+                        <span><span style={{ color: '#22c55e' }}>Edit</span> Can view & edit</span>
                     </div>
                 </div>
             );
