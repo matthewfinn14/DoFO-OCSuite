@@ -37938,6 +37938,9 @@
                                     <>
                                         {schoolName && (
                                             <div style={{ animation: 'fadeIn 0.5s ease', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <h2 style={{ fontSize: '1.2rem', fontWeight: '700', lineHeight: '1.2', color: 'var(--text-primary)', marginBottom: '0' }}>
+                                                    {schoolName}
+                                                </h2>
                                                 {teamLogo && (
                                                     <img
                                                         src={teamLogo}
@@ -37945,9 +37948,6 @@
                                                         style={{ maxHeight: '60px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px', alignSelf: 'flex-start' }}
                                                     />
                                                 )}
-                                                <h2 style={{ fontSize: '1.2rem', fontWeight: '700', lineHeight: '1.2', color: 'var(--text-primary)' }}>
-                                                    {schoolName}
-                                                </h2>
                                             </div>
                                         )}
 
