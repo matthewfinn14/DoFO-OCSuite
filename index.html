@@ -33799,6 +33799,14 @@
             const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
             const [inviteData, setInviteData] = useState(null); // NEW: Invite State
             const [accessRequestStatus, setAccessRequestStatus] = useState({ checked: false, status: null, data: null }); // 'pending' | 'approved' | 'rejected' | null
+
+            // Auto-clear wizard if school is already set up (prevents wizard showing over existing school)
+            useEffect(() => {
+                if (schoolSetupData.showWizard && schoolName) {
+                    console.log("DEBUG: School already set up, clearing wizard state");
+                    setSchoolSetupData({ showWizard: false, schoolId: null });
+                }
+            }, [schoolSetupData.showWizard, schoolName]);
             const [pendingAccessRequests, setPendingAccessRequests] = useState(0); // Count of pending requests for admin badge
             const [isViewingAll, setIsViewingAll] = useState(false);
             const [selectedCharts, setSelectedCharts] = useState(DEPTH_CHART_TYPES.map(t => t.id));
@@ -37817,7 +37825,7 @@
             return (
                 <PlayDetailsModalContext.Provider value={{ openPlayDetails }}>
                     <div className="app-container">
-                        {schoolSetupData.showWizard && (
+                        {schoolSetupData.showWizard && !schoolName && (
                             <div className="onboarding-wizard-wrapper">
                                 <SchoolOnboardingWizard
                                     user={authUser}
