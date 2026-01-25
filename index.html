@@ -20972,15 +20972,19 @@
                                     );
                                 })}
                             </div>
-                            {activeCards.length > 0 && (
-                                <button
-                                    className="btn btn-secondary"
-                                    style={{ width: '100%', marginTop: '0.5rem' }}
-                                    onClick={() => setCoachPrintMode(true)}
-                                >
-                                    <Icon name="Eye" size={16} /> Print Coach Wristbands (All)
-                                </button>
-                            )}
+                            <button
+                                className="btn btn-secondary"
+                                style={{ width: '100%', marginTop: '0.5rem' }}
+                                onClick={() => {
+                                    if (activeCards.length === 0) {
+                                        alert('No wristband cards have plays assigned yet.');
+                                        return;
+                                    }
+                                    setCoachPrintMode(true);
+                                }}
+                            >
+                                <Icon name="Eye" size={16} /> Print Coach Wristbands (All)
+                            </button>
                         </div>
 
                         {/* Column 2: Practice Materials */}
