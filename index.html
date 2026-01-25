@@ -14770,7 +14770,29 @@
 
         // --- VALHALLA 2.0 CONSTANTS & HELPERS ---
         // Colors
-        const PRESET_COLORS = ['#38bdf8', '#3b82f6', '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#000000', '#4b5563'];
+        // Football team colors (NFL & College inspired)
+        const PRESET_COLORS = [
+            '#002244', // Navy (Patriots, Cowboys)
+            '#0B162A', // Dark Navy (Bears)
+            '#003594', // Royal Blue (Giants, Bills)
+            '#0076B6', // Powder Blue (Chargers, UNC)
+            '#203731', // Green Bay Green
+            '#004C54', // Eagles Green
+            '#006778', // Jaguars Teal
+            '#E31837', // Chiefs Red
+            '#C8102E', // 49ers Red
+            '#9E1B32', // Crimson (Alabama)
+            '#500000', // Maroon (Texas A&M)
+            '#4F2683', // Vikings Purple
+            '#241773', // Ravens Purple
+            '#FB4F14', // Broncos Orange
+            '#FF7900', // Bengals Orange
+            '#FFB612', // Steelers Gold
+            '#B3995D', // Saints Gold
+            '#000000', // Raiders Black
+            '#A5ACAF', // Silver
+            '#5A5A5A', // Charcoal
+        ];
 
         const CALENDAR_CONSTANTS = {
             PRACTICE_TEMPO_PROTOCOLS: [
@@ -18318,17 +18340,6 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="card">
-                                <h3>Account</h3>
-                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                    <button className="btn" style={{ background: '#ef4444', color: 'white' }} onClick={logout}>
-                                        <Icon name="LogOut" size={16} /> Log Out
-                                    </button>
-                                </div>
-                            </div>
-
-
 
                             <div className="card">
                                 <h3>Active Season</h3>
