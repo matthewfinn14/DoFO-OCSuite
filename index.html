@@ -34575,8 +34575,9 @@
             const [accessRequestStatus, setAccessRequestStatus] = useState({ checked: false, status: null, data: null }); // 'pending' | 'approved' | 'rejected' | null
 
             // Auto-clear wizard if school is already set up (prevents wizard showing over existing school)
+            // CRITICAL: Only clear if localStorage also has school ID - prevents stale React state from blocking wizard
             useEffect(() => {
-                if (schoolSetupData.showWizard && schoolName) {
+                if (schoolSetupData.showWizard && schoolName && localStorage.getItem('hc_school_id')) {
                     console.log("DEBUG: School already set up, clearing wizard state");
                     setSchoolSetupData({ showWizard: false, schoolId: null });
                 }
@@ -34790,6 +34791,9 @@
                                         }
                                         // Approved and not expired - show wizard to create school
                                         console.log("Access approved. Showing school creation wizard.");
+                                        // CRITICAL: Clear any stale school ID from localStorage to ensure wizard shows
+                                        localStorage.removeItem('hc_school_id');
+                                        localStorage.removeItem('hc_school_name');
                                         // Store trial info for banner display
                                         if (requestData.accessExpiresAt) {
                                             localStorage.setItem('dofo_trial_expires', requestData.accessExpiresAt);
@@ -36212,6 +36216,12 @@
             const [schoolName, setSchoolName] = useState(() => {
                 return localStorage.getItem('hc_school_name') || '';
             });
+            // Sync schoolName with localStorage when wizard is shown (clears stale React state)
+            useEffect(() => {
+                if (schoolSetupData.showWizard && !localStorage.getItem('hc_school_name')) {
+                    setSchoolName('');
+                }
+            }, [schoolSetupData.showWizard]);
             const [teamMascot, setTeamMascot] = useLocalStorage('oc-dashboard-team-mascot', '');
             const [teamAddress, setTeamAddress] = useLocalStorage('oc-dashboard-team-address', '');
             const [teamCity, setTeamCity] = useLocalStorage('oc-dashboard-team-city', '');
