@@ -18601,7 +18601,7 @@
                             cursor: 'pointer',
                             color: 'var(--text-secondary)',
                             fontWeight: nested ? '500' : '600',
-                            fontSize: '0.9rem',
+                            fontSize: '0.85rem',
                             borderRadius: '6px',
                             transition: 'background 0.2s',
                             userSelect: 'none'
@@ -34781,6 +34781,11 @@
                 if (isOffseasonWeek) {
                     return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', padding: '0.25rem 0 0.5rem 0' }}>
+                            <button className={`nav-item ${isActive && view === 'end-of-season-reports' ? 'active' : ''}`}
+                                onClick={() => { setCurrentWeekId(weekId); setView('end-of-season-reports'); }}
+                                style={navBtnStyle}>
+                                <Icon name="FileBarChart" size={12} /> End of Season Reports
+                            </button>
                             <button className={`nav-item ${isActive && view === 'offseason-swot' ? 'active' : ''}`}
                                 onClick={() => { setCurrentWeekId(weekId); setView('offseason-swot'); }}
                                 style={navBtnStyle}>
@@ -34794,7 +34799,7 @@
                             <button className={`nav-item ${isActive && view === 'coaches-notes' ? 'active' : ''}`}
                                 onClick={() => { setCurrentWeekId(weekId); setView('coaches-notes'); }}
                                 style={navBtnStyle}>
-                                <Icon name="FileText" size={12} /> Meeting Notes
+                                <Icon name="FileText" size={12} /> Offseason Notes
                             </button>
                             <button className={`nav-item ${isActive && view === 'practice' ? 'active' : ''}`}
                                 onClick={() => { setCurrentWeekId(weekId); setView('practice'); }}
@@ -34815,11 +34820,6 @@
                                 onClick={() => { setCurrentWeekId(weekId); setView('offseason-research'); }}
                                 style={navBtnStyle}>
                                 <Icon name="Search" size={12} /> Offseason Research
-                            </button>
-                            <button className={`nav-item ${isActive && view === 'end-of-season-reports' ? 'active' : ''}`}
-                                onClick={() => { setCurrentWeekId(weekId); setView('end-of-season-reports'); }}
-                                style={navBtnStyle}>
-                                <Icon name="FileBarChart" size={12} /> End of Season Reports
                             </button>
                         </div>
                     );
@@ -35656,6 +35656,7 @@
                 KO: ['', '', ''], KOR: ['', '', ''], PUNT: ['', '', ''], PR: ['', '', ''], FG: ['', '', ''], FGB: ['', '', '']
             });
             const [positionBigThreeAssignments, setPositionBigThreeAssignments] = useLocalStorage('oc-dashboard-position-big-three-assignments', {});
+            const [customBigThreeGroups, setCustomBigThreeGroups] = useLocalStorage('oc-dashboard-custom-big-three-groups', []);
             // Offseason-specific state
             const [offseasonSwot, setOffseasonSwot] = useLocalStorage('oc-dashboard-offseason-swot', { strengths: '', weaknesses: '', opportunities: '', threats: '' });
             const [offseasonMeetings, setOffseasonMeetings] = useLocalStorage('oc-dashboard-offseason-meetings', []);
@@ -39631,7 +39632,7 @@
                                         }}
                                     >
                                         <Icon name="Target" size={18} />
-                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PROGRAM ALIGNMENT</span>}
+                                        {!sidebarCollapsed && <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>PROGRAM ALIGNMENT</span>}
                                     </button>
                                 )}
                                 {/* SETUP */}
@@ -39653,7 +39654,7 @@
                                         }}
                                     >
                                         <Icon name="Settings" size={18} />
-                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>SYSTEM SETUP</span>}
+                                        {!sidebarCollapsed && <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>SYSTEM SETUP</span>}
                                     </button>
                                 )}
                                 {/* MASTER PLAYBOOK */}
@@ -39675,7 +39676,7 @@
                                         }}
                                     >
                                         <Icon name="Book" size={18} />
-                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>MASTER PLAYBOOK</span>}
+                                        {!sidebarCollapsed && <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>MASTER PLAYBOOK</span>}
                                     </button>
                                 )}
                                 {/* PRINT CENTER - moved above Personnel */}
@@ -39697,7 +39698,7 @@
                                         }}
                                     >
                                         <Icon name="Printer" size={18} />
-                                        {!sidebarCollapsed && <span style={{ fontWeight: '600' }}>PRINT CENTER</span>}
+                                        {!sidebarCollapsed && <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>PRINT CENTER</span>}
                                     </button>
                                 )}
                                 {/* PERSONNEL */}
@@ -40623,15 +40624,41 @@
                                                 </div>
                                             );
                                         };
+                                        const addCustomGroup = () => {
+                                            const name = prompt('Enter position group name (e.g., "Scout Team", "JV"):');
+                                            if (name && name.trim()) {
+                                                const key = 'CUSTOM_' + Date.now();
+                                                setCustomBigThreeGroups([...customBigThreeGroups, { key, name: name.trim(), category: 'custom' }]);
+                                                setPositionBigThree({ ...positionBigThree, [key]: ['', '', ''] });
+                                            }
+                                        };
+                                        const removeCustomGroup = (key) => {
+                                            if (confirm('Remove this position group?')) {
+                                                setCustomBigThreeGroups(customBigThreeGroups.filter(g => g.key !== key));
+                                                const updated = { ...positionBigThree };
+                                                delete updated[key];
+                                                setPositionBigThree(updated);
+                                                const updatedAssignments = { ...positionBigThreeAssignments };
+                                                delete updatedAssignments[key];
+                                                setPositionBigThreeAssignments(updatedAssignments);
+                                            }
+                                        };
                                         return (
                                             <div className="card" style={{ padding: '0.75rem' }}>
-                                                <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <Icon name="Target" size={16} /> Position Group "Big Three" Emphasis
-                                                </h3>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                    <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <Icon name="Target" size={16} /> Position Group "Big Three" Emphasis
+                                                    </h3>
+                                                    {isHC && (
+                                                        <button className="btn btn-secondary" onClick={addCustomGroup} style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                                                            <Icon name="Plus" size={12} /> Add Group
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.75rem', marginTop: 0 }}>
                                                     Each position group's top 3 focus areas. {isHC && <span style={{ color: 'var(--accent)' }}>Click [assign] to assign a coach.</span>}
                                                 </p>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: customBigThreeGroups.length > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '0.75rem' }}>
                                                     {/* Offense */}
                                                     <div>
                                                         <h4 style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.5rem', borderBottom: '2px solid #ef4444', paddingBottom: '0.25rem' }}>Offense</h4>
@@ -40658,6 +40685,26 @@
                                                         {renderPositionRow('FG', 'FG / PAT')}
                                                         {renderPositionRow('FGB', 'FG Block')}
                                                     </div>
+                                                    {/* Custom Groups */}
+                                                    {customBigThreeGroups.length > 0 && (
+                                                        <div>
+                                                            <h4 style={{ fontSize: '0.85rem', color: '#f59e0b', marginBottom: '0.5rem', borderBottom: '2px solid #f59e0b', paddingBottom: '0.25rem' }}>Custom</h4>
+                                                            {customBigThreeGroups.map(group => (
+                                                                <div key={group.key} style={{ position: 'relative' }}>
+                                                                    {isHC && (
+                                                                        <button
+                                                                            onClick={() => removeCustomGroup(group.key)}
+                                                                            style={{ position: 'absolute', right: 0, top: 0, background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0', fontSize: '0.7rem', opacity: 0.6 }}
+                                                                            title="Remove group"
+                                                                        >
+                                                                            <Icon name="X" size={10} />
+                                                                        </button>
+                                                                    )}
+                                                                    {renderPositionRow(group.key, group.name)}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -41267,49 +41314,88 @@
                                         <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <Icon name="Search" size={24} /> Offseason Research
                                         </h2>
-                                        {currentUser?.roles?.includes('Head Coach') && (
-                                            <button className="btn btn-primary" onClick={() => setOffseasonResearch([...offseasonResearch, { id: Date.now().toString(), coachId: '', coachName: '', topic: '', sources: '', notes: '', status: 'In Progress' }])}>
-                                                <Icon name="Plus" size={16} /> Add Research Topic
-                                            </button>
-                                        )}
                                     </div>
                                     <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                                        Track what each coach is researching during the offseason and where they plan to learn about it.
+                                        Track what each coach is researching during the offseason. Each coach can edit their own row.
                                     </p>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        {offseasonResearch.length === 0 && (
-                                            <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem' }}>No research topics yet.</p>
-                                        )}
-                                        {offseasonResearch.map((item, idx) => {
-                                            const canEdit = currentUser?.roles?.includes('Head Coach') || currentUser?.id === item.coachId;
-                                            return (
-                                                <div key={item.id} className="card" style={{ padding: '1rem' }}>
-                                                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
-                                                        <select className="form-select" value={item.coachId} onChange={(e) => { if (!canEdit) return; const coach = staff.find(s => s.id === e.target.value); const u = [...offseasonResearch]; u[idx] = { ...item, coachId: e.target.value, coachName: coach?.name || '' }; setOffseasonResearch(u); }} style={{ width: '180px' }} disabled={!currentUser?.roles?.includes('Head Coach')}>
-                                                            <option value="">Select Coach...</option>
-                                                            {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                        </select>
-                                                        <input type="text" className="form-input" value={item.topic} onChange={(e) => { if (!canEdit) return; const u = [...offseasonResearch]; u[idx] = { ...item, topic: e.target.value }; setOffseasonResearch(u); }} placeholder="Research Topic" style={{ flex: 1 }} readOnly={!canEdit} />
-                                                        <select className="form-select" value={item.status} onChange={(e) => { if (!canEdit) return; const u = [...offseasonResearch]; u[idx] = { ...item, status: e.target.value }; setOffseasonResearch(u); }} style={{ width: '130px' }} disabled={!canEdit}>
-                                                            <option value="In Progress">In Progress</option>
-                                                            <option value="Completed">Completed</option>
-                                                            <option value="On Hold">On Hold</option>
-                                                        </select>
-                                                        {currentUser?.roles?.includes('Head Coach') && (
-                                                            <button onClick={() => setOffseasonResearch(offseasonResearch.filter(r => r.id !== item.id))} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}><Icon name="Trash2" size={16} /></button>
-                                                        )}
-                                                    </div>
-                                                    <div style={{ marginBottom: '0.5rem' }}>
-                                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem', display: 'block' }}>Where will you learn about this? (clinics, videos, books, etc.)</label>
-                                                        <textarea className="form-input" value={item.sources} onChange={(e) => { if (!canEdit) return; const u = [...offseasonResearch]; u[idx] = { ...item, sources: e.target.value }; setOffseasonResearch(u); }} placeholder="Sources: clinics, YouTube channels, books, websites..." rows={2} style={{ resize: 'vertical', fontSize: '0.9rem' }} readOnly={!canEdit} />
-                                                    </div>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem', display: 'block' }}>Notes / Findings</label>
-                                                        <textarea className="form-input" value={item.notes} onChange={(e) => { if (!canEdit) return; const u = [...offseasonResearch]; u[idx] = { ...item, notes: e.target.value }; setOffseasonResearch(u); }} placeholder="Key takeaways, notes, ideas to implement..." rows={3} style={{ resize: 'vertical', fontSize: '0.9rem' }} readOnly={!canEdit} />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+
+                                    {/* Staff Research Chart */}
+                                    <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{ background: 'var(--bg-input)' }}>
+                                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '600', fontSize: '0.85rem', borderBottom: '2px solid var(--border)', width: '150px' }}>Coach</th>
+                                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '600', fontSize: '0.85rem', borderBottom: '2px solid var(--border)' }}>Concepts</th>
+                                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '600', fontSize: '0.85rem', borderBottom: '2px solid var(--border)' }}>Techniques</th>
+                                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '600', fontSize: '0.85rem', borderBottom: '2px solid var(--border)' }}>Sources</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {staff.map((coach, idx) => {
+                                                    const researchData = offseasonResearch.find(r => r.coachId === coach.id) || { coachId: coach.id, concepts: '', techniques: '', sources: '' };
+                                                    const canEdit = currentUser?.roles?.includes('Head Coach') || currentUser?.id === coach.id;
+                                                    const updateField = (field, value) => {
+                                                        const existing = offseasonResearch.find(r => r.coachId === coach.id);
+                                                        if (existing) {
+                                                            setOffseasonResearch(offseasonResearch.map(r => r.coachId === coach.id ? { ...r, [field]: value } : r));
+                                                        } else {
+                                                            setOffseasonResearch([...offseasonResearch, { id: Date.now().toString(), coachId: coach.id, coachName: coach.name, concepts: '', techniques: '', sources: '', [field]: value }]);
+                                                        }
+                                                    };
+                                                    return (
+                                                        <tr key={coach.id} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'transparent' : 'var(--surface)' }}>
+                                                            <td style={{ padding: '0.75rem 1rem', fontWeight: '600', fontSize: '0.9rem', verticalAlign: 'top' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                    <Icon name="User" size={14} color="var(--accent)" />
+                                                                    {coach.name}
+                                                                </div>
+                                                                {coach.role && <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>{coach.role}</div>}
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', verticalAlign: 'top' }}>
+                                                                <textarea
+                                                                    className="form-input"
+                                                                    value={researchData.concepts || ''}
+                                                                    onChange={(e) => canEdit && updateField('concepts', e.target.value)}
+                                                                    placeholder={canEdit ? "Schemes, formations, philosophies to study..." : ""}
+                                                                    rows={3}
+                                                                    readOnly={!canEdit}
+                                                                    style={{ resize: 'vertical', fontSize: '0.85rem', background: canEdit ? 'var(--bg-input)' : 'transparent', border: canEdit ? '1px solid var(--border)' : 'none' }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', verticalAlign: 'top' }}>
+                                                                <textarea
+                                                                    className="form-input"
+                                                                    value={researchData.techniques || ''}
+                                                                    onChange={(e) => canEdit && updateField('techniques', e.target.value)}
+                                                                    placeholder={canEdit ? "Drills, coaching methods, teaching points..." : ""}
+                                                                    rows={3}
+                                                                    readOnly={!canEdit}
+                                                                    style={{ resize: 'vertical', fontSize: '0.85rem', background: canEdit ? 'var(--bg-input)' : 'transparent', border: canEdit ? '1px solid var(--border)' : 'none' }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', verticalAlign: 'top' }}>
+                                                                <textarea
+                                                                    className="form-input"
+                                                                    value={researchData.sources || ''}
+                                                                    onChange={(e) => canEdit && updateField('sources', e.target.value)}
+                                                                    placeholder={canEdit ? "Clinics, videos, books, podcasts..." : ""}
+                                                                    rows={3}
+                                                                    readOnly={!canEdit}
+                                                                    style={{ resize: 'vertical', fontSize: '0.85rem', background: canEdit ? 'var(--bg-input)' : 'transparent', border: canEdit ? '1px solid var(--border)' : 'none' }}
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                                {staff.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                            No staff members added yet. Add staff in Personnel &gt; Staff &amp; Roles.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             )}
