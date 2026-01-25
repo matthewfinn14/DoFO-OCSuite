@@ -40337,7 +40337,7 @@
 
                                     {/* Two column layout */}
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                                        {/* Left Column: Mission, Vision, Non-Negotiables */}
+                                        {/* Left Column: Mission, Vision, Core Values */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                             <div className="card" style={{ padding: '0.75rem' }}>
                                                 <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="Compass" size={14} /> Mission</h3>
@@ -40356,11 +40356,11 @@
                                                 )}
                                             </div>
                                             <div className="card" style={{ padding: '0.75rem' }}>
-                                                <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="AlertTriangle" size={14} /> Non-Negotiables</h3>
+                                                <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.9rem' }}><Icon name="Heart" size={14} /> Core Values</h3>
                                                 {isHeadCoach ? (
-                                                    <textarea className="form-input" value={teamNonNegotiables} onChange={(e) => setTeamNonNegotiables(e.target.value)} placeholder="What are your absolute standards?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
+                                                    <textarea className="form-input" value={teamNonNegotiables} onChange={(e) => setTeamNonNegotiables(e.target.value)} placeholder="What values define your program?" rows={2} style={{ resize: 'vertical', fontSize: '0.85rem' }} />
                                                 ) : (
-                                                    <ReadOnlyText value={teamNonNegotiables} placeholder="Standards not defined" />
+                                                    <ReadOnlyText value={teamNonNegotiables} placeholder="Core values not defined" />
                                                 )}
                                             </div>
                                         </div>
