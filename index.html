@@ -9491,7 +9491,7 @@
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         }}>
-                            <span style={{ textTransform: 'uppercase' }}>WIZ</span>
+                            <span style={{ textTransform: 'uppercase' }}>{viewType === 'skill' ? 'SKILL' : 'OLINE'}</span>
                             <span>{title}</span>
                         </div>
                         {/* Grid */}
@@ -10136,22 +10136,6 @@
                                         </select>
                                     </div>
                                 )}
-                                {(activeCard.type === 'wiz') && (
-                                    <>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>View:</label>
-                                            <select
-                                                className="form-input"
-                                                style={{ width: 'auto', padding: '4px 8px' }}
-                                                value={activeCard.wizView || 'skill'}
-                                                onChange={e => updateCard(selectedCardId, { wizView: e.target.value })}
-                                            >
-                                                <option value="skill">Skill Positions</option>
-                                                <option value="oline">O-Line</option>
-                                            </select>
-                                        </div>
-                                    </>
-                                )}
                             </div>
                         )}
 
@@ -10235,14 +10219,27 @@
                                     {activeCard.type === 'wiz' ? (
                                         <div style={{
                                             width: '100%',
-                                            aspectRatio: '5 / 3',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '1.5rem',
                                             margin: '0 auto'
                                         }}>
-                                            {renderWizGrid(
-                                                getSlotsForCard(selectedCardId),
-                                                `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
-                                                activeCard.wizView || 'skill'
-                                            )}
+                                            {/* SKILL card on top */}
+                                            <div style={{ aspectRatio: '5 / 3' }}>
+                                                {renderWizGrid(
+                                                    getSlotsForCard(selectedCardId),
+                                                    `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                    'skill'
+                                                )}
+                                            </div>
+                                            {/* OLINE card below */}
+                                            <div style={{ aspectRatio: '5 / 3' }}>
+                                                {renderWizGrid(
+                                                    getSlotsForCard(selectedCardId),
+                                                    `${activeCard.opponent || 'OPPONENT'} ${activeCard.iteration || '1'}`,
+                                                    'oline'
+                                                )}
+                                            </div>
                                         </div>
                                     ) : activeCard.type === 'audible' ? (
                                         renderAudibleTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
@@ -10250,7 +10247,8 @@
                                         renderSpreadsheetTable(getSlotsForCard(selectedCardId), 'standard-view', selectedCardId, activeCard.opp || activeCard.opponent || '')
                                     )}
                                 </div>
-                            ) : null}\n                        </div>
+                            ) : null}
+                        </div>
                     </div>
 
                     {/* Print Layout (hidden on screen, shown when printing) */}
