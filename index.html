@@ -9886,8 +9886,57 @@
                                     placeholder="Search plays..."
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
-                                    style={{ marginBottom: '1rem' }}
+                                    style={{ marginBottom: '0.5rem' }}
                                 />
+                                {(() => {
+                                    const priorityPlays = filteredPlays.filter(p => p.priority && !p.wristbandSlot);
+                                    return priorityPlays.length > 0 ? (
+                                        <button
+                                            className="btn btn-secondary"
+                                            style={{ marginBottom: '0.75rem', fontSize: '0.75rem', padding: '0.35rem 0.5rem' }}
+                                            onClick={() => {
+                                                const card = wbSettings[selectedCardId];
+                                                if (!card) return;
+
+                                                let currentSlotMap = { ...slotMap };
+                                                const updates = [];
+
+                                                priorityPlays.forEach(play => {
+                                                    let availableSlot = null;
+                                                    if (card.type === 'staples') {
+                                                        for (let i = 10; i <= 89; i++) {
+                                                            if (!currentSlotMap[i]) {
+                                                                availableSlot = i;
+                                                                break;
+                                                            }
+                                                        }
+                                                    } else {
+                                                        const startSlot = selectedCardId === 'card1' ? 101 : (selectedCardId === 'card2' ? 201 : (selectedCardId === 'card3' ? 301 : (selectedCardId === 'card4' ? 401 : (selectedCardId === 'card5' ? 501 : 601))));
+                                                        const maxSlots = (card.type === 'wiz') ? 16 : 48;
+                                                        for (let i = 0; i < maxSlots; i++) {
+                                                            const slot = startSlot + i;
+                                                            if (!currentSlotMap[slot]) {
+                                                                availableSlot = slot;
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (availableSlot) {
+                                                        currentSlotMap[availableSlot] = play;
+                                                        updates.push({ ...play, wristbandSlot: availableSlot.toString() });
+                                                    }
+                                                });
+
+                                                if (updates.length > 0) {
+                                                    onUpdatePlay(updates);
+                                                }
+                                            }}
+                                        >
+                                            <Icon name="Star" size={12} style={{ fill: '#eab308', color: '#eab308' }} /> Add {priorityPlays.length} Priority
+                                        </button>
+                                    ) : null;
+                                })()}
                                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                     {filteredPlays.map(play => (
                                         <div
