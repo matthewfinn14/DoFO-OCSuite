@@ -1273,9 +1273,56 @@
                     }
                 } else {
                     // NEW: User Doc does not exist (New User or Deleted Doc).
-                    // WIPE LOCAL STORAGE to prevent "ghost" sessions from previous users on this device.
-                    clearAllLocalData();
-                    // Don't return, let execution continue so appData (empty) flows through to clear state
+                    // TRY TO RECOVER: Search for schools where user is in memberList or staff
+                    console.log("User doc doesn't exist. Attempting recovery by email...");
+                    const myEmail = window.auth.currentUser.email.toLowerCase();
+
+                    try {
+                        const schoolsSnapshot = await window.db.collection('schools').get();
+                        for (const schoolDoc of schoolsSnapshot.docs) {
+                            const schoolData = schoolDoc.data();
+                            const members = schoolData.memberList || [];
+                            const staff = schoolData.staff || [];
+
+                            // Check memberList
+                            const inMemberList = members.some(m =>
+                                (typeof m === 'string' && m.toLowerCase() === myEmail) ||
+                                (m && m.email && m.email.toLowerCase() === myEmail)
+                            );
+                            // Check staff array
+                            const inStaff = staff.some(s => s.email && s.email.toLowerCase() === myEmail);
+
+                            if (inMemberList || inStaff) {
+                                console.log("RECOVERY: Found school for orphaned user:", schoolDoc.id, schoolData.name);
+
+                                // Create user document and membership
+                                await userDocRef.set({
+                                    email: myEmail,
+                                    schoolId: schoolDoc.id,
+                                    recoveredAt: new Date().toISOString()
+                                });
+                                await userDocRef.collection('memberships').doc(schoolDoc.id).set({
+                                    role: 'admin',
+                                    joinedAt: new Date().toISOString(),
+                                    status: 'active'
+                                });
+
+                                // Load school data
+                                localStorage.setItem('hc_school_id', schoolDoc.id);
+                                localStorage.setItem('hc_school_name', schoolData.name || 'My School');
+                                appData = schoolData;
+                                isSchoolData = true;
+                                break;
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Recovery search failed:", err);
+                    }
+
+                    // Only clear if no recovery was successful
+                    if (!isSchoolData) {
+                        clearAllLocalData();
+                    }
                 }
 
                 console.log("Applying data to localStorage...", appData);
@@ -40125,59 +40172,11 @@
                         />
                     );
                 }
-                // Request approved - check if they already have a school, otherwise show wizard
+                // Request approved - user is cleared to use app
+                // The app will load their data via loadUserDataFromFirestore
                 if (accessRequestStatus.status === 'approved') {
-                    // If school already in localStorage, skip this handler - let app render normally
-                    const existingSchoolId = localStorage.getItem('hc_school_id');
-                    if (existingSchoolId) {
-                        console.log("DEBUG: School already in localStorage, skipping approved handler");
-                        // Don't return anything - fall through to normal app rendering
-                    } else {
-                        // Check if user already has a school before showing wizard
-                        const checkExistingSchool = async () => {
-                            try {
-                                const schoolsSnapshot = await window.db.collection('schools').get();
-                                for (const doc of schoolsSnapshot.docs) {
-                                    const members = doc.data().memberList || [];
-                                    const found = members.some(m =>
-                                        (typeof m === 'string' && m.toLowerCase() === authUser.email.toLowerCase()) ||
-                                        (m && m.email && m.email.toLowerCase() === authUser.email.toLowerCase())
-                                    );
-                                    if (found) {
-                                        console.log("User already has school:", doc.id, "- saving to localStorage");
-                                        // Save to localStorage so next render skips this
-                                        const schoolData = doc.data();
-                                        localStorage.setItem('hc_school_id', doc.id);
-                                        localStorage.setItem('hc_school_name', schoolData.name || 'My School');
-                                        window.location.reload();
-                                        return;
-                                    }
-                                }
-                                // No existing school found - show wizard with access request data
-                                const newSchoolId = 'school_' + Date.now();
-                                setSchoolSetupData({ showWizard: true, schoolId: newSchoolId, requestData: accessRequestStatus.data });
-                            } catch (err) {
-                                console.error("Error checking for existing school:", err);
-                                // On error, show wizard anyway with access request data
-                                const newSchoolId = 'school_' + Date.now();
-                                setSchoolSetupData({ showWizard: true, schoolId: newSchoolId, requestData: accessRequestStatus.data });
-                            }
-                        };
-                        if (!schoolSetupData.showWizard) {
-                            checkExistingSchool();
-                        }
-                        return (
-                            <div style={{
-                                height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
-                            }}>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>Access Approved!</div>
-                                    <div style={{ color: '#94a3b8' }}>Setting up your account...</div>
-                                </div>
-                            </div>
-                        );
-                    }
+                    // Fall through to normal app rendering - the data loader handles school association
+                    console.log("DEBUG: Access approved, proceeding to app");
                 }
                 // Request pending - show waiting screen
                 if (accessRequestStatus.status === 'pending') {
