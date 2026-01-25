@@ -35651,6 +35651,7 @@
             const [staffNotes, setStaffNotes] = useLocalStorage('oc-dashboard-staff-notes', []);
             const [weeklyCoachesNotes, setWeeklyCoachesNotes] = useLocalStorage('oc-dashboard-weekly-coaches-notes', {});
             const [positionBigThree, setPositionBigThree] = useLocalStorage('oc-dashboard-position-big-three', {
+                OVERALL_OFF: ['', '', ''], OVERALL_DEF: ['', '', ''], OVERALL_ST: ['', '', ''],
                 QB: ['', '', ''], RB: ['', '', ''], WR: ['', '', ''], TE: ['', '', ''], OL: ['', '', ''],
                 DL: ['', '', ''], LB: ['', '', ''], DB: ['', '', ''],
                 KO: ['', '', ''], KOR: ['', '', ''], PUNT: ['', '', ''], PR: ['', '', ''], FG: ['', '', ''], FGB: ['', '', '']
@@ -40667,10 +40668,34 @@
                                                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.75rem', marginTop: 0 }}>
                                                     Each position group's top 3 focus areas. {isHC && <span style={{ color: 'var(--accent)' }}>Click [assign] to assign a coach.</span>}
                                                 </p>
+
+                                                {/* Overall Big Three - Top Row */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius)' }}>
+                                                    <div style={{ background: 'var(--bg-panel)', padding: '0.75rem', borderRadius: 'var(--radius)', borderTop: '3px solid #ef4444' }}>
+                                                        <h4 style={{ fontSize: '0.9rem', color: '#ef4444', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <Icon name="Zap" size={14} /> Overall Offense
+                                                        </h4>
+                                                        {renderPositionRow('OVERALL_OFF', 'Team Offense')}
+                                                    </div>
+                                                    <div style={{ background: 'var(--bg-panel)', padding: '0.75rem', borderRadius: 'var(--radius)', borderTop: '3px solid #3b82f6' }}>
+                                                        <h4 style={{ fontSize: '0.9rem', color: '#3b82f6', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <Icon name="Shield" size={14} /> Overall Defense
+                                                        </h4>
+                                                        {renderPositionRow('OVERALL_DEF', 'Team Defense')}
+                                                    </div>
+                                                    <div style={{ background: 'var(--bg-panel)', padding: '0.75rem', borderRadius: 'var(--radius)', borderTop: '3px solid #22c55e' }}>
+                                                        <h4 style={{ fontSize: '0.9rem', color: '#22c55e', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <Icon name="Star" size={14} /> Overall Special Teams
+                                                        </h4>
+                                                        {renderPositionRow('OVERALL_ST', 'Team ST')}
+                                                    </div>
+                                                </div>
+
+                                                {/* Position Groups */}
                                                 <div style={{ display: 'grid', gridTemplateColumns: customBigThreeGroups.length > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '0.75rem' }}>
                                                     {/* Offense */}
                                                     <div>
-                                                        <h4 style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.5rem', borderBottom: '2px solid #ef4444', paddingBottom: '0.25rem' }}>Offense</h4>
+                                                        <h4 style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.5rem', borderBottom: '2px solid #ef4444', paddingBottom: '0.25rem' }}>Offense by Position</h4>
                                                         {renderPositionRow('QB', 'QB')}
                                                         {renderPositionRow('RB', 'RB')}
                                                         {renderPositionRow('WR', 'WR')}
@@ -40679,14 +40704,14 @@
                                                     </div>
                                                     {/* Defense */}
                                                     <div>
-                                                        <h4 style={{ fontSize: '0.85rem', color: '#3b82f6', marginBottom: '0.5rem', borderBottom: '2px solid #3b82f6', paddingBottom: '0.25rem' }}>Defense</h4>
+                                                        <h4 style={{ fontSize: '0.85rem', color: '#3b82f6', marginBottom: '0.5rem', borderBottom: '2px solid #3b82f6', paddingBottom: '0.25rem' }}>Defense by Position</h4>
                                                         {renderPositionRow('DL', 'DL')}
                                                         {renderPositionRow('LB', 'LB')}
                                                         {renderPositionRow('DB', 'DB')}
                                                     </div>
                                                     {/* Special Teams */}
                                                     <div>
-                                                        <h4 style={{ fontSize: '0.85rem', color: '#22c55e', marginBottom: '0.5rem', borderBottom: '2px solid #22c55e', paddingBottom: '0.25rem' }}>Special Teams</h4>
+                                                        <h4 style={{ fontSize: '0.85rem', color: '#22c55e', marginBottom: '0.5rem', borderBottom: '2px solid #22c55e', paddingBottom: '0.25rem' }}>Special Teams by Unit</h4>
                                                         {renderPositionRow('KO', 'Kickoff')}
                                                         {renderPositionRow('KOR', 'KO Return')}
                                                         {renderPositionRow('PUNT', 'Punt')}
