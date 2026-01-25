@@ -3429,7 +3429,7 @@
         };
 
         // --- PLAY DIAGRAM EDITOR ---
-        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], onAddFormation = () => { }, wizLibrary = [], setWizLibrary = () => { }, positionNames = {}, positionColors = {}, readOnly = false, formationOnly = false }) => {
+        const PlayDiagramEditor = ({ initialData, onSave, onCancel, mode = 'standard', formations = [], onAddFormation = () => { }, wizLibrary = [], setWizLibrary = () => { }, positionNames = {}, positionColors = {}, readOnly = false, formationOnly = false, personnelGroupings = [] }) => {
 
             // Helper for default formation - uses position colors
             const getDefaultFormation = () => {
@@ -3675,6 +3675,105 @@
                     });
                 });
 
+                setElements(newElements);
+                updateHistory(newElements);
+            };
+
+            // Load Personnel Grouping (for wiz-skill mode)
+            const loadPersonnelGrouping = (groupingId) => {
+                const grouping = personnelGroupings.find(g => g.id === groupingId);
+                if (!grouping || !grouping.positions) return;
+
+                // For wiz-skill mode, use the wiz-card viewBox coordinates
+                const wizCenter = 377;
+                const wizLos = 300;
+                const newElements = [];
+
+                const defaultColorMap = {
+                    'QB': '#1e3a5f', 'RB': '#3b82f6', 'F': '#f97316', 'H': '#06b6d4',
+                    'X': '#a855f7', 'Z': '#22c55e', 'Y': '#eab308', 'A': '#ef4444', 'B': '#ec4899',
+                    'C': '#64748b', 'LT': '#64748b', 'LG': '#64748b', 'RG': '#64748b', 'RT': '#64748b'
+                };
+                const getColor = (label) => positionColors[label] || defaultColorMap[label] || '#3b82f6';
+
+                // Default positions for personnel (can be adjusted once placed)
+                const defaultPositions = {
+                    'QB': { x: wizCenter, y: wizLos + 60 },
+                    'RB': { x: wizCenter - 60, y: wizLos + 60 },
+                    'F': { x: wizCenter + 60, y: wizLos + 55 },
+                    'X': { x: 80, y: wizLos + 10 },
+                    'Z': { x: 674, y: wizLos + 10 },
+                    'Y': { x: wizCenter + 120, y: wizLos + 10 },
+                    'A': { x: 170, y: wizLos + 25 },
+                    'H': { x: 584, y: wizLos + 15 },
+                    'B': { x: wizCenter - 120, y: wizLos + 25 },
+                    // OL positions
+                    'C': { x: wizCenter, y: wizLos + 15 },
+                    'LG': { x: wizCenter - 40, y: wizLos + 15 },
+                    'RG': { x: wizCenter + 40, y: wizLos + 15 },
+                    'LT': { x: wizCenter - 80, y: wizLos + 15 },
+                    'RT': { x: wizCenter + 80, y: wizLos + 15 }
+                };
+
+                // Add OL first (text-only)
+                const olPositions = ['LT', 'LG', 'C', 'RG', 'RT'];
+                olPositions.forEach((pos, idx) => {
+                    const coords = defaultPositions[pos] || { x: wizCenter, y: wizLos + 15 };
+                    newElements.push({
+                        id: Date.now() + idx,
+                        type: 'player',
+                        points: [coords],
+                        color: getColor(pos),
+                        label: pos === 'LT' || pos === 'RT' ? 'T' : pos === 'LG' || pos === 'RG' ? 'G' : 'C',
+                        shape: 'text-only',
+                        variant: 'filled',
+                        fontSize: 24
+                    });
+                });
+
+                // Add skill positions from grouping
+                grouping.positions.forEach((pos, idx) => {
+                    if (olPositions.includes(pos)) return; // Skip OL, already added
+                    const coords = defaultPositions[pos] || { x: wizCenter, y: wizLos + 60 };
+                    newElements.push({
+                        id: Date.now() + 100 + idx,
+                        type: 'player',
+                        points: [coords],
+                        color: getColor(pos),
+                        label: positionNames[pos] || pos,
+                        shape: 'circle',
+                        variant: 'filled'
+                    });
+                });
+
+                setElements(newElements);
+                updateHistory(newElements);
+            };
+
+            // Add single player to diagram (for wiz-skill mode)
+            const addSinglePlayer = (positionKey) => {
+                const wizCenter = 377;
+                const wizLos = 300;
+                const defaultColorMap = {
+                    'QB': '#1e3a5f', 'RB': '#3b82f6', 'F': '#f97316', 'H': '#06b6d4',
+                    'X': '#a855f7', 'Z': '#22c55e', 'Y': '#eab308', 'A': '#ef4444', 'B': '#ec4899',
+                    'C': '#64748b', 'LT': '#64748b', 'LG': '#64748b', 'RG': '#64748b', 'RT': '#64748b'
+                };
+                const getColor = (label) => positionColors[label] || defaultColorMap[label] || '#3b82f6';
+
+                const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(positionKey);
+                const newPlayer = {
+                    id: Date.now(),
+                    type: 'player',
+                    points: [{ x: wizCenter, y: wizLos + (isOL ? 15 : 60) }],
+                    color: getColor(positionKey),
+                    label: positionNames[positionKey] || positionKey,
+                    shape: isOL ? 'text-only' : 'circle',
+                    variant: 'filled',
+                    fontSize: isOL ? 24 : undefined
+                };
+
+                const newElements = [...elements, newPlayer];
                 setElements(newElements);
                 updateHistory(newElements);
             };
@@ -4522,32 +4621,56 @@
                                 </button>
                             )}
 
-                            {/* --- Personnel (WIZ modes only) --- */}
-                            {(mode === 'wiz-oline' || mode === 'wiz-skill') && !formationOnly && (
-                                <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', background: '#e0f2fe', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
-                                    {mode === 'wiz-skill' && (
-                                        <>
-                                            <button className={`btn ${elements.some(e => e.label === 'Y') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleWizNode('Y')} style={{ padding: '0.15rem 0.4rem', fontSize: '0.75rem', color: '#1e293b' }}>+Y</button>
-                                            <button className={`btn ${elements.some(e => e.label === 'F') ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleWizNode('F')} style={{ padding: '0.15rem 0.4rem', fontSize: '0.75rem', color: '#1e293b' }}>+F</button>
-                                        </>
+                            {/* --- WIZ Skill: Personnel & Add Player --- */}
+                            {mode === 'wiz-skill' && !formationOnly && (
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#e0f2fe', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
+                                    {/* Personnel Dropdown */}
+                                    {personnelGroupings.length > 0 && (
+                                        <select
+                                            onChange={(e) => { if (e.target.value) { loadPersonnelGrouping(e.target.value); e.target.value = ''; } }}
+                                            defaultValue=""
+                                            style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}
+                                        >
+                                            <option value="">Personnel...</option>
+                                            {personnelGroupings.map(g => (<option key={g.id} value={g.id}>{g.code} - {g.name}</option>))}
+                                        </select>
                                     )}
+                                    {/* Add Player Dropdown */}
+                                    <select
+                                        onChange={(e) => { if (e.target.value) { addSinglePlayer(e.target.value); e.target.value = ''; } }}
+                                        defaultValue=""
+                                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #7dd3fc', color: '#1e293b', backgroundColor: 'white' }}
+                                    >
+                                        <option value="">+ Add Player...</option>
+                                        <optgroup label="Skill Positions">
+                                            {['QB', 'RB', 'F', 'X', 'Z', 'Y', 'A', 'H', 'B'].map(pos => (
+                                                <option key={pos} value={pos}>{positionNames[pos] || pos}</option>
+                                            ))}
+                                        </optgroup>
+                                        <optgroup label="O-Line">
+                                            {['LT', 'LG', 'C', 'RG', 'RT'].map(pos => (
+                                                <option key={pos} value={pos}>{pos}</option>
+                                            ))}
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* --- WIZ O-Line Controls --- */}
+                            {mode === 'wiz-oline' && !formationOnly && (
+                                <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', background: '#e0f2fe', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #7dd3fc' }}>
                                     <input type="text" value={customLetterInput} onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())} placeholder="?" maxLength={2} style={{ width: '22px', padding: '2px', textAlign: 'center', fontSize: '0.75rem', color: '#1e293b', border: '1px solid #94a3b8', borderRadius: '3px' }} />
                                     <button className="btn btn-secondary" onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }} disabled={!customLetterInput} style={{ padding: '0.15rem 0.35rem', fontSize: '0.75rem', color: '#1e293b' }}>Add</button>
-
-                                    {mode === 'wiz-oline' && (
-                                        <>
-                                            <div style={{ width: '1px', height: '16px', background: '#7dd3fc', margin: '0 0.15rem' }}></div>
-                                            <button className="btn btn-secondary" onClick={() => { const s = Math.max(12, wizTextSize - 4); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.25rem', fontSize: '0.8rem', color: '#1e293b' }}>-</button>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', minWidth: '1rem', textAlign: 'center' }}>{wizTextSize}</span>
-                                            <button className="btn btn-secondary" onClick={() => { const s = Math.min(200, wizTextSize + 4); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.25rem', fontSize: '0.8rem', color: '#1e293b' }}>+</button>
-                                            <div style={{ width: '1px', height: '16px', background: '#7dd3fc', margin: '0 0.15rem' }}></div>
-                                            <button className="btn btn-secondary" onClick={initiateSave} title="Save to library" style={{ padding: '0.1rem 0.25rem', fontSize: '0.7rem', color: '#1e293b', border: 'none', background: 'transparent' }}><Icon name="Save" size={12} /></button>
-                                            <select style={{ padding: '2px', fontSize: '0.7rem', width: '70px', color: '#1e293b', border: 'none', background: 'transparent' }} onChange={(e) => { if (e.target.value) { loadWizPreset(e.target.value); e.target.value = ""; } }} defaultValue="">
-                                                <option value="" disabled>Lib</option>
-                                                {wizLibrary.map(preset => (<option key={preset.id} value={preset.id}>{preset.name}</option>))}
-                                            </select>
-                                        </>
-                                    )}
+                                    <div style={{ width: '1px', height: '16px', background: '#7dd3fc', margin: '0 0.15rem' }}></div>
+                                    <button className="btn btn-secondary" onClick={() => { const s = Math.max(12, wizTextSize - 4); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.25rem', fontSize: '0.8rem', color: '#1e293b' }}>-</button>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'bold', minWidth: '1rem', textAlign: 'center' }}>{wizTextSize}</span>
+                                    <button className="btn btn-secondary" onClick={() => { const s = Math.min(200, wizTextSize + 4); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }} style={{ padding: '0 0.25rem', fontSize: '0.8rem', color: '#1e293b' }}>+</button>
+                                    <div style={{ width: '1px', height: '16px', background: '#7dd3fc', margin: '0 0.15rem' }}></div>
+                                    <button className="btn btn-secondary" onClick={initiateSave} title="Save to library" style={{ padding: '0.1rem 0.25rem', fontSize: '0.7rem', color: '#1e293b', border: 'none', background: 'transparent' }}><Icon name="Save" size={12} /></button>
+                                    <select style={{ padding: '2px', fontSize: '0.7rem', width: '70px', color: '#1e293b', border: 'none', background: 'transparent' }} onChange={(e) => { if (e.target.value) { loadWizPreset(e.target.value); e.target.value = ""; } }} defaultValue="">
+                                        <option value="" disabled>Lib</option>
+                                        {wizLibrary.map(preset => (<option key={preset.id} value={preset.id}>{preset.name}</option>))}
+                                    </select>
                                 </div>
                             )}
 
@@ -4841,7 +4964,7 @@
         };
 
 
-        const PlayInput = ({ onSave, onCancel, onDelete, initialData, initialPhase = 'OFFENSE', availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, positionColors = {}, playSyntax = [], termLibrary = {}, playBuckets = [], playCategories = [], onAddFormation = () => { }, passProtections = [], setPassProtections = () => { }, runBlocking = [], setRunBlocking = () => { }, customTagCategories = [], setCustomTagCategories }) => {
+        const PlayInput = ({ onSave, onCancel, onDelete, initialData, initialPhase = 'OFFENSE', availableMiniScripts = [], initialAssignedScriptIds = [], wizLibrary, setWizLibrary, formations = [], positionNames = {}, positionColors = {}, playSyntax = [], termLibrary = {}, playBuckets = [], playCategories = [], onAddFormation = () => { }, passProtections = [], setPassProtections = () => { }, runBlocking = [], setRunBlocking = () => { }, customTagCategories = [], setCustomTagCategories, personnelGroupings = [] }) => {
             const [isDiagramming, setIsDiagramming] = useState(false);
             const [activeScenarioId, setActiveScenarioId] = useState(null); // ID of scenario being edited
             const [activeDiagramMode, setActiveDiagramMode] = useState(null); // null, 'wiz-oline', 'wiz-skill', 'detailed'
@@ -5371,6 +5494,7 @@
                             positionNames={positionNames}
                             positionColors={positionColors}
                             onAddFormation={onAddFormation}
+                            personnelGroupings={personnelGroupings}
                         />
                     )}
 
@@ -36329,6 +36453,7 @@
                         setRunBlocking={setRunBlocking}
                         customTagCategories={customTagCategories}
                         setCustomTagCategories={setCustomTagCategories}
+                        personnelGroupings={personnelGroupings}
                     />
                 )
             }
@@ -40825,6 +40950,7 @@
                                         setRunBlocking={setRunBlocking}
                                         customTagCategories={customTagCategories}
                                         setCustomTagCategories={setCustomTagCategories}
+                                        personnelGroupings={personnelGroupings}
                                     />
                                 )
                             }
