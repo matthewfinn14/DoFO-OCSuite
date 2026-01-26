@@ -20,7 +20,9 @@ import {
   CheckCircle2,
   X,
   MessageSquare,
-  StickyNote
+  StickyNote,
+  Layers,
+  Link2
 } from 'lucide-react';
 
 // Days of the week
@@ -647,6 +649,124 @@ function LegacySegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
   );
 }
 
+// Segment Levels Selector - shows which program levels practice this segment together
+function SegmentLevelsSelector({ segment, programLevels, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Get current levels for this segment (default to 'all' if not set)
+  const selectedLevels = segment.levels || ['all'];
+  const isAllLevels = selectedLevels.includes('all') || selectedLevels.length === 0;
+
+  const toggleLevel = (levelId) => {
+    let newLevels;
+    if (levelId === 'all') {
+      newLevels = ['all'];
+    } else {
+      // Remove 'all' if selecting specific levels
+      const current = selectedLevels.filter(l => l !== 'all');
+      if (current.includes(levelId)) {
+        newLevels = current.filter(l => l !== levelId);
+      } else {
+        newLevels = [...current, levelId];
+      }
+      // If no levels selected, default back to 'all'
+      if (newLevels.length === 0) {
+        newLevels = ['all'];
+      }
+    }
+    onChange(newLevels);
+  };
+
+  // Get display text
+  const getDisplayText = () => {
+    if (isAllLevels) return 'All';
+    const levelNames = selectedLevels
+      .map(id => programLevels.find(l => l.id === id)?.name || id)
+      .slice(0, 2);
+    if (selectedLevels.length > 2) {
+      return `${levelNames.join(', ')} +${selectedLevels.length - 2}`;
+    }
+    return levelNames.join(', ');
+  };
+
+  if (!programLevels || programLevels.length === 0) {
+    return null; // Don't show if no program levels defined
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className={`flex items-center gap-1 px-2 py-1 text-xs rounded border transition-colors ${
+          isAllLevels
+            ? 'bg-slate-700/50 border-slate-600 text-slate-400'
+            : 'bg-purple-500/20 border-purple-500/30 text-purple-300'
+        }`}
+        title="Select which levels practice this segment"
+      >
+        <Layers size={12} />
+        <span className="truncate max-w-[60px]">{getDisplayText()}</span>
+      </button>
+
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+          {/* Dropdown */}
+          <div className="absolute top-full left-0 mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-xl z-50 min-w-[140px]">
+            <div className="p-2 space-y-1">
+              {/* All Levels Option */}
+              <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isAllLevels}
+                  onChange={() => toggleLevel('all')}
+                  className="rounded border-slate-500 bg-slate-600 text-purple-500"
+                />
+                <span className="text-sm text-white font-medium">All Levels</span>
+              </label>
+
+              <div className="border-t border-slate-600 my-1" />
+
+              {/* Varsity (always present) */}
+              <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!isAllLevels && selectedLevels.includes('varsity')}
+                  onChange={() => toggleLevel('varsity')}
+                  disabled={isAllLevels}
+                  className="rounded border-slate-500 bg-slate-600 text-purple-500 disabled:opacity-50"
+                />
+                <span className={`text-sm ${isAllLevels ? 'text-slate-500' : 'text-slate-300'}`}>Varsity</span>
+              </label>
+
+              {/* Program Levels */}
+              {programLevels.map(level => (
+                <label key={level.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!isAllLevels && selectedLevels.includes(level.id)}
+                    onChange={() => toggleLevel(level.id)}
+                    disabled={isAllLevels}
+                    className="rounded border-slate-500 bg-slate-600 text-purple-500 disabled:opacity-50"
+                  />
+                  <span className={`text-sm ${isAllLevels ? 'text-slate-500' : 'text-slate-300'}`}>{level.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Save Template Modal
 function SaveTemplateModal({ currentPlan, selectedDay, existingTemplates, onSave, onClose }) {
   const [templateName, setTemplateName] = useState('');
@@ -850,7 +970,15 @@ function SaveTemplateModal({ currentPlan, selectedDay, existingTemplates, onSave
 export default function PracticePlans() {
   const { year, phase, week: weekParam, day: dayParam, weekId: legacyWeekId } = useParams();
   const navigate = useNavigate();
-  const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings } = useSchool();
+  const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId } = useSchool();
+
+  // Get program levels from setup config
+  const programLevels = useMemo(() => {
+    return setupConfig?.programLevels || [];
+  }, [setupConfig]);
+
+  // Check if we have multiple levels (show timer sync and level selectors)
+  const hasMultipleLevels = programLevels.length > 0;
 
   // Determine the week - support both new URL structure and legacy
   const week = useMemo(() => {
@@ -1279,6 +1407,35 @@ export default function PracticePlans() {
           <div className="max-w-6xl mx-auto space-y-6">
             {/* Plan Controls */}
             <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-800 rounded-lg">
+              {/* Timer Source (only show if multiple levels exist) */}
+              {hasMultipleLevels && (
+                <div className="flex items-center gap-2">
+                  <Link2 size={14} className="text-slate-400" />
+                  <select
+                    value={currentPlan.timerSource || 'own'}
+                    onChange={e => updateCurrentPlan({ timerSource: e.target.value })}
+                    className={`px-2 py-1 border rounded text-sm ${
+                      currentPlan.timerSource && currentPlan.timerSource !== 'own'
+                        ? 'bg-purple-500/20 border-purple-500/30 text-purple-300'
+                        : 'bg-slate-700 border-slate-600 text-white'
+                    }`}
+                  >
+                    <option value="own">Own Timer</option>
+                    <option value="varsity">Sync with Varsity</option>
+                    {programLevels.map(level => (
+                      <option key={level.id} value={level.id}>Sync with {level.name}</option>
+                    ))}
+                  </select>
+                  {currentPlan.timerSource && currentPlan.timerSource !== 'own' && (
+                    <span className="text-xs text-purple-400">Timer controlled by {
+                      currentPlan.timerSource === 'varsity'
+                        ? 'Varsity'
+                        : programLevels.find(l => l.id === currentPlan.timerSource)?.name || currentPlan.timerSource
+                    }</span>
+                  )}
+                </div>
+              )}
+
               {/* Start Time */}
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-slate-400">Start:</label>
@@ -1287,6 +1444,7 @@ export default function PracticePlans() {
                   value={currentPlan.startTime || '15:30'}
                   onChange={e => updateCurrentPlan({ startTime: e.target.value })}
                   className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  disabled={currentPlan.timerSource && currentPlan.timerSource !== 'own'}
                 />
               </div>
 
@@ -1392,6 +1550,7 @@ export default function PracticePlans() {
                 <thead>
                   <tr className="border-b-2 border-slate-600 text-slate-400 text-xs uppercase">
                     <th className="px-3 py-3 text-center w-12">#</th>
+                    {hasMultipleLevels && <th className="px-3 py-3 text-center w-20">Levels</th>}
                     <th className="px-3 py-3 text-center w-20">Time</th>
                     <th className="px-3 py-3 text-center w-16">Dur</th>
                     <th className="px-3 py-3 text-center w-16">Phase</th>
@@ -1422,6 +1581,15 @@ export default function PracticePlans() {
                       <td className="px-3 py-3 text-center">
                         <span className="text-sky-400 font-bold">0</span>
                       </td>
+                      {hasMultipleLevels && (
+                        <td className="px-3 py-3 text-center">
+                          <SegmentLevelsSelector
+                            segment={{ id: 'warmup', levels: currentPlan.warmupLevels }}
+                            programLevels={programLevels}
+                            onChange={(levels) => updateCurrentPlan({ warmupLevels: levels })}
+                          />
+                        </td>
+                      )}
                       <td className="px-3 py-3 text-center text-slate-300 text-sm">
                         {currentPlan.startTime ? (() => {
                           const [h, m] = currentPlan.startTime.split(':').map(Number);
@@ -1561,6 +1729,15 @@ export default function PracticePlans() {
                           </button>
                         </div>
                       </td>
+                      {hasMultipleLevels && (
+                        <td className="px-3 py-3 text-center">
+                          <SegmentLevelsSelector
+                            segment={seg}
+                            programLevels={programLevels}
+                            onChange={(levels) => updateSegment(seg.id, 'levels', levels)}
+                          />
+                        </td>
+                      )}
                       <td className="px-3 py-3 text-center text-slate-300 text-sm">
                         {getSegmentStartTime(index)}
                       </td>

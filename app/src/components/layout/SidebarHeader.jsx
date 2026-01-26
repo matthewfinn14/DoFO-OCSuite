@@ -94,7 +94,7 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
                   onChange={(e) => setActiveLevelId(e.target.value || null)}
                   className="w-full px-3 py-2 text-sm bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer hover:border-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
                 >
-                  <option value="">Varsity (Main)</option>
+                  <option value="">Program</option>
                   {accessibleLevels.map(level => (
                     <option key={level.id} value={level.id}>
                       {level.name}
@@ -103,11 +103,12 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
                 </select>
                 <Layers size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
-              {activeLevelId && (
-                <p className="text-[0.65rem] text-amber-400/80 mt-1">
-                  Viewing {accessibleLevels.find(l => l.id === activeLevelId)?.name || 'sub-level'} data
-                </p>
-              )}
+              <p className="text-[0.65rem] text-slate-500 mt-1">
+                {activeLevelId
+                  ? `Viewing ${accessibleLevels.find(l => l.id === activeLevelId)?.name || 'level'} only`
+                  : 'Viewing all levels & full roster'
+                }
+              </p>
             </div>
           )}
 
