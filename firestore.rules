@@ -13,12 +13,12 @@ service cloud.firestore {
     }
 
     // --- USERS ---
-    // Strictly private. Only the user can access their own profile.
+    // Users can access their own profile. Site admins can create/manage any user (for approvals).
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isSiteAdmin());
 
       match /memberships/{schoolId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if request.auth != null && (request.auth.uid == userId || isSiteAdmin());
       }
     }
 
