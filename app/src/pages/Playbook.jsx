@@ -188,6 +188,35 @@ export default function Playbook() {
     setEditorOpen(true);
   };
 
+  // Quick add play from search bar
+  const quickAddPlay = async (name) => {
+    if (!name || !name.trim()) return;
+
+    const newPlay = {
+      name: name.trim(),
+      phase: activePhase,
+      formation: '',
+      concept: '',
+      tags: []
+    };
+
+    await addPlay(newPlay);
+    setSearchTerm(''); // Clear search after adding
+  };
+
+  // Handle search bar key press for quick add
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && searchTerm.trim()) {
+      // If no exact match found, offer to quick add
+      const exactMatch = filteredPlays.some(p =>
+        p.name?.toLowerCase() === searchTerm.trim().toLowerCase()
+      );
+      if (!exactMatch) {
+        quickAddPlay(searchTerm);
+      }
+    }
+  };
+
   // Open editor for editing
   const openEditPlayEditor = (play) => {
     setEditingPlay(play);
@@ -289,10 +318,10 @@ export default function Playbook() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {/* Search */}
+          {/* Search with Quick Add */}
           <div className="col-span-2 md:col-span-1">
             <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
-              Search
+              Search / Quick Add
             </label>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -300,10 +329,28 @@ export default function Playbook() {
                 type="text"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Name or formation..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm placeholder-slate-500"
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Type name, Enter to add..."
+                className={`w-full pl-9 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm placeholder-slate-500 ${
+                  searchTerm.trim() ? 'pr-20' : 'pr-3'
+                }`}
               />
+              {searchTerm.trim() && !filteredPlays.some(p => p.name?.toLowerCase() === searchTerm.trim().toLowerCase()) && (
+                <button
+                  onClick={() => quickAddPlay(searchTerm)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded hover:bg-emerald-500/30 transition-colors"
+                  title="Quick add this play (Enter)"
+                >
+                  <Plus size={12} />
+                  Add
+                </button>
+              )}
             </div>
+            {searchTerm.trim() && !filteredPlays.some(p => p.name?.toLowerCase() === searchTerm.trim().toLowerCase()) && (
+              <p className="text-xs text-emerald-400/70 mt-1">
+                Press Enter to quick-add "{searchTerm.trim()}"
+              </p>
+            )}
           </div>
 
           {/* Formation */}
