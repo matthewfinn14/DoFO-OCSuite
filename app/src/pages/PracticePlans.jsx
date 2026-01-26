@@ -17,7 +17,10 @@ import {
   LayoutTemplate,
   GripVertical,
   Settings,
-  CheckCircle2
+  CheckCircle2,
+  X,
+  MessageSquare,
+  StickyNote
 } from 'lucide-react';
 
 // Days of the week
@@ -82,6 +85,155 @@ const DEFAULT_SEGMENT_TYPES = [
   'Conditioning'
 ];
 
+// Segment Notes Modal Component
+function SegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
+  // Ensure notes is an object
+  const notes = typeof segment.notes === 'object' ? segment.notes : {};
+
+  // Separate coaches and other staff
+  const coaches = (staff || []).filter(s =>
+    s.role === 'Head Coach' || s.role === 'Coordinator' || s.role === 'Position Coach'
+  );
+  const otherStaff = (staff || []).filter(s =>
+    s.role !== 'Head Coach' && s.role !== 'Coordinator' && s.role !== 'Position Coach'
+  );
+
+  const handleNoteChange = (coachId, value) => {
+    const newNotes = { ...notes, [coachId]: value };
+    if (!value || value.trim() === '') {
+      delete newNotes[coachId];
+    }
+    onUpdateNotes(newNotes);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <StickyNote size={20} className="text-amber-400" />
+            <h3 className="text-lg font-semibold text-white">
+              {segment.id === 'WARMUP' ? 'Warmup Notes' : `Notes: ${segment.type || 'Segment'} (${segment.duration || 0}m)`}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b-2 border-slate-600">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300 w-1/3">Staff Member</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* All Coaches Row */}
+              <tr className="border-b border-slate-700 bg-slate-900/50">
+                <td className="px-4 py-3">
+                  <span className="font-bold text-amber-400">ALL COACHES</span>
+                </td>
+                <td className="px-4 py-3">
+                  <textarea
+                    value={notes['ALL_COACHES'] || ''}
+                    onChange={e => handleNoteChange('ALL_COACHES', e.target.value)}
+                    placeholder="Notes visible to everyone..."
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 text-sm resize-none"
+                    rows={2}
+                  />
+                </td>
+              </tr>
+
+              {/* Coaches Section */}
+              {coaches.length > 0 && (
+                <>
+                  <tr className="bg-slate-800">
+                    <td colSpan={2} className="px-4 py-2 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      Coaches
+                    </td>
+                  </tr>
+                  {coaches.map(coach => (
+                    <tr key={coach.id} className="border-b border-slate-700">
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-slate-200">{coach.name}</span>
+                        {coach.positionGroup && (
+                          <span className="ml-2 text-xs text-slate-500">({coach.positionGroup})</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <textarea
+                          value={notes[coach.id] || ''}
+                          onChange={e => handleNoteChange(coach.id, e.target.value)}
+                          placeholder={`Notes for ${coach.name}...`}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 text-sm resize-none"
+                          rows={1}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              )}
+
+              {/* Other Staff Section */}
+              {otherStaff.length > 0 && (
+                <>
+                  <tr className="bg-slate-800">
+                    <td colSpan={2} className="px-4 py-2 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      Other Staff
+                    </td>
+                  </tr>
+                  {otherStaff.map(person => (
+                    <tr key={person.id} className="border-b border-slate-700">
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-slate-200">{person.name}</span>
+                        {person.role && (
+                          <span className="ml-2 text-xs text-slate-500">({person.role})</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <textarea
+                          value={notes[person.id] || ''}
+                          onChange={e => handleNoteChange(person.id, e.target.value)}
+                          placeholder={`Notes for ${person.name}...`}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 text-sm resize-none"
+                          rows={1}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-700">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PracticePlans() {
   const { year, phase, week: weekParam, day: dayParam, weekId: legacyWeekId } = useParams();
   const navigate = useNavigate();
@@ -134,7 +286,7 @@ export default function PracticePlans() {
   const [mode, setMode] = useState('plan'); // 'plan' or 'script'
   const [coachFilter, setCoachFilter] = useState('ALL');
   const [notesCoach, setNotesCoach] = useState('ALL_COACHES');
-  const [editingNotes, setEditingNotes] = useState(null);
+  const [notesModalSegmentId, setNotesModalSegmentId] = useState(null); // 'WARMUP' or segment.id
 
   // Get weekId for updates
   const weekId = week?.id;
@@ -245,6 +397,57 @@ export default function PracticePlans() {
     );
     updateCurrentPlan({ segments: newSegments });
   }, [currentPlan, updateCurrentPlan]);
+
+  // Update warmup notes
+  const updateWarmupNotes = useCallback((newNotes) => {
+    updateCurrentPlan({ warmupNotes: newNotes });
+  }, [updateCurrentPlan]);
+
+  // Update segment notes
+  const updateSegmentNotes = useCallback((segmentId, newNotes) => {
+    const newSegments = currentPlan.segments.map(seg =>
+      seg.id === segmentId ? { ...seg, notes: newNotes } : seg
+    );
+    updateCurrentPlan({ segments: newSegments });
+  }, [currentPlan, updateCurrentPlan]);
+
+  // Get segment for notes modal
+  const notesModalSegment = useMemo(() => {
+    if (!notesModalSegmentId) return null;
+    if (notesModalSegmentId === 'WARMUP') {
+      return {
+        id: 'WARMUP',
+        type: 'Warmup',
+        duration: currentPlan.warmupDuration || 0,
+        notes: currentPlan.warmupNotes || {}
+      };
+    }
+    return currentPlan.segments.find(seg => seg.id === notesModalSegmentId) || null;
+  }, [notesModalSegmentId, currentPlan]);
+
+  // Handle notes update from modal
+  const handleNotesUpdate = useCallback((newNotes) => {
+    if (notesModalSegmentId === 'WARMUP') {
+      updateWarmupNotes(newNotes);
+    } else if (notesModalSegmentId) {
+      updateSegmentNotes(notesModalSegmentId, newNotes);
+    }
+  }, [notesModalSegmentId, updateWarmupNotes, updateSegmentNotes]);
+
+  // Helper to check if segment has any notes
+  const hasNotes = useCallback((notes) => {
+    if (!notes || typeof notes !== 'object') return false;
+    return Object.values(notes).some(v => v && v.trim() !== '');
+  }, []);
+
+  // Get preview text for notes button
+  const getNotesPreview = useCallback((notes) => {
+    if (!notes || typeof notes !== 'object') return null;
+    const allNotes = notes['ALL_COACHES'];
+    if (allNotes) return allNotes;
+    const firstNote = Object.values(notes).find(v => v && v.trim() !== '');
+    return firstNote || null;
+  }, []);
 
   // Add segment
   const addSegment = useCallback((afterIndex = -1) => {
@@ -526,6 +729,7 @@ export default function PracticePlans() {
                       <th className="px-3 py-3 text-left">Focus</th>
                     )}
                     <th className="px-3 py-3 text-center w-28">Contact</th>
+                    <th className="px-3 py-3 text-left w-40">Notes</th>
                     <th className="px-3 py-3 text-center w-20">Script</th>
                     <th className="px-3 py-3 text-center w-16"></th>
                   </tr>
@@ -626,6 +830,23 @@ export default function PracticePlans() {
                             <option key={c.value} value={c.value}>{c.label}</option>
                           ))}
                         </select>
+                      </td>
+                      <td className="px-3 py-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNotesModalSegmentId('WARMUP');
+                          }}
+                          className={`w-full px-2 py-1.5 text-left text-sm rounded border transition-colors truncate ${
+                            hasNotes(currentPlan.warmupNotes)
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                              : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
+                          }`}
+                        >
+                          {hasNotes(currentPlan.warmupNotes)
+                            ? getNotesPreview(currentPlan.warmupNotes) || 'View notes...'
+                            : 'Add notes...'}
+                        </button>
                       </td>
                       <td className="px-3 py-3 text-center">
                         <input
@@ -757,6 +978,23 @@ export default function PracticePlans() {
                           ))}
                         </select>
                       </td>
+                      <td className="px-3 py-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNotesModalSegmentId(seg.id);
+                          }}
+                          className={`w-full px-2 py-1.5 text-left text-sm rounded border transition-colors truncate ${
+                            hasNotes(seg.notes)
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                              : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
+                          }`}
+                        >
+                          {hasNotes(seg.notes)
+                            ? getNotesPreview(seg.notes) || 'View notes...'
+                            : 'Add notes...'}
+                        </button>
+                      </td>
                       <td className="px-3 py-3 text-center">
                         <input
                           type="checkbox"
@@ -793,6 +1031,18 @@ export default function PracticePlans() {
                 </button>
               </div>
             </div>
+
+            {/* Post-Practice Notes */}
+            <div className="p-4 bg-slate-800 rounded-lg">
+              <label className="block text-sm font-medium text-slate-300 mb-2">Post-Practice Notes</label>
+              <textarea
+                value={currentPlan.postPracticeNotes || ''}
+                onChange={e => updateCurrentPlan({ postPracticeNotes: e.target.value })}
+                placeholder="Post-practice thoughts, ideas for tomorrow, things that went well or need work..."
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm resize-none"
+                rows={3}
+              />
+            </div>
           </div>
         ) : (
           /* Script Mode */
@@ -819,6 +1069,16 @@ export default function PracticePlans() {
           </div>
         )}
       </div>
+
+      {/* Notes Modal */}
+      {notesModalSegment && (
+        <SegmentNotesModal
+          segment={notesModalSegment}
+          staff={staff}
+          onUpdateNotes={handleNotesUpdate}
+          onClose={() => setNotesModalSegmentId(null)}
+        />
+      )}
     </div>
   );
 }
