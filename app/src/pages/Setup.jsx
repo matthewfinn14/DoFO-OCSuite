@@ -139,6 +139,44 @@ const TAB_HELP = {
       </div>
     )
   },
+  'season-schedule': {
+    title: "About Season Schedule",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Define your season schedule including all weeks, opponents,
+          and game dates. Manage schedules for Varsity and all sub-levels from one place.
+        </p>
+        <p>
+          <strong className="text-white">Connections:</strong> Weeks created here appear in the sidebar navigation.
+          Each week links to practice plans, game plans, install sheets, and other weekly tools.
+        </p>
+        <p>
+          <strong className="text-white">Sub-level Games:</strong> Assign weeks to specific levels (JV, Freshman) when
+          they have games that don't match the Varsity schedule.
+        </p>
+      </div>
+    )
+  },
+  'program-events': {
+    title: "About Program Events",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Track program-wide events like banquets, pool parties,
+          team meals, community service, or fundraisers that involve the whole program.
+        </p>
+        <p>
+          <strong className="text-white">Visibility:</strong> Program events appear on calendars for all levels,
+          keeping everyone in the program informed about important dates.
+        </p>
+        <p>
+          <strong className="text-white">Examples:</strong> End of season banquet, summer pool party, team meals
+          before games, community service projects, booster club events.
+        </p>
+      </div>
+    )
+  },
   'play-buckets': {
     title: "About Play Buckets / Categories",
     content: (
@@ -375,6 +413,7 @@ const DEFAULT_POSITION_COLORS = {
 // Phase tabs
 const PHASES = [
   { id: 'PROGRAM', label: 'Program Setup' },
+  { id: 'SEASON', label: 'Season Setup' },
   { id: 'OFFENSE', label: 'Offense Setup' },
   { id: 'DEFENSE', label: 'Defense Setup' },
   { id: 'SPECIAL_TEAMS', label: 'Special Teams Setup' },
@@ -382,7 +421,7 @@ const PHASES = [
 ];
 
 export default function Setup() {
-  const { school, staff, setupConfig, updateSetupConfig } = useSchool();
+  const { school, staff, setupConfig, updateSetupConfig, weeks, activeYear, updateWeeks } = useSchool();
   const { isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
   const { phase: urlPhase, tab: urlTab } = useParams();
   const navigate = useNavigate();
@@ -393,7 +432,8 @@ export default function Setup() {
     'defense': 'DEFENSE',
     'special-teams': 'SPECIAL_TEAMS',
     'practice': 'PRACTICE',
-    'program': 'PROGRAM'
+    'program': 'PROGRAM',
+    'season': 'SEASON'
   };
 
   const phaseIdToSlug = {
@@ -401,7 +441,8 @@ export default function Setup() {
     'DEFENSE': 'defense',
     'SPECIAL_TEAMS': 'special-teams',
     'PRACTICE': 'practice',
-    'PROGRAM': 'program'
+    'PROGRAM': 'program',
+    'SEASON': 'season'
   };
 
   // Get phase from URL or default
@@ -416,6 +457,7 @@ export default function Setup() {
   const [phase, setPhase] = useState(() => getPhaseFromUrl());
   const isPractice = phase === 'PRACTICE';
   const isProgram = phase === 'PROGRAM';
+  const isSeason = phase === 'SEASON';
   const isOffense = phase === 'OFFENSE';
   const isDefense = phase === 'DEFENSE';
   const isST = phase === 'SPECIAL_TEAMS';
@@ -424,6 +466,7 @@ export default function Setup() {
   const getDefaultTab = (p) => {
     if (p === 'PRACTICE') return 'practice-lists';
     if (p === 'PROGRAM') return 'levels';
+    if (p === 'SEASON') return 'season-schedule';
     return 'positions';
   };
   const [activeTab, setActiveTab] = useState(() => urlTab || getDefaultTab(phase));
@@ -586,6 +629,12 @@ export default function Setup() {
     if (isProgram) {
       return [
         { id: 'levels', label: 'Program Levels', icon: Layers }
+      ];
+    }
+    if (isSeason) {
+      return [
+        { id: 'season-schedule', label: 'Season Schedule', icon: Calendar },
+        { id: 'program-events', label: 'Program Events', icon: LayoutDashboard }
       ];
     }
     if (isPractice) {
@@ -912,6 +961,24 @@ export default function Setup() {
             <ProgramLevelsTab
               programLevels={localConfig.programLevels || []}
               staff={staff || []}
+              onUpdate={updateLocal}
+            />
+          )}
+
+          {/* Season Schedule Tab */}
+          {activeTab === 'season-schedule' && isSeason && (
+            <SeasonScheduleTab
+              weeks={weeks}
+              programLevels={localConfig.programLevels || []}
+              activeYear={activeYear}
+              onUpdateWeeks={updateWeeks}
+            />
+          )}
+
+          {/* Program Events Tab */}
+          {activeTab === 'program-events' && isSeason && (
+            <ProgramEventsTab
+              programEvents={localConfig.programEvents || []}
               onUpdate={updateLocal}
             />
           )}
@@ -2927,6 +2994,632 @@ function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
         <Plus size={18} />
         Add Program Level
       </button>
+    </div>
+  );
+}
+
+// ============= SEASON SETUP COMPONENTS =============
+
+// Week phases for organization
+const WEEK_PHASES = [
+  { id: 'offseason', label: 'Offseason', color: 'bg-slate-600' },
+  { id: 'summer', label: 'Summer', color: 'bg-amber-600' },
+  { id: 'preseason', label: 'Preseason', color: 'bg-purple-600' },
+  { id: 'season', label: 'Season', color: 'bg-emerald-600' }
+];
+
+// Season Schedule Tab Component
+function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) {
+  const [editingWeek, setEditingWeek] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [filterPhase, setFilterPhase] = useState('all');
+  const [filterLevel, setFilterLevel] = useState('all');
+
+  // Group weeks by phase
+  const groupedWeeks = {
+    offseason: weeks.filter(w => w.phase === 'offseason' || w.name === 'Offseason'),
+    summer: weeks.filter(w => w.phase === 'summer' || w.name?.includes('Summer')),
+    preseason: weeks.filter(w => w.phase === 'preseason' || ['Family Week', 'Camp Week', 'First Week of Practice', 'Week 0'].includes(w.name)),
+    season: weeks.filter(w => w.phase === 'season' || (w.name?.startsWith('Week ') && !w.name?.includes('Summer') && w.name !== 'Week 0'))
+  };
+
+  // Filter weeks
+  const filteredWeeks = weeks.filter(w => {
+    if (filterPhase !== 'all') {
+      const weekPhase = w.phase || (
+        w.name === 'Offseason' ? 'offseason' :
+        w.name?.includes('Summer') ? 'summer' :
+        ['Family Week', 'Camp Week', 'First Week of Practice', 'Week 0'].includes(w.name) ? 'preseason' :
+        'season'
+      );
+      if (weekPhase !== filterPhase) return false;
+    }
+    if (filterLevel !== 'all') {
+      if (filterLevel === 'varsity' && w.levelId) return false;
+      if (filterLevel !== 'varsity' && w.levelId !== filterLevel) return false;
+    }
+    return true;
+  });
+
+  const addWeek = (weekData) => {
+    const newWeek = {
+      id: `week_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...weekData,
+      year: activeYear,
+      createdAt: new Date().toISOString()
+    };
+    onUpdateWeeks([...weeks, newWeek]);
+    setShowAddModal(false);
+  };
+
+  const updateWeek = (weekId, updates) => {
+    const newWeeks = weeks.map(w => w.id === weekId ? { ...w, ...updates } : w);
+    onUpdateWeeks(newWeeks);
+  };
+
+  const deleteWeek = (weekId, weekName) => {
+    if (!confirm(`Delete "${weekName}"? This will also delete all practice plans and notes for this week.`)) return;
+    onUpdateWeeks(weeks.filter(w => w.id !== weekId));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with filters */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <select
+            value={filterPhase}
+            onChange={e => setFilterPhase(e.target.value)}
+            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
+          >
+            <option value="all">All Phases</option>
+            {WEEK_PHASES.map(p => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+          </select>
+          <select
+            value={filterLevel}
+            onChange={e => setFilterLevel(e.target.value)}
+            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
+          >
+            <option value="all">All Levels</option>
+            <option value="varsity">Varsity</option>
+            {programLevels.map(l => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+        >
+          <Plus size={18} />
+          Add Week
+        </button>
+      </div>
+
+      {/* Info Box */}
+      <div className="p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg">
+        <p className="text-sm text-sky-300">
+          <strong>Season Schedule:</strong> Add and organize weeks for your season. Each week can have an opponent,
+          date, and be assigned to specific program levels. Weeks appear in the sidebar navigation.
+        </p>
+      </div>
+
+      {/* Weeks by Phase */}
+      {WEEK_PHASES.map(phase => {
+        const phaseWeeks = filteredWeeks.filter(w => {
+          const weekPhase = w.phase || (
+            w.name === 'Offseason' ? 'offseason' :
+            w.name?.includes('Summer') ? 'summer' :
+            ['Family Week', 'Camp Week', 'First Week of Practice', 'Week 0'].includes(w.name) ? 'preseason' :
+            'season'
+          );
+          return weekPhase === phase.id;
+        });
+
+        if (filterPhase !== 'all' && filterPhase !== phase.id) return null;
+
+        return (
+          <div key={phase.id} className="space-y-3">
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${phase.color}`}>
+              <span className="text-white font-semibold">{phase.label}</span>
+              <span className="text-white/70 text-sm">({phaseWeeks.length} weeks)</span>
+            </div>
+
+            {phaseWeeks.length === 0 ? (
+              <div className="text-center py-6 text-slate-500 border-2 border-dashed border-slate-700 rounded-lg">
+                <p className="text-sm">No weeks in {phase.label.toLowerCase()}</p>
+                <button
+                  onClick={() => {
+                    setShowAddModal(true);
+                  }}
+                  className="text-sky-400 text-sm hover:underline mt-1"
+                >
+                  + Add a week
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {phaseWeeks.map(week => (
+                  <div
+                    key={week.id}
+                    className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600 hover:border-slate-500 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold text-white">{week.name}</span>
+                        {week.opponent && (
+                          <span className="text-slate-400">
+                            vs {week.opponent}
+                            {week.isHome !== undefined && (
+                              <span className="text-xs ml-1">({week.isHome ? 'Home' : 'Away'})</span>
+                            )}
+                          </span>
+                        )}
+                        {week.levelId && (
+                          <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 text-xs rounded">
+                            {programLevels.find(l => l.id === week.levelId)?.name || 'Sub-level'}
+                          </span>
+                        )}
+                      </div>
+                      {week.date && (
+                        <p className="text-sm text-slate-500 mt-1">
+                          {new Date(week.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setEditingWeek(week)}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-600 rounded"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button
+                        onClick={() => deleteWeek(week.id, week.name)}
+                        className="p-2 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Add/Edit Week Modal */}
+      {(showAddModal || editingWeek) && (
+        <WeekEditModal
+          week={editingWeek}
+          programLevels={programLevels}
+          onSave={(data) => {
+            if (editingWeek) {
+              updateWeek(editingWeek.id, data);
+              setEditingWeek(null);
+            } else {
+              addWeek(data);
+            }
+          }}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingWeek(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Week Edit Modal
+function WeekEditModal({ week, programLevels, onSave, onClose }) {
+  const [formData, setFormData] = useState({
+    name: week?.name || '',
+    phase: week?.phase || 'season',
+    opponent: week?.opponent || '',
+    isHome: week?.isHome ?? true,
+    date: week?.date || '',
+    levelId: week?.levelId || '',
+    weekNum: week?.weekNum || '',
+    notes: week?.notes || ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      alert('Week name is required');
+      return;
+    }
+    onSave({
+      ...formData,
+      weekNum: formData.weekNum ? parseInt(formData.weekNum) : undefined
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <h3 className="text-lg font-semibold text-white">
+            {week ? 'Edit Week' : 'Add Week'}
+          </h3>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Week Name *</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Week 1, Camp Week"
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Phase</label>
+              <select
+                value={formData.phase}
+                onChange={e => setFormData({ ...formData, phase: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+              >
+                {WEEK_PHASES.map(p => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Opponent</label>
+              <input
+                type="text"
+                value={formData.opponent}
+                onChange={e => setFormData({ ...formData, opponent: e.target.value })}
+                placeholder="e.g., Rival High"
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Home/Away</label>
+              <select
+                value={formData.isHome ? 'home' : 'away'}
+                onChange={e => setFormData({ ...formData, isHome: e.target.value === 'home' })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+              >
+                <option value="home">Home</option>
+                <option value="away">Away</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Game Date</label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Week Number</label>
+              <input
+                type="number"
+                value={formData.weekNum}
+                onChange={e => setFormData({ ...formData, weekNum: e.target.value })}
+                placeholder="e.g., 1"
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                min="0"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Program Level</label>
+            <select
+              value={formData.levelId}
+              onChange={e => setFormData({ ...formData, levelId: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+            >
+              <option value="">All Levels / Varsity</option>
+              {programLevels.map(l => (
+                <option key={l.id} value={l.id}>{l.name} only</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              Leave blank for weeks that apply to all levels. Select a specific level for sub-level only games.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={e => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Any additional notes..."
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white resize-none"
+              rows={2}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+            >
+              {week ? 'Save Changes' : 'Add Week'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Program Events Tab Component
+function ProgramEventsTab({ programEvents, onUpdate }) {
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const addEvent = (eventData) => {
+    const newEvent = {
+      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...eventData,
+      createdAt: new Date().toISOString()
+    };
+    onUpdate('programEvents', [...programEvents, newEvent]);
+    setShowAddModal(false);
+  };
+
+  const updateEvent = (eventId, updates) => {
+    const newEvents = programEvents.map(e => e.id === eventId ? { ...e, ...updates } : e);
+    onUpdate('programEvents', newEvents);
+  };
+
+  const deleteEvent = (eventId, eventName) => {
+    if (!confirm(`Delete "${eventName}"?`)) return;
+    onUpdate('programEvents', programEvents.filter(e => e.id !== eventId));
+  };
+
+  // Sort events by date
+  const sortedEvents = [...programEvents].sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return new Date(a.date) - new Date(b.date);
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-slate-400 text-sm">
+            Program-wide events that appear on all levels' calendars (banquets, team meals, community events, etc.)
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+        >
+          <Plus size={18} />
+          Add Event
+        </button>
+      </div>
+
+      {/* Events List */}
+      {sortedEvents.length === 0 ? (
+        <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-600 rounded-lg">
+          <Calendar size={48} className="mx-auto mb-4 opacity-30" />
+          <p>No program events defined.</p>
+          <p className="text-sm mt-1">Add events like banquets, pool parties, or team meals.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sortedEvents.map(event => (
+            <div
+              key={event.id}
+              className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600"
+            >
+              <div>
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold text-white">{event.name}</span>
+                  {event.type && (
+                    <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 text-xs rounded">
+                      {event.type}
+                    </span>
+                  )}
+                </div>
+                {event.date && (
+                  <p className="text-sm text-slate-400 mt-1">
+                    {new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    {event.time && ` at ${event.time}`}
+                  </p>
+                )}
+                {event.location && (
+                  <p className="text-sm text-slate-500">{event.location}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEditingEvent(event)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-600 rounded"
+                >
+                  <Edit3 size={16} />
+                </button>
+                <button
+                  onClick={() => deleteEvent(event.id, event.name)}
+                  className="p-2 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add/Edit Event Modal */}
+      {(showAddModal || editingEvent) && (
+        <EventEditModal
+          event={editingEvent}
+          onSave={(data) => {
+            if (editingEvent) {
+              updateEvent(editingEvent.id, data);
+              setEditingEvent(null);
+            } else {
+              addEvent(data);
+            }
+          }}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingEvent(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Event Edit Modal
+function EventEditModal({ event, onSave, onClose }) {
+  const [formData, setFormData] = useState({
+    name: event?.name || '',
+    type: event?.type || '',
+    date: event?.date || '',
+    time: event?.time || '',
+    location: event?.location || '',
+    notes: event?.notes || ''
+  });
+
+  const eventTypes = ['Banquet', 'Team Meal', 'Pool Party', 'Community Service', 'Fundraiser', 'Meeting', 'Other'];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      alert('Event name is required');
+      return;
+    }
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <h3 className="text-lg font-semibold text-white">
+            {event ? 'Edit Event' : 'Add Program Event'}
+          </h3>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Event Name *</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., End of Season Banquet"
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Type</label>
+              <select
+                value={formData.type}
+                onChange={e => setFormData({ ...formData, type: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+              >
+                <option value="">Select type...</option>
+                {eventTypes.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Time</label>
+              <input
+                type="time"
+                value={formData.time}
+                onChange={e => setFormData({ ...formData, time: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Location</label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={e => setFormData({ ...formData, location: e.target.value })}
+              placeholder="e.g., School Cafeteria"
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={e => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Any additional details..."
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white resize-none"
+              rows={2}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+            >
+              {event ? 'Save Changes' : 'Add Event'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
