@@ -40365,7 +40365,7 @@
             return (
                 <PlayDetailsModalContext.Provider value={{ openPlayDetails }}>
                     <div className="app-container">
-                        {schoolSetupData.showWizard && !schoolName && !isSiteAdmin && (
+                        {schoolSetupData.showWizard && !isSiteAdmin && (
                             <div className="onboarding-wizard-wrapper">
                                 <SchoolOnboardingWizard
                                     user={authUser}
