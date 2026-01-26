@@ -36638,16 +36638,17 @@
 
             // Save team logo to localStorage whenever it changes
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 if (teamLogo) {
                     localStorage.setItem('oc-dashboard-logo', teamLogo);
                 } else {
                     localStorage.removeItem('oc-dashboard-logo');
                 }
                 // Cloud Sync
-                if (currentUser && window.db) {
-                    syncToFirestore(currentUser.uid, 'settings', { teamLogo });
+                if (authUser && window.db) {
+                    syncToFirestore(authUser.uid, 'settings', { teamLogo });
                 }
-            }, [teamLogo, currentUser]);
+            }, [teamLogo, dataLoaded, authUser]);
 
             // Apply and Save Accent Color
             useEffect(() => {
