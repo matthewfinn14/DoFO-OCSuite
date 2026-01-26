@@ -34696,14 +34696,8 @@
             const [inviteData, setInviteData] = useState(null); // NEW: Invite State
             const [accessRequestStatus, setAccessRequestStatus] = useState({ checked: false, status: null, data: null }); // 'pending' | 'approved' | 'rejected' | null
 
-            // Auto-clear wizard if school is already set up (prevents wizard showing over existing school)
-            // CRITICAL: Only clear if localStorage also has school ID - prevents stale React state from blocking wizard
-            useEffect(() => {
-                if (schoolSetupData.showWizard && schoolName && localStorage.getItem('hc_school_id')) {
-                    console.log("DEBUG: School already set up, clearing wizard state");
-                    setSchoolSetupData({ showWizard: false, schoolId: null });
-                }
-            }, [schoolSetupData.showWizard, schoolName]);
+            // NOTE: Removed auto-clear wizard useEffect - was too aggressive and cleared wizard
+            // even for uninitialized schools. The 'initialized' flag in Firestore now controls this.
             const [pendingAccessRequests, setPendingAccessRequests] = useState(0); // Count of pending requests for admin badge
             const [isViewingAll, setIsViewingAll] = useState(false);
             const [selectedCharts, setSelectedCharts] = useState(DEPTH_CHART_TYPES.map(t => t.id));
