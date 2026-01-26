@@ -374,11 +374,11 @@ const DEFAULT_POSITION_COLORS = {
 
 // Phase tabs
 const PHASES = [
-  { id: 'PROGRAM', label: 'Program' },
-  { id: 'OFFENSE', label: 'Offense' },
-  { id: 'DEFENSE', label: 'Defense' },
-  { id: 'SPECIAL_TEAMS', label: 'Special Teams' },
-  { id: 'PRACTICE', label: 'Practice' }
+  { id: 'PROGRAM', label: 'Program Setup' },
+  { id: 'OFFENSE', label: 'Offense Setup' },
+  { id: 'DEFENSE', label: 'Defense Setup' },
+  { id: 'SPECIAL_TEAMS', label: 'Special Teams Setup' },
+  { id: 'PRACTICE', label: 'Practice Setup' }
 ];
 
 export default function Setup() {
