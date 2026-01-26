@@ -1821,7 +1821,7 @@
                 setLoading(true);
                 try {
                     if (isRequestMode) {
-                        // Create account - they'll be routed to AccessRequestForm after
+                        // Create account - they'll be routed to Create School wizard after
                         await window.auth.createUserWithEmailAndPassword(email, password);
                     } else {
                         // Log in existing account
@@ -2131,9 +2131,7 @@
                             createdAt: new Date().toISOString(),
                             createdBy: user.uid
                         },
-                        // Link to access request for data continuity
-                        linkedAccessRequest: user.email.toLowerCase(),
-                        // Initialize empty collections/structures if needed
+                        // Initialize empty collections/structures
                         roster: [],
                         plays: {}, // Empty library
                         staff: [{
@@ -2175,17 +2173,6 @@
                     }
 
                     console.log("School Created & Verified:", schoolId);
-
-                    // 4. Link access request to school (two-way link)
-                    try {
-                        await window.db.collection('access_requests').doc(user.email.toLowerCase()).update({
-                            schoolId: schoolId,
-                            schoolCreatedAt: new Date().toISOString()
-                        });
-                        console.log("Access request linked to school:", schoolId);
-                    } catch (linkErr) {
-                        console.warn("Could not link access request (may not exist):", linkErr);
-                    }
 
                     // Force local storage update nicely
                     localStorage.setItem('hc_school_id', schoolId);
@@ -2332,210 +2319,10 @@
             )
         };
 
-        // --- ACCESS REQUEST SYSTEM ---
-
-        // Form for new users to request access
-        const AccessRequestForm = ({ user, onSubmit }) => {
-            const [loading, setLoading] = useState(false);
-            const [checking, setChecking] = useState(true);
-            const [existingRequest, setExistingRequest] = useState(null);
-            const [formData, setFormData] = useState({
-                name: user?.displayName || '',
-                schoolName: '',
-                role: 'Head Coach',
-                phone: '',
-                howHeard: ''
-            });
-            const [error, setError] = useState('');
-
-            // Check for existing request on mount
-            useEffect(() => {
-                const checkExisting = async () => {
-                    try {
-                        const doc = await window.db.collection('access_requests').doc(user.email.toLowerCase()).get({ source: 'server' });
-                        if (doc.exists) {
-                            const data = doc.data();
-                            console.log("AccessRequestForm: Found existing request with status:", data.status);
-                            setExistingRequest(data);
-                            // If there's an existing request with a non-null status, notify parent
-                            if (data.status) {
-                                onSubmit(data.status);
-                            }
-                        }
-                    } catch (err) {
-                        console.warn("Error checking existing request:", err);
-                    }
-                    setChecking(false);
-                };
-                checkExisting();
-            }, [user.email]);
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                if (!formData.name || !formData.schoolName) {
-                    setError('Please fill in your name and school name.');
-                    return;
-                }
-
-                setLoading(true);
-                setError('');
-
-                try {
-                    // Double-check for existing request before submitting
-                    const existingDoc = await window.db.collection('access_requests').doc(user.email.toLowerCase()).get();
-                    if (existingDoc.exists && existingDoc.data().status) {
-                        const existingStatus = existingDoc.data().status;
-                        console.log("Request already exists with status:", existingStatus);
-                        onSubmit(existingStatus);
-                        return;
-                    }
-
-                    const requestData = {
-                        ...formData,
-                        email: user.email,
-                        uid: user.uid,
-                        status: 'pending',
-                        submittedAt: new Date().toISOString(),
-                        reviewedAt: null,
-                        reviewedBy: null,
-                        notes: ''
-                    };
-
-                    // Use email as document ID for easy lookup
-                    await window.db.collection('access_requests').doc(user.email.toLowerCase()).set(requestData);
-
-                    onSubmit('pending');
-                } catch (err) {
-                    console.error('Error submitting request:', err);
-                    setError(`Failed to submit request: ${err.message || 'Unknown error'}. Please try again or contact support.`);
-                }
-                setLoading(false);
-            };
-
-            // Show loading while checking for existing request
-            if (checking) {
-                return (
-                    <div style={{
-                        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
-                    }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Checking access status...</div>
-                        </div>
-                    </div>
-                );
-            }
-
-            return (
-                <div style={{
-                    height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
-                }}>
-                    <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', color: '#38bdf8' }}>
-                            Request Access to DoFO
-                        </h1>
-                        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '2rem', fontSize: '0.9rem' }}>
-                            Tell us about your program and we'll get you set up.
-                        </p>
-
-                        {error && <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>{error}</div>}
-
-                        <form onSubmit={handleSubmit}>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>Your Name *</label>
-                                <input
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', background: '#0f172a', border: '1px solid #475569', color: 'white', boxSizing: 'border-box' }}
-                                    placeholder="e.g. Coach Smith"
-                                />
-                            </div>
-
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>School / Program Name *</label>
-                                <input
-                                    value={formData.schoolName}
-                                    onChange={e => setFormData({ ...formData, schoolName: e.target.value })}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', background: '#0f172a', border: '1px solid #475569', color: 'white', boxSizing: 'border-box' }}
-                                    placeholder="e.g. East Dillon High School"
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>Your Role</label>
-                                    <select
-                                        value={formData.role}
-                                        onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', background: '#0f172a', border: '1px solid #475569', color: 'white' }}
-                                    >
-                                        <option value="Head Coach">Head Coach</option>
-                                        <option value="Offensive Coordinator">Offensive Coordinator</option>
-                                        <option value="Defensive Coordinator">Defensive Coordinator</option>
-                                        <option value="Position Coach">Position Coach</option>
-                                        <option value="Director of Operations">Director of Operations</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>Phone (optional)</label>
-                                    <input
-                                        value={formData.phone}
-                                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', background: '#0f172a', border: '1px solid #475569', color: 'white', boxSizing: 'border-box' }}
-                                        placeholder="555-123-4567"
-                                    />
-                                </div>
-                            </div>
-
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1' }}>How did you hear about us?</label>
-                                <select
-                                    value={formData.howHeard}
-                                    onChange={e => setFormData({ ...formData, howHeard: e.target.value })}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', background: '#0f172a', border: '1px solid #475569', color: 'white' }}
-                                >
-                                    <option value="">Select...</option>
-                                    <option value="Coaching Clinic">Coaching Clinic</option>
-                                    <option value="Another Coach">Another Coach</option>
-                                    <option value="Social Media">Social Media</option>
-                                    <option value="Google Search">Google Search</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                style={{
-                                    width: '100%', padding: '1rem', background: '#38bdf8', color: '#0f172a',
-                                    border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem',
-                                    cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1
-                                }}
-                            >
-                                {loading ? 'Submitting...' : 'Request Access'}
-                            </button>
-                        </form>
-
-                        <p style={{ textAlign: 'center', color: '#64748b', marginTop: '1.5rem', fontSize: '0.8rem' }}>
-                            Signed in as {user?.email}
-                            <br />
-                            <button
-                                onClick={() => window.auth.signOut()}
-                                style={{ background: 'none', border: 'none', color: '#94a3b8', textDecoration: 'underline', cursor: 'pointer', marginTop: '0.5rem' }}
-                            >
-                                Sign out
-                            </button>
-                        </p>
-                    </div>
-                </div>
-            );
-        };
-
-        // Screen shown while waiting for approval
-        const PendingApprovalScreen = ({ user, requestData }) => {
-            const submittedDate = requestData?.submittedAt ? new Date(requestData.submittedAt).toLocaleDateString() : 'recently';
+        // --- TRIAL EXPIRED SCREEN ---
+        // Screen shown when trial has expired
+        const TrialExpiredScreen = ({ user, school }) => {
+            const expiresDate = school?.billing?.trialEndsAt ? new Date(school.billing.trialEndsAt).toLocaleDateString() : 'Unknown';
 
             return (
                 <div style={{
@@ -2543,598 +2330,28 @@
                     background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
                 }}>
                     <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '500px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏳</div>
-                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#38bdf8' }}>
-                            Request Pending
+                        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏰</div>
+                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#f59e0b' }}>
+                            Trial Expired
                         </h1>
                         <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-                            Thanks for your interest in DoFO! We received your request on {submittedDate} and will review it shortly.
+                            Your free trial has ended. Contact us to continue using DoFO!
                         </p>
-
                         <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'left' }}>
-                            <div style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '0.5rem' }}>YOUR REQUEST</div>
-                            <div style={{ color: '#e2e8f0' }}><strong>{requestData?.name}</strong></div>
-                            <div style={{ color: '#94a3b8' }}>{requestData?.schoolName}</div>
-                            <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{requestData?.role}</div>
+                            <div style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '0.5rem' }}>ACCOUNT DETAILS</div>
+                            <div style={{ color: '#e2e8f0' }}><strong>{school?.name || 'Your School'}</strong></div>
+                            <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Trial ended: {expiresDate}</div>
                         </div>
-
-                        <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                            We typically respond within 24 hours. Check your email for updates!
+                        <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                            Email us at <a href="mailto:support@digitaldofo.com" style={{ color: '#38bdf8' }}>support@digitaldofo.com</a> to upgrade your account.
                         </p>
-
-                        <button
-                            onClick={() => window.location.reload()}
-                            style={{ background: '#334155', border: 'none', color: '#94a3b8', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', marginRight: '0.5rem' }}
-                        >
-                            Refresh Status
-                        </button>
                         <button
                             onClick={() => window.auth.signOut()}
-                            style={{ background: 'none', border: '1px solid #475569', color: '#94a3b8', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer' }}
+                            style={{ background: '#334155', border: 'none', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer' }}
                         >
                             Sign Out
                         </button>
                     </div>
-                </div>
-            );
-        };
-
-        // Admin panel for reviewing access requests
-        const AccessRequestsAdmin = ({ currentUser }) => {
-            const [requests, setRequests] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [filter, setFilter] = useState('pending'); // 'pending' | 'approved' | 'rejected' | 'all'
-            const [editingRequest, setEditingRequest] = useState(null);
-            const [editForm, setEditForm] = useState({ trialDays: '', accessExpiresAt: '', notes: '' });
-
-            useEffect(() => {
-                const loadRequests = async () => {
-                    try {
-                        const snapshot = await window.db.collection('access_requests').orderBy('submittedAt', 'desc').get();
-                        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setRequests(data);
-                    } catch (err) {
-                        console.error('Error loading requests:', err);
-                    }
-                    setLoading(false);
-                };
-                loadRequests();
-            }, []);
-
-            const handleApprove = async (request) => {
-                const daysInput = prompt(`Approve ${request.name} (${request.schoolName})?\n\nEnter number of trial days to grant:`, '7');
-                if (daysInput === null) return; // Cancelled
-
-                const trialDays = parseInt(daysInput, 10);
-                if (isNaN(trialDays) || trialDays < 1) {
-                    alert('Please enter a valid number of days (minimum 1).');
-                    return;
-                }
-
-                try {
-                    const now = new Date();
-                    const accessExpiresAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
-                    // Data gets removed 30 days after access expires (grace period)
-                    const dataExpiresAt = new Date(accessExpiresAt.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-                    // 1. Create the school document
-                    const schoolId = 'school_' + Date.now();
-                    await window.db.collection('schools').doc(schoolId).set({
-                        name: request.schoolName || 'My School',
-                        mascot: '',
-                        initialized: false, // User needs to complete setup
-                        createdAt: now.toISOString(),
-                        createdBy: request.uid,
-                        memberList: [{
-                            uid: request.uid,
-                            email: request.email.toLowerCase(),
-                            role: 'admin',
-                            joinedAt: now.toISOString()
-                        }],
-                        staff: [{
-                            id: request.uid,
-                            name: request.name || 'Head Coach',
-                            email: request.email.toLowerCase(),
-                            roles: ['Head Coach', 'Team Admin'],
-                            phone: '',
-                            bio: ''
-                        }],
-                        billing: {
-                            plan: 'trial',
-                            trialDays: trialDays,
-                            trialEndsAt: accessExpiresAt.toISOString(),
-                            dataExpiresAt: dataExpiresAt.toISOString()
-                        },
-                        // Initialize empty arrays for data
-                        plays: [],
-                        roster: [],
-                        weeks: [],
-                        formations: [],
-                        settings: {}
-                    });
-
-                    // 2. Create the user document
-                    await window.db.collection('users').doc(request.uid).set({
-                        email: request.email.toLowerCase(),
-                        schoolId: schoolId,
-                        createdAt: now.toISOString()
-                    });
-
-                    // 3. Create membership subcollection
-                    await window.db.collection('users').doc(request.uid).collection('memberships').doc(schoolId).set({
-                        role: 'admin',
-                        joinedAt: now.toISOString(),
-                        status: 'active'
-                    });
-
-                    // 4. Update access request status
-                    await window.db.collection('access_requests').doc(request.id).update({
-                        status: 'approved',
-                        reviewedAt: now.toISOString(),
-                        reviewedBy: currentUser?.email || 'admin',
-                        trialDays: trialDays,
-                        accessExpiresAt: accessExpiresAt.toISOString(),
-                        dataExpiresAt: dataExpiresAt.toISOString(),
-                        schoolId: schoolId // Link to created school
-                    });
-
-                    // Update local state
-                    setRequests(prev => prev.map(r =>
-                        r.id === request.id
-                            ? { ...r, status: 'approved', reviewedAt: now.toISOString(), trialDays, accessExpiresAt: accessExpiresAt.toISOString(), schoolId }
-                            : r
-                    ));
-
-                    alert(`Approved! Created school "${request.schoolName}" for ${request.name}. They have ${trialDays} days of access.`);
-                } catch (err) {
-                    console.error('Error approving:', err);
-                    alert('Failed to approve. Check console.');
-                }
-            };
-
-            const handleReject = async (request) => {
-                const reason = prompt('Rejection reason (optional):');
-                if (reason === null) return; // Cancelled
-
-                try {
-                    await window.db.collection('access_requests').doc(request.id).update({
-                        status: 'rejected',
-                        reviewedAt: new Date().toISOString(),
-                        reviewedBy: currentUser?.email || 'admin',
-                        notes: reason
-                    });
-
-                    setRequests(prev => prev.map(r =>
-                        r.id === request.id
-                            ? { ...r, status: 'rejected', reviewedAt: new Date().toISOString(), notes: reason }
-                            : r
-                    ));
-                } catch (err) {
-                    console.error('Error rejecting:', err);
-                    alert('Failed to reject. Check console.');
-                }
-            };
-
-            const handleEdit = (request) => {
-                setEditForm({
-                    trialDays: request.trialDays || '',
-                    accessExpiresAt: request.accessExpiresAt ? request.accessExpiresAt.split('T')[0] : '',
-                    notes: request.notes || ''
-                });
-                setEditingRequest(request);
-            };
-
-            const handleSaveEdit = async () => {
-                if (!editingRequest) return;
-                try {
-                    const updates = {
-                        notes: editForm.notes || ''
-                    };
-
-                    if (editForm.accessExpiresAt) {
-                        updates.accessExpiresAt = new Date(editForm.accessExpiresAt).toISOString();
-                        // Recalculate data deletion date (30 days after access expires)
-                        updates.dataExpiresAt = new Date(new Date(editForm.accessExpiresAt).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-                    }
-
-                    if (editForm.trialDays) {
-                        updates.trialDays = parseInt(editForm.trialDays, 10);
-                    }
-
-                    await window.db.collection('access_requests').doc(editingRequest.id).update(updates);
-
-                    setRequests(prev => prev.map(r =>
-                        r.id === editingRequest.id ? { ...r, ...updates } : r
-                    ));
-
-                    setEditingRequest(null);
-                    alert('Access request updated successfully.');
-                } catch (err) {
-                    console.error('Error updating request:', err);
-                    alert('Failed to update. Check console.');
-                }
-            };
-
-            const filteredRequests = filter === 'all'
-                ? requests
-                : requests.filter(r => r.status === filter);
-
-            const statusCounts = {
-                pending: requests.filter(r => r.status === 'pending').length,
-                approved: requests.filter(r => r.status === 'approved').length,
-                rejected: requests.filter(r => r.status === 'rejected').length,
-                archived: requests.filter(r => r.status === 'archived').length
-            };
-
-            if (loading) {
-                return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading requests...</div>;
-            }
-
-            return (
-                <div style={{ padding: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h2 style={{ margin: 0 }}>Access Requests</h2>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            {['pending', 'approved', 'rejected', 'archived', 'all'].map(f => (
-                                <button
-                                    key={f}
-                                    onClick={() => setFilter(f)}
-                                    style={{
-                                        padding: '0.5rem 1rem',
-                                        background: filter === f ? 'var(--accent)' : 'var(--surface)',
-                                        color: filter === f ? 'white' : 'var(--text-secondary)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        textTransform: 'capitalize'
-                                    }}
-                                >
-                                    {f} {f !== 'all' && `(${statusCounts[f]})`}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {filteredRequests.length === 0 ? (
-                        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--surface)', borderRadius: '8px' }}>
-                            No {filter === 'all' ? '' : filter} requests found.
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {filteredRequests.map(request => (
-                                <div
-                                    key={request.id}
-                                    style={{
-                                        background: 'var(--surface)',
-                                        padding: '1.25rem',
-                                        borderRadius: '8px',
-                                        border: request.status === 'pending' ? '2px solid var(--accent)' : '1px solid var(--border)'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{request.name}</div>
-                                            <div style={{ color: 'var(--text-secondary)' }}>{request.schoolName}</div>
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                                                {request.role} &bull; {request.email}
-                                                {request.phone && ` &bull; ${request.phone}`}
-                                            </div>
-                                            {request.howHeard && (
-                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                                                    Source: {request.howHeard}
-                                                </div>
-                                            )}
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                                                Submitted: {new Date(request.submittedAt).toLocaleString()}
-                                                {request.reviewedAt && ` | Reviewed: ${new Date(request.reviewedAt).toLocaleString()}`}
-                                            </div>
-                                            {request.notes && (
-                                                <div style={{ color: '#f59e0b', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                                                    Note: {request.notes}
-                                                </div>
-                                            )}
-                                            {request.status === 'approved' && request.accessExpiresAt && (
-                                                <div style={{
-                                                    marginTop: '0.5rem',
-                                                    padding: '0.5rem',
-                                                    background: new Date(request.accessExpiresAt) < new Date() ? '#7f1d1d' : '#14532d',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.8rem'
-                                                }}>
-                                                    <span style={{ color: new Date(request.accessExpiresAt) < new Date() ? '#fca5a5' : '#86efac' }}>
-                                                        {request.trialDays} day trial •
-                                                        {new Date(request.accessExpiresAt) < new Date()
-                                                            ? ` Expired ${new Date(request.accessExpiresAt).toLocaleDateString()}`
-                                                            : ` Expires ${new Date(request.accessExpiresAt).toLocaleDateString()}`
-                                                        }
-                                                        {request.dataExpiresAt && ` • Data deletion: ${new Date(request.dataExpiresAt).toLocaleDateString()}`}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                            {request.status === 'pending' ? (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleApprove(request)}
-                                                        style={{
-                                                            padding: '0.5rem 1rem',
-                                                            background: '#22c55e',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            cursor: 'pointer',
-                                                            fontWeight: 'bold'
-                                                        }}
-                                                    >
-                                                        Approve
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleReject(request)}
-                                                        style={{
-                                                            padding: '0.5rem 1rem',
-                                                            background: '#ef4444',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                </>
-                                            ) : request.status === 'archived' ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                                    <span style={{
-                                                        padding: '0.5rem 1rem',
-                                                        background: '#374151',
-                                                        color: '#9ca3af',
-                                                        borderRadius: '6px',
-                                                        fontSize: '0.85rem',
-                                                        textTransform: 'uppercase'
-                                                    }}>
-                                                        ARCHIVED
-                                                    </span>
-                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (!window.confirm(`Restore access for ${request.name}? They will need to create a new school.`)) return;
-                                                                try {
-                                                                    await window.db.collection('access_requests').doc(request.id).update({
-                                                                        status: 'approved',
-                                                                        restoredAt: new Date().toISOString()
-                                                                    });
-                                                                    setRequests(prev => prev.map(r =>
-                                                                        r.id === request.id ? { ...r, status: 'approved' } : r
-                                                                    ));
-                                                                    alert('Access restored. User can now create a new school.');
-                                                                } catch (err) {
-                                                                    console.error('Error restoring:', err);
-                                                                    alert('Failed to restore. Check console.');
-                                                                }
-                                                            }}
-                                                            style={{
-                                                                padding: '0.25rem 0.75rem',
-                                                                background: '#3b82f6',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '4px',
-                                                                fontSize: '0.75rem',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            Restore
-                                                        </button>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (!window.confirm(`Permanently delete access request for ${request.email}?`)) return;
-                                                                try {
-                                                                    await window.db.collection('access_requests').doc(request.id).delete();
-                                                                    setRequests(prev => prev.filter(r => r.id !== request.id));
-                                                                } catch (err) {
-                                                                    console.error('Error deleting:', err);
-                                                                    alert('Failed to delete. Check console.');
-                                                                }
-                                                            }}
-                                                            style={{
-                                                                padding: '0.25rem 0.75rem',
-                                                                background: 'transparent',
-                                                                color: '#ef4444',
-                                                                border: '1px solid #ef4444',
-                                                                borderRadius: '4px',
-                                                                fontSize: '0.75rem',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                                    <span style={{
-                                                        padding: '0.5rem 1rem',
-                                                        background: request.status === 'approved' ? '#166534' : '#7f1d1d',
-                                                        color: request.status === 'approved' ? '#86efac' : '#fca5a5',
-                                                        borderRadius: '6px',
-                                                        fontSize: '0.85rem',
-                                                        textTransform: 'uppercase'
-                                                    }}>
-                                                        {request.status}
-                                                    </span>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                                        {request.status === 'approved' && (
-                                                            <button
-                                                                onClick={() => handleEdit(request)}
-                                                                style={{
-                                                                    padding: '0.25rem 0.75rem',
-                                                                    background: 'transparent',
-                                                                    border: '1px solid var(--border)',
-                                                                    color: 'var(--text-secondary)',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '0.75rem',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (!window.confirm(`Reset ${request.email} for re-onboarding?\n\nThis will:\n- Remove from all schools\n- Delete user profile & memberships\n- Delete access request\n- User will need to request access again`)) return;
-                                                                try {
-                                                                    // Find and remove from all schools
-                                                                    const schoolsSnapshot = await window.db.collection('schools').get();
-                                                                    for (const schoolDoc of schoolsSnapshot.docs) {
-                                                                        const data = schoolDoc.data();
-                                                                        if (data.memberList?.some(m => m.email?.toLowerCase() === request.email.toLowerCase())) {
-                                                                            const updatedList = data.memberList.filter(m =>
-                                                                                m.email?.toLowerCase() !== request.email.toLowerCase()
-                                                                            );
-                                                                            await window.db.collection('schools').doc(schoolDoc.id).update({
-                                                                                memberList: updatedList
-                                                                            });
-                                                                        }
-                                                                    }
-                                                                    // Find user by email and delete their profile + memberships
-                                                                    const usersQuery = await window.db.collection('users')
-                                                                        .where('email', '==', request.email.toLowerCase())
-                                                                        .get();
-                                                                    for (const userDoc of usersQuery.docs) {
-                                                                        // Delete memberships subcollection
-                                                                        const memberships = await window.db.collection('users').doc(userDoc.id)
-                                                                            .collection('memberships').get();
-                                                                        for (const membership of memberships.docs) {
-                                                                            await membership.ref.delete();
-                                                                        }
-                                                                        // Delete user document
-                                                                        await userDoc.ref.delete();
-                                                                    }
-                                                                    // Delete access request
-                                                                    await window.db.collection('access_requests').doc(request.id).delete();
-                                                                    setRequests(prev => prev.filter(r => r.id !== request.id));
-                                                                    alert('User fully reset. They will need to request access again.');
-                                                                } catch (err) {
-                                                                    console.error('Error resetting user:', err);
-                                                                    alert('Failed to reset user. Check console.');
-                                                                }
-                                                            }}
-                                                            style={{
-                                                                padding: '0.25rem 0.75rem',
-                                                                background: 'transparent',
-                                                                color: '#f59e0b',
-                                                                border: '1px solid #f59e0b',
-                                                                borderRadius: '4px',
-                                                                fontSize: '0.75rem',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            Reset User
-                                                        </button>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (!window.confirm(`Permanently delete access request for ${request.email}?`)) return;
-                                                                try {
-                                                                    await window.db.collection('access_requests').doc(request.id).delete();
-                                                                    setRequests(prev => prev.filter(r => r.id !== request.id));
-                                                                } catch (err) {
-                                                                    console.error('Error deleting:', err);
-                                                                    alert('Failed to delete. Check console.');
-                                                                }
-                                                            }}
-                                                            style={{
-                                                                padding: '0.25rem 0.75rem',
-                                                                background: 'transparent',
-                                                                color: '#ef4444',
-                                                                border: '1px solid #ef4444',
-                                                                borderRadius: '4px',
-                                                                fontSize: '0.75rem',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Edit Modal */}
-                    {editingRequest && (
-                        <div style={{
-                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-                        }}>
-                            <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', width: '100%', maxWidth: '450px' }}>
-                                <h3 style={{ margin: '0 0 1rem 0' }}>Edit Access Request</h3>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                                    {editingRequest.name} ({editingRequest.email})
-                                </p>
-
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Trial Days</label>
-                                    <input
-                                        type="number"
-                                        value={editForm.trialDays}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, trialDays: e.target.value }))}
-                                        style={{
-                                            width: '100%', padding: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)',
-                                            borderRadius: '6px', color: 'var(--text)'
-                                        }}
-                                    />
-                                </div>
-
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Access Expires</label>
-                                    <input
-                                        type="date"
-                                        value={editForm.accessExpiresAt}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, accessExpiresAt: e.target.value }))}
-                                        style={{
-                                            width: '100%', padding: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)',
-                                            borderRadius: '6px', color: 'var(--text)'
-                                        }}
-                                    />
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                                        Data will be deleted 30 days after this date.
-                                    </p>
-                                </div>
-
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Notes</label>
-                                    <textarea
-                                        value={editForm.notes}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
-                                        rows={2}
-                                        style={{
-                                            width: '100%', padding: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)',
-                                            borderRadius: '6px', color: 'var(--text)', resize: 'vertical'
-                                        }}
-                                    />
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                    <button
-                                        onClick={() => setEditingRequest(null)}
-                                        style={{ padding: '0.5rem 1rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSaveEdit}
-                                        style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                                    >
-                                        Save Changes
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         };
@@ -18621,7 +17838,6 @@
                         <h2>Site Admin</h2>
                         <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-panel)', padding: '0.25rem', borderRadius: '8px' }}>
                             <button className="btn" style={{ backgroundColor: activeTab === 'schools' ? 'var(--accent)' : 'transparent', color: activeTab === 'schools' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('schools')}>Schools & Users</button>
-                            <button className="btn" style={{ backgroundColor: activeTab === 'requests' ? 'var(--accent)' : 'transparent', color: activeTab === 'requests' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('requests')}>Access Requests</button>
                             <button className="btn" style={{ backgroundColor: activeTab === 'templates' ? 'var(--accent)' : 'transparent', color: activeTab === 'templates' ? 'white' : 'var(--text-secondary)' }} onClick={() => setActiveTab('templates')}>Global Templates</button>
                         </div>
                     </div>
@@ -18706,60 +17922,55 @@
                                                         }}>
                                                             {statusText}
                                                         </span>
+                                                        {trialEnds && (
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                                                {isTrialExpired ? 'Expired' : 'Expires'}: {trialEnds.toLocaleDateString()}
+                                                            </div>
+                                                        )}
                                                         {school.memberCount !== undefined && (
                                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
                                                                 {school.memberCount} roster member{school.memberCount !== 1 ? 's' : ''}
                                                             </div>
                                                         )}
-                                                        {/* Sync from Access Request - only show if school has no name */}
-                                                        {!school.name && school.memberList && school.memberList.length > 0 && (
-                                                            <button
-                                                                onClick={async () => {
-                                                                    // Find admin member email
-                                                                    const adminMember = school.memberList.find(m => m.role === 'Head Coach' || m.isAdmin);
-                                                                    const email = adminMember?.email || school.memberList[0]?.email;
-                                                                    if (!email) {
-                                                                        alert('No member email found to look up access request.');
-                                                                        return;
-                                                                    }
-                                                                    try {
-                                                                        const requestDoc = await window.db.collection('access_requests').doc(email.toLowerCase()).get();
-                                                                        if (!requestDoc.exists) {
-                                                                            alert('No access request found for ' + email);
-                                                                            return;
-                                                                        }
-                                                                        const requestData = requestDoc.data();
-                                                                        if (!requestData.schoolName) {
-                                                                            alert('Access request has no school name.');
-                                                                            return;
-                                                                        }
-                                                                        // Update school with data from access request
-                                                                        await window.db.collection('schools').doc(school.id).update({
-                                                                            name: requestData.schoolName,
-                                                                            'settings.schoolName': requestData.schoolName,
-                                                                            linkedAccessRequest: email.toLowerCase()
-                                                                        });
-                                                                        alert(`Synced school name: "${requestData.schoolName}" from access request.`);
-                                                                    } catch (err) {
-                                                                        console.error('Error syncing from access request:', err);
-                                                                        alert('Error: ' + err.message);
-                                                                    }
-                                                                }}
-                                                                style={{
-                                                                    marginTop: '0.5rem',
-                                                                    marginRight: '0.5rem',
-                                                                    padding: '0.25rem 0.5rem',
-                                                                    fontSize: '0.75rem',
-                                                                    background: '#22c55e',
-                                                                    border: 'none',
-                                                                    color: 'white',
-                                                                    borderRadius: '4px',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                            >
-                                                                Sync from Request
-                                                            </button>
-                                                        )}
+                                                        {/* Extend Trial Button */}
+                                                        <button
+                                                            onClick={async () => {
+                                                                const daysOption = prompt('Extend trial by how many days?\n\nOptions: 7, 14, or 30 days', '7');
+                                                                if (daysOption === null) return;
+                                                                const days = parseInt(daysOption, 10);
+                                                                if (isNaN(days) || days < 1) {
+                                                                    alert('Please enter a valid number of days.');
+                                                                    return;
+                                                                }
+                                                                try {
+                                                                    const currentBilling = school.billing || {};
+                                                                    const currentTrialEnd = currentBilling.trialEndsAt ? new Date(currentBilling.trialEndsAt) : new Date();
+                                                                    const baseDate = currentTrialEnd > new Date() ? currentTrialEnd : new Date();
+                                                                    const newTrialEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+                                                                    await window.db.collection('schools').doc(school.id).update({
+                                                                        'billing.plan': 'trial',
+                                                                        'billing.trialEndsAt': newTrialEnd.toISOString()
+                                                                    });
+                                                                    alert(`Trial extended by ${days} days!\nNew expiration: ${newTrialEnd.toLocaleDateString()}`);
+                                                                } catch (err) {
+                                                                    console.error('Error extending trial:', err);
+                                                                    alert('Error: ' + err.message);
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                marginTop: '0.5rem',
+                                                                marginRight: '0.5rem',
+                                                                padding: '0.25rem 0.5rem',
+                                                                fontSize: '0.75rem',
+                                                                background: '#10b981',
+                                                                border: 'none',
+                                                                color: 'white',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Extend Trial
+                                                        </button>
                                                         <button
                                                             onClick={async () => {
                                                                 const newName = prompt('Edit School Name:', school.name || '');
@@ -18803,23 +18014,6 @@
                                                                 btn.textContent = 'Deleting...';
                                                                 btn.disabled = true;
                                                                 try {
-                                                                    // Archive access requests for all members of this school
-                                                                    if (school.memberList && school.memberList.length > 0) {
-                                                                        const archivePromises = school.memberList.map(async (member) => {
-                                                                            if (member.email) {
-                                                                                const requestDoc = await window.db.collection('access_requests').doc(member.email.toLowerCase()).get();
-                                                                                if (requestDoc.exists) {
-                                                                                    await window.db.collection('access_requests').doc(member.email.toLowerCase()).update({
-                                                                                        status: 'archived',
-                                                                                        archivedAt: new Date().toISOString(),
-                                                                                        archivedReason: 'School deleted by admin',
-                                                                                        previousSchoolName: school.name || school.id
-                                                                                    });
-                                                                                }
-                                                                            }
-                                                                        });
-                                                                        await Promise.all(archivePromises);
-                                                                    }
                                                                     // Delete all subcollections first
                                                                     const subcollections = ['roster', 'plays', 'practice_plans', 'weeks', 'staff'];
                                                                     for (const sub of subcollections) {
@@ -18831,9 +18025,21 @@
                                                                             await batch.commit();
                                                                         }
                                                                     }
+                                                                    // Delete user memberships for this school
+                                                                    if (school.memberList && school.memberList.length > 0) {
+                                                                        for (const member of school.memberList) {
+                                                                            if (member.uid) {
+                                                                                try {
+                                                                                    await window.db.collection('users').doc(member.uid).collection('memberships').doc(school.id).delete();
+                                                                                } catch (memErr) {
+                                                                                    console.warn('Could not delete membership for', member.uid, memErr);
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
                                                                     // Then delete school document
                                                                     await window.db.collection('schools').doc(school.id).delete();
-                                                                    alert('School and all subcollections deleted successfully. Access requests archived.');
+                                                                    alert('School and all subcollections deleted successfully.');
                                                                 } catch (err) {
                                                                     console.error('Error deleting school:', err);
                                                                     alert('Error deleting school: ' + err.message);
@@ -18926,13 +18132,6 @@
                                     })}
                                 </div>
                             )}
-                        </div>
-                    )}
-
-                    {/* ACCESS REQUESTS TAB */}
-                    {activeTab === 'requests' && (
-                        <div className="animation-fade-in card">
-                            <AccessRequestsAdmin currentUser={currentUser} />
                         </div>
                     )}
 
@@ -19093,20 +18292,6 @@
                 }
             };
             const { currentUser, logout } = useAuth();
-
-            // Fetch access request data for trial info
-            const [accessRequestData, setAccessRequestData] = useState(null);
-            useEffect(() => {
-                if (currentUser?.email) {
-                    window.db.collection('access_requests').doc(currentUser.email.toLowerCase()).get()
-                        .then(doc => {
-                            if (doc.exists) {
-                                setAccessRequestData(doc.data());
-                            }
-                        })
-                        .catch(err => console.warn('Could not fetch access request:', err));
-                }
-            }, [currentUser?.email]);
 
             const [activeTab, setActiveTab] = useState('general'); // 'general' | 'members' | 'billing'
             const [expandedCategories, setExpandedCategories] = useState({});
@@ -19504,11 +18689,9 @@
                                     <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: '8px' }}>
                                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account Created</label>
                                         <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', fontSize: '1.1rem' }}>
-                                            {accessRequestData?.reviewedAt
-                                                ? new Date(accessRequestData.reviewedAt).toLocaleDateString()
-                                                : billingInfo?.createdAt
-                                                    ? new Date(billingInfo.createdAt).toLocaleDateString()
-                                                    : 'N/A'}
+                                            {billingInfo?.createdAt
+                                                ? new Date(billingInfo.createdAt).toLocaleDateString()
+                                                : 'N/A'}
                                         </p>
                                     </div>
                                 </div>
@@ -19521,12 +18704,11 @@
                                     <h3 style={{ margin: 0 }}>Subscription Status</h3>
                                 </div>
                                 {(() => {
-                                    // Determine plan status from access request data
-                                    const isTrialActive = accessRequestData?.accessExpiresAt && new Date(accessRequestData.accessExpiresAt) > new Date();
-                                    const trialDays = accessRequestData?.trialDays;
-                                    const trialExpires = accessRequestData?.accessExpiresAt;
-                                    const dataExpires = accessRequestData?.dataExpiresAt;
-                                    const hasPremium = currentPlanStatus?.includes('PREMIUM');
+                                    // Determine plan status from school billing
+                                    const trialExpires = billingInfo?.trialEndsAt;
+                                    const isTrialActive = billingInfo?.plan === 'trial' && trialExpires && new Date(trialExpires) > new Date();
+                                    const trialDays = trialExpires ? Math.ceil((new Date(trialExpires) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+                                    const hasPremium = billingInfo?.plan === 'premium' || currentPlanStatus?.includes('PREMIUM');
 
                                     return (
                                         <>
@@ -32481,7 +31663,7 @@
                         billing: {
                             plan: 'trial',
                             status: 'active',
-                            trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                            trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
                             promoCode: null,
                             subscriptionEndsAt: null,
                             features: {}
@@ -34691,14 +33873,11 @@
             const openPlayDetails = (playId) => setPlayDetailsModalState({ isOpen: true, playId });
             const closePlayDetails = () => setPlayDetailsModalState({ isOpen: false, playId: null });
 
-            // -- SCHOOL INITIALIZATION CHECK --
-            const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null, requestData: null });
-            const [inviteData, setInviteData] = useState(null); // NEW: Invite State
-            const [accessRequestStatus, setAccessRequestStatus] = useState({ checked: false, status: null, data: null }); // 'pending' | 'approved' | 'rejected' | null
-
-            // NOTE: Removed auto-clear wizard useEffect - was too aggressive and cleared wizard
-            // even for uninitialized schools. The 'initialized' flag in Firestore now controls this.
-            const [pendingAccessRequests, setPendingAccessRequests] = useState(0); // Count of pending requests for admin badge
+            // -- SCHOOL INITIALIZATION CHECK (SIMPLIFIED) --
+            const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
+            const [inviteData, setInviteData] = useState(null); // Invite State for team joins
+            const [authCheckComplete, setAuthCheckComplete] = useState(false); // Whether initial auth check is done
+            const [trialExpiredSchool, setTrialExpiredSchool] = useState(null); // School object if trial expired
             const [isViewingAll, setIsViewingAll] = useState(false);
             const [selectedCharts, setSelectedCharts] = useState(DEPTH_CHART_TYPES.map(t => t.id));
 
@@ -34726,34 +33905,34 @@
             // Sync Depth Charts to Firestore
             useAutoSync(authUser, 'depth_charts', depthCharts);
 
-            // Migration Effect
+            // SIMPLIFIED AUTH CHECK EFFECT
+            // New flow: Login → Has school? → Yes: Check trial → Load data or show "Expired"
+            //                              → No: Show Create School wizard
             useEffect(() => {
-                const checkSchoolInit = async () => {
+                const checkUserAccess = async () => {
                     if (!authUser) return;
 
+                    console.log("DEBUG: Starting simplified auth check for:", authUser.email);
+
                     // ADMIN BYPASS: admin@digitaldofo.com skips ALL school setup (admin-only mode)
-                    // This must be at the very top before any other checks
                     if (authUser.email.toLowerCase() === 'admin@digitaldofo.com') {
-                        console.log("DEBUG: admin@digitaldofo.com detected. Bypassing ALL school setup - admin-only mode.");
-                        setAccessRequestStatus({ checked: true, status: 'admin', data: { isAdmin: true } });
-                        setSchoolSetupData({ showWizard: false, schoolId: null });
+                        console.log("DEBUG: admin@digitaldofo.com detected. Bypassing ALL school setup.");
+                        setAuthCheckComplete(true);
                         return;
                     }
 
-                    // LOCAL TESTING BYPASS: Skip access request AND wizard for @test.com emails or localhost
+                    // LOCAL TESTING BYPASS: Skip for @test.com emails or localhost
                     const isLocalhost = window.location.hostname === 'localhost' || window.location.protocol === 'file:';
                     const isTestEmail = authUser.email.toLowerCase().endsWith('@test.com');
                     if (isLocalhost || isTestEmail) {
-                        console.log("DEBUG: Local testing detected. Bypassing access request and wizard.");
-                        const newSchoolId = 'test_school_' + Date.now();
-                        setSchoolSetupData({ showWizard: false, schoolId: newSchoolId });
-                        setAccessRequestStatus({ checked: true, status: 'approved', data: { isLocalBypass: true } }); // FIX: Was missing!
+                        console.log("DEBUG: Local testing detected. Bypassing auth checks.");
+                        setAuthCheckComplete(true);
                         return;
                     }
 
                     try {
-                        // 1. CHECK FOR PENDING INVITES
-                        console.log("Checking for invites for:", authUser.email);
+                        // 1. CHECK FOR PENDING INVITES (for team joins)
+                        console.log("DEBUG: Checking for invites for:", authUser.email);
                         const inviteQuery = await window.db.collection('invites')
                             .where('email', '==', authUser.email.toLowerCase())
                             .where('status', '==', 'pending')
@@ -34761,13 +33940,13 @@
 
                         if (!inviteQuery.empty) {
                             const inviteDoc = inviteQuery.docs[0];
-                            console.log("Found invite:", inviteDoc.id);
+                            console.log("DEBUG: Found invite:", inviteDoc.id);
                             setInviteData({ id: inviteDoc.id, ...inviteDoc.data() });
-                            return; // Stop processing to show invite modal
+                            setAuthCheckComplete(true);
+                            return;
                         }
 
-                        // 1b. CHECK FOR CLAIMED DOMAINS (Auto-Join)
-                        // Skip public email domains - only match custom/school domains
+                        // 2. CHECK FOR CLAIMED DOMAINS (Auto-Join)
                         const PUBLIC_EMAIL_DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'mail.com', 'protonmail.com'];
                         const emailDomain = authUser.email.split('@')[1]?.toLowerCase();
                         if (emailDomain && !PUBLIC_EMAIL_DOMAINS.includes(emailDomain)) {
@@ -34781,234 +33960,86 @@
                                 const sDoc = domainQuery.docs[0];
                                 const sData = sDoc.data();
                                 console.log("DEBUG: Found domain match for school:", sData.name);
-                                // Check if already a member
                                 const memCheck = await window.db.collection('users').doc(authUser.uid).collection('memberships').doc(sDoc.id).get();
                                 if (!memCheck.exists) {
                                     setInviteData({
                                         schoolId: sDoc.id,
                                         schoolName: sData.name,
-                                        role: 'viewer', // Default to viewer for safety
+                                        role: 'viewer',
                                         type: 'domain_match'
                                     });
+                                    setAuthCheckComplete(true);
                                     return;
                                 }
                             }
-                        } else {
-                            console.log("DEBUG: Skipping domain match for public email domain:", emailDomain);
                         }
 
-                        // 1c. PRIMARY SETUP CHECK: DO I HAVE A MEMBERSHIP?
-                        // If user has ANY membership, they are setup. We skip legacy/creation wizard.
-                        // FIX: Ensure User Document actually exists! (Subcollections persist after parent deletion)
+                        // 3. CHECK IF USER HAS A MEMBERSHIP
                         const userDocCall = await window.db.collection('users').doc(authUser.uid).get();
-
-                        console.log("DEBUG: Checking memberships for user:", authUser.uid);
                         const memberships = await window.db.collection('users').doc(authUser.uid).collection('memberships').get();
                         console.log("DEBUG: Membership count:", memberships.size);
 
-                        // Only respect memberships if the user profile is intact
                         if (!memberships.empty && userDocCall.exists) {
-                            console.log("User has active memberships. Skipping wizard.");
-                            return;
-                        }
+                            // User has membership - check their school's trial status
+                            const firstMembership = memberships.docs[0];
+                            const schoolId = firstMembership.id;
+                            console.log("DEBUG: User has membership for school:", schoolId);
 
-                        // 2. CHECK LEGACY / EXISTING ACCESS
-                        // Force Server Fetch to avoid stale cache loop (Wrapped in Try/Catch for robustness)
-                        let accessDoc;
-                        try {
-                            accessDoc = await window.db.collection('config').doc('access').get({ source: 'server' });
-                        } catch (e) {
-                            console.warn("Access config server fetch failed, fallback to cache", e);
-                            accessDoc = await window.db.collection('config').doc('access').get();
-                        }
-
-                        const accessData = accessDoc.exists ? accessDoc.data() : {};
-                        const userValues = Object.values(accessData.userSchools || {});
-
-                        const isPaying = accessData.payingAdmins && accessData.payingAdmins.includes(authUser.email.toLowerCase());
-
-                        // Check if user has a school ID assigned in config OR on their profile
-                        let schoolId = accessData.userSchools ? accessData.userSchools[authUser.email.toLowerCase()] : null;
-
-                        if (!schoolId) {
-                            const userDoc = await window.db.collection('users').doc(authUser.uid).get();
-                            if (userDoc.exists && userDoc.data().schoolId) {
-                                schoolId = userDoc.data().schoolId;
-                            }
-                        }
-
-                        // 3. CHECK FOR ZERO MEMBERSHIPS (Orphaned User -> Check Access Request)
-                        // If no invites, no domain match, and no legacy school ID, check access request status
-                        console.log("DEBUG: inviteData=", inviteData, "schoolId=", schoolId);
-
-                        // 3a. FALLBACK: Check if user email is in any school's memberList (covers edge cases)
-                        if (!inviteData && !schoolId) {
-                            console.log("DEBUG: Checking if user email is in any school memberList...");
-                            try {
-                                const memberQuery = await window.db.collection('schools')
-                                    .where('memberList', 'array-contains', { email: authUser.email.toLowerCase(), role: 'admin' })
-                                    .limit(1)
-                                    .get();
-
-                                if (!memberQuery.empty) {
-                                    schoolId = memberQuery.docs[0].id;
-                                    console.log("DEBUG: Found school via memberList query:", schoolId);
-                                } else {
-                                    // Try alternative memberList format (just email string)
-                                    const memberQuery2 = await window.db.collection('schools').get();
-                                    for (const doc of memberQuery2.docs) {
-                                        const members = doc.data().memberList || [];
-                                        const found = members.some(m =>
-                                            (typeof m === 'string' && m.toLowerCase() === authUser.email.toLowerCase()) ||
-                                            (m && m.email && m.email.toLowerCase() === authUser.email.toLowerCase())
-                                        );
-                                        if (found) {
-                                            schoolId = doc.id;
-                                            console.log("DEBUG: Found school via full scan:", schoolId);
-                                            break;
-                                        }
-                                    }
-                                }
-                            } catch (err) {
-                                console.warn("DEBUG: memberList query failed:", err);
-                            }
-                        }
-
-                        // matthewfinn14@gmail.com gets wizard to create template schools (admin bypass handled earlier)
-                        if (authUser.email.toLowerCase() === 'matthewfinn14@gmail.com' && !inviteData && !schoolId) {
-                            console.log("DEBUG: matthewfinn14@gmail.com detected. Showing school wizard for template creation.");
-                            const newSchoolId = 'school_' + Date.now();
-                            setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
-                            return;
-                        }
-
-                        if (!inviteData && !schoolId) {
-                            console.log("DEBUG: User has no memberships. Checking access request status...");
-
-                            // Check for existing access request (force server fetch to avoid stale cache)
-                            try {
-                                let requestDoc;
-                                try {
-                                    requestDoc = await window.db.collection('access_requests').doc(authUser.email.toLowerCase()).get({ source: 'server' });
-                                } catch (serverErr) {
-                                    console.warn("Access request server fetch failed, fallback to cache:", serverErr);
-                                    requestDoc = await window.db.collection('access_requests').doc(authUser.email.toLowerCase()).get();
-                                }
-                                console.log("DEBUG: Access request doc exists:", requestDoc.exists, "data:", requestDoc.data());
-
-                                if (requestDoc.exists) {
-                                    const requestData = requestDoc.data();
-
-                                    if (requestData.status === 'approved') {
-                                        // Check if access has expired
-                                        if (requestData.accessExpiresAt && new Date(requestData.accessExpiresAt) < new Date()) {
-                                            console.log("Access has expired.");
-                                            setAccessRequestStatus({ checked: true, status: 'expired', data: requestData });
-                                            return;
-                                        }
-                                        // Approved and not expired - show wizard to create school
-                                        console.log("Access approved. Showing school creation wizard.");
-                                        // CRITICAL: Clear any stale school ID from localStorage to ensure wizard shows
-                                        localStorage.removeItem('hc_school_id');
-                                        localStorage.removeItem('hc_school_name');
-                                        // Store trial info for banner display
-                                        if (requestData.accessExpiresAt) {
-                                            localStorage.setItem('dofo_trial_expires', requestData.accessExpiresAt);
-                                            localStorage.setItem('dofo_trial_days', requestData.trialDays || '7');
-                                        }
-                                        const newSchoolId = 'school_' + Date.now();
-                                        // Pass requestData so wizard can pre-populate school name
-                                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId, requestData: requestData });
-                                        return;
-                                    } else if (requestData.status === 'pending') {
-                                        console.log("Access request pending.");
-                                        setAccessRequestStatus({ checked: true, status: 'pending', data: requestData });
-                                        return;
-                                    } else if (requestData.status === 'rejected') {
-                                        console.log("Access request rejected.");
-                                        setAccessRequestStatus({ checked: true, status: 'rejected', data: requestData });
-                                        return;
-                                    } else {
-                                        // Unknown status - log it and treat as pending for safety
-                                        console.log("Access request has unknown status:", requestData.status);
-                                        setAccessRequestStatus({ checked: true, status: requestData.status || 'pending', data: requestData });
-                                        return;
-                                    }
-                                } else {
-                                    // No request exists - show the request form
-                                    console.log("No access request found. Showing request form.");
-                                    setAccessRequestStatus({ checked: true, status: null, data: null });
-                                    return;
-                                }
-
-                            } catch (err) {
-                                console.error("Error checking access request:", err);
-                                // On error, show the request form
-                                setAccessRequestStatus({ checked: true, status: null, data: null });
-                                return;
-                            }
-                        }
-
-                        // If user has a school ID, check if the school exists and load it
-                        if (schoolId) {
+                            // Fetch school to check trial expiration
                             let schoolDoc;
                             try {
                                 schoolDoc = await window.db.collection('schools').doc(schoolId).get({ source: 'server' });
                             } catch (e) {
-                                console.warn("School doc server fetch failed, using cache", e);
                                 schoolDoc = await window.db.collection('schools').doc(schoolId).get();
                             }
 
                             if (schoolDoc.exists) {
-                                const schoolData = schoolDoc.data();
-                                if (!schoolData.initialized) {
-                                    console.log("School not initialized, showing wizard.");
-                                    setSchoolSetupData({ showWizard: true, schoolId: schoolId });
+                                const schoolData = { id: schoolId, ...schoolDoc.data() };
+                                const billing = schoolData.billing || {};
+                                const trialEndsAt = billing.trialEndsAt ? new Date(billing.trialEndsAt) : null;
+                                const now = new Date();
+
+                                // Check if trial has expired (only for trial plans, not premium)
+                                if (billing.plan === 'trial' && trialEndsAt && trialEndsAt < now) {
+                                    console.log("DEBUG: Trial expired for school:", schoolData.name);
+                                    setTrialExpiredSchool(schoolData);
+                                    setAuthCheckComplete(true);
                                     return;
                                 }
-                                // School exists and is initialized - user should be able to access it
-                                // Ensure user has proper membership record (repair if missing)
-                                console.log("DEBUG: Found valid school for user:", schoolId, schoolData.name);
-                                const membershipRef = window.db.collection('users').doc(authUser.uid).collection('memberships').doc(schoolId);
-                                const membershipDoc = await membershipRef.get();
-                                if (!membershipDoc.exists) {
-                                    console.log("DEBUG: Repairing missing membership record...");
-                                    // Find user's role from school memberList
-                                    const members = schoolData.memberList || [];
-                                    const userEntry = members.find(m =>
-                                        (m && m.email && m.email.toLowerCase() === authUser.email.toLowerCase())
-                                    );
-                                    const userRole = userEntry?.role || 'viewer';
-                                    // Create membership
-                                    await window.db.collection('users').doc(authUser.uid).set({
-                                        email: authUser.email,
-                                        updatedAt: new Date().toISOString()
-                                    }, { merge: true });
-                                    await membershipRef.set({
-                                        schoolId: schoolId,
-                                        role: userRole,
-                                        joinedAt: new Date().toISOString()
-                                    });
-                                    console.log("DEBUG: Membership repaired. Reloading...");
+
+                                // Store trial info for banner display
+                                if (billing.plan === 'trial' && trialEndsAt) {
+                                    localStorage.setItem('dofo_trial_expires', billing.trialEndsAt);
+                                    const daysRemaining = Math.ceil((trialEndsAt - now) / (1000 * 60 * 60 * 24));
+                                    localStorage.setItem('dofo_trial_days', daysRemaining.toString());
+                                } else {
+                                    localStorage.removeItem('dofo_trial_expires');
+                                    localStorage.removeItem('dofo_trial_days');
                                 }
-                                // School is valid - let normal app loading continue
-                                return;
-                            } else {
-                                console.log("DEBUG: School", schoolId, "doesn't exist. User may need new school.");
                             }
+
+                            // User has valid membership - proceed to app
+                            setAuthCheckComplete(true);
+                            return;
                         }
 
-                        // Mark as checked even if nothing matched (should rarely happen)
-                        console.log("DEBUG: No setup conditions matched. Marking as checked.");
-                        setAccessRequestStatus({ checked: true, status: null, data: null });
+                        // 4. NO MEMBERSHIP - Show school creation wizard
+                        console.log("DEBUG: User has no memberships. Showing school creation wizard.");
+                        localStorage.removeItem('hc_school_id');
+                        localStorage.removeItem('hc_school_name');
+                        const newSchoolId = 'school_' + Date.now();
+                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                        setAuthCheckComplete(true);
 
                     } catch (err) {
-                        console.error("Error checking school init:", err);
-                        // On error, show access request form as fallback
-                        setAccessRequestStatus({ checked: true, status: null, data: null });
+                        console.error("Error in auth check:", err);
+                        // On error, show wizard as fallback
+                        const newSchoolId = 'school_' + Date.now();
+                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                        setAuthCheckComplete(true);
                     }
                 };
-                checkSchoolInit();
+                checkUserAccess();
             }, [authUser]);
 
             // INVITE ACCEPTANCE HANDLER
@@ -35693,21 +34724,6 @@
                 return () => unsubscribe();
             }, [authUser]);
 
-            // Fetch pending access requests count for admin notification badge
-            useEffect(() => {
-                if (!isSiteAdmin || !window.db) return;
-
-                const unsubscribe = window.db.collection('access_requests')
-                    .where('status', '==', 'pending')
-                    .onSnapshot((snapshot) => {
-                        setPendingAccessRequests(snapshot.size);
-                    }, (error) => {
-                        console.error("Error fetching pending requests:", error);
-                    });
-
-                return () => unsubscribe();
-            }, [isSiteAdmin]);
-
             // Ensure permissions structure integrity on load (if new roles added later)
             useEffect(() => {
                 const newPerms = { ...permissions };
@@ -36391,6 +35407,7 @@
             const [positionBigThreeAssignments, setPositionBigThreeAssignments] = useLocalStorage('oc-dashboard-position-big-three-assignments', {});
             const [customBigThreeGroups, setCustomBigThreeGroups] = useLocalStorage('oc-dashboard-custom-big-three-groups', []);
             // Offseason-specific state
+            const [activeSwotTab, setActiveSwotTab] = useState('culture');
             const [offseasonSwot, setOffseasonSwot] = useLocalStorage('oc-dashboard-offseason-swot', {
                 culture: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
                 practice: { strengths: '', weaknesses: '', opportunities: '', threats: '' },
@@ -40334,10 +39351,10 @@
                 localStorage.setItem('hc_user_id', authUser.uid);
             }
 
-            // Only bypass loading screen if user has completed setup (has both user ID and school ID)
-            // New users must wait for access check to complete
+            // SIMPLIFIED AUTH GATES
+            // Wait for auth check to complete
             const hasCompletedSetup = isCurrentUserData && hasExistingSchool;
-            if (!accessRequestStatus.checked && !schoolSetupData.showWizard && !hasCompletedSetup && !isSiteAdmin) {
+            if (!authCheckComplete && !schoolSetupData.showWizard && !hasCompletedSetup && !isSiteAdmin) {
                 return (
                     <div style={{
                         height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -40351,119 +39368,9 @@
                 );
             }
 
-            // ACCESS REQUEST GATE: Show appropriate screen based on request status
-            // Site admins bypass access request system entirely
-            if (accessRequestStatus.checked && !schoolSetupData.showWizard && !isSiteAdmin) {
-                // No request yet - show form
-                if (accessRequestStatus.status === null) {
-                    return (
-                        <AccessRequestForm
-                            user={authUser}
-                            onSubmit={(status) => setAccessRequestStatus({ checked: true, status, data: { email: authUser.email } })}
-                        />
-                    );
-                }
-                // Request approved - user is cleared to use app
-                // The app will load their data via loadUserDataFromFirestore
-                if (accessRequestStatus.status === 'approved') {
-                    // Fall through to normal app rendering - the data loader handles school association
-                    console.log("DEBUG: Access approved, proceeding to app");
-                }
-                // Request pending - show waiting screen
-                if (accessRequestStatus.status === 'pending') {
-                    return <PendingApprovalScreen user={authUser} requestData={accessRequestStatus.data} />;
-                }
-                // Request rejected
-                if (accessRequestStatus.status === 'rejected') {
-                    return (
-                        <div style={{
-                            height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
-                        }}>
-                            <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '500px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>❌</div>
-                                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#ef4444' }}>
-                                    Request Not Approved
-                                </h1>
-                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-                                    Unfortunately, we weren't able to approve your access request at this time.
-                                    {accessRequestStatus.data?.notes && (
-                                        <span style={{ display: 'block', marginTop: '1rem', color: '#f59e0b' }}>
-                                            Note: {accessRequestStatus.data.notes}
-                                        </span>
-                                    )}
-                                </p>
-                                <button
-                                    onClick={() => window.auth.signOut()}
-                                    style={{ background: '#334155', border: 'none', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer' }}
-                                >
-                                    Sign Out
-                                </button>
-                            </div>
-                        </div>
-                    );
-                }
-                // Access expired
-                if (accessRequestStatus.status === 'expired') {
-                    return (
-                        <div style={{
-                            height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
-                        }}>
-                            <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '500px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏰</div>
-                                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#f59e0b' }}>
-                                    Access Expired
-                                </h1>
-                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-                                    Your trial period has ended. Contact us to continue using DoFO!
-                                </p>
-                                <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                                    Expired: {accessRequestStatus.data?.accessExpiresAt ? new Date(accessRequestStatus.data.accessExpiresAt).toLocaleDateString() : 'Unknown'}
-                                </p>
-                                <button
-                                    onClick={() => window.auth.signOut()}
-                                    style={{ background: '#334155', border: 'none', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer' }}
-                                >
-                                    Sign Out
-                                </button>
-                            </div>
-                        </div>
-                    );
-                }
-                // Account archived (school was deleted)
-                if (accessRequestStatus.status === 'archived') {
-                    return (
-                        <div style={{
-                            height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
-                        }}>
-                            <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '500px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📦</div>
-                                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#6b7280' }}>
-                                    Account Archived
-                                </h1>
-                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-                                    Your school account has been deleted by an administrator.
-                                    {accessRequestStatus.data?.previousSchoolName && (
-                                        <span style={{ display: 'block', marginTop: '0.5rem', color: '#64748b' }}>
-                                            Previous school: {accessRequestStatus.data.previousSchoolName}
-                                        </span>
-                                    )}
-                                </p>
-                                <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                                    Contact an administrator if you believe this was a mistake.
-                                </p>
-                                <button
-                                    onClick={() => window.auth.signOut()}
-                                    style={{ background: '#334155', border: 'none', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer' }}
-                                >
-                                    Sign Out
-                                </button>
-                            </div>
-                        </div>
-                    );
-                }
+            // TRIAL EXPIRED GATE: Show trial expired screen if user's school trial has ended
+            if (trialExpiredSchool && !isSiteAdmin) {
+                return <TrialExpiredScreen user={authUser} school={trialExpiredSchool} />;
             }
 
             // SAFETY: Wait for cloud data to load before rendering main app
@@ -40490,11 +39397,10 @@
                             <div className="onboarding-wizard-wrapper">
                                 <SchoolOnboardingWizard
                                     user={authUser}
-                                    requestData={schoolSetupData.requestData}
                                     existingSchoolId={schoolSetupData.schoolId}
                                     onComplete={async (schoolId) => {
                                         console.log("Onboarding Complete. Fetching new data...");
-                                        setSchoolSetupData({ showWizard: false, schoolId: null, requestData: null });
+                                        setSchoolSetupData({ showWizard: false, schoolId: null });
                                         // Fetch fresh data immediately to populate Dashboard without reload
                                         await loadUserDataFromFirestore(authUser.uid);
                                         // Ensure School ID is set in local state (in case loader didn't catch it yet)
@@ -40755,30 +39661,6 @@
                                     </CollapsibleCategory>
                                 )}
 
-                                {!sidebarCollapsed && isSiteAdmin && (
-                                    <div style={{ marginTop: '0.25rem' }}>
-                                        <select
-                                            className="form-select"
-                                            value={currentUserId}
-                                            onChange={(e) => {
-                                                setCurrentUserId(e.target.value);
-                                                setView('landing');
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                fontSize: '0.8rem',
-                                                padding: '0.4rem',
-                                                background: 'var(--surface)',
-                                                border: '1px solid var(--border)',
-                                                color: 'var(--accent)'
-                                            }}
-                                        >
-                                            {staff.map(s => (
-                                                <option key={s.id} value={s.id}>View as: {s.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
 
                                 {!sidebarCollapsed && <div style={{ borderBottom: '1px solid var(--border)', marginTop: '0.5rem', marginBottom: '0.5rem' }}></div>}
                             </div>
@@ -40987,32 +39869,10 @@
                                         <button
                                             className={`nav-item ${view === 'admin' ? 'active' : ''}`}
                                             onClick={() => setView('admin')}
-                                            style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem', position: 'relative' }}
+                                            style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.75rem 0' : '0.5rem 1rem' }}
                                         >
                                             <Icon name="Shield" size={16} />
                                             {!sidebarCollapsed && <span style={{ marginLeft: '8px' }}>Site Admin</span>}
-                                            {/* Notification badge for pending access requests */}
-                                            {pendingAccessRequests > 0 && (
-                                                <span style={{
-                                                    position: 'absolute',
-                                                    top: sidebarCollapsed ? '2px' : '50%',
-                                                    right: sidebarCollapsed ? '2px' : '8px',
-                                                    transform: sidebarCollapsed ? 'none' : 'translateY(-50%)',
-                                                    background: '#ef4444',
-                                                    color: 'white',
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 'bold',
-                                                    minWidth: '18px',
-                                                    height: '18px',
-                                                    borderRadius: '9px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    padding: '0 4px'
-                                                }}>
-                                                    {pendingAccessRequests}
-                                                </span>
-                                            )}
                                         </button>
                                     )}
                                     <button
@@ -42514,7 +41374,6 @@
                                             { key: 'specialTeams', label: 'Special Teams', icon: 'Star', color: '#22c55e' },
                                             { key: 'gameDay', label: 'Game Day', icon: 'Calendar', color: '#f59e0b' }
                                         ];
-                                        const [activeSwotTab, setActiveSwotTab] = useState('culture');
                                         const currentSwot = offseasonSwot[activeSwotTab] || { strengths: '', weaknesses: '', opportunities: '', threats: '' };
                                         const updateSwot = (field, value) => {
                                             setOffseasonSwot({
