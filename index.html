@@ -1498,6 +1498,12 @@
                     return { success: false, reason: 'no_school' };
                 }
 
+                // Skip sync if data is undefined - Firestore doesn't accept undefined values
+                if (data === undefined) {
+                    console.log(`Skipping sync for ${dataType} - data is undefined`);
+                    return { success: false, reason: 'undefined_data' };
+                }
+
                 const docRef = window.db.collection('schools').doc(schoolId);
                 console.log(`Syncing ${dataType} to School (${schoolId})...`);
 
