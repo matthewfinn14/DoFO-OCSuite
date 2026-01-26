@@ -22,7 +22,9 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     weeks,
     currentWeekId,
     gamePlans,
-    scripts
+    scripts,
+    addPlay,
+    updateWeek
   } = useSchool();
 
   // Local state
@@ -134,12 +136,52 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
   // Week stats
   const weekStats = useMemo(() => {
     const installList = currentWeek?.installList || [];
+    const newInstallIds = currentWeek?.newInstallIds || [];
     return {
       uniquePlaysCount: installList.length,
-      newPlaysCount: 0, // TODO: track new plays
+      newPlaysCount: newInstallIds.length,
       totalScriptSlots: 0 // TODO: calculate from scripts
     };
   }, [currentWeek]);
+
+  // Quick add play handler
+  const handleQuickAdd = useCallback(async () => {
+    if (!quickAddValue.trim()) return;
+
+    // Parse the input - support "FORMATION PLAY_NAME" format
+    const parts = quickAddValue.trim().split(/\s+/);
+    let formation = '';
+    let name = quickAddValue.trim();
+
+    // If multiple words and first word looks like a formation (all caps, short)
+    if (parts.length > 1 && parts[0].length <= 10 && parts[0] === parts[0].toUpperCase()) {
+      formation = parts[0];
+      name = parts.slice(1).join(' ');
+    }
+
+    // Create the new play
+    const playData = {
+      name: name.toUpperCase(),
+      formation: formation,
+      phase: playBankPhase,
+      archived: false
+    };
+
+    const playId = await addPlay(playData);
+
+    // Add to install list if we have a current week
+    if (currentWeek && playId) {
+      const installList = currentWeek.installList || [];
+      const newInstallIds = currentWeek.newInstallIds || [];
+      await updateWeek(currentWeekId, {
+        installList: [...installList, playId],
+        newInstallIds: [...newInstallIds, playId]
+      });
+    }
+
+    // Clear the input
+    setQuickAddValue('');
+  }, [quickAddValue, playBankPhase, addPlay, currentWeek, currentWeekId, updateWeek]);
 
   // Render a single play row
   const renderPlayRow = useCallback((play) => {
@@ -358,6 +400,32 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
               className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded bg-white text-slate-800 placeholder-slate-400"
             />
           </div>
+        </div>
+
+        {/* Quick Add */}
+        <div className="p-2 bg-slate-50 border-b border-slate-200">
+          <div className="flex gap-1.5">
+            <input
+              placeholder="Quick add: FORM PLAY NAME"
+              value={quickAddValue}
+              onChange={e => setQuickAddValue(e.target.value.toUpperCase())}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleQuickAdd();
+              }}
+              className="flex-1 px-2.5 py-1.5 text-sm border border-slate-300 rounded bg-white text-slate-800 placeholder-slate-400"
+            />
+            <button
+              onClick={handleQuickAdd}
+              disabled={!quickAddValue.trim()}
+              className="px-2.5 py-1.5 bg-emerald-500 text-white rounded text-sm font-semibold hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              title="Add play to playbook and install"
+            >
+              <PlusCircle size={14} />
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-1">
+            Press Enter to add play{currentWeek ? ' and install for this week' : ''}
+          </p>
         </div>
 
         {/* Content */}
