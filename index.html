@@ -1295,8 +1295,7 @@
                             console.log("No school data found for user.");
                             localStorage.removeItem('hc_school_id');
                         }
-
-                        localStorage.removeItem('hc_school_id');
+                        // BUG FIX: Removed unconditional localStorage.removeItem('hc_school_id') that was breaking invite auto-join
                     }
                 } else {
                     // NEW: User Doc does not exist (New User or Deleted Doc).
@@ -34557,6 +34556,8 @@
 
 
             const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+            // SAFETY LOCK: Prevents syncing stale data before cloud data loads
+            const [dataLoaded, setDataLoaded] = useState(false);
             const [view, setView] = useState('staff-hub'); // Default to Alignment Dashboard
             const [showManageWeekModal, setShowManageWeekModal] = useState(false);
             const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage('hc-sidebar-collapsed', false);
@@ -34631,6 +34632,7 @@
                         console.log("DEBUG: Local testing detected. Bypassing access request and wizard.");
                         const newSchoolId = 'test_school_' + Date.now();
                         setSchoolSetupData({ showWizard: false, schoolId: newSchoolId });
+                        setAccessRequestStatus({ checked: true, status: 'approved', data: { isLocalBypass: true } }); // FIX: Was missing!
                         return;
                     }
 
@@ -35163,20 +35165,24 @@
             });
 
             // --- CRITICAL DATA SYNC (FINAL AUDIT) ---
+            // FIXED: Added dataLoaded guards to prevent overwriting cloud data during initial boot
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-position-names', JSON.stringify(positionNames));
                 if (authUser) syncToFirestore(authUser.uid, 'positionNames', positionNames);
-            }, [positionNames]);
+            }, [positionNames, dataLoaded]);
 
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('wiz_ol_library', JSON.stringify(wizLibrary));
                 if (authUser) syncToFirestore(authUser.uid, 'wizLib', wizLibrary);
-            }, [wizLibrary]);
+            }, [wizLibrary, dataLoaded]);
 
 
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
-            }, [plays]);
+            }, [plays, dataLoaded]);
 
             // Sync Weeks (Practice Plans) to Firestore
             useEffect(() => {
@@ -35196,9 +35202,9 @@
 
 
             // --- LOADING STATE & SAFETY LOCK ---
-            // 'dataLoaded' prevents the app from auto-syncing "empty" initial state back to the cloud.
+            // 'dataLoaded' (defined at top of App) prevents the app from auto-syncing "empty" initial state back to the cloud.
             // It remains false until loadUserDataFromFirestore is finished or fails.
-            const [dataLoaded, setDataLoaded] = useState(false);
+            // NOTE: dataLoaded state moved to line ~34559 to be available for earlier useEffects
 
             useEffect(() => {
                 const initUser = async () => {
@@ -36604,36 +36610,31 @@
 
 
             // Save plays to localStorage whenever it changes
-            useEffect(() => {
-                localStorage.setItem('oc-dashboard-plays', JSON.stringify(plays));
-            }, [plays]);
+            // NOTE: Duplicate removed - already handled at line ~35178 with dataLoaded guard
 
             // Save roster to localStorage whenever it changes
+            // NOTE: Firestore sync removed - handled by useAutoSync at line ~35245
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-roster', JSON.stringify(roster));
-                // Cloud Sync
-                if (currentUser && window.db) {
-                    syncToFirestore(currentUser.uid, 'roster', roster);
-                }
-            }, [roster, currentUser]);
+            }, [roster, dataLoaded]);
 
             // Save depth chart to localStorage whenever it changes
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-depthchart', JSON.stringify(depthChart));
-                // Cloud Sync
-                if (currentUser && window.db) {
-                    syncToFirestore(currentUser.uid, 'depthChart', depthChart);
+                // Cloud Sync (keeping this one as depthChart is different from depthCharts)
+                if (authUser && window.db) {
+                    syncToFirestore(authUser.uid, 'depthChart', depthChart);
                 }
-            }, [depthChart, currentUser]);
+            }, [depthChart, dataLoaded, authUser]);
 
             // Save staff to localStorage whenever it changes
+            // NOTE: Firestore sync removed - handled by useAutoSync at line ~35248
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-staff', JSON.stringify(staff));
-                // Cloud Sync
-                if (currentUser && window.db) {
-                    syncToFirestore(currentUser.uid, 'staff', staff);
-                }
-            }, [staff, currentUser]);
+            }, [staff, dataLoaded]);
 
             // Save team logo to localStorage whenever it changes
             useEffect(() => {
@@ -40335,6 +40336,23 @@
                         </div>
                     );
                 }
+            }
+
+            // SAFETY: Wait for cloud data to load before rendering main app
+            // This prevents stale localStorage data from being displayed
+            // Skip this check for new users (no school) or if wizard is showing
+            if (!dataLoaded && hasExistingSchool && !schoolSetupData.showWizard) {
+                return (
+                    <div style={{
+                        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white'
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>Loading...</div>
+                            <div style={{ color: '#94a3b8' }}>Syncing your data...</div>
+                        </div>
+                    </div>
+                );
             }
 
             return (
