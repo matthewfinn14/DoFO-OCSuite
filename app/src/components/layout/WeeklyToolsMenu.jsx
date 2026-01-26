@@ -47,7 +47,7 @@ const OFFSEASON_MENU = [
 // Season menu items
 const SEASON_MENU = [
   { to: (weekId) => `/week/${weekId}/notes`, icon: FileText, label: 'Meeting Notes', usesWeekId: true },
-  { to: (weekId) => `/week/${weekId}/practice`, icon: Megaphone, label: 'Practice Plans', usesWeekId: true },
+  { to: (weekId) => `/week/${weekId}/practice`, icon: Megaphone, label: 'Practice Planner', usesWeekId: true },
   { to: (weekId) => `/week/${weekId}/install`, icon: Layers, label: 'Install', usesWeekId: true },
   { to: (weekId) => `/week/${weekId}/depth-charts`, icon: Users, label: 'Depth Charts', usesWeekId: true },
   { to: (weekId) => `/week/${weekId}/game-plan`, icon: Clipboard, label: 'Game Planner', usesWeekId: true },

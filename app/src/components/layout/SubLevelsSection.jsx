@@ -82,7 +82,7 @@ function PracticePlansCollapsible({ levelId, weeks }) {
         className="w-full flex items-center gap-2 pl-6 py-1.5 text-left text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 rounded-md"
       >
         <Clipboard size={12} />
-        <span className="flex-1">Practice Plans</span>
+        <span className="flex-1">Practice Planner</span>
         {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </button>
       {isOpen && (

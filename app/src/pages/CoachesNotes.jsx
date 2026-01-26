@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +35,13 @@ const ROLE_MAP = {
   'STC': ['Special Teams Coordinator', 'special_teams_coordinator', 'STC', 'ST Coordinator']
 };
 
+// Phase colors for position group rows
+const PHASE_COLORS = {
+  OFFENSE: { bg: 'bg-sky-500/10', border: 'border-l-sky-500', text: 'text-sky-400' },
+  DEFENSE: { bg: 'bg-red-500/10', border: 'border-l-red-500', text: 'text-red-400' },
+  SPECIAL_TEAMS: { bg: 'bg-purple-500/10', border: 'border-l-purple-500', text: 'text-purple-400' }
+};
+
 export default function CoachesNotes() {
   const { weekId } = useParams();
   const { weeks, currentWeekId, meetingNotes, updateMeetingNotes, setupConfig, staff } = useSchool();
@@ -59,14 +66,55 @@ export default function CoachesNotes() {
   // Get position groups from setup config
   const positionGroups = setupConfig?.positionGroups || { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] };
 
+  // Build list of position group coaches with their assigned staff
+  const positionGroupCoaches = useMemo(() => {
+    const coaches = [];
+
+    ['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].forEach(phase => {
+      const phaseGroups = positionGroups[phase] || [];
+      phaseGroups.forEach(group => {
+        if (group.coachId) {
+          const staffMember = staff?.find(s => s.id === group.coachId);
+          if (staffMember) {
+            // Check if this staff member is already added (might coach multiple groups)
+            const existing = coaches.find(c => c.staffId === staffMember.id);
+            if (existing) {
+              // Add this group to their list
+              existing.groups.push({ id: group.id, name: group.name, abbrev: group.abbrev });
+            } else {
+              coaches.push({
+                id: `pg_${staffMember.id}`,
+                staffId: staffMember.id,
+                name: staffMember.name,
+                phase,
+                groups: [{ id: group.id, name: group.name, abbrev: group.abbrev }]
+              });
+            }
+          }
+        }
+      });
+    });
+
+    return coaches;
+  }, [positionGroups, staff]);
+
+  // Get custom coaches (ones manually added that aren't coordinators or position group coaches)
+  const customCoaches = useMemo(() => {
+    const pgCoachNames = positionGroupCoaches.map(c => c.name);
+    return coaches.filter(c =>
+      !DEFAULT_COACHES.includes(c) &&
+      !pgCoachNames.includes(c)
+    );
+  }, [coaches, positionGroupCoaches]);
+
   // Check if current user can edit a coach's row
   const canEdit = isHeadCoach || isTeamAdmin || isSiteAdmin;
 
-  const canEditRow = (coach) => {
+  const canEditRow = (coach, staffId = null) => {
     // Head coach, team admin, site admin can edit everything
     if (canEdit) return true;
 
-    // Check role mapping
+    // Check role mapping for coordinators
     const allowedRoles = ROLE_MAP[coach] || [coach];
     const userRole = user?.role || '';
 
@@ -78,6 +126,21 @@ export default function CoachesNotes() {
     // Match by name for custom coaches
     if (user?.displayName === coach || user?.email?.split('@')[0] === coach.toLowerCase()) {
       return true;
+    }
+
+    // Match by staff ID for position group coaches
+    if (staffId) {
+      const staffMember = staff?.find(s => s.id === staffId);
+      if (staffMember) {
+        // Check if user email matches staff email
+        if (staffMember.email && user?.email === staffMember.email) {
+          return true;
+        }
+        // Check if user display name matches staff name
+        if (user?.displayName === staffMember.name) {
+          return true;
+        }
+      }
     }
 
     return false;
@@ -227,9 +290,9 @@ export default function CoachesNotes() {
               </tr>
             </thead>
             <tbody>
-              {coaches.map((coach, idx) => {
+              {/* Coordinators Section */}
+              {DEFAULT_COACHES.map((coach, idx) => {
                 const editable = canEditRow(coach);
-                const isDefault = DEFAULT_COACHES.includes(coach);
 
                 return (
                   <tr
@@ -237,18 +300,7 @@ export default function CoachesNotes() {
                     className={`${idx % 2 === 0 ? 'bg-slate-900' : 'bg-slate-900/50'} border-t border-slate-800`}
                   >
                     <td className="px-4 py-2 sticky left-0 bg-inherit z-10">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sky-400">{coach}</span>
-                        {canEdit && !isDefault && (
-                          <button
-                            onClick={() => handleRemoveCoach(coach)}
-                            className="p-1 text-slate-500 hover:text-red-400"
-                            title="Remove coach"
-                          >
-                            <X size={12} />
-                          </button>
-                        )}
-                      </div>
+                      <span className="font-semibold text-sky-400">{coach}</span>
                     </td>
                     {NOTE_CATEGORIES.map(cat => (
                       <td key={cat.key} className="px-2 py-2">
@@ -269,6 +321,120 @@ export default function CoachesNotes() {
                   </tr>
                 );
               })}
+
+              {/* Position Group Coaches by Phase */}
+              {['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].map(phase => {
+                const phaseCoaches = positionGroupCoaches.filter(c => c.phase === phase);
+                if (phaseCoaches.length === 0) return null;
+
+                const phaseColors = PHASE_COLORS[phase];
+                const phaseLabel = phase === 'SPECIAL_TEAMS' ? 'Special Teams' : phase.charAt(0) + phase.slice(1).toLowerCase();
+
+                return (
+                  <React.Fragment key={phase}>
+                    {/* Phase Header Row */}
+                    <tr className="bg-slate-800/50">
+                      <td
+                        colSpan={NOTE_CATEGORIES.length + 1}
+                        className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wide ${phaseColors.text} border-l-2 ${phaseColors.border}`}
+                      >
+                        {phaseLabel} Position Groups
+                      </td>
+                    </tr>
+
+                    {/* Position Group Coach Rows */}
+                    {phaseCoaches.map((pgCoach, idx) => {
+                      const editable = canEditRow(pgCoach.name, pgCoach.staffId);
+                      const groupAbbrevs = pgCoach.groups.map(g => g.abbrev || g.name).join(', ');
+
+                      return (
+                        <tr
+                          key={pgCoach.id}
+                          className={`${phaseColors.bg} border-t border-slate-800 border-l-2 ${phaseColors.border}`}
+                        >
+                          <td className={`px-4 py-2 sticky left-0 z-10 ${phaseColors.bg}`}>
+                            <div className="flex flex-col">
+                              <span className={`font-semibold ${phaseColors.text}`}>{pgCoach.name}</span>
+                              <span className="text-[0.65rem] text-slate-500">{groupAbbrevs}</span>
+                            </div>
+                          </td>
+                          {NOTE_CATEGORIES.map(cat => (
+                            <td key={cat.key} className="px-2 py-2">
+                              <textarea
+                                value={data[pgCoach.name]?.[cat.key] || ''}
+                                onChange={(e) => editable && updateNote(pgCoach.name, cat.key, e.target.value)}
+                                placeholder={editable ? `${pgCoach.name} ${cat.label.toLowerCase()}...` : ''}
+                                readOnly={!editable}
+                                rows={3}
+                                className={`w-full px-2 py-1.5 text-xs rounded border resize-y min-h-[60px] ${
+                                  editable
+                                    ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none'
+                                    : 'bg-slate-800/50 border-slate-700/50 text-slate-400 cursor-default'
+                                }`}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+
+              {/* Custom Coaches Section */}
+              {customCoaches.length > 0 && (
+                <>
+                  <tr className="bg-slate-800/50">
+                    <td
+                      colSpan={NOTE_CATEGORIES.length + 1}
+                      className="px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-slate-400"
+                    >
+                      Additional Coaches
+                    </td>
+                  </tr>
+                  {customCoaches.map((coach, idx) => {
+                    const editable = canEditRow(coach);
+
+                    return (
+                      <tr
+                        key={coach}
+                        className={`${idx % 2 === 0 ? 'bg-slate-900' : 'bg-slate-900/50'} border-t border-slate-800`}
+                      >
+                        <td className="px-4 py-2 sticky left-0 bg-inherit z-10">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-300">{coach}</span>
+                            {canEdit && (
+                              <button
+                                onClick={() => handleRemoveCoach(coach)}
+                                className="p-1 text-slate-500 hover:text-red-400"
+                                title="Remove coach"
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        {NOTE_CATEGORIES.map(cat => (
+                          <td key={cat.key} className="px-2 py-2">
+                            <textarea
+                              value={data[coach]?.[cat.key] || ''}
+                              onChange={(e) => editable && updateNote(coach, cat.key, e.target.value)}
+                              placeholder={editable ? `${coach} ${cat.label.toLowerCase()}...` : ''}
+                              readOnly={!editable}
+                              rows={3}
+                              className={`w-full px-2 py-1.5 text-xs rounded border resize-y min-h-[60px] ${
+                                editable
+                                  ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none'
+                                  : 'bg-slate-800/50 border-slate-700/50 text-slate-400 cursor-default'
+                              }`}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </>
+              )}
             </tbody>
           </table>
         </div>

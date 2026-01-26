@@ -73,8 +73,8 @@ const PERMISSION_CATEGORIES = [
     id: 'practice',
     label: 'Practice',
     permissions: [
-      { id: 'view_practice', label: 'View Practice Plans' },
-      { id: 'edit_practice', label: 'Edit Practice Plans' },
+      { id: 'view_practice', label: 'View Practice Planner' },
+      { id: 'edit_practice', label: 'Edit Practice Planner' },
       { id: 'view_scripts', label: 'View Scripts' },
       { id: 'edit_scripts', label: 'Edit Scripts' }
     ]

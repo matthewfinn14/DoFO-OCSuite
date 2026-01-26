@@ -177,7 +177,7 @@ export default function Sidebar() {
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/practice`}
                     icon={Megaphone}
-                    label="Practice Plans"
+                    label="Practice Planner"
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/install`}

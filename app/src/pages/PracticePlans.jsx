@@ -27,6 +27,15 @@ import {
 // Days of the week
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
+// Short day abbreviations
+const DAY_ABBREV = {
+  Monday: 'M',
+  Tuesday: 'T',
+  Wednesday: 'W',
+  Thursday: 'TH',
+  Friday: 'F'
+};
+
 // Map day names to URL-friendly slugs
 const DAY_SLUGS = {
   'Monday': 'monday',
@@ -387,7 +396,7 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, on
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
           <div className="flex items-center gap-3">
             <Printer size={20} className="text-sky-400" />
-            <h3 className="text-lg font-semibold text-white">Print Practice Plans</h3>
+            <h3 className="text-lg font-semibold text-white">Print Practice Planner</h3>
           </div>
           <button
             onClick={onClose}
@@ -454,7 +463,7 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, on
                         : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                     } ${!hasPlan ? 'opacity-50' : ''}`}
                   >
-                    {day.slice(0, 3)}
+                    {DAY_ABBREV[day]}
                     {hasPlan && <span className="block text-xs opacity-75">{practicePlans[day].segments.length} seg</span>}
                   </button>
                 );
@@ -1178,6 +1187,7 @@ export default function PracticePlans() {
           startTime: '15:30',
           warmupDuration: 10,
           transitionTime: 2,
+          transitionSeconds: 0,
           showPeriodZero: true,
           isTwoPlatoon: false,
           prePracticeNotes: '',
@@ -1196,6 +1206,7 @@ export default function PracticePlans() {
     startTime: '15:30',
     warmupDuration: 10,
     transitionTime: 2,
+    transitionSeconds: 0,
     showPeriodZero: true,
     isTwoPlatoon: false,
     prePracticeNotes: '',
@@ -1257,7 +1268,9 @@ export default function PracticePlans() {
 
     const [startH, startM] = currentPlan.startTime.split(':').map(Number);
     const warmup = parseInt(currentPlan.warmupDuration) || 0;
-    const transition = parseInt(currentPlan.transitionTime) || 0;
+    const transitionMin = parseInt(currentPlan.transitionTime) || 0;
+    const transitionSec = parseInt(currentPlan.transitionSeconds) || 0;
+    const transition = transitionMin + (transitionSec / 60);
 
     let elapsedMinutes = warmup;
     for (let i = 0; i < index; i++) {
@@ -1278,10 +1291,12 @@ export default function PracticePlans() {
   // Calculate total practice duration
   const totalDuration = useMemo(() => {
     const warmup = parseInt(currentPlan.warmupDuration) || 0;
-    const transition = parseInt(currentPlan.transitionTime) || 0;
+    const transitionMin = parseInt(currentPlan.transitionTime) || 0;
+    const transitionSec = parseInt(currentPlan.transitionSeconds) || 0;
+    const transitionTotal = transitionMin + (transitionSec / 60);
     const segmentTotal = currentPlan.segments.reduce((sum, seg) => sum + (parseInt(seg.duration) || 0), 0);
-    const transitions = Math.max(0, currentPlan.segments.length - 1) * transition;
-    return warmup + segmentTotal + transitions;
+    const transitions = Math.max(0, currentPlan.segments.length - 1) * transitionTotal;
+    return Math.round(warmup + segmentTotal + transitions);
   }, [currentPlan]);
 
   // Calculate end time based on start time and total duration
@@ -1290,9 +1305,12 @@ export default function PracticePlans() {
     const [hours, minutes] = startTimeStr.split(':').map(Number);
     const startMinutes = hours * 60 + minutes;
     const endMinutes = startMinutes + totalDuration;
-    const endHours = Math.floor(endMinutes / 60) % 24;
+    const endHours24 = Math.floor(endMinutes / 60) % 24;
     const endMins = endMinutes % 60;
-    return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+    // Convert to 12-hour format
+    const period = endHours24 >= 12 ? 'PM' : 'AM';
+    const endHours12 = endHours24 % 12 || 12;
+    return `${endHours12}:${endMins.toString().padStart(2, '0')} ${period}`;
   }, [currentPlan.startTime, totalDuration]);
 
   // Update plan helper
@@ -1487,7 +1505,7 @@ export default function PracticePlans() {
     <div className="h-full flex flex-col bg-slate-900">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-slate-700 bg-slate-800">
-        <div className="px-6 py-4">
+        <div className="px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
@@ -1497,72 +1515,117 @@ export default function PracticePlans() {
                 <ArrowLeft size={20} className="text-slate-400" />
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-white">Practice Plans</h1>
-                <p className="text-sm text-slate-400">
+                <h1 className="text-lg font-bold text-white">Practice Planner</h1>
+                <p className="text-xs text-slate-400">
                   {week.name}{week.opponent ? ` vs ${week.opponent}` : ''}
                 </p>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              {/* Mode Toggle */}
-              <div className="flex bg-slate-700 rounded-lg p-1">
-                <button
-                  onClick={() => setMode('plan')}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    mode === 'plan'
-                      ? 'bg-sky-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Plans
-                </button>
-                <button
-                  onClick={() => setMode('script')}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    mode === 'script'
-                      ? 'bg-sky-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Scripts
-                </button>
+              {/* Day Tabs - inline with title */}
+              <div className="flex flex-col gap-1 ml-4">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Select Day</span>
+                <div className="flex gap-1">
+                  {DAYS.map(day => {
+                    const dayPlan = practicePlans[day];
+                    const hasSegments = dayPlan?.segments?.length > 0;
+
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => navigateToDay(day)}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+                          selectedDay === day
+                            ? 'bg-sky-600 text-white'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        {DAY_ABBREV[day]}
+                        {hasSegments && (
+                          <CheckCircle2 size={12} className={selectedDay === day ? 'text-sky-200' : 'text-emerald-400'} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Print Button */}
-              <button
-                onClick={() => setShowPrintModal(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
-              >
-                <Printer size={16} />
-                Print
-              </button>
+              {/* Templates */}
+              <div className="flex flex-col gap-1 ml-4">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Template</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowImportTemplateModal(true)}
+                    className="h-8 flex items-center gap-1 px-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-xs"
+                    title="Load a saved template into this day"
+                  >
+                    <LayoutTemplate size={12} />
+                    Import
+                  </button>
+                  <button
+                    onClick={() => setShowSaveTemplateModal(true)}
+                    className="h-8 flex items-center gap-1 px-2 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded-lg hover:bg-emerald-600/30 text-xs"
+                    title="Save this day's plan as a reusable template"
+                  >
+                    <Save size={12} />
+                    Save
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Day Tabs */}
-          <div className="flex gap-2 mt-4">
-            {DAYS.map(day => {
-              const dayPlan = practicePlans[day];
-              const hasSegments = dayPlan?.segments?.length > 0;
+            <div className="flex items-center gap-3 ml-6">
+              {/* Mode Toggle */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Viewing</span>
+                <div className="h-8 flex items-center bg-slate-700 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setMode('plan')}
+                    className={`h-7 px-3 text-sm font-medium rounded-md transition-colors ${
+                      mode === 'plan'
+                        ? 'bg-sky-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Plans
+                  </button>
+                  <button
+                    onClick={() => setMode('script')}
+                    className={`h-7 px-3 text-sm font-medium rounded-md transition-colors ${
+                      mode === 'script'
+                        ? 'bg-sky-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Scripts
+                  </button>
+                </div>
+              </div>
 
-              return (
-                <button
-                  key={day}
-                  onClick={() => navigateToDay(day)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                    selectedDay === day
-                      ? 'bg-sky-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
-                >
-                  {day.slice(0, 3)}
-                  {hasSegments && (
-                    <CheckCircle2 size={14} className={selectedDay === day ? 'text-sky-200' : 'text-emerald-400'} />
-                  )}
-                </button>
-              );
-            })}
+              {/* Print Section */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Print For</span>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={coachFilter}
+                    onChange={e => setCoachFilter(e.target.value)}
+                    className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  >
+                    <option value="ALL">All</option>
+                    <option value="GENERAL">General</option>
+                    {(staff || []).map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setShowPrintModal(true)}
+                    className="h-8 flex items-center gap-2 px-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                  >
+                    <Printer size={16} />
+                    Print
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1576,33 +1639,30 @@ export default function PracticePlans() {
               {/* View Level Selector (Program view only - to see varsity or sub-level plans) */}
               {hasMultipleLevels && !activeLevelId && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Viewing</span>
-                  <div className="flex items-center gap-1.5">
-                    <Layers size={14} className="text-slate-400" />
-                    <select
-                      value={viewingLevelId || 'varsity'}
-                      onChange={e => setViewingLevelId(e.target.value === 'varsity' ? null : e.target.value)}
-                      className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                    >
-                      <option value="varsity">Varsity</option>
-                      {programLevels.map(level => (
-                        <option key={level.id} value={level.id}>{level.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Level</span>
+                  <select
+                    value={viewingLevelId || 'varsity'}
+                    onChange={e => setViewingLevelId(e.target.value === 'varsity' ? null : e.target.value)}
+                    className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  >
+                    <option value="varsity">Varsity</option>
+                    {programLevels.map(level => (
+                      <option key={level.id} value={level.id}>{level.name}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
               {/* Timer Source (only show for sub-levels, not varsity or program view) */}
               {hasMultipleLevels && activeLevelId && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Timer Sync</span>
-                  <div className="flex items-center gap-1.5">
+                  <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Timer Sync</span>
+                  <div className="h-8 flex items-center gap-1.5">
                     <Link2 size={14} className="text-slate-400" />
                     <select
                       value={currentPlan.timerSource || 'own'}
                       onChange={e => updateCurrentPlan({ timerSource: e.target.value })}
-                      className={`px-2 py-1 border rounded text-sm ${
+                      className={`h-8 px-2 border rounded text-sm ${
                         currentPlan.timerSource && currentPlan.timerSource !== 'own'
                           ? 'bg-purple-500/20 border-purple-500/30 text-purple-300'
                           : 'bg-slate-700 border-slate-600 text-white'
@@ -1618,107 +1678,97 @@ export default function PracticePlans() {
                 </div>
               )}
 
-              {/* Time Group */}
+              {/* Start Time */}
               <div className="flex flex-col gap-1">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Time</span>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="time"
-                      value={currentPlan.startTime || '15:30'}
-                      onChange={e => updateCurrentPlan({ startTime: e.target.value })}
-                      className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                      disabled={currentPlan.timerSource && currentPlan.timerSource !== 'own'}
-                    />
-                    <span className="text-slate-500">–</span>
-                    <span className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-300 text-sm font-medium">
-                      {endTime}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1" title="Time between segments for transitions">
-                    <span className="text-xs text-slate-500">Trans:</span>
-                    <input
-                      type="number"
-                      value={currentPlan.transitionTime || 0}
-                      onChange={e => updateCurrentPlan({ transitionTime: Math.max(0, parseInt(e.target.value) || 0) })}
-                      className="w-12 px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
-                      min="0"
-                    />
-                    <span className="text-xs text-slate-500">min</span>
-                  </div>
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Start Time</span>
+                <input
+                  type="time"
+                  value={currentPlan.startTime || '15:30'}
+                  onChange={e => updateCurrentPlan({ startTime: e.target.value })}
+                  className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden"
+                  disabled={currentPlan.timerSource && currentPlan.timerSource !== 'own'}
+                />
+              </div>
+
+              {/* End Time */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">End Time</span>
+                <div className="h-8 px-2 flex items-center bg-slate-700 border border-slate-600 rounded text-white text-sm">
+                  {endTime}
+                </div>
+              </div>
+
+              {/* Duration Display */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Duration</span>
+                <div className="h-8 px-2 flex items-center bg-slate-900 rounded text-sm font-medium text-white">
+                  {totalDuration} min
+                </div>
+              </div>
+
+              {/* Transition Time */}
+              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3" title="Time between segments for transitions">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Transition</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    value={currentPlan.transitionTime || 0}
+                    onChange={e => updateCurrentPlan({ transitionTime: Math.max(0, parseInt(e.target.value) || 0) })}
+                    className="w-10 h-8 px-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                    min="0"
+                    max="59"
+                  />
+                  <span className="text-xs text-slate-500">min</span>
+                  <input
+                    type="number"
+                    value={currentPlan.transitionSeconds || 0}
+                    onChange={e => updateCurrentPlan({ transitionSeconds: Math.max(0, Math.min(59, parseInt(e.target.value) || 0)) })}
+                    className="w-10 h-8 px-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                    min="0"
+                    max="59"
+                  />
+                  <span className="text-xs text-slate-500">sec</span>
                 </div>
               </div>
 
               {/* Options Group */}
-              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Options</span>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={currentPlan.showPeriodZero !== false}
-                      onChange={e => updateCurrentPlan({ showPeriodZero: e.target.checked })}
-                      className="rounded border-slate-600 bg-slate-700 text-sky-500"
-                    />
-                    <span className="text-sm text-slate-300">Period 0</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={currentPlan.isTwoPlatoon || false}
-                      onChange={e => updateCurrentPlan({ isTwoPlatoon: e.target.checked })}
-                      className="rounded border-slate-600 bg-slate-700 text-sky-500"
-                    />
-                    <span className="text-sm text-slate-300">2-Platoon</span>
-                  </label>
-                </div>
+              <div className="flex flex-col gap-2 border-l border-slate-700 pl-3">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={currentPlan.isTwoPlatoon || false}
+                    onChange={e => updateCurrentPlan({ isTwoPlatoon: e.target.checked })}
+                    className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                  />
+                  <span className="text-sm text-slate-300">2-Platoon</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={currentPlan.showPeriodZero !== false}
+                    onChange={e => updateCurrentPlan({ showPeriodZero: e.target.checked })}
+                    className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                  />
+                  <span className="text-sm text-slate-300 flex flex-col leading-tight">
+                    <span>Period 0</span>
+                    <span>Warmup</span>
+                  </span>
+                </label>
               </div>
 
               {/* Filter Group */}
               <div className="flex flex-col gap-1 border-l border-slate-700 pl-3">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Filter</span>
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Filter</span>
                 <select
                   value={coachFilter}
                   onChange={e => setCoachFilter(e.target.value)}
-                  className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                 >
                   <option value="ALL">All Staff</option>
                   {(staff || []).map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
-              </div>
-
-              {/* Templates Group */}
-              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3 ml-auto">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Templates</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowImportTemplateModal(true)}
-                    className="flex items-center gap-1.5 px-2 py-1 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 text-sm"
-                    title="Load a saved template into this day"
-                  >
-                    <LayoutTemplate size={14} />
-                    Import
-                  </button>
-                  <button
-                    onClick={() => setShowSaveTemplateModal(true)}
-                    className="flex items-center gap-1.5 px-2 py-1 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-600/30 text-sm"
-                    title="Save this day's plan as a reusable template"
-                  >
-                    <Save size={14} />
-                    Save
-                  </button>
-                </div>
-              </div>
-
-              {/* Duration Display */}
-              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Duration</span>
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 rounded">
-                  <Clock size={14} className="text-slate-400" />
-                  <span className="text-sm font-medium text-white">{totalDuration} min</span>
-                </div>
               </div>
             </div>
 

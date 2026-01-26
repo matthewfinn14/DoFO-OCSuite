@@ -14,7 +14,7 @@ export default function SubLevelPractice() {
       <div className="text-center max-w-md">
         <FileText size={64} className="text-amber-400 mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-white mb-2">
-          {level?.name || 'Sub-Level'} Practice Plans
+          {level?.name || 'Sub-Level'} Practice Planner
         </h1>
         <p className="text-slate-400 mb-2">
           {week ? `Week: ${week.name}${week.opponent ? ` vs ${week.opponent}` : ''}` : ''}
