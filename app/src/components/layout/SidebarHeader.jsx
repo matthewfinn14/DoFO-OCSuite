@@ -1,14 +1,86 @@
-import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
+import { useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Layers, Calendar } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import { useAuth } from '../../context/AuthContext';
 import SchoolSwitcher from './SchoolSwitcher';
 
 export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'dark' }) {
-  const { school, activeYear, globalWeekTemplates, setCurrentWeekId, setupConfig, programLevels, activeLevelId, setActiveLevelId } = useSchool();
+  const { school, activeYear, globalWeekTemplates, weeks, currentWeekId, setCurrentWeekId, setupConfig, programLevels, activeLevelId, setActiveLevelId } = useSchool();
   const { user, isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
 
   // Get program levels from setupConfig (they're stored there when edited in Setup)
   const levels = setupConfig?.programLevels || programLevels || [];
+
+  // Get season phases from setupConfig
+  const seasonPhases = setupConfig?.seasonPhases || [];
+
+  // Find current week based on today's date
+  const currentWeek = useMemo(() => {
+    if (currentWeekId) {
+      return weeks.find(w => w.id === currentWeekId);
+    }
+
+    // Auto-select based on today's date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find week whose date range includes today
+    const sortedWeeks = [...weeks].sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(a.date) - new Date(b.date);
+    });
+
+    for (let i = 0; i < sortedWeeks.length; i++) {
+      const week = sortedWeeks[i];
+      if (!week.date) continue;
+
+      const weekStart = new Date(week.date);
+      weekStart.setHours(0, 0, 0, 0);
+
+      // Week ends 6 days after start (7 day week)
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+
+      if (today >= weekStart && today <= weekEnd) {
+        return week;
+      }
+
+      // If today is before this week, return previous week or this one
+      if (today < weekStart) {
+        return i > 0 ? sortedWeeks[i - 1] : week;
+      }
+    }
+
+    // Default to last week if past all weeks
+    return sortedWeeks[sortedWeeks.length - 1] || null;
+  }, [weeks, currentWeekId]);
+
+  // Group weeks by phase for the dropdown
+  const groupedWeeks = useMemo(() => {
+    if (seasonPhases.length === 0) {
+      // Fallback grouping if no phases defined
+      return [{
+        id: 'all',
+        name: 'All Weeks',
+        weeks: weeks.sort((a, b) => {
+          if (!a.date) return 1;
+          if (!b.date) return -1;
+          return new Date(a.date) - new Date(b.date);
+        })
+      }];
+    }
+
+    return seasonPhases
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map(phase => ({
+        ...phase,
+        weeks: weeks
+          .filter(w => w.phaseId === phase.id)
+          .sort((a, b) => (a.weekNum || 0) - (b.weekNum || 0))
+      }))
+      .filter(phase => phase.weeks.length > 0);
+  }, [weeks, seasonPhases]);
 
   // Determine which levels the current user can access
   const accessibleLevels = levels.filter(level => {
@@ -115,24 +187,42 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
             </div>
           )}
 
-          {/* Week Template Selector */}
-          {globalWeekTemplates.length > 0 && (
-            <div className="mt-4 flex flex-col gap-1">
-              <select
-                className="w-full px-2 py-1 text-sm bg-black/10 border border-dashed border-white/20 rounded text-slate-300 focus:outline-none focus:border-sky-500"
-                onChange={(e) => {
-                  if (e.target.value) {
-                    handleLoadWeekFromTemplate(e.target.value);
-                    e.target.value = '';
-                  }
-                }}
-                value=""
-              >
-                <option value="" disabled>Apply Week Template...</option>
-                {globalWeekTemplates.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
+          {/* Active Week Selector */}
+          {weeks.length > 0 && (
+            <div className="mt-4">
+              <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide block mb-1">
+                Active Week
+              </span>
+              <div className="relative">
+                <select
+                  value={currentWeekId || currentWeek?.id || ''}
+                  onChange={(e) => setCurrentWeekId(e.target.value || null)}
+                  className="w-full px-3 py-2 text-sm bg-sky-500/10 border border-sky-500/30 rounded-lg text-white appearance-none cursor-pointer hover:border-sky-500/50 focus:outline-none focus:border-sky-500 transition-colors"
+                >
+                  <option value="">Select Week...</option>
+                  {groupedWeeks.map(phase => (
+                    <optgroup key={phase.id} label={phase.name}>
+                      {phase.weeks.map(week => {
+                        const displayName = week.opponent
+                          ? `${week.name} vs ${week.opponent}`
+                          : week.name;
+                        return (
+                          <option key={week.id} value={week.id}>
+                            {displayName}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  ))}
+                </select>
+                <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-400 pointer-events-none" />
+              </div>
+              {currentWeek?.date && (
+                <p className="text-[0.65rem] text-sky-400/80 mt-1">
+                  {new Date(currentWeek.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {currentWeek.opponent && ` - ${currentWeek.isHome ? 'Home' : 'Away'}`}
+                </p>
+              )}
             </div>
           )}
         </>

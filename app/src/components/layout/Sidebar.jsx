@@ -5,7 +5,6 @@ import { useSchool } from '../../context/SchoolContext';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import SidebarHeader from './SidebarHeader';
 import SidebarFooter from './SidebarFooter';
-import WeeklyToolsMenu from './WeeklyToolsMenu';
 import SubLevelsSection from './SubLevelsSection';
 import {
   Target,
@@ -17,12 +16,14 @@ import {
   UserCog,
   Lock,
   Archive,
-  Calendar,
-  Sun,
-  Zap,
-  Trophy,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  FileText,
+  Megaphone,
+  Layers,
+  Clipboard,
+  Watch,
+  Clock
 } from 'lucide-react';
 
 // Enhanced collapsible category component
@@ -66,6 +67,25 @@ function CollapsibleCategory({
   );
 }
 
+// Weekly tool navigation item
+function WeeklyToolItem({ to, icon: Icon, label }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex items-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
+          isActive
+            ? 'text-sky-400 bg-sky-500/10'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
+        }`
+      }
+    >
+      <Icon size={16} />
+      <span>{label}</span>
+    </NavLink>
+  );
+}
+
 // Navigation item component
 function NavItem({ to, icon: Icon, label, collapsed }) {
   return (
@@ -85,72 +105,17 @@ function NavItem({ to, icon: Icon, label, collapsed }) {
   );
 }
 
-// Week collapsible with tools menu
-function WeekCollapsible({ week, icon: Icon, nested = false }) {
-  const { currentWeekId, setCurrentWeekId } = useSchool();
-  const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(currentWeekId === week.id);
-
-  const isOffseasonWeek = week.name === 'Offseason';
-
-  const displayTitle = week.opponent
-    ? `${week.name} - ${week.opponent}${week.isHome !== undefined ? (week.isHome ? ' (H)' : ' (A)') : ''}`
-    : week.name;
-
-  const handleClick = () => {
-    setIsOpen(!isOpen);
-    setCurrentWeekId(week.id);
-    navigate(`/week/${week.id}/notes`);
-  };
-
-  return (
-    <div className={nested ? 'ml-2 mb-0.5' : 'mb-1'}>
-      <button
-        onClick={handleClick}
-        className={`w-full flex items-center gap-2 px-4 py-1.5 text-left text-sm rounded-md transition-colors ${
-          currentWeekId === week.id
-            ? 'text-sky-400 bg-sky-500/10'
-            : 'text-slate-400/90 hover:text-slate-200 hover:bg-slate-800/30'
-        }`}
-      >
-        <Icon size={14} />
-        <span className="flex-1 truncate">{displayTitle}</span>
-        {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-      </button>
-      {isOpen && (
-        <WeeklyToolsMenu weekId={week.id} isOffseason={isOffseasonWeek} />
-      )}
-    </div>
-  );
-}
-
 export default function Sidebar() {
   const { currentPermissions, isSiteAdmin } = useAuth();
-  const { school, weeks, visibleFeatures, setCurrentWeekId } = useSchool();
+  const { school, weeks, currentWeekId, visibleFeatures, setCurrentWeekId } = useSchool();
   const navigate = useNavigate();
 
   // Persist collapse state to localStorage
   const [collapsed, setCollapsed] = useLocalStorage('dofo_sidebar_collapsed', false);
 
-  // Categorize weeks by phase
-  const offseasonWeeks = weeks.filter(w => w.name === 'Offseason');
-  const summerWeeks = weeks.filter(w => w.name.includes('Summer'));
-  const preseasonWeeks = weeks.filter(w =>
-    ['Family Week', 'Camp Week', 'First Week of Practice', 'Week 0'].includes(w.name)
-  );
-  const seasonWeeks = weeks
-    .filter(w =>
-      (w.name.startsWith('Week ') && !w.name.includes('Summer') && w.name !== 'Week 0') ||
-      w.name === 'First Week with No Game'
-    )
-    .sort((a, b) => {
-      const getNum = (item) => {
-        if (item.weekNum !== undefined) return item.weekNum;
-        const match = item.name.match(/Week (\d+)/);
-        return match ? parseInt(match[1]) : 99;
-      };
-      return getNum(a) - getNum(b);
-    });
+  // Get current week
+  const currentWeek = weeks.find(w => w.id === currentWeekId);
+  const isOffseasonWeek = currentWeek?.name === 'Offseason' || currentWeek?.phaseId?.includes('offseason');
 
   return (
     <aside
@@ -204,81 +169,81 @@ export default function Sidebar() {
 
             <div className="border-t border-slate-800 my-4" />
 
-            {/* Phases / Weeks */}
-            <div className="mb-2">
-              <span className="px-4 text-xs text-slate-500 uppercase tracking-wide">
-                Phases / Weeks
-              </span>
-            </div>
+            {/* Weekly Tools - shown when a week is selected */}
+            {currentWeekId && (
+              <>
+                <div className="mb-2">
+                  <span className="px-4 text-xs text-slate-500 uppercase tracking-wide">
+                    Weekly Tools
+                  </span>
+                </div>
 
-            {/* Offseason Phase */}
-            {offseasonWeeks.map(w => (
-              <CollapsibleCategory
-                key={w.id}
-                title="OFFSEASON"
-                icon={w.isLocked ? Lock : Calendar}
-                defaultOpen={false}
-                onTitleClick={() => {
-                  setCurrentWeekId(w.id);
-                  navigate('/offseason');
-                }}
-              >
-                <WeeklyToolsMenu weekId={w.id} isOffseason={true} />
-              </CollapsibleCategory>
-            ))}
-
-            {/* Summer Phase */}
-            {summerWeeks.length > 0 && (
-              <CollapsibleCategory
-                title="SUMMER"
-                icon={Sun}
-                onTitleClick={() => navigate('/summer')}
-              >
-                {summerWeeks.map(w => (
-                  <WeekCollapsible
-                    key={w.id}
-                    week={w}
-                    icon={w.isLocked ? Lock : Sun}
-                    nested
+                <div className="space-y-0.5 mb-4">
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/notes`}
+                    icon={FileText}
+                    label="Meeting Notes"
                   />
-                ))}
-              </CollapsibleCategory>
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/practice`}
+                    icon={Megaphone}
+                    label="Practice Plans"
+                  />
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/install`}
+                    icon={Layers}
+                    label="Install"
+                  />
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/depth-charts`}
+                    icon={Users}
+                    label="Depth Charts"
+                  />
+                  {!isOffseasonWeek && (
+                    <>
+                      <WeeklyToolItem
+                        to={`/week/${currentWeekId}/game-plan`}
+                        icon={Clipboard}
+                        label="Game Planner"
+                      />
+                      <WeeklyToolItem
+                        to={`/week/${currentWeekId}/wristband`}
+                        icon={Watch}
+                        label="Wristband Builder"
+                      />
+                      <WeeklyToolItem
+                        to={`/week/${currentWeekId}/practice-scripts`}
+                        icon={FileText}
+                        label="Practice Scripts"
+                      />
+                      <WeeklyToolItem
+                        to={`/week/${currentWeekId}/pregame`}
+                        icon={Clock}
+                        label="Pre-Game Timeline"
+                      />
+                    </>
+                  )}
+                </div>
+
+                <div className="border-t border-slate-800 my-4" />
+              </>
             )}
 
-            {/* Pre-Season Phase */}
-            {preseasonWeeks.length > 0 && (
-              <CollapsibleCategory
-                title="PRE-SEASON"
-                icon={Zap}
-                onTitleClick={() => navigate('/preseason')}
-              >
-                {preseasonWeeks.map(w => (
-                  <WeekCollapsible
-                    key={w.id}
-                    week={w}
-                    icon={w.isLocked ? Lock : Zap}
-                    nested
-                  />
-                ))}
-              </CollapsibleCategory>
+            {/* Prompt to select week if none selected */}
+            {!currentWeekId && weeks.length > 0 && (
+              <div className="px-4 py-3 text-center">
+                <p className="text-xs text-slate-500">
+                  Select a week above to see weekly tools
+                </p>
+              </div>
             )}
 
-            {/* Season Phase */}
-            {seasonWeeks.length > 0 && (
-              <CollapsibleCategory
-                title="SEASON"
-                icon={Trophy}
-                onTitleClick={() => navigate('/season')}
-              >
-                {seasonWeeks.map(w => (
-                  <WeekCollapsible
-                    key={w.id}
-                    week={w}
-                    icon={w.isLocked ? Lock : Trophy}
-                    nested
-                  />
-                ))}
-              </CollapsibleCategory>
+            {!currentWeekId && weeks.length === 0 && (
+              <div className="px-4 py-3 text-center">
+                <p className="text-xs text-slate-500">
+                  Add weeks in Season Setup
+                </p>
+              </div>
             )}
 
             <div className="border-t border-slate-800 my-4" />
