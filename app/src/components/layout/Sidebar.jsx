@@ -182,7 +182,7 @@ export default function Sidebar() {
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/install`}
                     icon={Layers}
-                    label="Install"
+                    label="Install Manager"
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/depth-charts`}
