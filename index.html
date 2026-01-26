@@ -35255,8 +35255,9 @@
             });
 
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-formations', JSON.stringify(formations));
-            }, [formations]);
+            }, [formations, dataLoaded]);
 
             // Zone Philosophies
             const [zonePhilosophies, setZonePhilosophies] = useState(() => {
@@ -35273,8 +35274,9 @@
             });
 
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-zone-philosophies', JSON.stringify(zonePhilosophies));
-            }, [zonePhilosophies]);
+            }, [zonePhilosophies, dataLoaded]);
 
             const handleUpdateFormations = (newFormations) => {
                 setFormations(newFormations);
@@ -35800,8 +35802,9 @@
             const [pregameTemplates, setPregameTemplates] = useLocalStorage('oc-dashboard-pregame-templates', []);
 
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-segment-settings', JSON.stringify(practiceSegmentSettings));
-            }, [practiceSegmentSettings]);
+            }, [practiceSegmentSettings, dataLoaded]);
 
             const [practiceFocusItems, setPracticeFocusItems] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-focus-items');
@@ -36082,8 +36085,9 @@
 
             // Persistence for Weeks
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-weeks', JSON.stringify(weeks));
-            }, [weeks]);
+            }, [weeks, dataLoaded]);
 
             // --- End Weeks Management ---
 
@@ -36309,13 +36313,16 @@
             });
 
             useEffect(() => {
-                localStorage.setItem('oc-dashboard-theme', theme);
+                // Always apply theme class (visual only)
                 document.body.className = `theme-${theme}`;
+                // Only persist after data is loaded
+                if (!dataLoaded) return;
+                localStorage.setItem('oc-dashboard-theme', theme);
                 // Cloud Sync
-                if (currentUser && window.db) {
-                    syncToFirestore(currentUser.uid, 'settings', { theme });
+                if (authUser && window.db) {
+                    syncToFirestore(authUser.uid, 'settings', { theme });
                 }
-            }, [theme, currentUser]);
+            }, [theme, dataLoaded, authUser]);
 
             const [positionNames, setPositionNames] = useState(() => {
                 const saved = localStorage.getItem('oc-dashboard-position-names');
@@ -36652,8 +36659,13 @@
 
             // Apply and Save Accent Color
             useEffect(() => {
+                // Always apply CSS variable (visual only)
                 if (accentColor) {
                     document.documentElement.style.setProperty('--accent', accentColor);
+                }
+                // Only persist after data is loaded
+                if (!dataLoaded) return;
+                if (accentColor) {
                     localStorage.setItem('oc-dashboard-accent', accentColor);
 
                     // Persist to School Data (Cloud) if possible
@@ -36661,7 +36673,6 @@
                     if (currentSchoolId && window.db) {
                         try {
                             const schoolRef = window.db.collection('schools').doc(currentSchoolId);
-                            // Only update if specifically changed (debounce could be added but this is simple)
                             schoolRef.set({
                                 settings: { accentColor: accentColor }
                             }, { merge: true }).catch(err => console.error("Error saving color to cloud:", err));
@@ -36670,21 +36681,16 @@
                         }
                     }
                 }
-            }, [accentColor]);
+            }, [accentColor, dataLoaded]);
 
             // Save position names to localStorage
-            useEffect(() => {
-                localStorage.setItem('oc-dashboard-position-names', JSON.stringify(positionNames));
-                // Cloud Sync
-                if (currentUser && window.db) {
-                    syncToFirestore(currentUser.uid, 'settings', { positionNames });
-                }
-            }, [positionNames, currentUser]);
+            // NOTE: Duplicate - already handled at line ~35170 with dataLoaded guard
 
             // Save ratings to localStorage whenever they change
             useEffect(() => {
+                if (!dataLoaded) return; // Don't sync until cloud data is loaded
                 localStorage.setItem('oc-dashboard-ratings', JSON.stringify(ratings));
-            }, [ratings]);
+            }, [ratings, dataLoaded]);
 
             const toggleTag = (tag) => {
                 // ... (logic handled in PlayInput)
