@@ -35576,16 +35576,30 @@
             // IMPORTANT: Look up by EMAIL first, then uid. Email is consistent across sign-in methods,
             // but uid can differ (e.g., Google Sign-In vs Email/Password create different uids for same email)
             const authEmail = authUser?.email?.toLowerCase();
-            const currentUser = staff.find(s => s.email?.toLowerCase() === authEmail)
+            const foundUser = staff.find(s => s.email?.toLowerCase() === authEmail)
                 || staff.find(s => s.id === currentUserId)
+                || staff.find(s => s.uid === currentUserId) // Backwards compat: some entries use 'uid' instead of 'id'
                 || staff[0]
                 || DEFAULT_STAFF_2025[0];
 
-            const currentPermissions = useMemo(() => {
-                const userRoles = currentUser?.roles || [];
+            // Normalize currentUser: ensure 'roles' array exists (backwards compat for 'role' string)
+            const currentUser = foundUser ? {
+                ...foundUser,
+                id: foundUser.id || foundUser.uid, // Normalize id
+                roles: foundUser.roles || (foundUser.role ? [foundUser.role] : []), // Normalize roles array
+                // Grant Team Admin if they have ADMIN permission
+                ...(foundUser.permissions?.includes('ADMIN') && !foundUser.roles?.includes('Team Admin')
+                    ? { roles: [...(foundUser.roles || (foundUser.role ? [foundUser.role] : [])), 'Team Admin'] }
+                    : {})
+            } : null;
 
-                // SUPER OVERRIDE: Admin Flag or Head Coach Role
-                if (currentUser?.isAdmin || userRoles.includes('Head Coach')) {
+            const currentPermissions = useMemo(() => {
+                // Backwards compatible: support both 'roles' (array) and 'role' (string)
+                const userRoles = currentUser?.roles || (currentUser?.role ? [currentUser.role] : []);
+
+                // SUPER OVERRIDE: Admin Flag, Head Coach Role, or ADMIN permission
+                const hasAdminPermission = currentUser?.permissions?.includes('ADMIN');
+                if (currentUser?.isAdmin || hasAdminPermission || userRoles.includes('Head Coach')) {
                     // Start with 'Head Coach' permissions (Full Access)
                     return JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS['Head Coach']));
                 }
