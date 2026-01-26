@@ -15,7 +15,6 @@ import {
   DepthCharts,
   WristbandBuilder,
   PracticeScriptBuilder,
-  Roster,
   Staff,
   Admin,
   PrintCenter,
@@ -25,9 +24,7 @@ import {
   Summer,
   Preseason,
   Season,
-  Archive,
   InstallManager,
-  Permissions,
   Pregame,
   NotFound,
   // Offseason pages
@@ -112,9 +109,7 @@ function AppRoutes() {
 
         {/* Staff & Roster */}
         <Route path="/staff" element={<Staff />} />
-        <Route path="/permissions" element={<Permissions />} />
-        <Route path="/roster" element={<Roster />} />
-        <Route path="/archive" element={<Archive />} />
+        <Route path="/staff/:tab" element={<Staff />} />
 
         {/* Phases */}
         <Route path="/offseason" element={<Offseason />} />

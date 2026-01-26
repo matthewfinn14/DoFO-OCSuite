@@ -151,16 +151,7 @@ export default function Sidebar() {
         </div>
 
         {!collapsed && currentPermissions.staff.view && (
-          <div className="mt-1">
-            <CollapsibleCategory title="STAFF & ROSTER" icon={Users}>
-              <NavItem to="/staff" icon={UserCog} label="Staff & Roles" collapsed={false} />
-              {currentPermissions.settings.view && (
-                <NavItem to="/permissions" icon={Lock} label="Permissions" collapsed={false} />
-              )}
-              <NavItem to="/roster" icon={Users} label="Manage Roster" collapsed={false} />
-              <NavItem to="/archive" icon={Archive} label="Archive" collapsed={false} />
-            </CollapsibleCategory>
-          </div>
+          <NavItem to="/staff" icon={Users} label="STAFF & ROSTER" collapsed={collapsed} />
         )}
       </div>
 
