@@ -1483,6 +1483,124 @@
                     if (data.wbSettings.sheetUrl) localStorage.setItem('hc_wristband_sheet_url', data.wbSettings.sheetUrl);
                 }
 
+                // --- EXTENDED SYNC ITEMS (New Fields) ---
+                // Team Settings
+                if (data.teamSettings) {
+                    if (data.teamSettings.mascot) localStorage.setItem('oc-dashboard-team-mascot', data.teamSettings.mascot);
+                    if (data.teamSettings.address) localStorage.setItem('oc-dashboard-team-address', data.teamSettings.address);
+                    if (data.teamSettings.city) localStorage.setItem('oc-dashboard-team-city', data.teamSettings.city);
+                    if (data.teamSettings.state) localStorage.setItem('oc-dashboard-team-state', data.teamSettings.state);
+                    if (data.teamSettings.zip) localStorage.setItem('oc-dashboard-team-zip', data.teamSettings.zip);
+                    if (data.teamSettings.primaryColor) localStorage.setItem('oc-dashboard-team-primary-color', data.teamSettings.primaryColor);
+                    if (data.teamSettings.secondaryColor) localStorage.setItem('oc-dashboard-team-secondary-color', data.teamSettings.secondaryColor);
+                }
+
+                // Culture & Philosophy
+                if (data.culture) {
+                    if (data.culture.seasonMotto) localStorage.setItem('oc-dashboard-season-motto', data.culture.seasonMotto);
+                    if (data.culture.teamMission) localStorage.setItem('oc-dashboard-team-mission', data.culture.teamMission);
+                    if (data.culture.teamVision) localStorage.setItem('oc-dashboard-team-vision', data.culture.teamVision);
+                    if (data.culture.teamNonNegotiables) localStorage.setItem('oc-dashboard-team-nonnegotiables', data.culture.teamNonNegotiables);
+                    if (data.culture.offensePhilosophy) localStorage.setItem('oc-dashboard-offense-philosophy', data.culture.offensePhilosophy);
+                    if (data.culture.defensePhilosophy) localStorage.setItem('oc-dashboard-defense-philosophy', data.culture.defensePhilosophy);
+                    if (data.culture.specialTeamsPhilosophy) localStorage.setItem('oc-dashboard-st-philosophy', data.culture.specialTeamsPhilosophy);
+                    if (data.culture.coachesExpectations) localStorage.setItem('oc-dashboard-coaches-expectations', data.culture.coachesExpectations);
+                }
+
+                // Standards
+                if (data.standards) {
+                    if (data.standards.practice) localStorage.setItem('oc-dashboard-practice-standards', data.standards.practice);
+                    if (data.standards.meeting) localStorage.setItem('oc-dashboard-meeting-standards', data.standards.meeting);
+                    if (data.standards.weightRoom) localStorage.setItem('oc-dashboard-weightroom-standards', data.standards.weightRoom);
+                    if (data.standards.life) localStorage.setItem('oc-dashboard-life-standards', data.standards.life);
+                    if (data.standards.school) localStorage.setItem('oc-dashboard-school-standards', data.standards.school);
+                    if (data.standards.travel) localStorage.setItem('oc-dashboard-travel-standards', data.standards.travel);
+                }
+
+                // Goals
+                if (data.goals) {
+                    if (data.goals.teamSeason) localStorage.setItem('oc-dashboard-team-season-goals', JSON.stringify(data.goals.teamSeason));
+                    if (data.goals.offenseWeekly) localStorage.setItem('oc-dashboard-offense-weekly-goals', JSON.stringify(data.goals.offenseWeekly));
+                    if (data.goals.defenseWeekly) localStorage.setItem('oc-dashboard-defense-weekly-goals', JSON.stringify(data.goals.defenseWeekly));
+                    if (data.goals.stWeekly) localStorage.setItem('oc-dashboard-st-weekly-goals', JSON.stringify(data.goals.stWeekly));
+                }
+
+                // Notes
+                if (data.notes) {
+                    if (data.notes.staff) localStorage.setItem('oc-dashboard-staff-notes', JSON.stringify(data.notes.staff));
+                    if (data.notes.weeklyCoaches) localStorage.setItem('oc-dashboard-weekly-coaches-notes', JSON.stringify(data.notes.weeklyCoaches));
+                }
+
+                // Position Configuration
+                if (data.positionConfig) {
+                    if (data.positionConfig.bigThree) localStorage.setItem('oc-dashboard-position-big-three', JSON.stringify(data.positionConfig.bigThree));
+                    if (data.positionConfig.bigThreeAssignments) localStorage.setItem('oc-dashboard-position-big-three-assignments', JSON.stringify(data.positionConfig.bigThreeAssignments));
+                    if (data.positionConfig.customBigThreeGroups) localStorage.setItem('oc-dashboard-custom-big-three-groups', JSON.stringify(data.positionConfig.customBigThreeGroups));
+                    if (data.positionConfig.colors) localStorage.setItem('oc-dashboard-position-colors', JSON.stringify(data.positionConfig.colors));
+                    if (data.positionConfig.custom) localStorage.setItem('oc-dashboard-custom-positions', JSON.stringify(data.positionConfig.custom));
+                    if (data.positionConfig.hidden) localStorage.setItem('oc-dashboard-hidden-positions', JSON.stringify(data.positionConfig.hidden));
+                    if (data.positionConfig.groupings) localStorage.setItem('oc-dashboard-personnel-groupings', JSON.stringify(data.positionConfig.groupings));
+                    if (data.positionConfig.groups) localStorage.setItem('oc-dashboard-position-groups', JSON.stringify(data.positionConfig.groups));
+                    if (data.positionConfig.descriptions) localStorage.setItem('oc-dashboard-position-descriptions', JSON.stringify(data.positionConfig.descriptions));
+                }
+
+                // Play Syntax
+                if (data.playSyntax) {
+                    if (data.playSyntax.offense) localStorage.setItem('oc-dashboard-play-syntax', JSON.stringify(data.playSyntax.offense));
+                    if (data.playSyntax.defense) localStorage.setItem('oc-dashboard-play-syntax-defense', JSON.stringify(data.playSyntax.defense));
+                    if (data.playSyntax.st) localStorage.setItem('oc-dashboard-play-syntax-st', JSON.stringify(data.playSyntax.st));
+                }
+
+                // Term Libraries
+                if (data.termLibrary) {
+                    if (data.termLibrary.offense) localStorage.setItem('oc-dashboard-term-library', JSON.stringify(data.termLibrary.offense));
+                    if (data.termLibrary.defense) localStorage.setItem('oc-dashboard-term-library-defense', JSON.stringify(data.termLibrary.defense));
+                    if (data.termLibrary.st) localStorage.setItem('oc-dashboard-term-library-st', JSON.stringify(data.termLibrary.st));
+                }
+
+                // Play Organization
+                if (data.playOrganization) {
+                    if (data.playOrganization.categories) localStorage.setItem('oc-dashboard-play-categories', JSON.stringify(data.playOrganization.categories));
+                    if (data.playOrganization.buckets) localStorage.setItem('oc-dashboard-play-buckets', JSON.stringify(data.playOrganization.buckets));
+                    if (data.playOrganization.customTags) localStorage.setItem('oc-dashboard-custom-tag-categories', JSON.stringify(data.playOrganization.customTags));
+                }
+
+                // O-Line Schemes
+                if (data.schemes) {
+                    if (data.schemes.passProtections) localStorage.setItem('oc-dashboard-pass-protections', JSON.stringify(data.schemes.passProtections));
+                    if (data.schemes.runBlocking) localStorage.setItem('oc-dashboard-run-blocking', JSON.stringify(data.schemes.runBlocking));
+                }
+
+                // Templates
+                if (data.templates) {
+                    if (data.templates.practice) localStorage.setItem('oc-dashboard-practice-templates', JSON.stringify(data.templates.practice));
+                    if (data.templates.gameplan) localStorage.setItem('oc-dashboard-gameplan-templates', JSON.stringify(data.templates.gameplan));
+                    if (data.templates.pregame) localStorage.setItem('oc-dashboard-pregame-templates', JSON.stringify(data.templates.pregame));
+                    if (data.templates.scripts) localStorage.setItem('oc-dashboard-script-presets', JSON.stringify(data.templates.scripts));
+                }
+
+                // Offseason Planning
+                if (data.offseason) {
+                    if (data.offseason.swot) localStorage.setItem('oc-dashboard-offseason-swot', JSON.stringify(data.offseason.swot));
+                    if (data.offseason.meetings) localStorage.setItem('oc-dashboard-offseason-meetings', JSON.stringify(data.offseason.meetings));
+                    if (data.offseason.research) localStorage.setItem('oc-dashboard-offseason-research', JSON.stringify(data.offseason.research));
+                    if (data.offseason.endOfSeasonReports) localStorage.setItem('oc-dashboard-end-of-season-reports', JSON.stringify(data.offseason.endOfSeasonReports));
+                }
+
+                // Other Data
+                if (data.programLevels) {
+                    localStorage.setItem('oc-dashboard-program-levels', JSON.stringify(data.programLevels));
+                }
+                if (data.attendance) {
+                    localStorage.setItem('oc-dashboard-attendance', JSON.stringify(data.attendance));
+                }
+                if (data.football101Data) {
+                    localStorage.setItem('hc-football-101', JSON.stringify(data.football101Data));
+                }
+                if (data.permissions) {
+                    localStorage.setItem('oc-dashboard-permissions', JSON.stringify(data.permissions));
+                }
+
                 // Return recovery status so caller can reload page to reinitialize React state
                 if (recoveryPerformed) {
                     console.log("RECOVERY COMPLETE: Returning recovered flag to trigger reload");
@@ -2153,6 +2271,13 @@
                         role: 'Head Coach',
                         email: user.email
                     }, { merge: true });
+
+                    // 2b. CREATE MEMBERSHIP (Required for Firestore security rules)
+                    await window.db.collection('users').doc(user.uid).collection('memberships').doc(schoolId).set({
+                        role: 'admin',
+                        joinedAt: new Date().toISOString(),
+                        status: 'active'
+                    });
 
                     // 3. VERIFY WRITE (Retry logic to prevent race conditions on reload)
                     let confirmed = false;
@@ -30300,6 +30425,13 @@
                     // 3. Update User Doc
                     await window.db.collection('users').doc(currentUser.uid).update({ schoolId: newSchoolId });
 
+                    // 4. CREATE MEMBERSHIP (Required for Firestore security rules)
+                    await window.db.collection('users').doc(currentUser.uid).collection('memberships').doc(newSchoolId).set({
+                        role: 'admin',
+                        joinedAt: new Date().toISOString(),
+                        status: 'active'
+                    });
+
                     alert(`School Created! ID: ${newSchoolId}. The app will now reload.`);
                     window.location.reload();
 
@@ -34399,6 +34531,118 @@
             useAutoSync(authUser, 'weeks', weeks, 3000, dataLoaded);
             useAutoSync(authUser, 'plays', plays, 2000, dataLoaded);
             useAutoSync(authUser, 'staff', staff, 2000, dataLoaded);
+
+            // --- EXTENDED AUTO SYNC - All User Data ---
+            // Team Settings
+            useAutoSync(authUser, 'teamSettings', {
+                mascot: teamMascot,
+                address: teamAddress,
+                city: teamCity,
+                state: teamState,
+                zip: teamZip,
+                primaryColor: teamPrimaryColor,
+                secondaryColor: teamSecondaryColor
+            }, 2000, dataLoaded);
+
+            // Culture & Philosophy
+            useAutoSync(authUser, 'culture', {
+                seasonMotto,
+                teamMission,
+                teamVision,
+                teamNonNegotiables,
+                offensePhilosophy,
+                defensePhilosophy,
+                specialTeamsPhilosophy,
+                coachesExpectations
+            }, 2000, dataLoaded);
+
+            // Standards
+            useAutoSync(authUser, 'standards', {
+                practice: practiceStandards,
+                meeting: meetingStandards,
+                weightRoom: weightRoomStandards,
+                life: lifeStandards,
+                school: schoolStandards,
+                travel: travelStandards
+            }, 2000, dataLoaded);
+
+            // Goals
+            useAutoSync(authUser, 'goals', {
+                teamSeason: teamSeasonGoals,
+                offenseWeekly: offenseWeeklyGoals,
+                defenseWeekly: defenseWeeklyGoals,
+                stWeekly: stWeeklyGoals
+            }, 2000, dataLoaded);
+
+            // Notes
+            useAutoSync(authUser, 'notes', {
+                staff: staffNotes,
+                weeklyCoaches: weeklyCoachesNotes
+            }, 2000, dataLoaded);
+
+            // Position Configuration
+            useAutoSync(authUser, 'positionConfig', {
+                bigThree: positionBigThree,
+                bigThreeAssignments: positionBigThreeAssignments,
+                customBigThreeGroups,
+                colors: positionColors,
+                custom: customPositions,
+                hidden: hiddenPositions,
+                groupings: personnelGroupings,
+                groups: positionGroups,
+                descriptions: positionDescriptions
+            }, 2000, dataLoaded);
+
+            // Play Syntax
+            useAutoSync(authUser, 'playSyntax', {
+                offense: playSyntax,
+                defense: defensePlaySyntax,
+                st: stPlaySyntax
+            }, 2000, dataLoaded);
+
+            // Term Libraries
+            useAutoSync(authUser, 'termLibrary', {
+                offense: termLibrary,
+                defense: defenseTermLibrary,
+                st: stTermLibrary
+            }, 2000, dataLoaded);
+
+            // Play Organization
+            useAutoSync(authUser, 'playOrganization', {
+                categories: playCategories,
+                buckets: playBuckets,
+                customTags: customTagCategories
+            }, 2000, dataLoaded);
+
+            // O-Line Schemes
+            useAutoSync(authUser, 'schemes', {
+                passProtections,
+                runBlocking
+            }, 2000, dataLoaded);
+
+            // Templates
+            useAutoSync(authUser, 'templates', {
+                practice: practiceTemplates,
+                gameplan: gameplanTemplates,
+                pregame: pregameTemplates,
+                scripts: scriptPresets
+            }, 2000, dataLoaded);
+
+            // Offseason Planning
+            useAutoSync(authUser, 'offseason', {
+                swot: offseasonSwot,
+                meetings: offseasonMeetings,
+                research: offseasonResearch,
+                endOfSeasonReports
+            }, 2000, dataLoaded);
+
+            // Other Data
+            useAutoSync(authUser, 'programLevels', programLevels, 2000, dataLoaded);
+            useAutoSync(authUser, 'attendance', attendance, 2000, dataLoaded);
+            useAutoSync(authUser, 'formations', formations, 2000, dataLoaded);
+            useAutoSync(authUser, 'zonePhilosophies', zonePhilosophies, 2000, dataLoaded);
+            useAutoSync(authUser, 'football101Data', football101Data, 2000, dataLoaded);
+            useAutoSync(authUser, 'permissions', permissions, 2000, dataLoaded);
 
             // Formation Database
             const [formations, setFormations] = useState(() => {
