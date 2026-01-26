@@ -99,9 +99,9 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
   };
 
   return (
-    <div className="p-4 border-b border-slate-800">
+    <div className="px-3 py-2 border-b border-slate-800">
       {/* Logo row with collapse toggle */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         {!collapsed ? (
           <img
             src={theme === 'light' ? '/DoFO dark, transparent.png' : '/DoFO - White logo transparent bckgrnd.png'}
@@ -125,79 +125,57 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
 
           {/* School Name and Logo */}
           {school?.name && (
-            <div className="mb-4 flex flex-col gap-2">
-              <h2 className="text-lg font-bold text-white leading-tight">
-                {school.name}
-              </h2>
+            <div className="mb-2 flex items-center gap-2">
               {school.settings?.teamLogo && (
                 <img
                   src={school.settings.teamLogo}
                   alt="School Logo"
-                  className="max-h-[60px] max-w-full object-contain rounded self-start"
+                  className="h-8 w-8 object-contain rounded"
                 />
               )}
+              <div>
+                <h2 className="text-sm font-bold text-white leading-tight">
+                  {school.name}
+                </h2>
+                <span className="text-xs text-slate-400">{activeYear || new Date().getFullYear()}</span>
+              </div>
             </div>
           )}
 
           {/* School Switcher */}
-          <div className="mb-4">
+          <div className="mb-2">
             <SchoolSwitcher />
           </div>
 
-          {/* Active Season */}
-          <div className="mt-4">
-            <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide block mb-0">
-              Active Season
-            </span>
-            <div className="text-lg font-bold text-white tracking-wide">
-              {activeYear || new Date().getFullYear()}
-            </div>
-          </div>
-
-          {/* Program Level Selector */}
-          {showLevelDropdown && (
-            <div className="mt-4">
-              <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide block mb-1">
-                Program Level
-              </span>
+          {/* Program Level & Week Selectors - Compact */}
+          <div className="space-y-2 mt-2">
+            {/* Program Level Selector */}
+            {showLevelDropdown && (
               <div className="relative">
+                <span className="text-[0.6rem] text-slate-500 uppercase tracking-wide">Level</span>
                 <select
                   value={activeLevelId || ''}
                   onChange={(e) => setActiveLevelId(e.target.value || null)}
-                  className="w-full px-3 py-2 text-sm bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer hover:border-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                  className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-600 rounded text-white appearance-none cursor-pointer hover:border-slate-500 focus:outline-none focus:border-sky-500"
                 >
                   <option value="">Program</option>
                   <option value="varsity">Varsity</option>
                   {accessibleLevels.map(level => (
-                    <option key={level.id} value={level.id}>
-                      {level.name}
-                    </option>
+                    <option key={level.id} value={level.id}>{level.name}</option>
                   ))}
                 </select>
-                <Layers size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <Layers size={12} className="absolute right-2 bottom-2 text-slate-400 pointer-events-none" />
               </div>
-              <p className="text-[0.65rem] text-slate-500 mt-1">
-                {activeLevelId === 'varsity'
-                  ? 'Viewing Varsity only'
-                  : activeLevelId
-                    ? `Viewing ${accessibleLevels.find(l => l.id === activeLevelId)?.name || 'level'} only`
-                    : 'Viewing all levels & full roster'
-                }
-              </p>
-            </div>
-          )}
+            )}
 
-          {/* Active Week Selector */}
-          {weeks.length > 0 && (
-            <div className="mt-4">
-              <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide block mb-1">
-                Active Week
-              </span>
+            {/* Active Week Selector */}
+            {weeks.length > 0 && (
               <div className="relative">
+                <span className="text-[0.6rem] text-slate-500 uppercase tracking-wide">Week</span>
                 <select
                   value={currentWeekId || currentWeek?.id || ''}
                   onChange={(e) => setCurrentWeekId(e.target.value || null)}
-                  className="w-full px-3 py-2 text-sm bg-sky-500/10 border border-sky-500/30 rounded-lg text-white appearance-none cursor-pointer hover:border-sky-500/50 focus:outline-none focus:border-sky-500 transition-colors"
+                  className="w-full px-2 py-1.5 text-xs bg-sky-500/10 border border-sky-500/30 rounded text-white appearance-none cursor-pointer hover:border-sky-500/50 focus:outline-none focus:border-sky-500"
                 >
                   <option value="">Select Week...</option>
                   {groupedWeeks.map(phase => (
@@ -207,24 +185,16 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
                           ? `${week.name} vs ${week.opponent}`
                           : week.name;
                         return (
-                          <option key={week.id} value={week.id}>
-                            {displayName}
-                          </option>
+                          <option key={week.id} value={week.id}>{displayName}</option>
                         );
                       })}
                     </optgroup>
                   ))}
                 </select>
-                <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-400 pointer-events-none" />
+                <Calendar size={12} className="absolute right-2 bottom-2 text-sky-400 pointer-events-none" />
               </div>
-              {currentWeek?.date && (
-                <p className="text-[0.65rem] text-sky-400/80 mt-1">
-                  {new Date(currentWeek.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  {currentWeek.opponent && ` - ${currentWeek.isHome ? 'Home' : 'Away'}`}
-                </p>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
     </div>

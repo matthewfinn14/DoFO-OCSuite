@@ -45,21 +45,21 @@ function CollapsibleCategory({
   };
 
   return (
-    <div className={nested ? 'ml-2' : 'mb-1'}>
+    <div className={nested ? 'ml-2' : ''}>
       <button
         onClick={handleClick}
-        className={`w-full flex items-center gap-2 px-4 py-2 text-left text-sm font-semibold rounded-md transition-colors ${
+        className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs font-semibold rounded transition-colors ${
           nested
-            ? 'text-slate-400/90 hover:text-slate-200 hover:bg-slate-800/30 py-1.5'
+            ? 'text-slate-400/90 hover:text-slate-200 hover:bg-slate-800/30'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
         }`}
       >
-        <Icon size={nested ? 14 : 16} />
+        <Icon size={14} />
         <span className="flex-1">{title}</span>
-        {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </button>
       {isOpen && (
-        <div className={nested ? 'ml-2 mt-0.5' : 'ml-4 mt-1 space-y-1'}>
+        <div className={nested ? 'ml-2 mt-0.5' : 'ml-3 mt-0.5 space-y-0.5'}>
           {children}
         </div>
       )}
@@ -73,14 +73,14 @@ function WeeklyToolItem({ to, icon: Icon, label }) {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
+        `flex items-center gap-2 px-3 py-1.5 text-xs rounded transition-colors ${
           isActive
             ? 'text-sky-400 bg-sky-500/10'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
         }`
       }
     >
-      <Icon size={16} />
+      <Icon size={14} />
       <span>{label}</span>
     </NavLink>
   );
@@ -92,14 +92,14 @@ function NavItem({ to, icon: Icon, label, collapsed }) {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+        `flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
           isActive
             ? 'bg-sky-500/20 text-sky-400 border-l-2 border-sky-400'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
         } ${collapsed ? 'justify-center px-2' : ''}`
       }
     >
-      <Icon size={18} />
+      <Icon size={14} />
       {!collapsed && <span>{label}</span>}
     </NavLink>
   );
@@ -130,10 +130,9 @@ export default function Sidebar() {
         theme={school?.settings?.theme || 'dark'}
       />
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2">
-        {/* Core Navigation */}
-        <div className="space-y-1 mb-4">
+      {/* Fixed Core Navigation */}
+      <div className="px-2 py-1 border-b border-slate-800 flex-shrink-0">
+        <div className="space-y-0.5">
           {currentPermissions.dashboard.view && (
             <NavItem to="/dashboard" icon={Target} label="PROGRAM ALIGNMENT" collapsed={collapsed} />
           )}
@@ -151,34 +150,34 @@ export default function Sidebar() {
           )}
         </div>
 
+        {!collapsed && currentPermissions.staff.view && (
+          <div className="mt-1">
+            <CollapsibleCategory title="STAFF & ROSTER" icon={Users}>
+              <NavItem to="/staff" icon={UserCog} label="Staff & Roles" collapsed={false} />
+              {currentPermissions.settings.view && (
+                <NavItem to="/permissions" icon={Lock} label="Permissions" collapsed={false} />
+              )}
+              <NavItem to="/roster" icon={Users} label="Manage Roster" collapsed={false} />
+              <NavItem to="/archive" icon={Archive} label="Archive" collapsed={false} />
+            </CollapsibleCategory>
+          </div>
+        )}
+      </div>
+
+      {/* Scrollable Weekly Tools Section */}
+      <nav className="flex-1 overflow-y-auto px-2 py-1">
         {!collapsed && (
           <>
-            <div className="border-t border-slate-800 my-4" />
-
-            {/* Staff & Roster */}
-            {currentPermissions.staff.view && (
-              <CollapsibleCategory title="STAFF & ROSTER" icon={Users}>
-                <NavItem to="/staff" icon={UserCog} label="Staff & Roles" collapsed={false} />
-                {currentPermissions.settings.view && (
-                  <NavItem to="/permissions" icon={Lock} label="Permissions" collapsed={false} />
-                )}
-                <NavItem to="/roster" icon={Users} label="Manage Roster" collapsed={false} />
-                <NavItem to="/archive" icon={Archive} label="Archive" collapsed={false} />
-              </CollapsibleCategory>
-            )}
-
-            <div className="border-t border-slate-800 my-4" />
-
             {/* Weekly Tools - shown when a week is selected */}
             {currentWeekId && (
               <>
-                <div className="mb-2">
-                  <span className="px-4 text-xs text-slate-500 uppercase tracking-wide">
+                <div className="mb-1">
+                  <span className="px-2 text-[0.65rem] text-slate-500 uppercase tracking-wide">
                     Weekly Tools
                   </span>
                 </div>
 
-                <div className="space-y-0.5 mb-4">
+                <div className="space-y-0.5">
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/notes`}
                     icon={FileText}
@@ -224,29 +223,25 @@ export default function Sidebar() {
                     </>
                   )}
                 </div>
-
-                <div className="border-t border-slate-800 my-4" />
               </>
             )}
 
             {/* Prompt to select week if none selected */}
             {!currentWeekId && weeks.length > 0 && (
-              <div className="px-4 py-3 text-center">
-                <p className="text-xs text-slate-500">
+              <div className="px-2 py-2 text-center">
+                <p className="text-[0.65rem] text-slate-500">
                   Select a week above to see weekly tools
                 </p>
               </div>
             )}
 
             {!currentWeekId && weeks.length === 0 && (
-              <div className="px-4 py-3 text-center">
-                <p className="text-xs text-slate-500">
+              <div className="px-2 py-2 text-center">
+                <p className="text-[0.65rem] text-slate-500">
                   Add weeks in Season Setup
                 </p>
               </div>
             )}
-
-            <div className="border-t border-slate-800 my-4" />
 
             {/* Sub-Levels Section */}
             <SubLevelsSection />
