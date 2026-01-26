@@ -95,6 +95,7 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
                   className="w-full px-3 py-2 text-sm bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer hover:border-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
                 >
                   <option value="">Program</option>
+                  <option value="varsity">Varsity</option>
                   {accessibleLevels.map(level => (
                     <option key={level.id} value={level.id}>
                       {level.name}
@@ -104,9 +105,11 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
                 <Layers size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
               <p className="text-[0.65rem] text-slate-500 mt-1">
-                {activeLevelId
-                  ? `Viewing ${accessibleLevels.find(l => l.id === activeLevelId)?.name || 'level'} only`
-                  : 'Viewing all levels & full roster'
+                {activeLevelId === 'varsity'
+                  ? 'Viewing Varsity only'
+                  : activeLevelId
+                    ? `Viewing ${accessibleLevels.find(l => l.id === activeLevelId)?.name || 'level'} only`
+                    : 'Viewing all levels & full roster'
                 }
               </p>
             </div>

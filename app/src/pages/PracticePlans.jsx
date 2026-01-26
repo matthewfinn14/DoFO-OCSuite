@@ -681,7 +681,10 @@ function SegmentLevelsSelector({ segment, programLevels, onChange }) {
   const getDisplayText = () => {
     if (isAllLevels) return 'All';
     const levelNames = selectedLevels
-      .map(id => programLevels.find(l => l.id === id)?.name || id)
+      .map(id => {
+        if (id === 'varsity') return 'Varsity';
+        return programLevels.find(l => l.id === id)?.name || id;
+      })
       .slice(0, 2);
     if (selectedLevels.length > 2) {
       return `${levelNames.join(', ')} +${selectedLevels.length - 2}`;
