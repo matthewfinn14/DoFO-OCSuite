@@ -1,9 +1,25 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
+import { useAuth } from '../../context/AuthContext';
 import SchoolSwitcher from './SchoolSwitcher';
 
 export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'dark' }) {
-  const { school, activeYear, globalWeekTemplates, setCurrentWeekId } = useSchool();
+  const { school, activeYear, globalWeekTemplates, setCurrentWeekId, setupConfig, programLevels, activeLevelId, setActiveLevelId } = useSchool();
+  const { user, isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
+
+  // Get program levels from setupConfig (they're stored there when edited in Setup)
+  const levels = setupConfig?.programLevels || programLevels || [];
+
+  // Determine which levels the current user can access
+  const accessibleLevels = levels.filter(level => {
+    // Head coaches, team admins, and site admins can access all levels
+    if (isHeadCoach || isTeamAdmin || isSiteAdmin) return true;
+    // Other staff can only access levels they have permission for
+    return (level.staffPermissions || []).includes(user?.uid);
+  });
+
+  // Only show dropdown if there are 2+ levels AND user has access to at least one
+  const showLevelDropdown = levels.length >= 1 && accessibleLevels.length >= 1;
 
   const handleLoadWeekFromTemplate = (templateId) => {
     // This would be implemented to load a week template
@@ -65,6 +81,35 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
               {activeYear || new Date().getFullYear()}
             </div>
           </div>
+
+          {/* Program Level Selector */}
+          {showLevelDropdown && (
+            <div className="mt-4">
+              <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide block mb-1">
+                Program Level
+              </span>
+              <div className="relative">
+                <select
+                  value={activeLevelId || ''}
+                  onChange={(e) => setActiveLevelId(e.target.value || null)}
+                  className="w-full px-3 py-2 text-sm bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer hover:border-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                >
+                  <option value="">Varsity (Main)</option>
+                  {accessibleLevels.map(level => (
+                    <option key={level.id} value={level.id}>
+                      {level.name}
+                    </option>
+                  ))}
+                </select>
+                <Layers size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+              {activeLevelId && (
+                <p className="text-[0.65rem] text-amber-400/80 mt-1">
+                  Viewing {accessibleLevels.find(l => l.id === activeLevelId)?.name || 'sub-level'} data
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Week Template Selector */}
           {globalWeekTemplates.length > 0 && (

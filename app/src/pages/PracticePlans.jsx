@@ -64,26 +64,40 @@ const CONTACT_LEVELS = [
   { value: 'Live', label: 'Live' }
 ];
 
-// Default segment types (can be customized in setup)
-const DEFAULT_SEGMENT_TYPES = [
-  'Competition',
-  'Individual',
-  'Group',
-  'Team',
-  'Special Teams',
-  'Pass Skelly',
-  'Inside Run',
-  '7-on-7',
-  'Team Run',
-  'Team Pass',
-  '1st/2nd Down',
-  '3rd Down',
-  'Red Zone',
-  'Goal Line',
-  '2-Minute',
-  'Take-Off',
-  'Conditioning'
-];
+// Map phase values to setup config keys
+const PHASE_TO_CONFIG_KEY = {
+  'O': 'O',
+  'D': 'D',
+  'K': 'K',
+  'C': 'C',
+  'ALL': null // ALL phase shows types from all phases
+};
+
+// Default segment types (fallback if setup is empty)
+const DEFAULT_SEGMENT_TYPES = {
+  O: [
+    { id: 'default_team', name: 'Team', focusItems: [] },
+    { id: 'default_indiv', name: 'Individual', focusItems: [] },
+    { id: 'default_7on7', name: '7-on-7', focusItems: [] },
+    { id: 'default_pass_skelly', name: 'Pass Skelly', focusItems: [] },
+    { id: 'default_inside_run', name: 'Inside Run', focusItems: [] }
+  ],
+  D: [
+    { id: 'default_team_d', name: 'Team', focusItems: [] },
+    { id: 'default_indiv_d', name: 'Individual', focusItems: [] },
+    { id: 'default_tackling', name: 'Tackling', focusItems: [] }
+  ],
+  K: [
+    { id: 'default_kickoff', name: 'Kickoff', focusItems: [] },
+    { id: 'default_punt', name: 'Punt', focusItems: [] },
+    { id: 'default_fg_pat', name: 'FG/PAT', focusItems: [] }
+  ],
+  C: [
+    { id: 'default_competition', name: 'Competition', focusItems: [] },
+    { id: 'default_conditioning', name: 'Conditioning', focusItems: [] },
+    { id: 'default_warmup', name: 'Warmup', focusItems: [] }
+  ]
+};
 
 // Segment Notes Modal Component with @mention support
 function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onClose }) {
@@ -250,7 +264,7 @@ function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onCl
             {/* Mention Suggestions Dropdown */}
             {showSuggestions && filteredSuggestions.length > 0 && (
               <div className="absolute left-0 right-0 mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-xl overflow-hidden z-10">
-                {filteredSuggestions.map((suggestion, idx) => (
+                {filteredSuggestions.map((suggestion) => (
                   <button
                     key={suggestion.value}
                     onClick={() => insertMention(suggestion)}
@@ -633,10 +647,210 @@ function LegacySegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
   );
 }
 
+// Save Template Modal
+function SaveTemplateModal({ currentPlan, selectedDay, existingTemplates, onSave, onClose }) {
+  const [templateName, setTemplateName] = useState('');
+  const [selectedFolder, setSelectedFolder] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+
+  // Get existing folders from templates
+  const existingFolders = useMemo(() => {
+    const folders = new Set();
+    (existingTemplates || []).forEach(t => {
+      if (t.folder) folders.add(t.folder);
+    });
+    return Array.from(folders).sort();
+  }, [existingTemplates]);
+
+  const handleSave = () => {
+    const name = templateName.trim();
+    if (!name) {
+      alert('Please enter a template name');
+      return;
+    }
+
+    const folder = isCreatingFolder ? newFolderName.trim() : selectedFolder;
+
+    const template = {
+      id: `template_${Date.now()}`,
+      name,
+      folder: folder || null,
+      createdAt: new Date().toISOString(),
+      dayOfWeek: selectedDay,
+      startTime: currentPlan.startTime,
+      warmupDuration: currentPlan.warmupDuration,
+      transitionTime: currentPlan.transitionTime,
+      showPeriodZero: currentPlan.showPeriodZero,
+      isTwoPlatoon: currentPlan.isTwoPlatoon,
+      segments: currentPlan.segments.map(seg => ({
+        ...seg,
+        id: `seg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // New IDs for template
+        notes: {} // Clear notes for template
+      }))
+    };
+
+    onSave(template);
+    onClose();
+  };
+
+  // Example names based on common patterns
+  const nameSuggestions = [
+    `${selectedDay}-Standard`,
+    'Camp-Day1',
+    'Preseason-Heavy',
+    'GameWeek-Tuesday',
+    'Spring-Install'
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <LayoutTemplate size={20} className="text-emerald-400" />
+            <h3 className="text-lg font-semibold text-white">Save as Template</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-5">
+          {/* Naming Tips */}
+          <div className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+            <p className="text-sm text-slate-300 font-medium mb-2">Naming Tips</p>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Use descriptive names that indicate the purpose or phase. Good examples:
+            </p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {nameSuggestions.map(s => (
+                <button
+                  key={s}
+                  onClick={() => setTemplateName(s)}
+                  className="px-2 py-1 text-xs bg-slate-600 text-slate-300 rounded hover:bg-slate-500 transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 mt-2 italic">
+              Pattern: [Phase/Event]-[Day/Focus] like "Camp-Monday" or "GameWeek-Install"
+            </p>
+          </div>
+
+          {/* Template Name */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Template Name <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={templateName}
+              onChange={e => setTemplateName(e.target.value)}
+              placeholder="e.g., Camp-Monday, Preseason-Heavy"
+              className="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+              autoFocus
+            />
+          </div>
+
+          {/* Folder Selection */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Folder (Optional)
+            </label>
+
+            {!isCreatingFolder ? (
+              <div className="space-y-2">
+                <select
+                  value={selectedFolder}
+                  onChange={e => setSelectedFolder(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+                >
+                  <option value="">No folder</option>
+                  {existingFolders.map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setIsCreatingFolder(true)}
+                  className="text-xs text-sky-400 hover:text-sky-300"
+                >
+                  + Create new folder
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  placeholder="New folder name..."
+                  className="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                />
+                <button
+                  onClick={() => {
+                    setIsCreatingFolder(false);
+                    setNewFolderName('');
+                  }}
+                  className="text-xs text-slate-400 hover:text-slate-300"
+                >
+                  Cancel - use existing folder
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Template Preview */}
+          <div className="p-3 bg-slate-900 rounded-lg">
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Template will include:</p>
+            <ul className="text-sm text-slate-400 space-y-1">
+              <li>• {currentPlan.segments?.length || 0} segments</li>
+              <li>• Start time: {currentPlan.startTime || '3:30 PM'}</li>
+              <li>• Warmup: {currentPlan.warmupDuration || 10} min</li>
+              <li>• Transition: {currentPlan.transitionTime || 0} min between periods</li>
+              {currentPlan.isTwoPlatoon && <li>• 2-Platoon mode enabled</li>}
+            </ul>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-700">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!templateName.trim()}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <Save size={16} />
+            Save Template
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PracticePlans() {
   const { year, phase, week: weekParam, day: dayParam, weekId: legacyWeekId } = useParams();
   const navigate = useNavigate();
-  const { weeks, updateWeek, setupConfig, staff, settings } = useSchool();
+  const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings } = useSchool();
 
   // Determine the week - support both new URL structure and legacy
   const week = useMemo(() => {
@@ -684,9 +898,9 @@ export default function PracticePlans() {
   const [selectedSegmentId, setSelectedSegmentId] = useState(null);
   const [mode, setMode] = useState('plan'); // 'plan' or 'script'
   const [coachFilter, setCoachFilter] = useState('ALL');
-  const [notesCoach, setNotesCoach] = useState('ALL_COACHES');
   const [notesModalSegmentId, setNotesModalSegmentId] = useState(null); // 'WARMUP' or segment.id
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
 
   // Get weekId for updates
   const weekId = week?.id;
@@ -725,21 +939,45 @@ export default function PracticePlans() {
     segments: []
   };
 
-  // Get segment types from setup or use defaults
-  const segmentTypes = useMemo(() => {
+  // Get all segment types organized by phase from setup or use defaults
+  const allSegmentTypes = useMemo(() => {
     const phaseTypes = setupConfig?.practiceSegmentTypes || {};
-    const allTypes = new Set(DEFAULT_SEGMENT_TYPES);
-    Object.values(phaseTypes).forEach(types => {
-      types.forEach(t => allTypes.add(t));
+    // Merge with defaults for each phase
+    const result = {};
+    ['O', 'D', 'K', 'C'].forEach(phase => {
+      const configTypes = phaseTypes[phase] || [];
+      const defaultTypes = DEFAULT_SEGMENT_TYPES[phase] || [];
+      // Use config types if available, otherwise defaults
+      result[phase] = configTypes.length > 0 ? configTypes : defaultTypes;
     });
-    return Array.from(allTypes).sort();
+    return result;
   }, [setupConfig]);
+
+  // Get segment types for a specific phase (or all phases if 'ALL')
+  const getSegmentTypesForPhase = useCallback((phase) => {
+    if (phase === 'ALL' || !phase) {
+      // Combine all phases
+      const allTypes = [];
+      ['O', 'D', 'K', 'C'].forEach(p => {
+        (allSegmentTypes[p] || []).forEach(t => allTypes.push(t));
+      });
+      return allTypes;
+    }
+    return allSegmentTypes[phase] || [];
+  }, [allSegmentTypes]);
+
+  // Get focus items for a specific segment type
+  const getFocusItemsForType = useCallback((phase, typeName) => {
+    const types = getSegmentTypesForPhase(phase);
+    const segType = types.find(t => t.name === typeName);
+    return segType?.focusItems || [];
+  }, [getSegmentTypesForPhase]);
 
   // Get position groups from setup
   const positionGroups = useMemo(() => {
     const groups = new Set();
     // Collect from all phases
-    ['offense', 'defense', 'specialTeams'].forEach(phase => {
+    ['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].forEach(phase => {
       const phaseGroups = setupConfig?.positionGroups?.[phase] || [];
       phaseGroups.forEach(g => groups.add(g.name || g));
     });
@@ -749,16 +987,6 @@ export default function PracticePlans() {
     });
     return Array.from(groups).sort();
   }, [setupConfig, staff]);
-
-  // Get focus items from setup
-  const focusItems = useMemo(() => {
-    const items = setupConfig?.practiceFocusItems || {};
-    const all = new Set();
-    Object.values(items).forEach(arr => {
-      arr.forEach(item => all.add(item));
-    });
-    return Array.from(all).sort();
-  }, [setupConfig]);
 
   // Calculate segment start times
   const getSegmentStartTime = useCallback((index) => {
@@ -933,6 +1161,16 @@ export default function PracticePlans() {
     // Navigate to the target day
     navigateToDay(targetDay);
   }, [week, weekId, practicePlans, selectedDay, currentPlan, updateWeek, navigateToDay]);
+
+  // Save current plan as template
+  const saveAsTemplate = useCallback(async (template) => {
+    const existingTemplates = setupConfig?.practiceTemplates || [];
+    const newTemplates = [...existingTemplates, template];
+    await updateSetupConfig({ practiceTemplates: newTemplates });
+  }, [setupConfig, updateSetupConfig]);
+
+  // Get existing templates for the modal
+  const existingTemplates = setupConfig?.practiceTemplates || [];
 
   if (!week) {
     return (
@@ -1120,6 +1358,15 @@ export default function PracticePlans() {
                 </div>
               </div>
 
+              {/* Save as Template */}
+              <button
+                onClick={() => setShowSaveTemplateModal(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-600/30 text-sm"
+              >
+                <LayoutTemplate size={14} />
+                Save Template
+              </button>
+
               {/* Total Duration */}
               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 rounded">
                 <Clock size={14} className="text-slate-400" />
@@ -1214,8 +1461,8 @@ export default function PracticePlans() {
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                             >
                               <option value="">-- Offense --</option>
-                              {focusItems.map(f => (
-                                <option key={f} value={f}>{f}</option>
+                              {getFocusItemsForType('O', currentPlan.warmupType).map(f => (
+                                <option key={f.id || f.name} value={f.name}>{f.name}</option>
                               ))}
                             </select>
                           </td>
@@ -1227,8 +1474,8 @@ export default function PracticePlans() {
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                             >
                               <option value="">-- Defense --</option>
-                              {focusItems.map(f => (
-                                <option key={f} value={f}>{f}</option>
+                              {getFocusItemsForType('D', currentPlan.warmupType).map(f => (
+                                <option key={f.id || f.name} value={f.name}>{f.name}</option>
                               ))}
                             </select>
                           </td>
@@ -1242,8 +1489,8 @@ export default function PracticePlans() {
                             className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                           >
                             <option value="">-- Select Focus --</option>
-                            {focusItems.map(f => (
-                              <option key={f} value={f}>{f}</option>
+                            {getFocusItemsForType('C', currentPlan.warmupType).map(f => (
+                              <option key={f.id || f.name} value={f.name}>{f.name}</option>
                             ))}
                           </select>
                         </td>
@@ -1346,8 +1593,8 @@ export default function PracticePlans() {
                           className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                         >
                           <option value="">-- Select Type --</option>
-                          {segmentTypes.map(t => (
-                            <option key={t} value={t}>{t}</option>
+                          {getSegmentTypesForPhase(seg.phase).map(t => (
+                            <option key={t.id || t.name} value={t.name}>{t.name}</option>
                           ))}
                         </select>
                       </td>
@@ -1361,8 +1608,8 @@ export default function PracticePlans() {
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                             >
                               <option value="">-- Offense --</option>
-                              {focusItems.map(f => (
-                                <option key={f} value={f}>{f}</option>
+                              {getFocusItemsForType('O', seg.type).map(f => (
+                                <option key={f.id || f.name} value={f.name}>{f.name}</option>
                               ))}
                             </select>
                           </td>
@@ -1374,8 +1621,8 @@ export default function PracticePlans() {
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                             >
                               <option value="">-- Defense --</option>
-                              {focusItems.map(f => (
-                                <option key={f} value={f}>{f}</option>
+                              {getFocusItemsForType('D', seg.type).map(f => (
+                                <option key={f.id || f.name} value={f.name}>{f.name}</option>
                               ))}
                             </select>
                           </td>
@@ -1389,8 +1636,8 @@ export default function PracticePlans() {
                             className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                           >
                             <option value="">-- Select Focus --</option>
-                            {focusItems.map(f => (
-                              <option key={f} value={f}>{f}</option>
+                            {getFocusItemsForType(seg.phase, seg.type).map(f => (
+                              <option key={f.id || f.name} value={f.name}>{f.name}</option>
                             ))}
                           </select>
                         </td>
@@ -1500,7 +1747,6 @@ export default function PracticePlans() {
       </div>
 
       {/* Notes Modal */}
-      {/* Notes Modal */}
       {notesModalSegment && (
         <SegmentNotesModal
           segment={notesModalSegment}
@@ -1519,6 +1765,17 @@ export default function PracticePlans() {
           practicePlans={practicePlans}
           weekName={week?.name || ''}
           onClose={() => setShowPrintModal(false)}
+        />
+      )}
+
+      {/* Save Template Modal */}
+      {showSaveTemplateModal && (
+        <SaveTemplateModal
+          currentPlan={currentPlan}
+          selectedDay={selectedDay}
+          existingTemplates={existingTemplates}
+          onSave={saveAsTemplate}
+          onClose={() => setShowSaveTemplateModal(false)}
         />
       )}
     </div>

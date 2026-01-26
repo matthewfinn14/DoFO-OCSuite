@@ -374,6 +374,7 @@ const DEFAULT_POSITION_COLORS = {
 
 // Phase tabs
 const PHASES = [
+  { id: 'PROGRAM', label: 'Program' },
   { id: 'OFFENSE', label: 'Offense' },
   { id: 'DEFENSE', label: 'Defense' },
   { id: 'SPECIAL_TEAMS', label: 'Special Teams' },
@@ -391,14 +392,16 @@ export default function Setup() {
     'offense': 'OFFENSE',
     'defense': 'DEFENSE',
     'special-teams': 'SPECIAL_TEAMS',
-    'practice': 'PRACTICE'
+    'practice': 'PRACTICE',
+    'program': 'PROGRAM'
   };
 
   const phaseIdToSlug = {
     'OFFENSE': 'offense',
     'DEFENSE': 'defense',
     'SPECIAL_TEAMS': 'special-teams',
-    'PRACTICE': 'practice'
+    'PRACTICE': 'practice',
+    'PROGRAM': 'program'
   };
 
   // Get phase from URL or default
@@ -412,12 +415,17 @@ export default function Setup() {
   // Phase selection - derive from URL
   const [phase, setPhase] = useState(() => getPhaseFromUrl());
   const isPractice = phase === 'PRACTICE';
+  const isProgram = phase === 'PROGRAM';
   const isOffense = phase === 'OFFENSE';
   const isDefense = phase === 'DEFENSE';
   const isST = phase === 'SPECIAL_TEAMS';
 
   // Active tab within phase - derive from URL or default
-  const getDefaultTab = (p) => p === 'PRACTICE' ? 'practice-lists' : 'positions';
+  const getDefaultTab = (p) => {
+    if (p === 'PRACTICE') return 'practice-lists';
+    if (p === 'PROGRAM') return 'levels';
+    return 'positions';
+  };
   const [activeTab, setActiveTab] = useState(() => urlTab || getDefaultTab(phase));
 
   // UI state
@@ -506,7 +514,7 @@ export default function Setup() {
   // Sync URL with phase changes
   const handlePhaseChange = (newPhase) => {
     setPhase(newPhase);
-    const defaultTab = newPhase === 'PRACTICE' ? 'practice-lists' : 'positions';
+    const defaultTab = getDefaultTab(newPhase);
     setActiveTab(defaultTab);
     const phaseSlug = phaseIdToSlug[newPhase];
     navigate(`/setup/${phaseSlug}/${defaultTab}`, { replace: true });
@@ -575,12 +583,14 @@ export default function Setup() {
 
   // Tabs based on phase
   const getTabs = () => {
+    if (isProgram) {
+      return [
+        { id: 'levels', label: 'Program Levels', icon: Layers }
+      ];
+    }
     if (isPractice) {
       return [
-        { id: 'practice-lists', label: 'Practice Lists', icon: List },
-        { id: 'practice-templates', label: 'Practice Templates', icon: Calendar },
-        { id: 'gameplan-templates', label: 'Game Plan Templates', icon: LayoutDashboard },
-        { id: 'pregame-templates', label: 'Pregame Templates', icon: Clock }
+        { id: 'practice-lists', label: 'Practice Lists', icon: List }
       ];
     }
     const tabs = [
@@ -789,7 +799,7 @@ export default function Setup() {
           )}
 
           {/* Positions Tab */}
-          {activeTab === 'positions' && !isPractice && (
+          {activeTab === 'positions' && !isPractice && !isProgram && (
             <PositionsTab
               phase={phase}
               positions={getPositions()}
@@ -803,7 +813,7 @@ export default function Setup() {
           )}
 
           {/* Position Groups Tab */}
-          {activeTab === 'position-groups' && !isPractice && (
+          {activeTab === 'position-groups' && !isPractice && !isProgram && (
             <PositionGroupsTab
               phase={phase}
               positionGroups={localConfig.positionGroups || {}}
@@ -824,7 +834,7 @@ export default function Setup() {
           )}
 
           {/* Formations Tab */}
-          {activeTab === 'formations' && !isPractice && (
+          {activeTab === 'formations' && !isPractice && !isProgram && (
             <FormationsTab
               phase={phase}
               formations={(localConfig.formations || []).filter(f => f.phase === phase)}
@@ -837,7 +847,7 @@ export default function Setup() {
           )}
 
           {/* Play Categories/Buckets Tab */}
-          {activeTab === 'categories' && !isPractice && (
+          {activeTab === 'categories' && !isPractice && !isProgram && (
             <CategoriesTab
               phase={phase}
               categories={getPlayCategories()}
@@ -847,7 +857,7 @@ export default function Setup() {
           )}
 
           {/* Concept Families Tab */}
-          {activeTab === 'buckets' && !isPractice && (
+          {activeTab === 'buckets' && !isPractice && !isProgram && (
             <ConceptFamiliesTab
               phase={phase}
               categories={getPlayCategories()}
@@ -857,7 +867,7 @@ export default function Setup() {
           )}
 
           {/* Play Call Chain Tab */}
-          {activeTab === 'play-call-chain' && !isPractice && (
+          {activeTab === 'play-call-chain' && !isPractice && !isProgram && (
             <PlayCallChainTab
               phase={phase}
               syntax={localConfig.syntax || {}}
@@ -867,7 +877,7 @@ export default function Setup() {
           )}
 
           {/* Glossary Definitions Tab */}
-          {activeTab === 'glossary' && !isPractice && (
+          {activeTab === 'glossary' && !isPractice && !isProgram && (
             <GlossaryDefinitionsTab
               phase={phase}
               termLibrary={localConfig.termLibrary || {}}
@@ -897,36 +907,12 @@ export default function Setup() {
             />
           )}
 
-          {/* Practice Templates Tab */}
-          {activeTab === 'practice-templates' && isPractice && (
-            <TemplatesTab
-              title="Practice Templates"
-              description="Templates are saved from Practice Planner. Use 'Save as Template' to add templates here."
-              templates={localConfig.practiceTemplates || []}
-              onUpdate={(templates) => updateLocal('practiceTemplates', templates)}
-              icon={Calendar}
-            />
-          )}
-
-          {/* Game Plan Templates Tab */}
-          {activeTab === 'gameplan-templates' && isPractice && (
-            <TemplatesTab
-              title="Game Plan Templates"
-              description="Templates are saved from Game Planner. Use 'Save as Template' to add templates here."
-              templates={localConfig.gameplanTemplates || []}
-              onUpdate={(templates) => updateLocal('gameplanTemplates', templates)}
-              icon={LayoutDashboard}
-            />
-          )}
-
-          {/* Pregame Templates Tab */}
-          {activeTab === 'pregame-templates' && isPractice && (
-            <TemplatesTab
-              title="Pregame Timeline Templates"
-              description="Save and reuse pregame warmup schedules and timelines."
-              templates={localConfig.pregameTemplates || []}
-              onUpdate={(templates) => updateLocal('pregameTemplates', templates)}
-              icon={Clock}
+          {/* Program Levels Tab */}
+          {activeTab === 'levels' && isProgram && (
+            <ProgramLevelsTab
+              programLevels={localConfig.programLevels || []}
+              staff={staff || []}
+              onUpdate={updateLocal}
             />
           )}
         </div>
@@ -2346,100 +2332,282 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
 }
 
 // Practice Lists Tab Component
-function PracticeListsTab({ phase, segmentTypes, focusItems, segmentSettings, onUpdate }) {
-  const currentSegments = segmentTypes.PRACTICE || [];
-  const currentFocus = focusItems.PRACTICE || [];
+// Segment Types are organized by phase (O, D, K, C)
+// Focus Items are sub-families of Segment Types
+const PRACTICE_PHASES = [
+  { id: 'O', label: 'Offense', color: 'bg-blue-600' },
+  { id: 'D', label: 'Defense', color: 'bg-red-600' },
+  { id: 'K', label: 'Special Teams', color: 'bg-amber-600' },
+  { id: 'C', label: 'Competition/Conditioning', color: 'bg-emerald-600' }
+];
 
+function PracticeListsTab({ phase, segmentTypes, focusItems, segmentSettings, onUpdate }) {
+  const [activePhase, setActivePhase] = useState('O');
+  const [expandedTypes, setExpandedTypes] = useState({});
+  const [editingType, setEditingType] = useState(null);
+  const [editingFocus, setEditingFocus] = useState(null);
+
+  // Get segment types for current phase
+  // Data structure: { O: [{ id, name, focusItems: [] }], D: [...], K: [...], C: [...] }
+  const currentSegments = segmentTypes[activePhase] || [];
+
+  // Toggle expand/collapse for segment type
+  const toggleExpand = (typeId) => {
+    setExpandedTypes(prev => ({ ...prev, [typeId]: !prev[typeId] }));
+  };
+
+  // Add new segment type
   const addSegmentType = () => {
     const name = prompt('New segment type (e.g., Team Run, Individual):');
-    if (!name || currentSegments.includes(name)) return;
-    onUpdate('practiceSegmentTypes', { ...segmentTypes, PRACTICE: [...currentSegments, name] });
+    if (!name || !name.trim()) return;
+
+    const newType = {
+      id: `type_${Date.now()}`,
+      name: name.trim(),
+      focusItems: []
+    };
+
+    const updated = {
+      ...segmentTypes,
+      [activePhase]: [...currentSegments, newType]
+    };
+    onUpdate('practiceSegmentTypes', updated);
   };
 
-  const deleteSegmentType = (item) => {
-    if (!confirm(`Delete "${item}"?`)) return;
-    onUpdate('practiceSegmentTypes', { ...segmentTypes, PRACTICE: currentSegments.filter(s => s !== item) });
+  // Rename segment type
+  const renameSegmentType = (typeId, newName) => {
+    if (!newName || !newName.trim()) return;
+    const updated = {
+      ...segmentTypes,
+      [activePhase]: currentSegments.map(t =>
+        t.id === typeId ? { ...t, name: newName.trim() } : t
+      )
+    };
+    onUpdate('practiceSegmentTypes', updated);
+    setEditingType(null);
   };
 
-  const addFocusItem = () => {
+  // Delete segment type
+  const deleteSegmentType = (typeId, typeName) => {
+    if (!confirm(`Delete "${typeName}" and all its focus items?`)) return;
+    const updated = {
+      ...segmentTypes,
+      [activePhase]: currentSegments.filter(t => t.id !== typeId)
+    };
+    onUpdate('practiceSegmentTypes', updated);
+  };
+
+  // Add focus item to segment type
+  const addFocusItem = (typeId) => {
     const name = prompt('New focus item (e.g., Run Game, Pass Pro):');
-    if (!name || currentFocus.includes(name)) return;
-    onUpdate('practiceFocusItems', { ...focusItems, PRACTICE: [...currentFocus, name] });
+    if (!name || !name.trim()) return;
+
+    const newFocus = {
+      id: `focus_${Date.now()}`,
+      name: name.trim()
+    };
+
+    const updated = {
+      ...segmentTypes,
+      [activePhase]: currentSegments.map(t =>
+        t.id === typeId
+          ? { ...t, focusItems: [...(t.focusItems || []), newFocus] }
+          : t
+      )
+    };
+    onUpdate('practiceSegmentTypes', updated);
   };
 
-  const deleteFocusItem = (item) => {
-    if (!confirm(`Delete "${item}"?`)) return;
-    onUpdate('practiceFocusItems', { ...focusItems, PRACTICE: currentFocus.filter(f => f !== item) });
+  // Rename focus item
+  const renameFocusItem = (typeId, focusId, newName) => {
+    if (!newName || !newName.trim()) return;
+    const updated = {
+      ...segmentTypes,
+      [activePhase]: currentSegments.map(t =>
+        t.id === typeId
+          ? {
+              ...t,
+              focusItems: (t.focusItems || []).map(f =>
+                f.id === focusId ? { ...f, name: newName.trim() } : f
+              )
+            }
+          : t
+      )
+    };
+    onUpdate('practiceSegmentTypes', updated);
+    setEditingFocus(null);
+  };
+
+  // Delete focus item
+  const deleteFocusItem = (typeId, focusId, focusName) => {
+    if (!confirm(`Delete focus item "${focusName}"?`)) return;
+    const updated = {
+      ...segmentTypes,
+      [activePhase]: currentSegments.map(t =>
+        t.id === typeId
+          ? { ...t, focusItems: (t.focusItems || []).filter(f => f.id !== focusId) }
+          : t
+      )
+    };
+    onUpdate('practiceSegmentTypes', updated);
   };
 
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Practice Lists</h3>
-        <p className="text-slate-400 text-sm">Customize standard dropdown options for practice plans.</p>
+        <h3 className="text-lg font-semibold text-white">Practice Segment Types</h3>
+        <p className="text-slate-400 text-sm">
+          Define segment types for each phase. Focus items are sub-categories within each segment type.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Segment Types */}
-        <div className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="font-semibold text-white">Segment Types</h4>
-            <button
-              onClick={addSegmentType}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-sky-600 text-white rounded hover:bg-sky-700"
-            >
-              <Plus size={14} /> Add
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {currentSegments.map(item => (
-              <div key={item} className="flex justify-between items-center px-3 py-2 bg-slate-600/50 rounded border border-slate-500">
-                <span className="text-white text-sm">{item}</span>
-                <button onClick={() => deleteSegmentType(item)} className="text-red-400 hover:text-red-300">
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {currentSegments.length === 0 && (
-            <div className="text-center py-6 text-sm text-slate-500 italic">
-              No segment types defined.
-            </div>
-          )}
-        </div>
-
-        {/* Focus Items */}
-        <div className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="font-semibold text-white">Focus Items</h4>
-            <button
-              onClick={addFocusItem}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-sky-600 text-white rounded hover:bg-sky-700"
-            >
-              <Plus size={14} /> Add
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {currentFocus.map(item => (
-              <div key={item} className="flex justify-between items-center px-3 py-2 bg-slate-600/50 rounded border border-slate-500">
-                <span className="text-white text-sm">{item}</span>
-                <button onClick={() => deleteFocusItem(item)} className="text-red-400 hover:text-red-300">
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {currentFocus.length === 0 && (
-            <div className="text-center py-6 text-sm text-slate-500 italic">
-              No focus items defined.
-            </div>
-          )}
-        </div>
+      {/* Phase Tabs */}
+      <div className="flex gap-1 mb-6 bg-slate-800/50 p-1 rounded-lg">
+        {PRACTICE_PHASES.map(p => (
+          <button
+            key={p.id}
+            onClick={() => setActivePhase(p.id)}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
+              activePhase === p.id
+                ? `${p.color} text-white`
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
+
+      {/* Segment Types List */}
+      <div className="space-y-3">
+        {currentSegments.map(segType => {
+          const isExpanded = expandedTypes[segType.id];
+          const focusCount = (segType.focusItems || []).length;
+
+          return (
+            <div
+              key={segType.id}
+              className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden"
+            >
+              {/* Segment Type Header */}
+              <div className="flex items-center gap-3 px-4 py-3 bg-slate-700/80">
+                <button
+                  onClick={() => toggleExpand(segType.id)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  {isExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
+                </button>
+
+                {editingType === segType.id ? (
+                  <input
+                    autoFocus
+                    defaultValue={segType.name}
+                    onBlur={(e) => renameSegmentType(segType.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') renameSegmentType(segType.id, e.target.value);
+                      if (e.key === 'Escape') setEditingType(null);
+                    }}
+                    className="flex-1 bg-slate-600 text-white px-2 py-1 rounded border border-slate-500 focus:outline-none focus:border-sky-500"
+                  />
+                ) : (
+                  <span
+                    className="flex-1 text-white font-medium cursor-pointer hover:text-sky-300"
+                    onClick={() => setEditingType(segType.id)}
+                  >
+                    {segType.name}
+                  </span>
+                )}
+
+                <span className="text-xs text-slate-500">
+                  {focusCount} focus item{focusCount !== 1 ? 's' : ''}
+                </span>
+
+                <button
+                  onClick={() => addFocusItem(segType.id)}
+                  className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-slate-600 rounded"
+                  title="Add Focus Item"
+                >
+                  <Plus size={16} />
+                </button>
+
+                <button
+                  onClick={() => deleteSegmentType(segType.id, segType.name)}
+                  className="p-1.5 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded"
+                  title="Delete Segment Type"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {/* Focus Items */}
+              {isExpanded && (
+                <div className="border-t border-slate-600">
+                  {(segType.focusItems || []).length > 0 ? (
+                    <div className="p-2 space-y-1">
+                      {(segType.focusItems || []).map(focus => (
+                        <div
+                          key={focus.id}
+                          className="flex items-center gap-2 px-3 py-2 bg-slate-600/50 rounded"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-sky-500" />
+
+                          {editingFocus === focus.id ? (
+                            <input
+                              autoFocus
+                              defaultValue={focus.name}
+                              onBlur={(e) => renameFocusItem(segType.id, focus.id, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') renameFocusItem(segType.id, focus.id, e.target.value);
+                                if (e.key === 'Escape') setEditingFocus(null);
+                              }}
+                              className="flex-1 bg-slate-700 text-white px-2 py-0.5 rounded border border-slate-500 text-sm focus:outline-none focus:border-sky-500"
+                            />
+                          ) : (
+                            <span
+                              className="flex-1 text-slate-300 text-sm cursor-pointer hover:text-white"
+                              onClick={() => setEditingFocus(focus.id)}
+                            >
+                              {focus.name}
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => deleteFocusItem(segType.id, focus.id, focus.name)}
+                            className="p-1 text-red-400 hover:text-red-300"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-slate-500 text-sm italic">
+                      No focus items. Click <Plus size={12} className="inline" /> to add one.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {currentSegments.length === 0 && (
+          <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-600 rounded-lg">
+            <List size={48} className="mx-auto mb-4 opacity-30" />
+            <p>No segment types for {PRACTICE_PHASES.find(p => p.id === activePhase)?.label}.</p>
+            <p className="text-sm mt-1">Click "Add Segment Type" to create one.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Add Segment Type Button */}
+      <button
+        onClick={addSegmentType}
+        className="mt-4 flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+      >
+        <Plus size={18} />
+        Add Segment Type
+      </button>
     </div>
   );
 }
@@ -2494,6 +2662,271 @@ function TemplatesTab({ title, description, templates, onUpdate, icon: Icon }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// Program Levels Tab Component
+// Tools available for each level
+const LEVEL_TOOLS = [
+  { key: 'playbook', label: 'Playbook', description: 'Access to playbook for this level' },
+  { key: 'depthChart', label: 'Depth Chart', description: 'Manage depth chart' },
+  { key: 'practiceScripts', label: 'Practice Scripts', description: 'Create practice scripts' },
+  { key: 'gamePlan', label: 'Game Planner', description: 'Build game plans' },
+  { key: 'wristband', label: 'Wristband Builder', description: 'Create wristbands' }
+];
+
+function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
+  const [expandedLevel, setExpandedLevel] = useState(null);
+
+  // Add new level
+  const addLevel = () => {
+    const name = prompt('Enter level name (e.g., JV, Freshman, Scout Team):');
+    if (!name || !name.trim()) return;
+
+    const newLevel = {
+      id: `level_${Date.now()}`,
+      name: name.trim(),
+      staffPermissions: [],
+      enabledTools: {
+        playbook: true,
+        depthChart: true,
+        practiceScripts: true,
+        gamePlan: false,
+        wristband: false
+      },
+      levelFocus: '',
+      coachExpectations: ''
+    };
+
+    onUpdate('programLevels', [...programLevels, newLevel]);
+    setExpandedLevel(newLevel.id);
+  };
+
+  // Update a level
+  const updateLevel = (levelId, updates) => {
+    const newLevels = programLevels.map(l =>
+      l.id === levelId ? { ...l, ...updates } : l
+    );
+    onUpdate('programLevels', newLevels);
+  };
+
+  // Delete a level
+  const deleteLevel = (levelId, levelName) => {
+    if (!confirm(`Delete "${levelName}"? This will remove all data for this level.`)) return;
+    onUpdate('programLevels', programLevels.filter(l => l.id !== levelId));
+  };
+
+  // Toggle staff permission
+  const toggleStaffPermission = (levelId, staffId) => {
+    const level = programLevels.find(l => l.id === levelId);
+    if (!level) return;
+    const perms = level.staffPermissions || [];
+    const newPerms = perms.includes(staffId)
+      ? perms.filter(id => id !== staffId)
+      : [...perms, staffId];
+    updateLevel(levelId, { staffPermissions: newPerms });
+  };
+
+  // Toggle tool
+  const toggleTool = (levelId, tool) => {
+    const level = programLevels.find(l => l.id === levelId);
+    if (!level) return;
+    updateLevel(levelId, {
+      enabledTools: { ...level.enabledTools, [tool]: !level.enabledTools?.[tool] }
+    });
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-white">Program Levels</h3>
+        <p className="text-slate-400 text-sm">
+          Manage sub-levels of your program (JV, Freshman, Scout Team, etc.). Each level can have its own staff permissions and enabled tools.
+        </p>
+      </div>
+
+      {/* Info Box */}
+      <div className="mb-6 p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg">
+        <p className="text-sm text-sky-300">
+          <strong>How it works:</strong> Program levels allow assistant coaches to manage JV, Freshman, or other sub-programs.
+          Head coaches see all levels via a dropdown in the header. Coaches assigned to a level only see that level's dropdown option.
+        </p>
+      </div>
+
+      {/* Levels List */}
+      <div className="space-y-4">
+        {programLevels.map(level => {
+          const isExpanded = expandedLevel === level.id;
+          const permCount = (level.staffPermissions || []).length;
+          const toolCount = Object.values(level.enabledTools || {}).filter(Boolean).length;
+
+          return (
+            <div
+              key={level.id}
+              className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden"
+            >
+              {/* Level Header */}
+              <div
+                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-700/70"
+                onClick={() => setExpandedLevel(isExpanded ? null : level.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${permCount > 0 ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+                  <span className="text-white font-semibold">{level.name}</span>
+                  <span className="text-xs text-slate-500">
+                    {permCount} coach{permCount !== 1 ? 'es' : ''} • {toolCount} tool{toolCount !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteLevel(level.id, level.name);
+                    }}
+                    className="p-1.5 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  {isExpanded ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+                </div>
+              </div>
+
+              {/* Level Content */}
+              {isExpanded && (
+                <div className="border-t border-slate-600 p-4 space-y-6">
+                  {/* Level Name Edit */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Level Name</label>
+                    <input
+                      type="text"
+                      value={level.name}
+                      onChange={(e) => updateLevel(level.id, { name: e.target.value })}
+                      className="w-full max-w-xs px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Staff Permissions */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-3">
+                        Staff with Edit Access
+                      </label>
+                      <p className="text-xs text-slate-500 mb-3">
+                        Select which coaches can manage this level. Head Coach always has access.
+                      </p>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {(staff || []).map(s => {
+                          const hasAccess = (level.staffPermissions || []).includes(s.id);
+                          return (
+                            <label
+                              key={s.id}
+                              className="flex items-center gap-3 p-2 bg-slate-600/50 rounded cursor-pointer hover:bg-slate-600"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={hasAccess}
+                                onChange={() => toggleStaffPermission(level.id, s.id)}
+                                className="rounded border-slate-500 bg-slate-700 text-sky-500"
+                              />
+                              <div>
+                                <span className="text-white text-sm">{s.name}</span>
+                                {s.role && (
+                                  <span className="text-xs text-slate-400 ml-2">({s.role})</span>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                        {(staff || []).length === 0 && (
+                          <p className="text-sm text-slate-500 italic">No staff members found. Add staff in the Staff page.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Enabled Tools */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-3">
+                        Enabled Tools
+                      </label>
+                      <p className="text-xs text-slate-500 mb-3">
+                        Choose which tools are available for this level.
+                      </p>
+                      <div className="space-y-2">
+                        {LEVEL_TOOLS.map(tool => {
+                          const isEnabled = level.enabledTools?.[tool.key] || false;
+                          return (
+                            <label
+                              key={tool.key}
+                              className="flex items-center gap-3 p-2 bg-slate-600/50 rounded cursor-pointer hover:bg-slate-600"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isEnabled}
+                                onChange={() => toggleTool(level.id, tool.key)}
+                                className="rounded border-slate-500 bg-slate-700 text-emerald-500"
+                              />
+                              <div>
+                                <span className="text-white text-sm">{tool.label}</span>
+                                <p className="text-xs text-slate-500">{tool.description}</p>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Level Focus & Expectations (HC Only fields) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-600">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Level Focus
+                      </label>
+                      <textarea
+                        value={level.levelFocus || ''}
+                        onChange={(e) => updateLevel(level.id, { levelFocus: e.target.value })}
+                        placeholder="What is the primary focus for this level? (e.g., Development, fundamentals, game experience...)"
+                        className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-500 text-sm resize-none focus:outline-none focus:border-sky-500"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Coach Expectations
+                      </label>
+                      <textarea
+                        value={level.coachExpectations || ''}
+                        onChange={(e) => updateLevel(level.id, { coachExpectations: e.target.value })}
+                        placeholder="What do you need from coaches at this level? (e.g., Daily attendance tracking, film review emphasis...)"
+                        className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-500 text-sm resize-none focus:outline-none focus:border-sky-500"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {programLevels.length === 0 && (
+          <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-600 rounded-lg">
+            <Layers size={48} className="mx-auto mb-4 opacity-30" />
+            <p>No program levels defined.</p>
+            <p className="text-sm mt-1">Add levels like JV, Freshman, or Scout Team.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Add Level Button */}
+      <button
+        onClick={addLevel}
+        className="mt-6 flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+      >
+        <Plus size={18} />
+        Add Program Level
+      </button>
     </div>
   );
 }

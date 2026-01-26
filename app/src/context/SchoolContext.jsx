@@ -102,9 +102,9 @@ export function SchoolProvider({ children }) {
     // Glossary Definitions
     glossaryDefinitions: { OFFENSE: {}, DEFENSE: {}, SPECIAL_TEAMS: {} },
 
-    // Practice Setup
-    practiceSegmentTypes: { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [], PRACTICE: [] },
-    practiceFocusItems: { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [], PRACTICE: [] },
+    // Practice Setup - Segment types organized by phase (O, D, K, C)
+    // Each type has: { id, name, focusItems: [{ id, name }] }
+    practiceSegmentTypes: { O: [], D: [], K: [], C: [] },
     practiceSegmentSettings: {},
 
     // Templates

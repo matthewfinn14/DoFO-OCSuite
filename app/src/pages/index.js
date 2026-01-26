@@ -8,6 +8,7 @@ export { default as Roster } from './Roster';
 export { default as Staff } from './Staff';
 export { default as Admin } from './Admin';
 export { default as PrintCenter } from './PrintCenter';
+export { default as Templates } from './Templates';
 export { default as Setup } from './Setup';
 export { default as Offseason } from './Offseason';
 export { default as Summer } from './Summer';

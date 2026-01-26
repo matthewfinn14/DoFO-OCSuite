@@ -19,6 +19,7 @@ import {
   Staff,
   Admin,
   PrintCenter,
+  Templates,
   Setup,
   Offseason,
   Summer,
@@ -107,6 +108,7 @@ function AppRoutes() {
         <Route path="/setup/:phase" element={<Setup />} />
         <Route path="/setup/:phase/:tab" element={<Setup />} />
         <Route path="/print" element={<PrintCenter />} />
+        <Route path="/templates" element={<Templates />} />
 
         {/* Staff & Roster */}
         <Route path="/staff" element={<Staff />} />

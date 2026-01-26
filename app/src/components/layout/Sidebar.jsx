@@ -12,6 +12,7 @@ import {
   Settings,
   Book,
   Printer,
+  LayoutTemplate,
   Users,
   UserCog,
   Lock,
@@ -179,6 +180,9 @@ export default function Sidebar() {
           )}
           {currentPermissions.dashboard.view && (
             <NavItem to="/print" icon={Printer} label="PRINT CENTER" collapsed={collapsed} />
+          )}
+          {currentPermissions.dashboard.view && (
+            <NavItem to="/templates" icon={LayoutTemplate} label="TEMPLATES" collapsed={collapsed} />
           )}
         </div>
 
