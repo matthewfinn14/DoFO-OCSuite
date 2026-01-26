@@ -6,7 +6,9 @@ import {
   Shield,
   Construction,
   HelpCircle,
-  LogOut
+  LogOut,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 // Footer navigation item
@@ -35,6 +37,7 @@ function FooterNavItem({ to, icon: Icon, label, collapsed, danger = false }) {
 export default function SidebarFooter({ collapsed }) {
   const { user, logout, isSiteAdmin, isHeadCoach, isTeamAdmin } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -42,52 +45,74 @@ export default function SidebarFooter({ collapsed }) {
 
   return (
     <div className="px-2 py-1.5 border-t border-slate-800">
-      {/* User info */}
+      {/* Collapsible header - User info with toggle */}
       {!collapsed && (
-        <div className="mb-1 px-1">
-          <div className="text-xs text-slate-400 truncate">{user?.email}</div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full flex items-center justify-between px-1 py-1 hover:bg-slate-800/30 rounded transition-colors"
+        >
+          <div className="text-left">
+            <div className="text-xs text-slate-400 truncate max-w-[180px]">{user?.email}</div>
+            {isSiteAdmin && (
+              <span className="text-[0.65rem] text-emerald-400 font-medium">Site Admin</span>
+            )}
+          </div>
+          {expanded ? (
+            <ChevronUp size={14} className="text-slate-500" />
+          ) : (
+            <ChevronDown size={14} className="text-slate-500" />
+          )}
+        </button>
+      )}
+
+      {/* Collapsible Navigation links */}
+      {!collapsed && expanded && (
+        <div className="flex flex-col gap-0.5 mt-1 mb-1">
+          <FooterNavItem
+            to="/settings"
+            icon={Settings}
+            label="Settings"
+            collapsed={collapsed}
+          />
+
           {isSiteAdmin && (
-            <span className="text-[0.65rem] text-emerald-400 font-medium">Site Admin</span>
+            <FooterNavItem
+              to="/admin"
+              icon={Shield}
+              label="Site Admin"
+              collapsed={collapsed}
+            />
+          )}
+
+          <FooterNavItem
+            to="/roadmap"
+            icon={Construction}
+            label="Under Construction"
+            collapsed={collapsed}
+          />
+
+          <FooterNavItem
+            to="/help"
+            icon={HelpCircle}
+            label="How to Use"
+            collapsed={collapsed}
+          />
+        </div>
+      )}
+
+      {/* Collapsed sidebar - show icons only */}
+      {collapsed && (
+        <div className="flex flex-col gap-0.5 mb-1">
+          <FooterNavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
+          {isSiteAdmin && (
+            <FooterNavItem to="/admin" icon={Shield} label="Site Admin" collapsed={collapsed} />
           )}
         </div>
       )}
 
-      {/* Navigation links */}
-      <div className="flex flex-col gap-0.5 mb-1">
-        <FooterNavItem
-          to="/settings"
-          icon={Settings}
-          label="Settings"
-          collapsed={collapsed}
-        />
-
-        {isSiteAdmin && (
-          <FooterNavItem
-            to="/admin"
-            icon={Shield}
-            label="Site Admin"
-            collapsed={collapsed}
-          />
-        )}
-
-        <FooterNavItem
-          to="/roadmap"
-          icon={Construction}
-          label="Under Construction"
-          collapsed={collapsed}
-        />
-
-        <FooterNavItem
-          to="/help"
-          icon={HelpCircle}
-          label="How to Use"
-          collapsed={collapsed}
-        />
-      </div>
-
-      {/* Logout */}
+      {/* Logout - always visible */}
       {showLogoutConfirm ? (
-        <div className="flex gap-1">
+        <div className="flex gap-1 mt-1">
           <button
             onClick={handleLogout}
             className="flex-1 px-2 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
@@ -104,7 +129,7 @@ export default function SidebarFooter({ collapsed }) {
       ) : (
         <button
           onClick={() => setShowLogoutConfirm(true)}
-          className={`flex items-center gap-2 px-3 py-1 rounded text-red-400/80 hover:text-red-400 hover:bg-slate-800/50 transition-colors ${
+          className={`flex items-center gap-2 px-3 py-1 rounded text-red-400/80 hover:text-red-400 hover:bg-slate-800/50 transition-colors mt-1 ${
             collapsed ? 'justify-center w-full' : ''
           }`}
         >
