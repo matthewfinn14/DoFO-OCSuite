@@ -1956,15 +1956,34 @@
             );
         };
 
-        const SchoolOnboardingWizard = ({ user, onComplete, requestData }) => {
+        const SchoolOnboardingWizard = ({ user, onComplete, requestData, existingSchoolId }) => {
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
+            const [existingSchoolData, setExistingSchoolData] = useState(null);
 
             // Site Admin check
             const isSiteAdmin = user?.email && ['admin@digitaldofo.com', 'matthewfinn14@gmail.com'].includes(user.email.toLowerCase());
             const [adminMode, setAdminMode] = useState(null); // null, 'select', 'create'
             const [allSchools, setAllSchools] = useState([]);
             const [selectedSchoolId, setSelectedSchoolId] = useState('');
+
+            // Load existing school data if we have an existingSchoolId
+            useEffect(() => {
+                if (existingSchoolId) {
+                    window.db.collection('schools').doc(existingSchoolId).get().then(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            setExistingSchoolData(data);
+                            // Pre-populate fields from existing school
+                            if (data.name) setSchoolName(data.name);
+                            if (data.mascot) setMascot(data.mascot);
+                            if (data.zipCode) setZipCode(data.zipCode);
+                            if (data.colors?.primary) setPrimaryColor(data.colors.primary);
+                            if (data.colors?.secondary) setSecondaryColor(data.colors.secondary);
+                        }
+                    });
+                }
+            }, [existingSchoolId]);
 
             // Load all schools for site admin
             useEffect(() => {
@@ -2006,7 +2025,7 @@
                 setLoading(false);
             };
 
-            // Data State - Pre-populate from access request if available
+            // Data State - Pre-populate from access request or existing school
             const [schoolName, setSchoolName] = useState(requestData?.schoolName || '');
             const [mascot, setMascot] = useState('');
             const [zipCode, setZipCode] = useState('');
@@ -2034,7 +2053,12 @@
             ]);
 
             const handleSave = async () => {
-                if (!schoolName || !mascot || !zipCode) {
+                if (!mascot || !zipCode) {
+                    setError('Please fill in all fields (Mascot, Zip Code).');
+                    return;
+                }
+                // School name only required if creating new school
+                if (!existingSchoolId && !schoolName) {
                     setError('Please fill in all fields (School Name, Mascot, Zip Code).');
                     return;
                 }
@@ -2042,7 +2066,38 @@
                 setLoading(true);
                 setError('');
                 try {
-                    // 1. Create School Document
+                    let schoolId;
+
+                    // If we have an existing school, just update it
+                    if (existingSchoolId) {
+                        schoolId = existingSchoolId;
+                        await window.db.collection('schools').doc(existingSchoolId).update({
+                            mascot: mascot,
+                            zipCode: zipCode,
+                            colors: { primary: primaryColor, secondary: secondaryColor },
+                            initialized: true,
+                            'settings.mascot': mascot,
+                            'settings.zipCode': zipCode,
+                            'settings.accentColor': primaryColor,
+                            'settings.theme': 'dark',
+                            'settings.initialized': true,
+                            completedSetupAt: new Date().toISOString()
+                        });
+                        console.log("School setup completed:", schoolId);
+
+                        // Update localStorage
+                        localStorage.setItem('hc_school_id', schoolId);
+                        localStorage.setItem('hc_school_name', existingSchoolData?.name || schoolName);
+                        localStorage.setItem('oc-dashboard-team-mascot', mascot);
+                        localStorage.setItem('oc-dashboard-team-zip', zipCode);
+                        localStorage.setItem('oc-dashboard-team-primary-color', primaryColor);
+                        localStorage.setItem('oc-dashboard-team-secondary-color', secondaryColor);
+
+                        onComplete(schoolId);
+                        return;
+                    }
+
+                    // Otherwise, create a new school (original flow)
                     const schoolData = {
                         name: schoolName,
                         mascot: mascot,
@@ -2076,7 +2131,7 @@
                     };
 
                     const schoolRef = await window.db.collection('schools').add(schoolData);
-                    const schoolId = schoolRef.id;
+                    schoolId = schoolRef.id;
 
                     // 2. Update User Profile with School ID
                     const userRef = window.db.collection('users').doc(user.uid);
@@ -2547,24 +2602,75 @@
                     // Data gets removed 30 days after access expires (grace period)
                     const dataExpiresAt = new Date(accessExpiresAt.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-                    // Update request status
+                    // 1. Create the school document
+                    const schoolId = 'school_' + Date.now();
+                    await window.db.collection('schools').doc(schoolId).set({
+                        name: request.schoolName || 'My School',
+                        mascot: '',
+                        initialized: false, // User needs to complete setup
+                        createdAt: now.toISOString(),
+                        createdBy: request.uid,
+                        memberList: [{
+                            uid: request.uid,
+                            email: request.email.toLowerCase(),
+                            role: 'admin',
+                            joinedAt: now.toISOString()
+                        }],
+                        staff: [{
+                            id: request.uid,
+                            name: request.name || 'Head Coach',
+                            email: request.email.toLowerCase(),
+                            roles: ['Head Coach', 'Team Admin'],
+                            phone: '',
+                            bio: ''
+                        }],
+                        billing: {
+                            plan: 'trial',
+                            trialDays: trialDays,
+                            trialEndsAt: accessExpiresAt.toISOString(),
+                            dataExpiresAt: dataExpiresAt.toISOString()
+                        },
+                        // Initialize empty arrays for data
+                        plays: [],
+                        roster: [],
+                        weeks: [],
+                        formations: [],
+                        settings: {}
+                    });
+
+                    // 2. Create the user document
+                    await window.db.collection('users').doc(request.uid).set({
+                        email: request.email.toLowerCase(),
+                        schoolId: schoolId,
+                        createdAt: now.toISOString()
+                    });
+
+                    // 3. Create membership subcollection
+                    await window.db.collection('users').doc(request.uid).collection('memberships').doc(schoolId).set({
+                        role: 'admin',
+                        joinedAt: now.toISOString(),
+                        status: 'active'
+                    });
+
+                    // 4. Update access request status
                     await window.db.collection('access_requests').doc(request.id).update({
                         status: 'approved',
                         reviewedAt: now.toISOString(),
                         reviewedBy: currentUser?.email || 'admin',
                         trialDays: trialDays,
                         accessExpiresAt: accessExpiresAt.toISOString(),
-                        dataExpiresAt: dataExpiresAt.toISOString()
+                        dataExpiresAt: dataExpiresAt.toISOString(),
+                        schoolId: schoolId // Link to created school
                     });
 
                     // Update local state
                     setRequests(prev => prev.map(r =>
                         r.id === request.id
-                            ? { ...r, status: 'approved', reviewedAt: now.toISOString(), trialDays, accessExpiresAt: accessExpiresAt.toISOString() }
+                            ? { ...r, status: 'approved', reviewedAt: now.toISOString(), trialDays, accessExpiresAt: accessExpiresAt.toISOString(), schoolId }
                             : r
                     ));
 
-                    alert(`Approved! ${request.name} has ${trialDays} days of access (until ${accessExpiresAt.toLocaleDateString()}).`);
+                    alert(`Approved! Created school "${request.schoolName}" for ${request.name}. They have ${trialDays} days of access.`);
                 } catch (err) {
                     console.error('Error approving:', err);
                     alert('Failed to approve. Check console.');
@@ -40370,6 +40476,7 @@
                                 <SchoolOnboardingWizard
                                     user={authUser}
                                     requestData={schoolSetupData.requestData}
+                                    existingSchoolId={schoolSetupData.schoolId}
                                     onComplete={async (schoolId) => {
                                         console.log("Onboarding Complete. Fetching new data...");
                                         setSchoolSetupData({ showWizard: false, schoolId: null, requestData: null });
