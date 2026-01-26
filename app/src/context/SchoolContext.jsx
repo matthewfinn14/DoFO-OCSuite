@@ -72,6 +72,9 @@ export function SchoolProvider({ children }) {
     customBigThreeGroups: []
   });
 
+  // Meeting notes by week (weekly coaches notes)
+  const [meetingNotes, setMeetingNotes] = useState({});
+
   // Setup configuration data
   const [setupConfig, setSetupConfig] = useState({
     // Positions
@@ -142,6 +145,7 @@ export function SchoolProvider({ children }) {
           setVisibleFeatures(data.visibleFeatures || { gameWeek: { enabled: true, items: { schemeSetup: true, playbook: true } } });
           if (data.culture) setCulture(prev => ({ ...prev, ...data.culture }));
           if (data.setupConfig) setSetupConfig(prev => ({ ...prev, ...data.setupConfig }));
+          if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
         } else {
           // Set default dev school
           setSchool({ id: 'dev-school-123', name: 'Development High School', mascot: 'Developers' });
@@ -184,6 +188,7 @@ export function SchoolProvider({ children }) {
           setVisibleFeatures(data.visibleFeatures || { gameWeek: { enabled: true, items: { schemeSetup: true, playbook: true } } });
           if (data.culture) setCulture(prev => ({ ...prev, ...data.culture }));
           if (data.setupConfig) setSetupConfig(prev => ({ ...prev, ...data.setupConfig }));
+          if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
         }
         setLoading(false);
       },
@@ -224,6 +229,7 @@ export function SchoolProvider({ children }) {
         if (updates.visibleFeatures) setVisibleFeatures(updates.visibleFeatures);
         if (updates.culture) setCulture(prev => ({ ...prev, ...updates.culture }));
         if (updates.setupConfig) setSetupConfig(prev => ({ ...prev, ...updates.setupConfig }));
+        if (updates.meetingNotes) setMeetingNotes(updates.meetingNotes);
       } catch (err) {
         console.error('Error saving dev data:', err);
         setError(err.message);
@@ -357,6 +363,14 @@ export function SchoolProvider({ children }) {
   }, [updateSchool, setupConfig]);
 
   /**
+   * Update meeting notes for a specific week
+   */
+  const updateMeetingNotes = useCallback(async (weekId, notes) => {
+    const newMeetingNotes = { ...meetingNotes, [weekId]: notes };
+    await updateSchool({ meetingNotes: newMeetingNotes });
+  }, [updateSchool, meetingNotes]);
+
+  /**
    * Get current week object
    */
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
@@ -393,6 +407,7 @@ export function SchoolProvider({ children }) {
     activeLevel,
     culture,
     setupConfig,
+    meetingNotes,
 
     // State
     loading,
@@ -413,6 +428,7 @@ export function SchoolProvider({ children }) {
     updateSettings,
     updateCulture,
     updateSetupConfig,
+    updateMeetingNotes,
     setCurrentWeekId,
     setActiveLevelId,
   };
