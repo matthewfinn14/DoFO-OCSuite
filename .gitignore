@@ -14,3 +14,8 @@ extracted_snippet.jsx
 # Node modules
 node_modules/
 .DS_Store
+
+# Sensitive credentials
+scripts/serviceAccountKey.json
+*.json.key
+serviceAccountKey*.json

@@ -57,26 +57,6 @@ service cloud.firestore {
       allow write: if request.auth != null && isSiteAdmin();
     }
 
-    // Access Requests: For new users requesting access
-    match /access_requests/{requestId} {
-      // Users can create requests (requestId is their email)
-      allow create: if request.auth != null &&
-        request.auth.token.email.lower() == requestId;
-
-      // Users can read their own request, admins can read all
-      allow read: if request.auth != null && (
-        requestId == request.auth.token.email.lower() || isSiteAdmin()
-      );
-
-      // Users can update their own pending request, admins can update any
-      allow update: if request.auth != null && (
-        requestId == request.auth.token.email.lower() || isSiteAdmin()
-      );
-
-      // Only admins can delete requests
-      allow delete: if request.auth != null && isSiteAdmin();
-    }
-
     // Config: App configuration (billing, access control)
     match /config/{docId} {
       allow read: if request.auth != null;
