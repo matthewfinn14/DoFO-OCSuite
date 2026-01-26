@@ -13,7 +13,6 @@ import {
   FileText,
   Lock,
   Unlock,
-  Copy,
   LayoutTemplate,
   GripVertical,
   Settings,
@@ -970,6 +969,137 @@ function SaveTemplateModal({ currentPlan, selectedDay, existingTemplates, onSave
   );
 }
 
+// Import Template Modal
+function ImportTemplateModal({ existingTemplates, onImport, onClose }) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const [selectedFolder, setSelectedFolder] = useState('all');
+
+  // Group templates by folder
+  const folders = useMemo(() => {
+    const folderSet = new Set();
+    (existingTemplates || []).forEach(t => {
+      if (t.folder) folderSet.add(t.folder);
+    });
+    return Array.from(folderSet).sort();
+  }, [existingTemplates]);
+
+  // Filter templates by selected folder
+  const filteredTemplates = useMemo(() => {
+    if (selectedFolder === 'all') return existingTemplates || [];
+    return (existingTemplates || []).filter(t => t.folder === selectedFolder);
+  }, [existingTemplates, selectedFolder]);
+
+  const selectedTemplate = (existingTemplates || []).find(t => t.id === selectedTemplateId);
+
+  const handleImport = () => {
+    if (!selectedTemplate) return;
+    onImport(selectedTemplate);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-slate-800 rounded-xl w-full max-w-lg overflow-hidden shadow-xl border border-slate-700">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <LayoutTemplate size={20} className="text-sky-400" />
+            <h3 className="text-lg font-semibold text-white">Import Template</h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          {existingTemplates?.length === 0 ? (
+            <div className="text-center py-8">
+              <LayoutTemplate size={48} className="text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400">No templates saved yet.</p>
+              <p className="text-slate-500 text-sm mt-1">Create templates by clicking "Save Template" on a practice plan.</p>
+            </div>
+          ) : (
+            <>
+              {/* Folder Filter */}
+              {folders.length > 0 && (
+                <div>
+                  <label className="text-xs text-slate-500 uppercase tracking-wide">Folder</label>
+                  <select
+                    value={selectedFolder}
+                    onChange={e => { setSelectedFolder(e.target.value); setSelectedTemplateId(null); }}
+                    className="w-full mt-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                  >
+                    <option value="all">All Templates</option>
+                    {folders.map(f => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Template List */}
+              <div>
+                <label className="text-xs text-slate-500 uppercase tracking-wide">Select Template</label>
+                <div className="mt-1 space-y-2 max-h-48 overflow-y-auto">
+                  {filteredTemplates.map(template => (
+                    <button
+                      key={template.id}
+                      onClick={() => setSelectedTemplateId(template.id)}
+                      className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                        selectedTemplateId === template.id
+                          ? 'bg-sky-500/20 border-sky-500 text-white'
+                          : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      <div className="font-medium">{template.name}</div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        {template.segments?.length || 0} segments • {template.folder || 'No folder'}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Template Preview */}
+              {selectedTemplate && (
+                <div className="p-3 bg-slate-900 rounded-lg">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Template Preview</p>
+                  <ul className="text-sm text-slate-400 space-y-1">
+                    <li>• {selectedTemplate.segments?.length || 0} segments</li>
+                    <li>• Start time: {selectedTemplate.startTime || '3:30 PM'}</li>
+                    <li>• Warmup: {selectedTemplate.warmupDuration || 10} min</li>
+                    <li>• Transition: {selectedTemplate.transitionTime || 0} min</li>
+                    {selectedTemplate.isTwoPlatoon && <li>• 2-Platoon mode</li>}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-700">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleImport}
+            disabled={!selectedTemplate}
+            className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <LayoutTemplate size={16} />
+            Import
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PracticePlans() {
   const { year, phase, week: weekParam, day: dayParam, weekId: legacyWeekId } = useParams();
   const navigate = useNavigate();
@@ -1032,6 +1162,8 @@ export default function PracticePlans() {
   const [notesModalSegmentId, setNotesModalSegmentId] = useState(null); // 'WARMUP' or segment.id
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [showImportTemplateModal, setShowImportTemplateModal] = useState(false);
+  const [viewingLevelId, setViewingLevelId] = useState(null); // For Program view to see other levels
 
   // Get weekId for updates
   const weekId = week?.id;
@@ -1300,6 +1432,26 @@ export default function PracticePlans() {
     await updateSetupConfig({ practiceTemplates: newTemplates });
   }, [setupConfig, updateSetupConfig]);
 
+  // Import a template into the current day's plan
+  const importTemplate = useCallback((template) => {
+    if (!confirm(`Import "${template.name}" into ${selectedDay}? This will replace the current plan.`)) return;
+
+    // Create new segments with fresh IDs
+    const newSegments = (template.segments || []).map(seg => ({
+      ...seg,
+      id: `seg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    }));
+
+    updateCurrentPlan({
+      startTime: template.startTime || currentPlan.startTime,
+      warmupDuration: template.warmupDuration ?? currentPlan.warmupDuration,
+      transitionTime: template.transitionTime ?? currentPlan.transitionTime,
+      showPeriodZero: template.showPeriodZero ?? currentPlan.showPeriodZero,
+      isTwoPlatoon: template.isTwoPlatoon ?? currentPlan.isTwoPlatoon,
+      segments: newSegments
+    });
+  }, [selectedDay, currentPlan, updateCurrentPlan]);
+
   // Get existing templates for the modal
   const existingTemplates = setupConfig?.practiceTemplates || [];
 
@@ -1410,8 +1562,26 @@ export default function PracticePlans() {
           <div className="max-w-6xl mx-auto space-y-6">
             {/* Plan Controls */}
             <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-800 rounded-lg">
-              {/* Timer Source (only show if multiple levels exist) */}
-              {hasMultipleLevels && (
+              {/* View Level Selector (Program view only - to see varsity or sub-level plans) */}
+              {hasMultipleLevels && !activeLevelId && (
+                <div className="flex items-center gap-2">
+                  <Layers size={14} className="text-slate-400" />
+                  <select
+                    value={viewingLevelId || 'varsity'}
+                    onChange={e => setViewingLevelId(e.target.value === 'varsity' ? null : e.target.value)}
+                    className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  >
+                    <option value="varsity">Varsity</option>
+                    {programLevels.map(level => (
+                      <option key={level.id} value={level.id}>{level.name}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-slate-500">View</span>
+                </div>
+              )}
+
+              {/* Timer Source (only show for sub-levels, not varsity or program view) */}
+              {hasMultipleLevels && activeLevelId && (
                 <div className="flex items-center gap-2">
                   <Link2 size={14} className="text-slate-400" />
                   <select
@@ -1425,12 +1595,12 @@ export default function PracticePlans() {
                   >
                     <option value="own">Own Timer</option>
                     <option value="varsity">Sync with Varsity</option>
-                    {programLevels.map(level => (
+                    {programLevels.filter(l => l.id !== activeLevelId).map(level => (
                       <option key={level.id} value={level.id}>Sync with {level.name}</option>
                     ))}
                   </select>
                   {currentPlan.timerSource && currentPlan.timerSource !== 'own' && (
-                    <span className="text-xs text-purple-400">Timer controlled by {
+                    <span className="text-xs text-purple-400">Timer synced with {
                       currentPlan.timerSource === 'varsity'
                         ? 'Varsity'
                         : programLevels.find(l => l.id === currentPlan.timerSource)?.name || currentPlan.timerSource
@@ -1452,8 +1622,8 @@ export default function PracticePlans() {
               </div>
 
               {/* Transition Time */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-400">Trans:</label>
+              <div className="flex items-center gap-2" title="Time between segments for transitions">
+                <label className="text-sm font-medium text-slate-400 cursor-help">Transition:</label>
                 <input
                   type="number"
                   value={currentPlan.transitionTime || 0}
@@ -1500,33 +1670,29 @@ export default function PracticePlans() {
                 </select>
               </div>
 
-              {/* Copy to Day */}
-              <div className="relative group">
-                <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 text-sm">
-                  <Copy size={14} />
-                  Copy to...
+              {/* Templates Section */}
+              <div className="flex items-center gap-2 border-l border-slate-600 pl-4 ml-2">
+                <span className="text-xs text-slate-500 uppercase tracking-wide mr-1">Templates:</span>
+                {/* Import Template */}
+                <button
+                  onClick={() => setShowImportTemplateModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 text-sm"
+                  title="Load a saved template into this day"
+                >
+                  <LayoutTemplate size={14} />
+                  Import
                 </button>
-                <div className="absolute right-0 top-full mt-1 hidden group-hover:block bg-slate-700 rounded-lg shadow-xl border border-slate-600 py-1 z-10">
-                  {DAYS.filter(d => d !== selectedDay).map(day => (
-                    <button
-                      key={day}
-                      onClick={() => duplicatePlanToDay(day)}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-600"
-                    >
-                      {day}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
-              {/* Save as Template */}
-              <button
-                onClick={() => setShowSaveTemplateModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-600/30 text-sm"
-              >
-                <LayoutTemplate size={14} />
-                Save Template
-              </button>
+                {/* Save as Template */}
+                <button
+                  onClick={() => setShowSaveTemplateModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-600/30 text-sm"
+                  title="Save this day's plan as a reusable template"
+                >
+                  <Save size={14} />
+                  Save
+                </button>
+              </div>
 
               {/* Total Duration */}
               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 rounded">
@@ -1956,6 +2122,15 @@ export default function PracticePlans() {
           existingTemplates={existingTemplates}
           onSave={saveAsTemplate}
           onClose={() => setShowSaveTemplateModal(false)}
+        />
+      )}
+
+      {/* Import Template Modal */}
+      {showImportTemplateModal && (
+        <ImportTemplateModal
+          existingTemplates={existingTemplates}
+          onImport={importTemplate}
+          onClose={() => setShowImportTemplateModal(false)}
         />
       )}
     </div>
