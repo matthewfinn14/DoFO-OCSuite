@@ -1284,6 +1284,17 @@ export default function PracticePlans() {
     return warmup + segmentTotal + transitions;
   }, [currentPlan]);
 
+  // Calculate end time based on start time and total duration
+  const endTime = useMemo(() => {
+    const startTimeStr = currentPlan.startTime || '15:30';
+    const [hours, minutes] = startTimeStr.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + totalDuration;
+    const endHours = Math.floor(endMinutes / 60) % 24;
+    const endMins = endMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+  }, [currentPlan.startTime, totalDuration]);
+
   // Update plan helper
   const updateCurrentPlan = useCallback((updates) => {
     if (!week) return;
@@ -1564,100 +1575,108 @@ export default function PracticePlans() {
             <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-800 rounded-lg">
               {/* View Level Selector (Program view only - to see varsity or sub-level plans) */}
               {hasMultipleLevels && !activeLevelId && (
-                <div className="flex items-center gap-2">
-                  <Layers size={14} className="text-slate-400" />
-                  <select
-                    value={viewingLevelId || 'varsity'}
-                    onChange={e => setViewingLevelId(e.target.value === 'varsity' ? null : e.target.value)}
-                    className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                  >
-                    <option value="varsity">Varsity</option>
-                    {programLevels.map(level => (
-                      <option key={level.id} value={level.id}>{level.name}</option>
-                    ))}
-                  </select>
-                  <span className="text-xs text-slate-500">View</span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Viewing</span>
+                  <div className="flex items-center gap-1.5">
+                    <Layers size={14} className="text-slate-400" />
+                    <select
+                      value={viewingLevelId || 'varsity'}
+                      onChange={e => setViewingLevelId(e.target.value === 'varsity' ? null : e.target.value)}
+                      className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                    >
+                      <option value="varsity">Varsity</option>
+                      {programLevels.map(level => (
+                        <option key={level.id} value={level.id}>{level.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
               {/* Timer Source (only show for sub-levels, not varsity or program view) */}
               {hasMultipleLevels && activeLevelId && (
-                <div className="flex items-center gap-2">
-                  <Link2 size={14} className="text-slate-400" />
-                  <select
-                    value={currentPlan.timerSource || 'own'}
-                    onChange={e => updateCurrentPlan({ timerSource: e.target.value })}
-                    className={`px-2 py-1 border rounded text-sm ${
-                      currentPlan.timerSource && currentPlan.timerSource !== 'own'
-                        ? 'bg-purple-500/20 border-purple-500/30 text-purple-300'
-                        : 'bg-slate-700 border-slate-600 text-white'
-                    }`}
-                  >
-                    <option value="own">Own Timer</option>
-                    <option value="varsity">Sync with Varsity</option>
-                    {programLevels.filter(l => l.id !== activeLevelId).map(level => (
-                      <option key={level.id} value={level.id}>Sync with {level.name}</option>
-                    ))}
-                  </select>
-                  {currentPlan.timerSource && currentPlan.timerSource !== 'own' && (
-                    <span className="text-xs text-purple-400">Timer synced with {
-                      currentPlan.timerSource === 'varsity'
-                        ? 'Varsity'
-                        : programLevels.find(l => l.id === currentPlan.timerSource)?.name || currentPlan.timerSource
-                    }</span>
-                  )}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Timer Sync</span>
+                  <div className="flex items-center gap-1.5">
+                    <Link2 size={14} className="text-slate-400" />
+                    <select
+                      value={currentPlan.timerSource || 'own'}
+                      onChange={e => updateCurrentPlan({ timerSource: e.target.value })}
+                      className={`px-2 py-1 border rounded text-sm ${
+                        currentPlan.timerSource && currentPlan.timerSource !== 'own'
+                          ? 'bg-purple-500/20 border-purple-500/30 text-purple-300'
+                          : 'bg-slate-700 border-slate-600 text-white'
+                      }`}
+                    >
+                      <option value="own">Own Timer</option>
+                      <option value="varsity">Sync with Varsity</option>
+                      {programLevels.filter(l => l.id !== activeLevelId).map(level => (
+                        <option key={level.id} value={level.id}>Sync with {level.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
-              {/* Start Time */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-400">Start:</label>
-                <input
-                  type="time"
-                  value={currentPlan.startTime || '15:30'}
-                  onChange={e => updateCurrentPlan({ startTime: e.target.value })}
-                  className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                  disabled={currentPlan.timerSource && currentPlan.timerSource !== 'own'}
-                />
+              {/* Time Group */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Time</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="time"
+                      value={currentPlan.startTime || '15:30'}
+                      onChange={e => updateCurrentPlan({ startTime: e.target.value })}
+                      className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                      disabled={currentPlan.timerSource && currentPlan.timerSource !== 'own'}
+                    />
+                    <span className="text-slate-500">–</span>
+                    <span className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-300 text-sm font-medium">
+                      {endTime}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1" title="Time between segments for transitions">
+                    <span className="text-xs text-slate-500">Trans:</span>
+                    <input
+                      type="number"
+                      value={currentPlan.transitionTime || 0}
+                      onChange={e => updateCurrentPlan({ transitionTime: Math.max(0, parseInt(e.target.value) || 0) })}
+                      className="w-12 px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                      min="0"
+                    />
+                    <span className="text-xs text-slate-500">min</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Transition Time */}
-              <div className="flex items-center gap-2" title="Time between segments for transitions">
-                <label className="text-sm font-medium text-slate-400 cursor-help">Transition:</label>
-                <input
-                  type="number"
-                  value={currentPlan.transitionTime || 0}
-                  onChange={e => updateCurrentPlan({ transitionTime: Math.max(0, parseInt(e.target.value) || 0) })}
-                  className="w-14 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
-                  min="0"
-                />
-                <span className="text-xs text-slate-500">min</span>
+              {/* Options Group */}
+              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Options</span>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={currentPlan.showPeriodZero !== false}
+                      onChange={e => updateCurrentPlan({ showPeriodZero: e.target.checked })}
+                      className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                    />
+                    <span className="text-sm text-slate-300">Period 0</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={currentPlan.isTwoPlatoon || false}
+                      onChange={e => updateCurrentPlan({ isTwoPlatoon: e.target.checked })}
+                      className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                    />
+                    <span className="text-sm text-slate-300">2-Platoon</span>
+                  </label>
+                </div>
               </div>
 
-              {/* Period Zero Toggle */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={currentPlan.showPeriodZero !== false}
-                  onChange={e => updateCurrentPlan({ showPeriodZero: e.target.checked })}
-                  className="rounded border-slate-600 bg-slate-700 text-sky-500"
-                />
-                <span className="text-sm font-medium text-slate-300">Period 0</span>
-              </label>
-
-              {/* 2-Platoon Toggle */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={currentPlan.isTwoPlatoon || false}
-                  onChange={e => updateCurrentPlan({ isTwoPlatoon: e.target.checked })}
-                  className="rounded border-slate-600 bg-slate-700 text-sky-500"
-                />
-                <span className="text-sm font-medium text-slate-300">2-Platoon</span>
-              </label>
-
-              {/* Staff Filter */}
-              <div className="flex items-center gap-2 ml-auto">
+              {/* Filter Group */}
+              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Filter</span>
                 <select
                   value={coachFilter}
                   onChange={e => setCoachFilter(e.target.value)}
@@ -1670,34 +1689,36 @@ export default function PracticePlans() {
                 </select>
               </div>
 
-              {/* Templates Section */}
-              <div className="flex items-center gap-2 border-l border-slate-600 pl-4 ml-2">
-                <span className="text-xs text-slate-500 uppercase tracking-wide mr-1">Templates:</span>
-                {/* Import Template */}
-                <button
-                  onClick={() => setShowImportTemplateModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 text-sm"
-                  title="Load a saved template into this day"
-                >
-                  <LayoutTemplate size={14} />
-                  Import
-                </button>
-
-                {/* Save as Template */}
-                <button
-                  onClick={() => setShowSaveTemplateModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-600/30 text-sm"
-                  title="Save this day's plan as a reusable template"
-                >
-                  <Save size={14} />
-                  Save
-                </button>
+              {/* Templates Group */}
+              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3 ml-auto">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Templates</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowImportTemplateModal(true)}
+                    className="flex items-center gap-1.5 px-2 py-1 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 text-sm"
+                    title="Load a saved template into this day"
+                  >
+                    <LayoutTemplate size={14} />
+                    Import
+                  </button>
+                  <button
+                    onClick={() => setShowSaveTemplateModal(true)}
+                    className="flex items-center gap-1.5 px-2 py-1 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-600/30 text-sm"
+                    title="Save this day's plan as a reusable template"
+                  >
+                    <Save size={14} />
+                    Save
+                  </button>
+                </div>
               </div>
 
-              {/* Total Duration */}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 rounded">
-                <Clock size={14} className="text-slate-400" />
-                <span className="text-sm font-medium text-white">{totalDuration} min</span>
+              {/* Duration Display */}
+              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3">
+                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Duration</span>
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 rounded">
+                  <Clock size={14} className="text-slate-400" />
+                  <span className="text-sm font-medium text-white">{totalDuration} min</span>
+                </div>
               </div>
             </div>
 
