@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import {
@@ -85,8 +85,407 @@ const DEFAULT_SEGMENT_TYPES = [
   'Conditioning'
 ];
 
-// Segment Notes Modal Component
-function SegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
+// Segment Notes Modal Component with @mention support
+function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onClose }) {
+  const [noteText, setNoteText] = useState(segment.notes || '');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionFilter, setSuggestionFilter] = useState('');
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const textareaRef = useRef(null);
+
+  // Build mention suggestions
+  const mentionOptions = useMemo(() => {
+    const options = [
+      { type: 'special', value: '@all', label: '@all', description: 'Everyone' },
+      { type: 'special', value: '@everybody', label: '@everybody', description: 'Everyone' },
+    ];
+
+    // Add position groups
+    (positionGroups || []).forEach(pg => {
+      options.push({
+        type: 'group',
+        value: `@${pg}`,
+        label: `@${pg}`,
+        description: 'Position Group'
+      });
+    });
+
+    // Add individual staff
+    (staff || []).forEach(s => {
+      const name = s.name.replace(/\s+/g, '');
+      options.push({
+        type: 'person',
+        value: `@${name}`,
+        label: `@${s.name}`,
+        description: s.role || s.positionGroup || ''
+      });
+    });
+
+    return options;
+  }, [staff, positionGroups]);
+
+  // Filter suggestions based on current input
+  const filteredSuggestions = useMemo(() => {
+    if (!suggestionFilter) return mentionOptions.slice(0, 8);
+    const filter = suggestionFilter.toLowerCase();
+    return mentionOptions
+      .filter(opt =>
+        opt.value.toLowerCase().includes(filter) ||
+        opt.label.toLowerCase().includes(filter) ||
+        opt.description.toLowerCase().includes(filter)
+      )
+      .slice(0, 8);
+  }, [mentionOptions, suggestionFilter]);
+
+  // Handle text change and detect @ mentions
+  const handleTextChange = (e) => {
+    const text = e.target.value;
+    const cursor = e.target.selectionStart;
+    setNoteText(text);
+    setCursorPosition(cursor);
+
+    // Check if we're typing an @mention
+    const textBeforeCursor = text.substring(0, cursor);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (atMatch) {
+      setShowSuggestions(true);
+      setSuggestionFilter(atMatch[1]);
+    } else {
+      setShowSuggestions(false);
+      setSuggestionFilter('');
+    }
+  };
+
+  // Insert mention at cursor position
+  const insertMention = (mention) => {
+    const textBeforeCursor = noteText.substring(0, cursorPosition);
+    const textAfterCursor = noteText.substring(cursorPosition);
+
+    // Find where the @ starts
+    const atIndex = textBeforeCursor.lastIndexOf('@');
+    const newText = textBeforeCursor.substring(0, atIndex) + mention.value + ' ' + textAfterCursor;
+
+    setNoteText(newText);
+    setShowSuggestions(false);
+    setSuggestionFilter('');
+
+    // Focus back on textarea
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const newCursor = atIndex + mention.value.length + 1;
+        textareaRef.current.setSelectionRange(newCursor, newCursor);
+      }
+    }, 0);
+  };
+
+  // Save on close
+  const handleSave = () => {
+    onUpdateNotes(noteText);
+    onClose();
+  };
+
+  // Render note text with highlighted mentions
+  const renderHighlightedText = (text) => {
+    if (!text) return null;
+    const parts = text.split(/(@\w+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('@')) {
+        return (
+          <span key={i} className="bg-sky-500/30 text-sky-300 px-1 rounded">
+            {part}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      onClick={handleSave}
+    >
+      <div
+        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <StickyNote size={20} className="text-amber-400" />
+            <h3 className="text-lg font-semibold text-white">
+              {segment.id === 'WARMUP' ? 'Warmup Notes' : `Notes: ${segment.type || 'Segment'} (${segment.duration || 0}m)`}
+            </h3>
+          </div>
+          <button
+            onClick={handleSave}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mb-4">
+            <p className="text-sm text-slate-400 mb-2">
+              Type <span className="text-sky-400 font-mono">@</span> to mention coaches, position groups, or use <span className="text-sky-400 font-mono">@all</span> for everyone.
+            </p>
+          </div>
+
+          {/* Note Input */}
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={noteText}
+              onChange={handleTextChange}
+              placeholder="Add notes... Use @name or @position to target specific coaches"
+              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm resize-none font-mono"
+              rows={6}
+              autoFocus
+            />
+
+            {/* Mention Suggestions Dropdown */}
+            {showSuggestions && filteredSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-xl overflow-hidden z-10">
+                {filteredSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={suggestion.value}
+                    onClick={() => insertMention(suggestion)}
+                    className="w-full px-4 py-2 text-left hover:bg-slate-600 flex items-center justify-between"
+                  >
+                    <span className={`font-medium ${
+                      suggestion.type === 'special' ? 'text-amber-400' :
+                      suggestion.type === 'group' ? 'text-emerald-400' :
+                      'text-sky-400'
+                    }`}>
+                      {suggestion.label}
+                    </span>
+                    <span className="text-xs text-slate-400">{suggestion.description}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Preview */}
+          {noteText && (
+            <div className="mt-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Preview</p>
+              <div className="px-4 py-3 bg-slate-900 rounded-lg text-sm text-slate-300 whitespace-pre-wrap">
+                {renderHighlightedText(noteText)}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Tags */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="text-xs text-slate-500">Quick tags:</span>
+            <button
+              onClick={() => {
+                setNoteText(prev => prev + '@all ');
+                textareaRef.current?.focus();
+              }}
+              className="px-2 py-1 text-xs bg-amber-500/20 text-amber-400 rounded hover:bg-amber-500/30"
+            >
+              @all
+            </button>
+            {(positionGroups || []).slice(0, 6).map(pg => (
+              <button
+                key={pg}
+                onClick={() => {
+                  setNoteText(prev => prev + `@${pg} `);
+                  textareaRef.current?.focus();
+                }}
+                className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30"
+              >
+                @{pg}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-700">
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+          >
+            Save Notes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Print Settings Modal
+function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, onClose }) {
+  const [selectedCoach, setSelectedCoach] = useState('ALL');
+  const [selectedDays, setSelectedDays] = useState({
+    Monday: true,
+    Tuesday: true,
+    Wednesday: true,
+    Thursday: true,
+    Friday: true
+  });
+
+  const toggleDay = (day) => {
+    setSelectedDays(prev => ({ ...prev, [day]: !prev[day] }));
+  };
+
+  const selectAllDays = () => {
+    setSelectedDays({
+      Monday: true,
+      Tuesday: true,
+      Wednesday: true,
+      Thursday: true,
+      Friday: true
+    });
+  };
+
+  const selectedDaysCount = Object.values(selectedDays).filter(Boolean).length;
+
+  const handlePrint = () => {
+    // Store print settings in sessionStorage for the print view to read
+    sessionStorage.setItem('printSettings', JSON.stringify({
+      coachFilter: selectedCoach,
+      days: selectedDays,
+      weekName
+    }));
+    window.print();
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <Printer size={20} className="text-sky-400" />
+            <h3 className="text-lg font-semibold text-white">Print Practice Plans</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Coach Filter */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Print for Coach
+            </label>
+            <select
+              value={selectedCoach}
+              onChange={e => setSelectedCoach(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+            >
+              <option value="ALL">All Staff (Master View)</option>
+              <optgroup label="Position Groups">
+                {(positionGroups || []).map(pg => (
+                  <option key={pg} value={`group:${pg}`}>@{pg} - Position Group</option>
+                ))}
+              </optgroup>
+              <optgroup label="Individual Coaches">
+                {(staff || []).map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </optgroup>
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              {selectedCoach === 'ALL'
+                ? 'Shows all notes and full details'
+                : 'Shows @all notes plus notes mentioning this coach/group'}
+            </p>
+          </div>
+
+          {/* Day Selection */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-slate-300">
+                Days to Print
+              </label>
+              <button
+                onClick={selectAllDays}
+                className="text-xs text-sky-400 hover:text-sky-300"
+              >
+                Select All
+              </button>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {DAYS.map(day => {
+                const hasPlan = practicePlans[day]?.segments?.length > 0;
+                return (
+                  <button
+                    key={day}
+                    onClick={() => toggleDay(day)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedDays[day]
+                        ? 'bg-sky-600 text-white'
+                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                    } ${!hasPlan ? 'opacity-50' : ''}`}
+                  >
+                    {day.slice(0, 3)}
+                    {hasPlan && <span className="block text-xs opacity-75">{practicePlans[day].segments.length} seg</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="bg-slate-900 rounded-lg p-4">
+            <p className="text-sm text-slate-400">
+              <span className="text-white font-medium">{selectedDaysCount}</span> day(s) will be printed
+              {selectedCoach !== 'ALL' && (
+                <span> for <span className="text-sky-400">
+                  {selectedCoach.startsWith('group:')
+                    ? `@${selectedCoach.replace('group:', '')}`
+                    : staff?.find(s => s.id === selectedCoach)?.name || selectedCoach}
+                </span></span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-700">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handlePrint}
+            disabled={selectedDaysCount === 0}
+            className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <Printer size={16} />
+            Print
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Legacy notes modal component (keeping for reference, will be removed)
+function LegacySegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
   // Ensure notes is an object
   const notes = typeof segment.notes === 'object' ? segment.notes : {};
 
@@ -287,6 +686,7 @@ export default function PracticePlans() {
   const [coachFilter, setCoachFilter] = useState('ALL');
   const [notesCoach, setNotesCoach] = useState('ALL_COACHES');
   const [notesModalSegmentId, setNotesModalSegmentId] = useState(null); // 'WARMUP' or segment.id
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Get weekId for updates
   const weekId = week?.id;
@@ -334,6 +734,21 @@ export default function PracticePlans() {
     });
     return Array.from(allTypes).sort();
   }, [setupConfig]);
+
+  // Get position groups from setup
+  const positionGroups = useMemo(() => {
+    const groups = new Set();
+    // Collect from all phases
+    ['offense', 'defense', 'specialTeams'].forEach(phase => {
+      const phaseGroups = setupConfig?.positionGroups?.[phase] || [];
+      phaseGroups.forEach(g => groups.add(g.name || g));
+    });
+    // Also collect from staff position assignments
+    (staff || []).forEach(s => {
+      if (s.positionGroup) groups.add(s.positionGroup);
+    });
+    return Array.from(groups).sort();
+  }, [setupConfig, staff]);
 
   // Get focus items from setup
   const focusItems = useMemo(() => {
@@ -434,19 +849,33 @@ export default function PracticePlans() {
     }
   }, [notesModalSegmentId, updateWarmupNotes, updateSegmentNotes]);
 
-  // Helper to check if segment has any notes
+  // Helper to check if segment has any notes (now works with string)
   const hasNotes = useCallback((notes) => {
-    if (!notes || typeof notes !== 'object') return false;
-    return Object.values(notes).some(v => v && v.trim() !== '');
+    // Support both old object format and new string format
+    if (!notes) return false;
+    if (typeof notes === 'string') return notes.trim() !== '';
+    if (typeof notes === 'object') {
+      return Object.values(notes).some(v => v && v.trim() !== '');
+    }
+    return false;
   }, []);
 
-  // Get preview text for notes button
+  // Get preview text for notes button (now works with string)
   const getNotesPreview = useCallback((notes) => {
-    if (!notes || typeof notes !== 'object') return null;
-    const allNotes = notes['ALL_COACHES'];
-    if (allNotes) return allNotes;
-    const firstNote = Object.values(notes).find(v => v && v.trim() !== '');
-    return firstNote || null;
+    if (!notes) return null;
+    // New string format
+    if (typeof notes === 'string') {
+      const preview = notes.substring(0, 50);
+      return notes.length > 50 ? preview + '...' : preview;
+    }
+    // Legacy object format
+    if (typeof notes === 'object') {
+      const allNotes = notes['ALL_COACHES'];
+      if (allNotes) return allNotes.substring(0, 50);
+      const firstNote = Object.values(notes).find(v => v && v.trim() !== '');
+      return firstNote ? firstNote.substring(0, 50) : null;
+    }
+    return null;
   }, []);
 
   // Add segment
@@ -570,7 +999,7 @@ export default function PracticePlans() {
 
               {/* Print Button */}
               <button
-                onClick={() => window.print()}
+                onClick={() => setShowPrintModal(true)}
                 className="flex items-center gap-2 px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
               >
                 <Printer size={16} />
@@ -1071,12 +1500,25 @@ export default function PracticePlans() {
       </div>
 
       {/* Notes Modal */}
+      {/* Notes Modal */}
       {notesModalSegment && (
         <SegmentNotesModal
           segment={notesModalSegment}
           staff={staff}
+          positionGroups={positionGroups}
           onUpdateNotes={handleNotesUpdate}
           onClose={() => setNotesModalSegmentId(null)}
+        />
+      )}
+
+      {/* Print Modal */}
+      {showPrintModal && (
+        <PrintSettingsModal
+          staff={staff}
+          positionGroups={positionGroups}
+          practicePlans={practicePlans}
+          weekName={week?.name || ''}
+          onClose={() => setShowPrintModal(false)}
         />
       )}
     </div>
