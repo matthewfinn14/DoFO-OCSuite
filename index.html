@@ -1213,8 +1213,17 @@
 
                         const schoolDoc = await window.db.collection('schools').doc(activeSchoolId).get();
                         if (schoolDoc.exists) {
+                            const schoolData = schoolDoc.data();
+
+                            // CHECK: If school is not initialized, don't load data - let wizard handle it
+                            if (!schoolData.initialized) {
+                                console.log("School not initialized - skipping data load, wizard will handle setup");
+                                localStorage.setItem('hc_school_id', activeSchoolId);
+                                return { needsSetup: true, schoolId: activeSchoolId };
+                            }
+
                             console.log("Loaded SCHOOL data");
-                            appData = schoolDoc.data();
+                            appData = schoolData;
                             isSchoolData = true;
 
                             // Note: memberList syncing removed - was causing duplicate entries
@@ -35327,6 +35336,12 @@
                                 // User was recovered from orphaned state - reload to reinitialize React state from localStorage
                                 console.log("User recovered - reloading page to apply data to React state");
                                 window.location.reload();
+                                return;
+                            }
+                            if (result && result.needsSetup) {
+                                // School exists but not initialized - show wizard to complete setup
+                                console.log("School needs setup - showing wizard for:", result.schoolId);
+                                setSchoolSetupData({ showWizard: true, schoolId: result.schoolId });
                                 return;
                             }
                             if (result && result.wiped) {
