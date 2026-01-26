@@ -139,7 +139,7 @@ const TAB_HELP = {
       </div>
     )
   },
-  categories: {
+  'play-buckets': {
     title: "About Play Buckets / Categories",
     content: (
       <div className="pt-3 space-y-3">
@@ -602,7 +602,7 @@ export default function Setup() {
     }
     tabs.push(
       { id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid },
-      { id: 'categories', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag },
+      { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag },
       { id: 'buckets', label: isDefense || isST ? 'Variations' : 'Concept Families', icon: Grid },
       { id: 'play-call-chain', label: 'Play Call Chain', icon: List }
     );
@@ -847,7 +847,7 @@ export default function Setup() {
           )}
 
           {/* Play Categories/Buckets Tab */}
-          {activeTab === 'categories' && !isPractice && !isProgram && (
+          {activeTab === 'play-buckets' && !isPractice && !isProgram && (
             <CategoriesTab
               phase={phase}
               categories={getPlayCategories()}
