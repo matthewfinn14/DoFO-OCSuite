@@ -126,7 +126,18 @@ function AppRoutes() {
         <Route path="/offseason/meetings" element={<OffseasonMeetings />} />
         <Route path="/offseason/research" element={<OffseasonResearch />} />
 
-        {/* Week-specific routes */}
+        {/* Week-specific routes (new URL structure) */}
+        <Route path="/:year/:phase/:week/practice" element={<PracticePlans />} />
+        <Route path="/:year/:phase/:week/practice/:day" element={<PracticePlans />} />
+        <Route path="/:year/:phase/:week/notes" element={<CoachesNotes />} />
+        <Route path="/:year/:phase/:week/install" element={<InstallManager />} />
+        <Route path="/:year/:phase/:week/depth-charts" element={<DepthCharts />} />
+        <Route path="/:year/:phase/:week/game-plan" element={<GamePlan />} />
+        <Route path="/:year/:phase/:week/wristband" element={<WristbandBuilder />} />
+        <Route path="/:year/:phase/:week/practice-scripts" element={<PracticeScriptBuilder />} />
+        <Route path="/:year/:phase/:week/pregame" element={<Pregame />} />
+
+        {/* Legacy week routes (for backwards compatibility) */}
         <Route path="/week/:weekId/notes" element={<CoachesNotes />} />
         <Route path="/week/:weekId/practice" element={<PracticePlans />} />
         <Route path="/week/:weekId/install" element={<InstallManager />} />

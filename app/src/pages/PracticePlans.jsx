@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import {
   ArrowLeft,
@@ -22,6 +22,23 @@ import {
 
 // Days of the week
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+// Map day names to URL-friendly slugs
+const DAY_SLUGS = {
+  'Monday': 'monday',
+  'Tuesday': 'tuesday',
+  'Wednesday': 'wednesday',
+  'Thursday': 'thursday',
+  'Friday': 'friday'
+};
+
+const SLUG_TO_DAY = {
+  'monday': 'Monday',
+  'tuesday': 'Tuesday',
+  'wednesday': 'Wednesday',
+  'thursday': 'Thursday',
+  'friday': 'Friday'
+};
 
 // Phase options
 const PHASES = [
@@ -66,18 +83,61 @@ const DEFAULT_SEGMENT_TYPES = [
 ];
 
 export default function PracticePlans() {
-  const { weekId } = useParams();
-  const { weeks, updateWeek, setupConfig, staff } = useSchool();
+  const { year, phase, week: weekParam, day: dayParam, weekId: legacyWeekId } = useParams();
+  const navigate = useNavigate();
+  const { weeks, updateWeek, setupConfig, staff, settings } = useSchool();
 
-  const week = weeks.find(w => w.id === weekId);
+  // Determine the week - support both new URL structure and legacy
+  const week = useMemo(() => {
+    if (legacyWeekId) {
+      // Legacy URL format: /week/:weekId/practice
+      return weeks.find(w => w.id === legacyWeekId);
+    }
+    // New URL format: /:year/:phase/:week/practice/:day
+    // Find week by matching year, phase, and week number/name
+    return weeks.find(w => {
+      const weekYear = w.year || settings?.activeYear || new Date().getFullYear().toString();
+      const weekPhase = (w.phase || 'season').toLowerCase();
+      const weekName = (w.name || '').toLowerCase().replace(/\s+/g, '-');
+      const weekNum = w.weekNum ? `week-${w.weekNum}` : weekName;
+
+      return weekYear === year &&
+             weekPhase === phase?.toLowerCase() &&
+             (weekNum === weekParam?.toLowerCase() || weekName === weekParam?.toLowerCase() || w.id === weekParam);
+    });
+  }, [weeks, year, phase, weekParam, legacyWeekId, settings]);
+
+  // Determine selected day from URL or default to Monday
+  const selectedDay = useMemo(() => {
+    if (dayParam && SLUG_TO_DAY[dayParam.toLowerCase()]) {
+      return SLUG_TO_DAY[dayParam.toLowerCase()];
+    }
+    return 'Monday';
+  }, [dayParam]);
+
+  // Build base URL for navigation
+  const baseUrl = useMemo(() => {
+    if (legacyWeekId) {
+      return `/week/${legacyWeekId}/practice`;
+    }
+    return `/${year}/${phase}/${weekParam}/practice`;
+  }, [year, phase, weekParam, legacyWeekId]);
+
+  // Navigate to a specific day
+  const navigateToDay = useCallback((day) => {
+    const slug = DAY_SLUGS[day];
+    navigate(`${baseUrl}/${slug}`);
+  }, [navigate, baseUrl]);
 
   // Local state
-  const [selectedDay, setSelectedDay] = useState('Monday');
   const [selectedSegmentId, setSelectedSegmentId] = useState(null);
   const [mode, setMode] = useState('plan'); // 'plan' or 'script'
   const [coachFilter, setCoachFilter] = useState('ALL');
   const [notesCoach, setNotesCoach] = useState('ALL_COACHES');
   const [editingNotes, setEditingNotes] = useState(null);
+
+  // Get weekId for updates
+  const weekId = week?.id;
 
   // Get practice plans from week (with defaults)
   const practicePlans = useMemo(() => {
@@ -238,7 +298,9 @@ export default function PracticePlans() {
     };
 
     updateWeek(weekId, { practicePlans: newPlans });
-  }, [week, weekId, practicePlans, selectedDay, currentPlan, updateWeek]);
+    // Navigate to the target day
+    navigateToDay(targetDay);
+  }, [week, weekId, practicePlans, selectedDay, currentPlan, updateWeek, navigateToDay]);
 
   if (!week) {
     return (
@@ -323,7 +385,7 @@ export default function PracticePlans() {
               return (
                 <button
                   key={day}
-                  onClick={() => setSelectedDay(day)}
+                  onClick={() => navigateToDay(day)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
                     selectedDay === day
                       ? 'bg-sky-600 text-white'
