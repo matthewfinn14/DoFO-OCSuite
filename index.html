@@ -2253,12 +2253,20 @@
                         roster: [],
                         plays: {}, // Empty library
                         staff: [{
+                            id: user.uid,
                             email: user.email,
-                            role: 'Head Coach',
+                            roles: ['Head Coach', 'Team Admin'],
                             name: user.displayName || 'Coach',
-                            uid: user.uid,
-                            permissions: ['ADMIN']
-                        }]
+                            phone: '',
+                            bio: 'School Creator'
+                        }],
+                        // Trial billing - 7 days
+                        billing: {
+                            plan: 'trial',
+                            status: 'active',
+                            trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                            createdAt: new Date().toISOString()
+                        }
                     };
 
                     const schoolRef = await window.db.collection('schools').add(schoolData);
