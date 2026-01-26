@@ -24,7 +24,8 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     gamePlans,
     scripts,
     addPlay,
-    updateWeek
+    updateWeek,
+    setupConfig
   } = useSchool();
 
   // Local state
@@ -144,26 +145,100 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     };
   }, [currentWeek]);
 
+  // Get play call chain syntax for current phase
+  const currentSyntax = setupConfig?.syntax?.[playBankPhase] || [];
+  const currentTermLibrary = setupConfig?.termLibrary?.[playBankPhase] || {};
+
+  // Parse input using play call chain syntax
+  const parseWithSyntax = useCallback((input) => {
+    if (!currentSyntax.length) return null;
+
+    const words = input.trim().toUpperCase().split(/\s+/);
+    const syntaxValues = {};
+    let wordIndex = 0;
+
+    // Try to match each syntax component in order
+    for (const component of currentSyntax) {
+      if (wordIndex >= words.length) break;
+
+      const terms = currentTermLibrary[component.id] || [];
+      const termLabels = terms.map(t => t.label?.toUpperCase());
+      const termAbbrevs = terms.map(t => t.abbrev?.toUpperCase()).filter(Boolean);
+
+      // Check for multi-word matches first (e.g., "TRIPS RIGHT")
+      let matched = false;
+      for (let len = Math.min(3, words.length - wordIndex); len > 0; len--) {
+        const phrase = words.slice(wordIndex, wordIndex + len).join(' ');
+        if (termLabels.includes(phrase) || termAbbrevs.includes(phrase)) {
+          syntaxValues[component.id] = phrase;
+          wordIndex += len;
+          matched = true;
+          break;
+        }
+      }
+
+      // If no exact term match, take single word for this component
+      if (!matched && wordIndex < words.length) {
+        syntaxValues[component.id] = words[wordIndex];
+        wordIndex++;
+      }
+    }
+
+    // Any remaining words get appended to the last component
+    if (wordIndex < words.length && currentSyntax.length > 0) {
+      const lastCompId = currentSyntax[currentSyntax.length - 1].id;
+      const remaining = words.slice(wordIndex).join(' ');
+      syntaxValues[lastCompId] = syntaxValues[lastCompId]
+        ? `${syntaxValues[lastCompId]} ${remaining}`
+        : remaining;
+    }
+
+    // Build the play name and extract formation
+    const nameParts = currentSyntax.map(comp => {
+      const value = syntaxValues[comp.id];
+      if (!value) return '';
+      return `${comp.prefix || ''}${value}${comp.suffix || ''}`;
+    }).filter(Boolean);
+
+    const formationComp = currentSyntax.find(c => c.label?.toLowerCase().includes('formation'));
+    const formation = formationComp ? syntaxValues[formationComp.id] || '' : '';
+
+    return {
+      name: nameParts.join(' '),
+      formation,
+      syntaxValues
+    };
+  }, [currentSyntax, currentTermLibrary]);
+
   // Quick add play handler
   const handleQuickAdd = useCallback(async () => {
     if (!quickAddValue.trim()) return;
 
-    // Parse the input - support "FORMATION PLAY_NAME" format
-    const parts = quickAddValue.trim().split(/\s+/);
+    let name = quickAddValue.trim().toUpperCase();
     let formation = '';
-    let name = quickAddValue.trim();
+    let syntaxValues = {};
 
-    // If multiple words and first word looks like a formation (all caps, short)
-    if (parts.length > 1 && parts[0].length <= 10 && parts[0] === parts[0].toUpperCase()) {
-      formation = parts[0];
-      name = parts.slice(1).join(' ');
+    // Try to parse with syntax if available
+    const parsed = parseWithSyntax(quickAddValue);
+    if (parsed && parsed.name) {
+      name = parsed.name;
+      formation = parsed.formation;
+      syntaxValues = parsed.syntaxValues;
+    } else {
+      // Fallback: simple "FORMATION PLAY_NAME" parsing
+      const parts = quickAddValue.trim().split(/\s+/);
+      if (parts.length > 1 && parts[0].length <= 12) {
+        formation = parts[0].toUpperCase();
+        name = parts.slice(1).join(' ').toUpperCase();
+      }
     }
 
     // Create the new play
     const playData = {
-      name: name.toUpperCase(),
-      formation: formation,
+      name,
+      formation,
       phase: playBankPhase,
+      syntaxValues, // Store parsed syntax values for future editing
       archived: false
     };
 
@@ -181,7 +256,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
 
     // Clear the input
     setQuickAddValue('');
-  }, [quickAddValue, playBankPhase, addPlay, currentWeek, currentWeekId, updateWeek]);
+  }, [quickAddValue, playBankPhase, addPlay, currentWeek, currentWeekId, updateWeek, parseWithSyntax]);
 
   // Render a single play row
   const renderPlayRow = useCallback((play) => {
@@ -406,7 +481,11 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
         <div className="p-2 bg-slate-50 border-b border-slate-200">
           <div className="flex gap-1.5">
             <input
-              placeholder="Quick add: FORM PLAY NAME"
+              placeholder={
+                currentSyntax.length > 0
+                  ? `e.g. ${currentSyntax.map(c => c.label?.toUpperCase() || '').slice(0, 3).join(' ')}`
+                  : 'Quick add: FORM PLAY NAME'
+              }
               value={quickAddValue}
               onChange={e => setQuickAddValue(e.target.value.toUpperCase())}
               onKeyDown={e => {
@@ -424,7 +503,11 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
             </button>
           </div>
           <p className="text-[10px] text-slate-400 mt-1">
-            Press Enter to add play{currentWeek ? ' and install for this week' : ''}
+            {currentSyntax.length > 0
+              ? `Uses your Play Call Chain: ${currentSyntax.map(c => c.label).join(' → ')}`
+              : 'Press Enter to add play'
+            }
+            {currentWeek ? ' • Auto-installs for this week' : ''}
           </p>
         </div>
 
