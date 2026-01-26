@@ -296,6 +296,16 @@ export function SchoolProvider({ children }) {
   }, [updateSchool]);
 
   /**
+   * Update a single week by ID
+   */
+  const updateWeek = useCallback(async (weekId, updates) => {
+    const newWeeks = weeks.map(w =>
+      w.id === weekId ? { ...w, ...updates } : w
+    );
+    await updateSchool({ weeks: newWeeks });
+  }, [weeks, updateSchool]);
+
+  /**
    * Update staff
    */
   const updateStaff = useCallback(async (newStaff) => {
@@ -395,6 +405,7 @@ export function SchoolProvider({ children }) {
     updatePlay,
     addPlay,
     updateWeeks,
+    updateWeek,
     updateStaff,
     updateDepthCharts,
     updateWristbands,
