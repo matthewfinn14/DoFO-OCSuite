@@ -34159,15 +34159,15 @@
                         console.log("DEBUG: User has no memberships. Showing school creation wizard.");
                         localStorage.removeItem('hc_school_id');
                         localStorage.removeItem('hc_school_name');
-                        const newSchoolId = 'school_' + Date.now();
-                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                        // Pass null so wizard creates a NEW school (not tries to update non-existent one)
+                        setSchoolSetupData({ showWizard: true, schoolId: null });
                         setAuthCheckComplete(true);
 
                     } catch (err) {
                         console.error("Error in auth check:", err);
                         // On error, show wizard as fallback
-                        const newSchoolId = 'school_' + Date.now();
-                        setSchoolSetupData({ showWizard: true, schoolId: newSchoolId });
+                        // Pass null so wizard creates a NEW school
+                        setSchoolSetupData({ showWizard: true, schoolId: null });
                         setAuthCheckComplete(true);
                     }
                 };
