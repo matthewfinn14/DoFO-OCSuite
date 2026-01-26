@@ -35680,7 +35680,7 @@
             const addToNextSlotRef = React.useRef(null);
 
             // Setup Page Tab State (Offense/Defense/Special Teams)
-            const [setupPhase, setSetupPhase] = useLocalStorage('oc-setup-phase', 'OFFENSE');
+            const [setupPhase, setSetupPhase] = useLocalStorage('oc-setup-phase', 'TEAM');
             const [setupSection, setSetupSection] = useState('positions'); // positions, formations, glossary
 
             const saveLayoutVersion = (name) => {
