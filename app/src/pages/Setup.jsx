@@ -139,13 +139,32 @@ const TAB_HELP = {
       </div>
     )
   },
-  'season-schedule': {
-    title: "About Season Schedule",
+  'season-phases': {
+    title: "About Season Phases",
     content: (
       <div className="pt-3 space-y-3">
         <p>
-          <strong className="text-white">Purpose:</strong> Define your season schedule including all weeks, opponents,
-          and game dates. Manage schedules for Varsity and all sub-levels from one place.
+          <strong className="text-white">Purpose:</strong> Define the phases of your season (Offseason, Summer,
+          Preseason, Regular Season, Playoffs, etc.) with start dates for each phase.
+        </p>
+        <p>
+          <strong className="text-white">Smart Dates:</strong> When you set a phase start date, weeks within that
+          phase auto-calculate their dates. Week 1 starts on your phase date, Week 2 is 7 days later, etc.
+        </p>
+        <p>
+          <strong className="text-white">Customizable:</strong> Add custom phases like "Spring Ball", "7-on-7 Season",
+          or "Playoff Run" to match your program's calendar.
+        </p>
+      </div>
+    )
+  },
+  'season-schedule': {
+    title: "About Week Schedule",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Add weeks to each phase with opponents and game details.
+          Weeks are auto-dated based on the phase start date you set.
         </p>
         <p>
           <strong className="text-white">Connections:</strong> Weeks created here appear in the sidebar navigation.
@@ -466,7 +485,7 @@ export default function Setup() {
   const getDefaultTab = (p) => {
     if (p === 'PRACTICE') return 'practice-lists';
     if (p === 'PROGRAM') return 'levels';
-    if (p === 'SEASON') return 'season-schedule';
+    if (p === 'SEASON') return 'season-phases';
     return 'positions';
   };
   const [activeTab, setActiveTab] = useState(() => urlTab || getDefaultTab(phase));
@@ -633,8 +652,9 @@ export default function Setup() {
     }
     if (isSeason) {
       return [
-        { id: 'season-schedule', label: 'Season Schedule', icon: Calendar },
-        { id: 'program-events', label: 'Program Events', icon: LayoutDashboard }
+        { id: 'season-phases', label: 'Season Phases', icon: LayoutDashboard },
+        { id: 'season-schedule', label: 'Week Schedule', icon: Calendar },
+        { id: 'program-events', label: 'Program Events', icon: Clock }
       ];
     }
     if (isPractice) {
@@ -965,10 +985,19 @@ export default function Setup() {
             />
           )}
 
+          {/* Season Phases Tab */}
+          {activeTab === 'season-phases' && isSeason && (
+            <SeasonPhasesTab
+              seasonPhases={localConfig.seasonPhases || []}
+              onUpdate={updateLocal}
+            />
+          )}
+
           {/* Season Schedule Tab */}
           {activeTab === 'season-schedule' && isSeason && (
             <SeasonScheduleTab
               weeks={weeks}
+              seasonPhases={localConfig.seasonPhases || []}
               programLevels={localConfig.programLevels || []}
               activeYear={activeYear}
               onUpdateWeeks={updateWeeks}
@@ -3000,40 +3029,252 @@ function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
 
 // ============= SEASON SETUP COMPONENTS =============
 
-// Week phases for organization
-const WEEK_PHASES = [
-  { id: 'offseason', label: 'Offseason', color: 'bg-slate-600' },
-  { id: 'summer', label: 'Summer', color: 'bg-amber-600' },
-  { id: 'preseason', label: 'Preseason', color: 'bg-purple-600' },
-  { id: 'season', label: 'Season', color: 'bg-emerald-600' }
+// Default phase colors
+const PHASE_COLORS = [
+  { id: 'slate', label: 'Gray', class: 'bg-slate-600' },
+  { id: 'amber', label: 'Amber', class: 'bg-amber-600' },
+  { id: 'purple', label: 'Purple', class: 'bg-purple-600' },
+  { id: 'emerald', label: 'Green', class: 'bg-emerald-600' },
+  { id: 'sky', label: 'Blue', class: 'bg-sky-600' },
+  { id: 'rose', label: 'Red', class: 'bg-rose-600' },
+  { id: 'orange', label: 'Orange', class: 'bg-orange-600' }
 ];
 
-// Season Schedule Tab Component
-function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) {
+// Default phases if none defined
+const DEFAULT_PHASES = [
+  { id: 'offseason', name: 'Offseason', color: 'slate', order: 0 },
+  { id: 'summer', name: 'Summer', color: 'amber', order: 1 },
+  { id: 'preseason', name: 'Preseason', color: 'purple', order: 2 },
+  { id: 'season', name: 'Regular Season', color: 'emerald', order: 3 }
+];
+
+// Season Phases Tab Component - Define and configure season phases
+function SeasonPhasesTab({ seasonPhases, onUpdate }) {
+  const phases = seasonPhases.length > 0 ? seasonPhases : DEFAULT_PHASES;
+
+  const addPhase = () => {
+    const name = prompt('Enter phase name (e.g., "Spring Ball", "Playoffs"):');
+    if (!name?.trim()) return;
+
+    const newPhase = {
+      id: `phase_${Date.now()}`,
+      name: name.trim(),
+      color: PHASE_COLORS[phases.length % PHASE_COLORS.length].id,
+      order: phases.length,
+      startDate: '',
+      numWeeks: 4
+    };
+    onUpdate('seasonPhases', [...phases, newPhase]);
+  };
+
+  const updatePhase = (phaseId, updates) => {
+    const newPhases = phases.map(p => p.id === phaseId ? { ...p, ...updates } : p);
+    onUpdate('seasonPhases', newPhases);
+  };
+
+  const deletePhase = (phaseId, phaseName) => {
+    if (!confirm(`Delete "${phaseName}" phase? Weeks in this phase will become unassigned.`)) return;
+    onUpdate('seasonPhases', phases.filter(p => p.id !== phaseId));
+  };
+
+  const movePhase = (phaseId, direction) => {
+    const idx = phases.findIndex(p => p.id === phaseId);
+    if (idx === -1) return;
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= phases.length) return;
+
+    const newPhases = [...phases];
+    [newPhases[idx], newPhases[newIdx]] = [newPhases[newIdx], newPhases[idx]];
+    newPhases.forEach((p, i) => p.order = i);
+    onUpdate('seasonPhases', newPhases);
+  };
+
+  // Calculate end date based on start date and number of weeks
+  const getEndDate = (startDate, numWeeks) => {
+    if (!startDate || !numWeeks) return null;
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + (numWeeks * 7) - 1);
+    return end;
+  };
+
+  // Format date for display
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Info Box */}
+      <div className="p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg">
+        <p className="text-sm text-sky-300">
+          <strong>Season Phases:</strong> Define the phases of your season with start dates.
+          When you set a start date, weeks in that phase auto-calculate (Week 1 starts on start date, Week 2 is 7 days later, etc.)
+        </p>
+      </div>
+
+      {/* Phases List */}
+      <div className="space-y-3">
+        {phases.sort((a, b) => a.order - b.order).map((phase, idx) => {
+          const colorClass = PHASE_COLORS.find(c => c.id === phase.color)?.class || 'bg-slate-600';
+          const endDate = getEndDate(phase.startDate, phase.numWeeks);
+
+          return (
+            <div
+              key={phase.id}
+              className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden"
+            >
+              {/* Phase Header */}
+              <div className={`flex items-center gap-3 px-4 py-3 ${colorClass}`}>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => movePhase(phase.id, 'up')}
+                    disabled={idx === 0}
+                    className="p-1 text-white/70 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <button
+                    onClick={() => movePhase(phase.id, 'down')}
+                    disabled={idx === phases.length - 1}
+                    className="p-1 text-white/70 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={phase.name}
+                  onChange={e => updatePhase(phase.id, { name: e.target.value })}
+                  className="bg-transparent text-white font-semibold border-none outline-none flex-1"
+                />
+                <button
+                  onClick={() => deletePhase(phase.id, phase.name)}
+                  className="p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {/* Phase Settings */}
+              <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Color */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase mb-1">Color</label>
+                  <select
+                    value={phase.color}
+                    onChange={e => updatePhase(phase.id, { color: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                  >
+                    {PHASE_COLORS.map(c => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Start Date */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={phase.startDate || ''}
+                    onChange={e => updatePhase(phase.id, { startDate: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                  />
+                </div>
+
+                {/* Number of Weeks */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase mb-1">Number of Weeks</label>
+                  <input
+                    type="number"
+                    value={phase.numWeeks || ''}
+                    onChange={e => updatePhase(phase.id, { numWeeks: parseInt(e.target.value) || 0 })}
+                    min="1"
+                    max="52"
+                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                  />
+                </div>
+
+                {/* Date Range Display */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase mb-1">Date Range</label>
+                  <div className="px-3 py-2 bg-slate-800/50 border border-slate-600 rounded text-sm">
+                    {phase.startDate ? (
+                      <span className="text-white">
+                        {formatDate(phase.startDate)} — {endDate ? formatDate(endDate) : '...'}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">Set start date</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add Phase Button */}
+      <button
+        onClick={addPhase}
+        className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+      >
+        <Plus size={18} />
+        Add Phase
+      </button>
+
+      {/* Initialize with defaults if empty */}
+      {seasonPhases.length === 0 && (
+        <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <p className="text-sm text-amber-300">
+            <strong>Tip:</strong> These are default phases. Edit the names, dates, and colors to match your program's calendar.
+            Click "Add Phase" to create custom phases like "Spring Ball" or "Playoffs".
+          </p>
+          <button
+            onClick={() => onUpdate('seasonPhases', DEFAULT_PHASES)}
+            className="mt-2 text-sm text-amber-400 hover:underline"
+          >
+            Save default phases to get started →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Season Schedule Tab Component - Add weeks to phases
+function SeasonScheduleTab({ weeks, seasonPhases, programLevels, activeYear, onUpdateWeeks }) {
   const [editingWeek, setEditingWeek] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addToPhase, setAddToPhase] = useState(null);
   const [filterPhase, setFilterPhase] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
 
-  // Group weeks by phase
-  const groupedWeeks = {
-    offseason: weeks.filter(w => w.phase === 'offseason' || w.name === 'Offseason'),
-    summer: weeks.filter(w => w.phase === 'summer' || w.name?.includes('Summer')),
-    preseason: weeks.filter(w => w.phase === 'preseason' || ['Family Week', 'Camp Week', 'First Week of Practice', 'Week 0'].includes(w.name)),
-    season: weeks.filter(w => w.phase === 'season' || (w.name?.startsWith('Week ') && !w.name?.includes('Summer') && w.name !== 'Week 0'))
+  // Use default phases if none defined
+  const phases = seasonPhases.length > 0 ? seasonPhases : DEFAULT_PHASES;
+
+  // Calculate week date based on phase start date and week number
+  const getWeekDate = (phaseId, weekNum) => {
+    const phase = phases.find(p => p.id === phaseId);
+    if (!phase?.startDate || !weekNum) return null;
+    const start = new Date(phase.startDate);
+    start.setDate(start.getDate() + ((weekNum - 1) * 7));
+    return start.toISOString().split('T')[0];
+  };
+
+  // Get next week number for a phase
+  const getNextWeekNum = (phaseId) => {
+    const phaseWeeks = weeks.filter(w => w.phaseId === phaseId);
+    if (phaseWeeks.length === 0) return 1;
+    const maxNum = Math.max(...phaseWeeks.map(w => w.weekNum || 0));
+    return maxNum + 1;
   };
 
   // Filter weeks
   const filteredWeeks = weeks.filter(w => {
-    if (filterPhase !== 'all') {
-      const weekPhase = w.phase || (
-        w.name === 'Offseason' ? 'offseason' :
-        w.name?.includes('Summer') ? 'summer' :
-        ['Family Week', 'Camp Week', 'First Week of Practice', 'Week 0'].includes(w.name) ? 'preseason' :
-        'season'
-      );
-      if (weekPhase !== filterPhase) return false;
-    }
+    if (filterPhase !== 'all' && w.phaseId !== filterPhase) return false;
     if (filterLevel !== 'all') {
       if (filterLevel === 'varsity' && w.levelId) return false;
       if (filterLevel !== 'varsity' && w.levelId !== filterLevel) return false;
@@ -3042,24 +3283,69 @@ function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) 
   });
 
   const addWeek = (weekData) => {
+    const phase = phases.find(p => p.id === weekData.phaseId);
+    const calculatedDate = getWeekDate(weekData.phaseId, weekData.weekNum);
+
     const newWeek = {
       id: `week_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...weekData,
+      date: weekData.date || calculatedDate,
       year: activeYear,
       createdAt: new Date().toISOString()
     };
     onUpdateWeeks([...weeks, newWeek]);
     setShowAddModal(false);
+    setAddToPhase(null);
   };
 
   const updateWeek = (weekId, updates) => {
-    const newWeeks = weeks.map(w => w.id === weekId ? { ...w, ...updates } : w);
+    const newWeeks = weeks.map(w => {
+      if (w.id !== weekId) return w;
+      const updated = { ...w, ...updates };
+      // Recalculate date if week number changed and no manual date override
+      if (updates.weekNum && !updates.date) {
+        updated.date = getWeekDate(updated.phaseId, updates.weekNum) || updated.date;
+      }
+      return updated;
+    });
     onUpdateWeeks(newWeeks);
   };
 
   const deleteWeek = (weekId, weekName) => {
     if (!confirm(`Delete "${weekName}"? This will also delete all practice plans and notes for this week.`)) return;
     onUpdateWeeks(weeks.filter(w => w.id !== weekId));
+  };
+
+  // Generate multiple weeks for a phase
+  const generateWeeks = (phaseId) => {
+    const phase = phases.find(p => p.id === phaseId);
+    if (!phase) return;
+
+    const existingCount = weeks.filter(w => w.phaseId === phaseId).length;
+    const toGenerate = (phase.numWeeks || 4) - existingCount;
+
+    if (toGenerate <= 0) {
+      alert(`This phase already has ${existingCount} weeks (configured for ${phase.numWeeks}).`);
+      return;
+    }
+
+    if (!confirm(`Generate ${toGenerate} weeks for ${phase.name}?`)) return;
+
+    const newWeeks = [];
+    for (let i = 1; i <= toGenerate; i++) {
+      const weekNum = existingCount + i;
+      newWeeks.push({
+        id: `week_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}`,
+        name: `${phase.name} Week ${weekNum}`,
+        phaseId: phaseId,
+        weekNum: weekNum,
+        date: getWeekDate(phaseId, weekNum),
+        year: activeYear,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    onUpdateWeeks([...weeks, ...newWeeks]);
   };
 
   return (
@@ -3073,8 +3359,8 @@ function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) 
             className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
           >
             <option value="all">All Phases</option>
-            {WEEK_PHASES.map(p => (
-              <option key={p.id} value={p.id}>{p.label}</option>
+            {phases.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
           <select
@@ -3098,40 +3384,64 @@ function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) 
         </button>
       </div>
 
-      {/* Info Box */}
-      <div className="p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg">
-        <p className="text-sm text-sky-300">
-          <strong>Season Schedule:</strong> Add and organize weeks for your season. Each week can have an opponent,
-          date, and be assigned to specific program levels. Weeks appear in the sidebar navigation.
-        </p>
-      </div>
-
       {/* Weeks by Phase */}
-      {WEEK_PHASES.map(phase => {
-        const phaseWeeks = filteredWeeks.filter(w => {
-          const weekPhase = w.phase || (
-            w.name === 'Offseason' ? 'offseason' :
-            w.name?.includes('Summer') ? 'summer' :
-            ['Family Week', 'Camp Week', 'First Week of Practice', 'Week 0'].includes(w.name) ? 'preseason' :
-            'season'
-          );
-          return weekPhase === phase.id;
-        });
+      {phases.sort((a, b) => a.order - b.order).map(phase => {
+        const phaseWeeks = filteredWeeks
+          .filter(w => w.phaseId === phase.id)
+          .sort((a, b) => (a.weekNum || 0) - (b.weekNum || 0));
 
         if (filterPhase !== 'all' && filterPhase !== phase.id) return null;
 
+        const colorClass = PHASE_COLORS.find(c => c.id === phase.color)?.class || 'bg-slate-600';
+        const hasStartDate = !!phase.startDate;
+
         return (
           <div key={phase.id} className="space-y-3">
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${phase.color}`}>
-              <span className="text-white font-semibold">{phase.label}</span>
-              <span className="text-white/70 text-sm">({phaseWeeks.length} weeks)</span>
+            <div className={`flex items-center justify-between gap-2 px-4 py-3 rounded-lg ${colorClass}`}>
+              <div className="flex items-center gap-3">
+                <span className="text-white font-semibold">{phase.name}</span>
+                <span className="text-white/70 text-sm">
+                  ({phaseWeeks.length}{phase.numWeeks ? ` / ${phase.numWeeks}` : ''} weeks)
+                </span>
+                {phase.startDate && (
+                  <span className="text-white/60 text-xs">
+                    Starting {new Date(phase.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {phase.numWeeks && phaseWeeks.length < phase.numWeeks && (
+                  <button
+                    onClick={() => generateWeeks(phase.id)}
+                    className="px-3 py-1 bg-white/20 text-white text-xs rounded hover:bg-white/30"
+                  >
+                    Generate Weeks
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setAddToPhase(phase.id);
+                    setShowAddModal(true);
+                  }}
+                  className="p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
             </div>
+
+            {!hasStartDate && (
+              <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded text-sm text-amber-300">
+                Set a start date in Season Phases to auto-calculate week dates.
+              </div>
+            )}
 
             {phaseWeeks.length === 0 ? (
               <div className="text-center py-6 text-slate-500 border-2 border-dashed border-slate-700 rounded-lg">
-                <p className="text-sm">No weeks in {phase.label.toLowerCase()}</p>
+                <p className="text-sm">No weeks in {phase.name.toLowerCase()}</p>
                 <button
                   onClick={() => {
+                    setAddToPhase(phase.id);
                     setShowAddModal(true);
                   }}
                   className="text-sky-400 text-sm hover:underline mt-1"
@@ -3148,6 +3458,7 @@ function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) 
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
+                        <span className="text-slate-500 text-sm font-mono w-8">#{week.weekNum || '?'}</span>
                         <span className="font-semibold text-white">{week.name}</span>
                         {week.opponent && (
                           <span className="text-slate-400">
@@ -3164,8 +3475,8 @@ function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) 
                         )}
                       </div>
                       {week.date && (
-                        <p className="text-sm text-slate-500 mt-1">
-                          {new Date(week.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                        <p className="text-sm text-slate-500 mt-1 ml-11">
+                          {new Date(week.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                         </p>
                       )}
                     </div>
@@ -3195,7 +3506,11 @@ function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) 
       {(showAddModal || editingWeek) && (
         <WeekEditModal
           week={editingWeek}
+          phases={phases}
           programLevels={programLevels}
+          defaultPhaseId={addToPhase}
+          getNextWeekNum={getNextWeekNum}
+          getWeekDate={getWeekDate}
           onSave={(data) => {
             if (editingWeek) {
               updateWeek(editingWeek.id, data);
@@ -3207,6 +3522,7 @@ function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) 
           onClose={() => {
             setShowAddModal(false);
             setEditingWeek(null);
+            setAddToPhase(null);
           }}
         />
       )}
@@ -3215,17 +3531,42 @@ function SeasonScheduleTab({ weeks, programLevels, activeYear, onUpdateWeeks }) 
 }
 
 // Week Edit Modal
-function WeekEditModal({ week, programLevels, onSave, onClose }) {
+function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWeekNum, getWeekDate, onSave, onClose }) {
+  const initialPhase = week?.phaseId || defaultPhaseId || phases[0]?.id || '';
   const [formData, setFormData] = useState({
     name: week?.name || '',
-    phase: week?.phase || 'season',
+    phaseId: initialPhase,
+    weekNum: week?.weekNum || (initialPhase ? getNextWeekNum(initialPhase) : 1),
     opponent: week?.opponent || '',
     isHome: week?.isHome ?? true,
     date: week?.date || '',
+    dateOverride: !!week?.date, // Track if date was manually set
     levelId: week?.levelId || '',
-    weekNum: week?.weekNum || '',
     notes: week?.notes || ''
   });
+
+  // Auto-generate name based on phase and week number
+  useEffect(() => {
+    if (!week && formData.phaseId && formData.weekNum) {
+      const phase = phases.find(p => p.id === formData.phaseId);
+      if (phase) {
+        setFormData(prev => ({
+          ...prev,
+          name: `${phase.name} Week ${formData.weekNum}`
+        }));
+      }
+    }
+  }, [formData.phaseId, formData.weekNum, week, phases]);
+
+  // Auto-calculate date when phase or week number changes
+  useEffect(() => {
+    if (!formData.dateOverride && formData.phaseId && formData.weekNum) {
+      const calculatedDate = getWeekDate(formData.phaseId, formData.weekNum);
+      if (calculatedDate) {
+        setFormData(prev => ({ ...prev, date: calculatedDate }));
+      }
+    }
+  }, [formData.phaseId, formData.weekNum, formData.dateOverride, getWeekDate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -3235,7 +3576,7 @@ function WeekEditModal({ week, programLevels, onSave, onClose }) {
     }
     onSave({
       ...formData,
-      weekNum: formData.weekNum ? parseInt(formData.weekNum) : undefined
+      weekNum: parseInt(formData.weekNum) || 1
     });
   };
 
@@ -3254,28 +3595,45 @@ function WeekEditModal({ week, programLevels, onSave, onClose }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Week Name *</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Week 1, Camp Week"
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                autoFocus
-              />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">Phase</label>
               <select
-                value={formData.phase}
-                onChange={e => setFormData({ ...formData, phase: e.target.value })}
+                value={formData.phaseId}
+                onChange={e => {
+                  const newPhase = e.target.value;
+                  setFormData({
+                    ...formData,
+                    phaseId: newPhase,
+                    weekNum: getNextWeekNum(newPhase)
+                  });
+                }}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
               >
-                {WEEK_PHASES.map(p => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
+                {phases.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Week #</label>
+              <input
+                type="number"
+                value={formData.weekNum}
+                onChange={e => setFormData({ ...formData, weekNum: e.target.value, dateOverride: false })}
+                min="1"
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Week Name *</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g., Regular Season Week 1"
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -3304,42 +3662,41 @@ function WeekEditModal({ week, programLevels, onSave, onClose }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Game Date</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">
+                Week Start Date
+                {!formData.dateOverride && formData.date && (
+                  <span className="text-xs text-emerald-400 ml-2">(auto-calculated)</span>
+                )}
+              </label>
               <input
                 type="date"
                 value={formData.date}
-                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                onChange={e => setFormData({ ...formData, date: e.target.value, dateOverride: true })}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
               />
+              {formData.dateOverride && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, dateOverride: false })}
+                  className="text-xs text-sky-400 hover:underline mt-1"
+                >
+                  Reset to auto-calculate
+                </button>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Week Number</label>
-              <input
-                type="number"
-                value={formData.weekNum}
-                onChange={e => setFormData({ ...formData, weekNum: e.target.value })}
-                placeholder="e.g., 1"
+              <label className="block text-sm font-medium text-slate-300 mb-1">Program Level</label>
+              <select
+                value={formData.levelId}
+                onChange={e => setFormData({ ...formData, levelId: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                min="0"
-              />
+              >
+                <option value="">All Levels / Varsity</option>
+                {programLevels.map(l => (
+                  <option key={l.id} value={l.id}>{l.name} only</option>
+                ))}
+              </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Program Level</label>
-            <select
-              value={formData.levelId}
-              onChange={e => setFormData({ ...formData, levelId: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-            >
-              <option value="">All Levels / Varsity</option>
-              {programLevels.map(l => (
-                <option key={l.id} value={l.id}>{l.name} only</option>
-              ))}
-            </select>
-            <p className="text-xs text-slate-500 mt-1">
-              Leave blank for weeks that apply to all levels. Select a specific level for sub-level only games.
-            </p>
           </div>
 
           <div>
