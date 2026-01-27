@@ -37,9 +37,9 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
   const [expandedSections, setExpandedSections] = useState({});
   const [quickAddValue, setQuickAddValue] = useState('');
 
-  // Get play buckets and concept families from settings
-  const playBuckets = settings?.playCategories || [];
-  const conceptFamilies = settings?.playBuckets || [];
+  // Get play buckets and concept families from setupConfig (with settings fallback)
+  const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
+  const conceptGroups = setupConfig?.conceptGroups || settings?.conceptGroups || [];
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
@@ -83,7 +83,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     );
 
     const buckets = phaseBuckets.map(bucket => {
-      const families = conceptFamilies
+      const families = conceptGroups
         .filter(cf => cf.categoryId === bucket.id)
         .map(family => {
           // Find plays assigned to this bucket and concept family
@@ -104,7 +104,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
       if (!p.bucketId || !p.conceptFamily) return true;
       // Also unassigned if its bucketId or conceptFamily doesn't exist in setup
       const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
-      const familyExists = conceptFamilies.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
+      const familyExists = conceptGroups.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
       return !bucketExists || !familyExists;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
@@ -119,7 +119,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     }
 
     return buckets;
-  }, [playsArray, playBuckets, conceptFamilies, searchTerm, playBankPhase]);
+  }, [playsArray, playBuckets, conceptGroups, searchTerm, playBankPhase]);
 
   // Calculate install data organized by bucket and concept family (like usageData but filtered to installed plays)
   const installUsageData = useMemo(() => {
@@ -149,7 +149,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     );
 
     const buckets = phaseBuckets.map(bucket => {
-      const families = conceptFamilies
+      const families = conceptGroups
         .filter(cf => cf.categoryId === bucket.id)
         .map(family => {
           const familyPlays = Object.values(filteredMap).filter(p =>
@@ -168,7 +168,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     const unassignedPlays = Object.values(filteredMap).filter(p => {
       if (!p.bucketId || !p.conceptFamily) return true;
       const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
-      const familyExists = conceptFamilies.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
+      const familyExists = conceptGroups.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
       return !bucketExists || !familyExists;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
@@ -183,7 +183,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     }
 
     return buckets;
-  }, [playsArray, playBuckets, conceptFamilies, currentWeek, searchTerm, playBankPhase]);
+  }, [playsArray, playBuckets, conceptGroups, currentWeek, searchTerm, playBankPhase]);
 
   // Total install count for display
   const installTotalCount = useMemo(() => {
@@ -316,6 +316,11 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
 
   // Render a single play row
   const renderPlayRow = useCallback((play) => {
+    // Build play call with formation first
+    const playCall = play.formation
+      ? `${play.formation} ${play.name}`
+      : play.name;
+
     return (
       <div
         key={play.id}
@@ -327,7 +332,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
       >
         <div className="flex-1 min-w-0">
           <div className="font-medium text-slate-800 truncate">
-            {play.name}
+            {playCall}
           </div>
         </div>
         {play.priority && (

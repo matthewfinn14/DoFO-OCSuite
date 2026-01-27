@@ -18,17 +18,17 @@ export default function MainLayout() {
   } = useSchool();
   const [playBankOpen, setPlayBankOpen] = useState(false);
 
-  // Get play categories, buckets, and formations from setup
-  const playCategories = setupConfig?.playCategories || settings?.playCategories || [];
+  // Get play buckets, concept families, and formations from setup
   const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
+  const conceptGroups = setupConfig?.conceptGroups || settings?.conceptGroups || [];
   const formations = setupConfig?.formations || settings?.formations || [];
 
   return (
     <PlayDetailsModalProvider
       plays={playsArray}
       updatePlay={updatePlay}
-      playCategories={playCategories}
       playBuckets={playBuckets}
+      conceptGroups={conceptGroups}
       formations={formations}
       currentWeek={currentWeek}
       updateWeek={updateWeek}

@@ -52,9 +52,9 @@ export default function Playbook() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingPlay, setEditingPlay] = useState(null);
 
-  // Get play categories and buckets from settings
-  const playCategories = settings?.playCategories || [];
+  // Get play buckets and concept families from settings
   const playBuckets = settings?.playBuckets || [];
+  const conceptGroups = settings?.conceptGroups || [];
 
   // Get all unique tags from plays
   const allTags = useMemo(() => {
@@ -381,7 +381,7 @@ export default function Playbook() {
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
               <option value="">All Categories</option>
-              {playCategories.filter(c => (c.phase || 'OFFENSE') === activePhase).map(cat => (
+              {playBuckets.filter(c => (c.phase || 'OFFENSE') === activePhase).map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.label}</option>
               ))}
             </select>
@@ -523,8 +523,8 @@ export default function Playbook() {
         onSave={handleSavePlay}
         onDelete={handleDeletePlay}
         formations={formations}
-        playCategories={playCategories}
         playBuckets={playBuckets}
+        conceptGroups={conceptGroups}
         phase={activePhase}
       />
     </div>
@@ -556,8 +556,9 @@ function PlayRow({ play, isSelected, onToggleSelect, onEdit }) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-white truncate">{play.name}</h3>
-        <div className="text-sm text-slate-500">{play.formation || 'No formation'}</div>
+        <h3 className="font-semibold text-white truncate">
+          {play.formation ? `${play.formation} ${play.name}` : play.name}
+        </h3>
       </div>
 
       {play.concept && (

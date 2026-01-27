@@ -10,7 +10,7 @@ const PlayDetailsModalContext = createContext({
 export const usePlayDetailsModal = () => useContext(PlayDetailsModalContext);
 
 // Provider component that wraps the app
-export function PlayDetailsModalProvider({ children, plays, updatePlay, playCategories, playBuckets, formations, currentWeek, updateWeek }) {
+export function PlayDetailsModalProvider({ children, plays, updatePlay, playBuckets, conceptGroups, formations, currentWeek, updateWeek }) {
   const [modalState, setModalState] = useState({ isOpen: false, playId: null });
 
   const openPlayDetails = (playId) => {
@@ -30,8 +30,8 @@ export function PlayDetailsModalProvider({ children, plays, updatePlay, playCate
           plays={plays}
           onClose={closePlayDetails}
           onUpdatePlay={updatePlay}
-          playCategories={playCategories}
           playBuckets={playBuckets}
+          conceptGroups={conceptGroups}
           formations={formations}
           currentWeek={currentWeek}
           onUpdateWeek={updateWeek}
@@ -47,8 +47,8 @@ export default function PlayDetailsModal({
   plays,
   onClose,
   onUpdatePlay,
-  playCategories = [],
   playBuckets = [],
+  conceptGroups = [],
   formations = [],
   currentWeek,
   onUpdateWeek
@@ -66,17 +66,17 @@ export default function PlayDetailsModal({
   const isMiniScript = play.isMiniScript || false;
 
   // Get the bucket and concept family for display
-  const bucket = playCategories.find(c => c.id === play.bucketId);
-  const conceptFamily = playBuckets.find(b => b.label === play.conceptFamily && b.categoryId === play.bucketId);
+  const bucket = playBuckets.find(b => b.id === play.bucketId);
+  const conceptFamily = conceptGroups.find(cf => cf.label === play.conceptFamily && cf.categoryId === play.bucketId);
 
   // Filter buckets by play's phase
-  const phaseBuckets = playCategories.filter(c =>
-    (c.phase || 'OFFENSE') === (play.phase || 'OFFENSE')
+  const phaseBuckets = playBuckets.filter(b =>
+    (b.phase || 'OFFENSE') === (play.phase || 'OFFENSE')
   );
 
   // Get concept families for selected bucket
   const bucketConceptFamilies = play.bucketId
-    ? playBuckets.filter(b => b.categoryId === play.bucketId)
+    ? conceptGroups.filter(cf => cf.categoryId === play.bucketId)
     : [];
 
   const handleTogglePriority = () => {
@@ -137,7 +137,7 @@ export default function PlayDetailsModal({
               {play.formation && <span className="text-slate-500">{play.formation} </span>}
               {play.name}
             </h3>
-            {/* Bucket and Concept Family badges */}
+            {/* Bucket and Concept Group badges */}
             {(bucket || conceptFamily) && (
               <div className="flex gap-1 mt-1.5 flex-wrap">
                 {bucket && (
@@ -314,11 +314,11 @@ export default function PlayDetailsModal({
           </div>
         )}
 
-        {/* Concept Family Selection */}
+        {/* Concept Group Selection */}
         {bucketConceptFamilies.length > 0 && (
           <div className="p-4 border-b border-slate-200">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
-              Concept Family
+              Concept Group
             </div>
             <div className="flex flex-wrap gap-1.5">
               {bucketConceptFamilies.map(cf => {

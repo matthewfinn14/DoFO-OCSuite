@@ -93,8 +93,11 @@ export function SchoolProvider({ children }) {
     // Formations
     formations: [],
 
-    // Play Categories/Buckets
-    playCategories: [],
+    // Play Buckets (formerly playCategories) - top level organization
+    playBuckets: [],
+
+    // Concept Families (formerly playBuckets) - sub-level organization within buckets
+    conceptGroups: [],
 
     // Play Call Syntax
     syntax: { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] },
@@ -144,7 +147,26 @@ export function SchoolProvider({ children }) {
           setGlobalWeekTemplates(data.globalWeekTemplates || []);
           setVisibleFeatures(data.visibleFeatures || { gameWeek: { enabled: true, items: { schemeSetup: true, playbook: true } } });
           if (data.culture) setCulture(prev => ({ ...prev, ...data.culture }));
-          if (data.setupConfig) setSetupConfig(prev => ({ ...prev, ...data.setupConfig }));
+          if (data.setupConfig) {
+            // Migrate old field names to new ones
+            const config = { ...data.setupConfig };
+            // playCategories → playBuckets (top-level buckets)
+            if (config.playCategories && !config.playBuckets) {
+              config.playBuckets = config.playCategories;
+            }
+            delete config.playCategories;
+            // old playBuckets → conceptGroups (sub-level families)
+            // Note: only migrate if conceptGroups doesn't exist and old playBuckets was the families array
+            if (data.setupConfig.playBuckets && !config.conceptGroups && Array.isArray(data.setupConfig.playBuckets) && data.setupConfig.playBuckets[0]?.categoryId) {
+              config.conceptGroups = data.setupConfig.playBuckets;
+            }
+            // conceptFamilies → conceptGroups (renamed field)
+            if (config.conceptFamilies && !config.conceptGroups) {
+              config.conceptGroups = config.conceptFamilies;
+            }
+            delete config.conceptFamilies;
+            setSetupConfig(prev => ({ ...prev, ...config }));
+          }
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
         } else {
           // Set default dev school
@@ -187,7 +209,25 @@ export function SchoolProvider({ children }) {
           setGlobalWeekTemplates(data.weekTemplates || []);
           setVisibleFeatures(data.visibleFeatures || { gameWeek: { enabled: true, items: { schemeSetup: true, playbook: true } } });
           if (data.culture) setCulture(prev => ({ ...prev, ...data.culture }));
-          if (data.setupConfig) setSetupConfig(prev => ({ ...prev, ...data.setupConfig }));
+          if (data.setupConfig) {
+            // Migrate old field names to new ones
+            const config = { ...data.setupConfig };
+            // playCategories → playBuckets (top-level buckets)
+            if (config.playCategories && !config.playBuckets) {
+              config.playBuckets = config.playCategories;
+            }
+            delete config.playCategories;
+            // old playBuckets → conceptGroups (sub-level families)
+            if (data.setupConfig.playBuckets && !config.conceptGroups && Array.isArray(data.setupConfig.playBuckets) && data.setupConfig.playBuckets[0]?.categoryId) {
+              config.conceptGroups = data.setupConfig.playBuckets;
+            }
+            // conceptFamilies → conceptGroups (renamed field)
+            if (config.conceptFamilies && !config.conceptGroups) {
+              config.conceptGroups = config.conceptFamilies;
+            }
+            delete config.conceptFamilies;
+            setSetupConfig(prev => ({ ...prev, ...config }));
+          }
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
         }
         setLoading(false);

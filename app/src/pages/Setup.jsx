@@ -216,7 +216,7 @@ const TAB_HELP = {
     )
   },
   buckets: {
-    title: "About Concept Families",
+    title: "About Concept Groups",
     content: (
       <div className="pt-3 space-y-3">
         <p>
@@ -638,9 +638,9 @@ export default function Setup() {
     ];
   };
 
-  // Get play categories for current phase
-  const getPlayCategories = () => {
-    return (localConfig.playCategories || []).filter(c => c.phase === phase || (!c.phase && phase === 'OFFENSE'));
+  // Get play buckets for current phase
+  const getPlayBuckets = () => {
+    return (localConfig.playBuckets || []).filter(b => b.phase === phase || (!b.phase && phase === 'OFFENSE'));
   };
 
   // Tabs based on phase
@@ -672,7 +672,7 @@ export default function Setup() {
     tabs.push(
       { id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid },
       { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag },
-      { id: 'buckets', label: isDefense || isST ? 'Variations' : 'Concept Families', icon: Grid },
+      { id: 'buckets', label: isDefense || isST ? 'Variations' : 'Concept Groups', icon: Grid },
       { id: 'play-call-chain', label: 'Play Call Chain', icon: List }
     );
     if (isOffense) {
@@ -915,22 +915,22 @@ export default function Setup() {
             />
           )}
 
-          {/* Play Categories/Buckets Tab */}
+          {/* Play Buckets Tab */}
           {activeTab === 'play-buckets' && !isPractice && !isProgram && (
-            <CategoriesTab
+            <PlayBucketsTab
               phase={phase}
-              categories={getPlayCategories()}
-              allCategories={localConfig.playCategories || []}
+              buckets={getPlayBuckets()}
+              allBuckets={localConfig.playBuckets || []}
               onUpdate={updateLocal}
             />
           )}
 
-          {/* Concept Families Tab */}
+          {/* Concept Groups Tab */}
           {activeTab === 'buckets' && !isPractice && !isProgram && (
-            <ConceptFamiliesTab
+            <ConceptGroupsTab
               phase={phase}
-              categories={getPlayCategories()}
-              allCategories={localConfig.playCategories || []}
+              buckets={getPlayBuckets()}
+              allBuckets={localConfig.playBuckets || []}
               onUpdate={updateLocal}
             />
           )}
@@ -1492,28 +1492,29 @@ function FormationsTab({ phase, formations, personnelGroupings, onUpdate }) {
   );
 }
 
-// Categories Tab Component
-function CategoriesTab({ phase, categories, allCategories, onUpdate }) {
+// Play Buckets Tab Component (called Categories for Defense/ST)
+function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate }) {
   const phaseLabel = phase === 'DEFENSE' ? 'Defensive Categories' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Categories' : 'Play Buckets';
+  const itemLabel = phase === 'OFFENSE' ? 'Bucket' : 'Category';
 
-  const addCategory = () => {
-    const label = prompt('New Category Label:');
+  const addBucket = () => {
+    const label = prompt(`New ${itemLabel} Label:`);
     if (!label) return;
     const id = label.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (categories.some(c => c.id === id)) {
-      alert('Category ID already exists for this phase.');
+    if (buckets.some(b => b.id === id)) {
+      alert(`${itemLabel} ID already exists for this phase.`);
       return;
     }
-    onUpdate('playCategories', [...allCategories, { id, label, color: '#94a3b8', phase }]);
+    onUpdate('playBuckets', [...allBuckets, { id, label, color: '#94a3b8', phase }]);
   };
 
-  const deleteCategory = (id) => {
-    if (!confirm('Delete this category?')) return;
-    onUpdate('playCategories', allCategories.filter(c => c.id !== id));
+  const deleteBucket = (id) => {
+    if (!confirm(`Delete this ${itemLabel.toLowerCase()}?`)) return;
+    onUpdate('playBuckets', allBuckets.filter(b => b.id !== id));
   };
 
-  const updateCategory = (id, updates) => {
-    onUpdate('playCategories', allCategories.map(c => c.id === id ? { ...c, ...updates } : c));
+  const updateBucket = (id, updates) => {
+    onUpdate('playBuckets', allBuckets.map(b => b.id === id ? { ...b, ...updates } : b));
   };
 
   return (
@@ -1521,40 +1522,40 @@ function CategoriesTab({ phase, categories, allCategories, onUpdate }) {
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-white">{phaseLabel}</h3>
         <button
-          onClick={addCategory}
+          onClick={addBucket}
           className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
         >
-          <Plus size={16} /> Add {phase === 'OFFENSE' ? 'Bucket' : 'Category'}
+          <Plus size={16} /> Add {itemLabel}
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categories.map(cat => (
-          <div key={cat.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
+        {buckets.map(bucket => (
+          <div key={bucket.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
             <div className="flex justify-between items-start mb-3 gap-2">
-              <div className="flex items-center gap-2 flex-1">
-                <div className="relative">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="relative flex-shrink-0">
                   <input
                     type="color"
-                    value={cat.color === 'gray' ? '#94a3b8' : cat.color}
-                    onChange={(e) => updateCategory(cat.id, { color: e.target.value })}
+                    value={bucket.color === 'gray' ? '#94a3b8' : bucket.color}
+                    onChange={(e) => updateBucket(bucket.id, { color: e.target.value })}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
                   <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2 border-white/20"
-                    style={{ backgroundColor: cat.color === 'gray' ? '#94a3b8' : cat.color }}
+                    style={{ backgroundColor: bucket.color === 'gray' ? '#94a3b8' : bucket.color }}
                   >
                     <Edit3 size={12} className="text-white/70" />
                   </div>
                 </div>
                 <input
                   type="text"
-                  value={cat.label}
-                  onChange={(e) => updateCategory(cat.id, { label: e.target.value })}
-                  className="flex-1 px-2 py-1 font-semibold bg-slate-600 border border-slate-500 rounded text-white"
+                  value={bucket.label}
+                  onChange={(e) => updateBucket(bucket.id, { label: e.target.value })}
+                  className="flex-1 min-w-0 px-2 py-1 font-semibold bg-slate-600 border border-slate-500 rounded text-white truncate"
                 />
               </div>
-              <button onClick={() => deleteCategory(cat.id)} className="text-red-400 hover:text-red-300">
+              <button onClick={() => deleteBucket(bucket.id)} className="text-red-400 hover:text-red-300 flex-shrink-0">
                 <Trash2 size={16} />
               </button>
             </div>
@@ -1562,7 +1563,7 @@ function CategoriesTab({ phase, categories, allCategories, onUpdate }) {
         ))}
       </div>
 
-      {categories.length === 0 && (
+      {buckets.length === 0 && (
         <div className="text-center py-12 text-slate-400">
           <Tag size={48} className="mx-auto mb-4 opacity-30" />
           <p>No {phaseLabel.toLowerCase()} defined.</p>
@@ -1576,34 +1577,34 @@ function CategoriesTab({ phase, categories, allCategories, onUpdate }) {
   );
 }
 
-// Concept Families Tab Component
-function ConceptFamiliesTab({ phase, categories, allCategories, onUpdate }) {
-  const phaseLabel = phase === 'DEFENSE' ? 'Defensive Concept Families' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Variations' : 'Concept Families';
+// Concept Groups Tab Component
+function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
+  const phaseLabel = phase === 'DEFENSE' ? 'Defensive Concept Groups' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Variations' : 'Concept Groups';
 
   const addFamily = (bucketId) => {
-    const name = prompt('New Concept Family Name:');
+    const name = prompt('New Concept Group Name:');
     if (!name) return;
-    const bucket = allCategories.find(c => c.id === bucketId);
+    const bucket = allBuckets.find(b => b.id === bucketId);
     if (!bucket) return;
     const newFamilies = [...(bucket.families || []), name];
-    onUpdate('playCategories', allCategories.map(c => c.id === bucketId ? { ...c, families: newFamilies } : c));
+    onUpdate('playBuckets', allBuckets.map(b => b.id === bucketId ? { ...b, families: newFamilies } : b));
   };
 
   const deleteFamily = (bucketId, family) => {
     if (!confirm(`Delete family "${family}"?`)) return;
-    const bucket = allCategories.find(c => c.id === bucketId);
+    const bucket = allBuckets.find(b => b.id === bucketId);
     if (!bucket) return;
     const newFamilies = (bucket.families || []).filter(f => f !== family);
-    onUpdate('playCategories', allCategories.map(c => c.id === bucketId ? { ...c, families: newFamilies } : c));
+    onUpdate('playBuckets', allBuckets.map(b => b.id === bucketId ? { ...b, families: newFamilies } : b));
   };
 
   const renameFamily = (bucketId, oldName) => {
-    const newName = prompt('Rename Concept Family:', oldName);
+    const newName = prompt('Rename Concept Group:', oldName);
     if (!newName || newName === oldName) return;
-    const bucket = allCategories.find(c => c.id === bucketId);
+    const bucket = allBuckets.find(b => b.id === bucketId);
     if (!bucket) return;
     const newFamilies = (bucket.families || []).map(f => f === oldName ? newName : f);
-    onUpdate('playCategories', allCategories.map(c => c.id === bucketId ? { ...c, families: newFamilies } : c));
+    onUpdate('playBuckets', allBuckets.map(b => b.id === bucketId ? { ...b, families: newFamilies } : b));
   };
 
   return (
@@ -1616,7 +1617,7 @@ function ConceptFamiliesTab({ phase, categories, allCategories, onUpdate }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categories.map(bucket => {
+        {buckets.map(bucket => {
           const families = bucket.families || [];
           return (
             <div key={bucket.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">

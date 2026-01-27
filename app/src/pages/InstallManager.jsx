@@ -32,8 +32,8 @@ export default function InstallManager() {
   const [expandedBuckets, setExpandedBuckets] = useState({});
 
   // Get play buckets and concept families from settings/setupConfig
-  const playBuckets = setupConfig?.playCategories || settings?.playCategories || [];
-  const conceptFamilies = setupConfig?.playBuckets || settings?.playBuckets || [];
+  const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
+  const conceptGroups = setupConfig?.conceptGroups || settings?.conceptGroups || [];
 
   // Current install list and new install IDs from week
   const installList = currentWeek?.installList || [];
@@ -60,7 +60,7 @@ export default function InstallManager() {
 
     const buckets = phaseBuckets.map(bucket => {
       // Get concept families for this bucket
-      const bucketFamilies = conceptFamilies.filter(cf => cf.categoryId === bucket.id);
+      const bucketFamilies = conceptGroups.filter(cf => cf.categoryId === bucket.id);
 
       const families = bucketFamilies.map(family => {
         const familyPlays = phaseInstalledPlays
@@ -83,7 +83,7 @@ export default function InstallManager() {
     const unassignedPlays = phaseInstalledPlays.filter(p => {
       if (!p.bucketId || !p.conceptFamily) return true;
       const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
-      const familyExists = conceptFamilies.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
+      const familyExists = conceptGroups.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
       return !bucketExists || !familyExists;
     }).sort((a, b) => {
       if (a.priority && !b.priority) return -1;
@@ -102,7 +102,7 @@ export default function InstallManager() {
     }
 
     return buckets;
-  }, [phaseInstalledPlays, playBuckets, conceptFamilies, activePhase]);
+  }, [phaseInstalledPlays, playBuckets, conceptGroups, activePhase]);
 
   // Stats
   const stats = useMemo(() => {
@@ -357,15 +357,10 @@ export default function InstallManager() {
                                       )}
                                     </div>
 
-                                    {/* Play Name */}
+                                    {/* Play Call (Formation + Name) */}
                                     <div className="text-sm font-medium text-white truncate pr-6">
-                                      {play.name}
+                                      {play.formation ? `${play.formation} ${play.name}` : play.name}
                                     </div>
-                                    {play.formation && (
-                                      <div className="text-xs text-slate-500 truncate">
-                                        {play.formation}
-                                      </div>
-                                    )}
 
                                     {/* Actions */}
                                     <div className="flex items-center gap-1 mt-2">

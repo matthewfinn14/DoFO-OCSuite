@@ -32,8 +32,8 @@ export default function PlayEditor({
   onSave,
   onDelete,
   formations = [],
-  playCategories = [],
   playBuckets = [],
+  conceptGroups = [],
   phase = 'OFFENSE'
 }) {
   const { setupConfig } = useSchool();
@@ -352,9 +352,9 @@ export default function PlayEditor({
                   onChange={e => setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }))}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
                 >
-                  <option value="">Select Category</option>
-                  {playCategories.filter(c => (c.phase || 'OFFENSE') === formData.phase).map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                  <option value="">Select Bucket</option>
+                  {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
+                    <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
                   ))}
                 </select>
               </div>
