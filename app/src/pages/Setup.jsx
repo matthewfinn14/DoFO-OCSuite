@@ -672,7 +672,7 @@ export default function Setup() {
     tabs.push(
       { id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid },
       { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag },
-      { id: 'buckets', label: isDefense || isST ? 'Variations' : 'Concept Groups', icon: Grid },
+      { id: 'concept-groups', label: isDefense || isST ? 'Variations' : 'Concept Groups', icon: Grid },
       { id: 'play-call-chain', label: 'Play Call Chain', icon: List }
     );
     if (isOffense) {
@@ -926,7 +926,7 @@ export default function Setup() {
           )}
 
           {/* Concept Groups Tab */}
-          {activeTab === 'buckets' && !isPractice && !isProgram && (
+          {activeTab === 'concept-groups' && !isPractice && !isProgram && (
             <ConceptGroupsTab
               phase={phase}
               buckets={getPlayBuckets()}
