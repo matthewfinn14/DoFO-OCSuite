@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSchool } from '../../context/SchoolContext';
 import {
   Settings,
   Shield,
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react';
 
 // Footer navigation item
-function FooterNavItem({ to, icon: Icon, label, collapsed, danger = false }) {
+function FooterNavItem({ to, icon: Icon, label, collapsed, danger = false, isLight = false }) {
   return (
     <NavLink
       to={to}
@@ -24,7 +25,9 @@ function FooterNavItem({ to, icon: Icon, label, collapsed, danger = false }) {
             ? 'bg-sky-500/20 text-sky-400'
             : danger
               ? 'text-red-400/80 hover:text-red-400 hover:bg-slate-800/50'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              : isLight
+                ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
         }`
       }
     >
@@ -36,6 +39,8 @@ function FooterNavItem({ to, icon: Icon, label, collapsed, danger = false }) {
 
 export default function SidebarFooter({ collapsed }) {
   const { user, logout, isSiteAdmin, isHeadCoach, isTeamAdmin } = useAuth();
+  const { settings } = useSchool();
+  const isLight = settings?.theme === 'light';
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -44,23 +49,25 @@ export default function SidebarFooter({ collapsed }) {
   };
 
   return (
-    <div className="px-2 py-1.5 border-t border-slate-800">
+    <div className={`px-2 py-1.5 border-t ${isLight ? 'border-gray-200' : 'border-slate-800'}`}>
       {/* Collapsible header - User info with toggle */}
       {!collapsed && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full flex items-center justify-between px-1 py-1 hover:bg-slate-800/30 rounded transition-colors"
+          className={`w-full flex items-center justify-between px-1 py-1 rounded transition-colors ${
+            isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-800/30'
+          }`}
         >
           <div className="text-left">
-            <div className="text-xs text-slate-400 truncate max-w-[180px]">{user?.email}</div>
+            <div className={`text-xs truncate max-w-[180px] ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>{user?.email}</div>
             {isSiteAdmin && (
               <span className="text-[0.65rem] text-emerald-400 font-medium">Site Admin</span>
             )}
           </div>
           {expanded ? (
-            <ChevronUp size={14} className="text-slate-500" />
+            <ChevronUp size={14} className={isLight ? 'text-gray-400' : 'text-slate-500'} />
           ) : (
-            <ChevronDown size={14} className="text-slate-500" />
+            <ChevronDown size={14} className={isLight ? 'text-gray-400' : 'text-slate-500'} />
           )}
         </button>
       )}
@@ -73,6 +80,7 @@ export default function SidebarFooter({ collapsed }) {
             icon={Settings}
             label="Settings"
             collapsed={collapsed}
+            isLight={isLight}
           />
 
           {isSiteAdmin && (
@@ -81,6 +89,7 @@ export default function SidebarFooter({ collapsed }) {
               icon={Shield}
               label="Site Admin"
               collapsed={collapsed}
+              isLight={isLight}
             />
           )}
 
@@ -89,6 +98,7 @@ export default function SidebarFooter({ collapsed }) {
             icon={Construction}
             label="Under Construction"
             collapsed={collapsed}
+            isLight={isLight}
           />
 
           <FooterNavItem
@@ -96,6 +106,7 @@ export default function SidebarFooter({ collapsed }) {
             icon={HelpCircle}
             label="How to Use"
             collapsed={collapsed}
+            isLight={isLight}
           />
         </div>
       )}
@@ -103,9 +114,9 @@ export default function SidebarFooter({ collapsed }) {
       {/* Collapsed sidebar - show icons only */}
       {collapsed && (
         <div className="flex flex-col gap-0.5 mb-1">
-          <FooterNavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
+          <FooterNavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} isLight={isLight} />
           {isSiteAdmin && (
-            <FooterNavItem to="/admin" icon={Shield} label="Site Admin" collapsed={collapsed} />
+            <FooterNavItem to="/admin" icon={Shield} label="Site Admin" collapsed={collapsed} isLight={isLight} />
           )}
         </div>
       )}
@@ -121,7 +132,11 @@ export default function SidebarFooter({ collapsed }) {
           </button>
           <button
             onClick={() => setShowLogoutConfirm(false)}
-            className="flex-1 px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs font-medium hover:bg-slate-600"
+            className={`flex-1 px-2 py-1 rounded text-xs font-medium ${
+              isLight
+                ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
           >
             Cancel
           </button>
@@ -129,9 +144,9 @@ export default function SidebarFooter({ collapsed }) {
       ) : (
         <button
           onClick={() => setShowLogoutConfirm(true)}
-          className={`flex items-center gap-2 px-3 py-1 rounded text-red-400/80 hover:text-red-400 hover:bg-slate-800/50 transition-colors mt-1 ${
+          className={`flex items-center gap-2 px-3 py-1 rounded text-red-400/80 hover:text-red-400 transition-colors mt-1 ${
             collapsed ? 'justify-center w-full' : ''
-          }`}
+          } ${isLight ? 'hover:bg-red-50' : 'hover:bg-slate-800/50'}`}
         >
           <LogOut size={14} />
           {!collapsed && <span className="text-xs">Log Out</span>}

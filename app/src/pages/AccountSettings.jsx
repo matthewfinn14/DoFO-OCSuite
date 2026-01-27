@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useAuth } from '../context/AuthContext';
 import { uploadSchoolLogo, deleteSchoolLogo } from '../services/storage';
@@ -27,6 +27,16 @@ export default function AccountSettings() {
   // Local state for settings
   const [accentColor, setAccentColor] = useState(settings?.accentColor || '#0ea5e9');
   const [theme, setTheme] = useState(settings?.theme || 'dark');
+
+  // Sync local state with settings when they load/change
+  useEffect(() => {
+    if (settings?.theme) {
+      setTheme(settings.theme);
+    }
+    if (settings?.accentColor) {
+      setAccentColor(settings.accentColor);
+    }
+  }, [settings?.theme, settings?.accentColor]);
 
   // Admins can edit logo and accent color
   const canEditAdvanced = isHeadCoach || isTeamAdmin || isSiteAdmin;

@@ -15,8 +15,165 @@ import {
   Crosshair,
   Shield,
   Zap,
-  FileText
+  FileText,
+  Layers,
+  X,
+  Check,
+  Users
 } from 'lucide-react';
+
+// Modal for assigning plays to sub-level playbooks
+function AssignLevelsModal({ selectedPlayIds, plays, programLevels, onAssign, onClose }) {
+  const [selectedLevels, setSelectedLevels] = useState([]);
+
+  // Get currently assigned levels for the selected plays
+  const currentAssignments = useMemo(() => {
+    const assignments = {};
+    programLevels.forEach(level => {
+      const count = selectedPlayIds.filter(playId => {
+        const play = plays.find(p => p.id === playId);
+        return play?.levelPlaybooks?.includes(level.id);
+      }).length;
+      assignments[level.id] = count;
+    });
+    return assignments;
+  }, [selectedPlayIds, plays, programLevels]);
+
+  const toggleLevel = (levelId) => {
+    setSelectedLevels(prev =>
+      prev.includes(levelId)
+        ? prev.filter(id => id !== levelId)
+        : [...prev, levelId]
+    );
+  };
+
+  const handleAssign = () => {
+    onAssign(selectedLevels);
+  };
+
+  const handleRemoveFromLevels = () => {
+    onAssign(selectedLevels, true); // true = remove mode
+  };
+
+  if (programLevels.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div className="bg-slate-900 rounded-xl w-full max-w-md overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-slate-800">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Layers size={20} className="text-sky-400" />
+              Assign to Sub-Levels
+            </h3>
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-white">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-6 text-center">
+            <Users size={48} className="text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 mb-2">No sub-level programs created yet.</p>
+            <p className="text-slate-500 text-sm">
+              Go to Setup → Program Levels to create JV, Freshman, or other sub-level programs.
+            </p>
+          </div>
+          <div className="flex justify-end p-4 border-t border-slate-800">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-slate-900 rounded-xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-800">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Layers size={20} className="text-sky-400" />
+            Assign to Sub-Level Playbooks
+          </h3>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4">
+          <p className="text-slate-400 text-sm mb-4">
+            Select which sub-level playbooks should include the {selectedPlayIds.length} selected play(s).
+          </p>
+
+          <div className="space-y-2">
+            {programLevels.map(level => {
+              const isSelected = selectedLevels.includes(level.id);
+              const currentCount = currentAssignments[level.id];
+              const allHaveIt = currentCount === selectedPlayIds.length;
+              const someHaveIt = currentCount > 0 && currentCount < selectedPlayIds.length;
+
+              return (
+                <button
+                  key={level.id}
+                  onClick={() => toggleLevel(level.id)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                    isSelected
+                      ? 'bg-sky-500/20 border-sky-500 text-white'
+                      : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      isSelected ? 'bg-sky-500 border-sky-500' : 'border-slate-500'
+                    }`}>
+                      {isSelected && <Check size={14} className="text-white" />}
+                    </div>
+                    <span className="font-medium">{level.name}</span>
+                  </div>
+                  <div className="text-xs">
+                    {allHaveIt ? (
+                      <span className="text-emerald-400">All assigned</span>
+                    ) : someHaveIt ? (
+                      <span className="text-amber-400">{currentCount} of {selectedPlayIds.length}</span>
+                    ) : (
+                      <span className="text-slate-500">Not assigned</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex justify-between gap-3 p-4 border-t border-slate-800">
+          <button
+            onClick={handleRemoveFromLevels}
+            disabled={selectedLevels.length === 0}
+            className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Remove from Selected
+          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAssign}
+              disabled={selectedLevels.length === 0}
+              className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add to Selected
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Phase tabs configuration
 const PHASE_TABS = [
@@ -38,11 +195,15 @@ export default function Playbook() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Get program levels for sub-level playbook assignment
+  const programLevels = setupConfig?.programLevels || [];
+
   // UI State
   const [activePhase, setActivePhase] = useState('OFFENSE');
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlays, setSelectedPlays] = useState([]);
+  const [showAssignLevelsModal, setShowAssignLevelsModal] = useState(false);
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -216,6 +377,38 @@ export default function Playbook() {
     }
   };
 
+  // Assign selected plays to sub-level playbooks
+  const handleAssignToLevels = async (levelIds, removeMode = false) => {
+    if (selectedPlays.length === 0 || levelIds.length === 0) return;
+
+    const newPlays = { ...plays };
+    selectedPlays.forEach(playId => {
+      const play = newPlays[playId];
+      if (!play) return;
+
+      const currentLevels = play.levelPlaybooks || [];
+
+      if (removeMode) {
+        // Remove from selected levels
+        newPlays[playId] = {
+          ...play,
+          levelPlaybooks: currentLevels.filter(id => !levelIds.includes(id))
+        };
+      } else {
+        // Add to selected levels (avoid duplicates)
+        const newLevels = [...new Set([...currentLevels, ...levelIds])];
+        newPlays[playId] = {
+          ...play,
+          levelPlaybooks: newLevels
+        };
+      }
+    });
+
+    await updatePlays(newPlays);
+    setShowAssignLevelsModal(false);
+    setSelectedPlays([]);
+  };
+
   // Handle save play (new or edit)
   const handleSavePlay = async (playData) => {
     if (editingPlay) {
@@ -293,13 +486,22 @@ export default function Playbook() {
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Master Playbook</h1>
           {selectedPlays.length > 0 && (
-            <button
-              onClick={handleDeleteSelected}
-              className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30"
-            >
-              <Trash2 size={16} />
-              Delete Selected ({selectedPlays.length})
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAssignLevelsModal(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-sky-500/20 text-sky-400 rounded-md hover:bg-sky-500/30"
+              >
+                <Layers size={16} />
+                Assign to Sub-Levels ({selectedPlays.length})
+              </button>
+              <button
+                onClick={handleDeleteSelected}
+                className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30"
+              >
+                <Trash2 size={16} />
+                Delete ({selectedPlays.length})
+              </button>
+            </div>
           )}
         </div>
         <div className="flex gap-3">
@@ -619,6 +821,17 @@ export default function Playbook() {
         phase={activePhase}
         availablePlays={phasePlays}
       />
+
+      {/* Assign to Levels Modal */}
+      {showAssignLevelsModal && (
+        <AssignLevelsModal
+          selectedPlayIds={selectedPlays}
+          plays={playsArray}
+          programLevels={programLevels}
+          onAssign={handleAssignToLevels}
+          onClose={() => setShowAssignLevelsModal(false)}
+        />
+      )}
     </div>
   );
 }

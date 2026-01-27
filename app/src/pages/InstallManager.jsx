@@ -13,6 +13,65 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+// Play Card Component for split view
+function PlayCard({ play, isNew, isPriority, onToggleNew, onRemove }) {
+  return (
+    <div
+      className={`relative p-2.5 rounded-lg border transition-colors ${
+        isPriority
+          ? 'bg-amber-500/10 border-amber-500/30'
+          : isNew
+          ? 'bg-emerald-500/10 border-emerald-500/30'
+          : 'bg-slate-800 border-slate-700 hover:border-slate-600'
+      }`}
+    >
+      {/* Priority Badge */}
+      {isPriority && (
+        <div className="absolute -top-1 -right-1">
+          <span className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-lg">
+            <Star size={12} className="text-white fill-white" />
+          </span>
+        </div>
+      )}
+
+      {/* Play Call (Formation + Name) */}
+      <div className="text-sm font-medium text-white truncate pr-5">
+        {play.formation ? `${play.formation} ${play.name}` : play.name}
+      </div>
+
+      {/* Bucket/Category info */}
+      {play.bucketLabel && (
+        <div className="text-xs text-slate-500 truncate mt-0.5">
+          {play.bucketLabel}
+          {play.conceptFamily && ` • ${play.conceptFamily}`}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-1 mt-2">
+        <button
+          onClick={onToggleNew}
+          className={`p-1.5 rounded text-xs transition-colors ${
+            isNew
+              ? 'bg-emerald-500/30 text-emerald-400 hover:bg-emerald-500/40'
+              : 'bg-slate-700 text-slate-400 hover:text-emerald-400 hover:bg-slate-600'
+          }`}
+          title={isNew ? 'Move to Review' : 'Mark as New'}
+        >
+          <Sparkles size={12} />
+        </button>
+        <button
+          onClick={onRemove}
+          className="p-1.5 rounded bg-slate-700 text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-colors"
+          title="Remove from install"
+        >
+          <Minus size={12} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function InstallManager() {
   const { weekId } = useParams();
   const {
@@ -272,9 +331,9 @@ export default function InstallManager() {
           </div>
         </div>
 
-        {/* Bucket Grid */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {bucketData.length === 0 ? (
+        {/* Split View: New vs Review */}
+        <div className="flex-1 overflow-hidden p-4">
+          {phaseInstalledPlays.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center max-w-sm">
                 <Layers size={48} className="text-slate-600 mx-auto mb-4" />
@@ -285,115 +344,178 @@ export default function InstallManager() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {bucketData.map(bucket => {
-                const isExpanded = expandedBuckets[bucket.id] !== false;
+            <div className="grid grid-cols-2 gap-4 h-full">
+              {/* NEW INSTALL Column */}
+              <div className="flex flex-col bg-slate-900 rounded-lg border border-emerald-500/30 overflow-hidden">
+                <div className="px-4 py-3 bg-emerald-500/10 border-b border-emerald-500/30 flex items-center gap-2">
+                  <Sparkles size={18} className="text-emerald-400" />
+                  <h3 className="font-semibold text-emerald-400">New Install</h3>
+                  <span className="ml-auto text-sm text-emerald-400/70">
+                    {stats.new} play{stats.new !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3">
+                  {(() => {
+                    const newPlays = phaseInstalledPlays
+                      .filter(p => newInstallIds.includes(p.id))
+                      .sort((a, b) => {
+                        // Priority first, then alphabetical
+                        if (a.priority && !b.priority) return -1;
+                        if (!a.priority && b.priority) return 1;
+                        return (a.name || '').localeCompare(b.name || '');
+                      });
 
-                return (
-                  <div
-                    key={bucket.id}
-                    className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden"
-                  >
-                    {/* Bucket Header */}
-                    <button
-                      onClick={() => toggleBucket(bucket.id)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-800/50 transition-colors"
-                      style={{ borderLeft: `4px solid ${bucket.color || '#3b82f6'}` }}
-                    >
-                      {isExpanded ? (
-                        <ChevronDown size={16} className="text-slate-500" />
-                      ) : (
-                        <ChevronRight size={16} className="text-slate-500" />
-                      )}
-                      <span className="font-semibold text-white">{bucket.label}</span>
-                      <span className="text-sm text-slate-500">
-                        {bucket.totalPlays} play{bucket.totalPlays !== 1 ? 's' : ''}
-                      </span>
-                    </button>
+                    // Split into priority and regular
+                    const priorityPlays = newPlays.filter(p => p.priority);
+                    const regularPlays = newPlays.filter(p => !p.priority);
 
-                    {/* Concept Families */}
-                    {isExpanded && (
-                      <div className="border-t border-slate-800">
-                        {bucket.families.map(family => (
-                          <div key={family.id} className="border-b border-slate-800 last:border-b-0">
-                            {/* Family Header */}
-                            <div className="px-4 py-2 bg-slate-800/30 flex items-center gap-2">
-                              <span className="text-sm font-medium text-slate-300">
-                                {family.label}
-                              </span>
-                              <span className="text-xs text-slate-500">
-                                ({family.plays.length})
-                              </span>
+                    if (newPlays.length === 0) {
+                      return (
+                        <div className="flex items-center justify-center h-full text-center">
+                          <div>
+                            <Sparkles size={32} className="text-slate-600 mx-auto mb-2" />
+                            <p className="text-slate-500 text-sm">No new plays this week</p>
+                            <p className="text-slate-600 text-xs mt-1">Click the sparkle icon on a play to mark as new</p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-3">
+                        {/* Priority New Plays */}
+                        {priorityPlays.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Star size={14} className="text-amber-400 fill-amber-400" />
+                              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wide">Priority</span>
                             </div>
-
-                            {/* Play Cards */}
-                            <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                              {family.plays.map(play => {
-                                const isNew = newInstallIds.includes(play.id);
-                                const isPriority = play.priority;
-
-                                return (
-                                  <div
-                                    key={play.id}
-                                    className={`relative p-2 rounded border transition-colors ${
-                                      isPriority
-                                        ? 'bg-amber-500/10 border-amber-500/30'
-                                        : isNew
-                                        ? 'bg-emerald-500/10 border-emerald-500/30'
-                                        : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-                                    }`}
-                                  >
-                                    {/* Badges */}
-                                    <div className="absolute -top-1 -right-1 flex gap-0.5">
-                                      {isPriority && (
-                                        <span className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
-                                          <Star size={10} className="text-white fill-white" />
-                                        </span>
-                                      )}
-                                      {isNew && (
-                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-white">
-                                          NEW
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Play Call (Formation + Name) */}
-                                    <div className="text-sm font-medium text-white truncate pr-6">
-                                      {play.formation ? `${play.formation} ${play.name}` : play.name}
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="flex items-center gap-1 mt-2">
-                                      <button
-                                        onClick={() => handleToggleNewPlay(play.id)}
-                                        className={`p-1 rounded text-xs ${
-                                          isNew
-                                            ? 'bg-emerald-500/30 text-emerald-400'
-                                            : 'bg-slate-700 text-slate-400 hover:text-emerald-400'
-                                        }`}
-                                        title={isNew ? 'Remove new marker' : 'Mark as new'}
-                                      >
-                                        <Sparkles size={12} />
-                                      </button>
-                                      <button
-                                        onClick={() => handleRemoveFromInstall(play.id)}
-                                        className="p-1 rounded bg-slate-700 text-slate-400 hover:text-red-400"
-                                        title="Remove from install"
-                                      >
-                                        <Minus size={12} />
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                              {priorityPlays.map(play => (
+                                <PlayCard
+                                  key={play.id}
+                                  play={play}
+                                  isNew={true}
+                                  isPriority={true}
+                                  onToggleNew={() => handleToggleNewPlay(play.id)}
+                                  onRemove={() => handleRemoveFromInstall(play.id)}
+                                />
+                              ))}
                             </div>
                           </div>
-                        ))}
+                        )}
+
+                        {/* Regular New Plays */}
+                        {regularPlays.length > 0 && (
+                          <div>
+                            {priorityPlays.length > 0 && (
+                              <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Other New</div>
+                            )}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                              {regularPlays.map(play => (
+                                <PlayCard
+                                  key={play.id}
+                                  play={play}
+                                  isNew={true}
+                                  isPriority={false}
+                                  onToggleNew={() => handleToggleNewPlay(play.id)}
+                                  onRemove={() => handleRemoveFromInstall(play.id)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* REVIEW Column */}
+              <div className="flex flex-col bg-slate-900 rounded-lg border border-sky-500/30 overflow-hidden">
+                <div className="px-4 py-3 bg-sky-500/10 border-b border-sky-500/30 flex items-center gap-2">
+                  <Layers size={18} className="text-sky-400" />
+                  <h3 className="font-semibold text-sky-400">Review</h3>
+                  <span className="ml-auto text-sm text-sky-400/70">
+                    {stats.total - stats.new} play{(stats.total - stats.new) !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3">
+                  {(() => {
+                    const reviewPlays = phaseInstalledPlays
+                      .filter(p => !newInstallIds.includes(p.id))
+                      .sort((a, b) => {
+                        // Priority first, then alphabetical
+                        if (a.priority && !b.priority) return -1;
+                        if (!a.priority && b.priority) return 1;
+                        return (a.name || '').localeCompare(b.name || '');
+                      });
+
+                    // Split into priority and regular
+                    const priorityPlays = reviewPlays.filter(p => p.priority);
+                    const regularPlays = reviewPlays.filter(p => !p.priority);
+
+                    if (reviewPlays.length === 0) {
+                      return (
+                        <div className="flex items-center justify-center h-full text-center">
+                          <div>
+                            <Layers size={32} className="text-slate-600 mx-auto mb-2" />
+                            <p className="text-slate-500 text-sm">No review plays</p>
+                            <p className="text-slate-600 text-xs mt-1">All installed plays are marked as new</p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-3">
+                        {/* Priority Review Plays */}
+                        {priorityPlays.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Star size={14} className="text-amber-400 fill-amber-400" />
+                              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wide">Priority</span>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                              {priorityPlays.map(play => (
+                                <PlayCard
+                                  key={play.id}
+                                  play={play}
+                                  isNew={false}
+                                  isPriority={true}
+                                  onToggleNew={() => handleToggleNewPlay(play.id)}
+                                  onRemove={() => handleRemoveFromInstall(play.id)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Regular Review Plays */}
+                        {regularPlays.length > 0 && (
+                          <div>
+                            {priorityPlays.length > 0 && (
+                              <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Other Review</div>
+                            )}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                              {regularPlays.map(play => (
+                                <PlayCard
+                                  key={play.id}
+                                  play={play}
+                                  isNew={false}
+                                  isPriority={false}
+                                  onToggleNew={() => handleToggleNewPlay(play.id)}
+                                  onRemove={() => handleRemoveFromInstall(play.id)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
           )}
         </div>

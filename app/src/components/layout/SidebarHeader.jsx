@@ -153,8 +153,10 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
     console.log('Loading week template:', templateId);
   };
 
+  const isLight = theme === 'light';
+
   return (
-    <div className="px-3 py-2 border-b border-slate-800">
+    <div className={`px-3 py-2 border-b ${isLight ? 'border-gray-200' : 'border-slate-800'}`}>
       {/* Logo row with collapse toggle */}
       <div className="flex items-center justify-between mb-2">
         {!collapsed ? (
@@ -168,7 +170,11 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
         )}
         <button
           onClick={onToggleCollapse}
-          className="p-2 rounded-full bg-slate-700/50 hover:bg-slate-600 text-slate-300 hover:text-white flex-shrink-0 border border-slate-600 transition-colors"
+          className={`p-2 rounded-full flex-shrink-0 border transition-colors ${
+            isLight
+              ? 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 border-gray-300'
+              : 'bg-slate-700/50 hover:bg-slate-600 text-slate-300 hover:text-white border-slate-600'
+          }`}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
@@ -189,10 +195,10 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
                 />
               )}
               <div>
-                <h2 className="text-sm font-bold text-white leading-tight">
+                <h2 className={`text-sm font-bold leading-tight ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   {school.name}
                 </h2>
-                <span className="text-xs text-slate-400">{activeYear || new Date().getFullYear()}</span>
+                <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{activeYear || new Date().getFullYear()}</span>
               </div>
             </div>
           )}
@@ -207,11 +213,15 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
             {/* Program Level Selector */}
             {showLevelDropdown && (
               <div className="relative">
-                <span className="text-[0.6rem] text-slate-500 uppercase tracking-wide">Level</span>
+                <span className={`text-[0.6rem] uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Level</span>
                 <select
                   value={activeLevelId || ''}
                   onChange={(e) => setActiveLevelId(e.target.value || null)}
-                  className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-600 rounded text-white appearance-none cursor-pointer hover:border-slate-500 focus:outline-none focus:border-sky-500"
+                  className={`w-full px-2 py-1.5 text-xs border rounded appearance-none cursor-pointer focus:outline-none focus:border-sky-500 ${
+                    isLight
+                      ? 'bg-gray-100 border-gray-300 text-gray-900 hover:border-gray-400'
+                      : 'bg-slate-800 border-slate-600 text-white hover:border-slate-500'
+                  }`}
                 >
                   <option value="">Program</option>
                   <option value="varsity">Varsity</option>
@@ -219,18 +229,22 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
                     <option key={level.id} value={level.id}>{level.name}</option>
                   ))}
                 </select>
-                <Layers size={12} className="absolute right-2 bottom-2 text-slate-400 pointer-events-none" />
+                <Layers size={12} className={`absolute right-2 bottom-2 pointer-events-none ${isLight ? 'text-gray-400' : 'text-slate-400'}`} />
               </div>
             )}
 
             {/* Active Week Selector */}
             {allWeeks.length > 0 && (
               <div className="relative">
-                <span className="text-[0.6rem] text-slate-500 uppercase tracking-wide">Week</span>
+                <span className={`text-[0.6rem] uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Week</span>
                 <select
                   value={currentWeekId || currentWeek?.id || ''}
                   onChange={(e) => setCurrentWeekId(e.target.value || null)}
-                  className="w-full px-2 py-1.5 text-xs bg-sky-500/10 border border-sky-500/30 rounded text-white appearance-none cursor-pointer hover:border-sky-500/50 focus:outline-none focus:border-sky-500"
+                  className={`w-full px-2 py-1.5 text-xs rounded appearance-none cursor-pointer focus:outline-none focus:border-sky-500 ${
+                    isLight
+                      ? 'bg-sky-50 border border-sky-300 text-gray-900 hover:border-sky-400'
+                      : 'bg-sky-500/10 border border-sky-500/30 text-white hover:border-sky-500/50'
+                  }`}
                 >
                   <option value="">Select Week...</option>
                   {groupedWeeks.map(phase => (

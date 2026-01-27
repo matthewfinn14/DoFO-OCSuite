@@ -92,10 +92,14 @@ export default function DiagramPreview({
   elements = [],
   width = 150,
   height = 100,
+  mode = 'wiz-oline',
   onClick
 }) {
   // Generate unique ID for this preview instance
   const previewId = useMemo(() => `preview-${Math.random().toString(36).substr(2, 9)}`, []);
+
+  const isWizSkill = mode === 'wiz-skill';
+  const viewBox = isWizSkill ? '0 0 754 445' : '0 0 900 600';
 
   if (!elements || elements.length === 0) {
     return (
@@ -120,7 +124,7 @@ export default function DiagramPreview({
         const { x, y } = el.points[0];
 
         if (el.shape === 'text-only') {
-          const tSize = el.fontSize || 170;
+          const tSize = el.fontSize || (isWizSkill ? 24 : 170);
           return (
             <g key={key}>
               <text
@@ -250,18 +254,34 @@ export default function DiagramPreview({
   return (
     <div
       onClick={onClick}
-      className="bg-white border border-slate-500 rounded overflow-hidden shadow-sm hover:border-sky-400 transition-colors"
-      style={{ width, height, cursor: onClick ? 'pointer' : 'default' }}
+      className="border border-slate-500 rounded overflow-hidden shadow-sm hover:border-sky-400 transition-colors"
+      style={{
+        width,
+        height,
+        cursor: onClick ? 'pointer' : 'default',
+        backgroundColor: isWizSkill ? '#1e293b' : 'white'
+      }}
     >
       <svg
         width="100%"
         height="100%"
-        viewBox="0 0 900 600"
+        viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
         xmlns="http://www.w3.org/2000/svg"
       >
         {/* Background */}
-        <rect width="900" height="600" fill="#ffffff" />
+        {isWizSkill ? (
+          <image
+            href="/WIZ Background.jpg"
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
+            preserveAspectRatio="none"
+          />
+        ) : (
+          <rect width="100%" height="100%" fill="#ffffff" />
+        )}
 
         {/* Render elements */}
         {elements.map((el, idx) => renderElement(el, idx))}

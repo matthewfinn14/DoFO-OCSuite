@@ -21,19 +21,19 @@ import {
 
 // Default pregame schedule template
 const DEFAULT_SCHEDULE = [
-  { id: 1, time: -120, duration: 0, name: 'Locker Room Opens', category: 'logistics', completed: false, notes: '' },
-  { id: 2, time: -90, duration: 15, name: 'Team Arrives / Dress', category: 'logistics', completed: false, notes: '' },
-  { id: 3, time: -75, duration: 15, name: 'Offensive Walk-through', category: 'warmup', completed: false, notes: '' },
-  { id: 4, time: -60, duration: 10, name: 'Defensive Walk-through', category: 'warmup', completed: false, notes: '' },
-  { id: 5, time: -50, duration: 5, name: 'Special Teams Review', category: 'warmup', completed: false, notes: '' },
-  { id: 6, time: -45, duration: 5, name: 'Take Field for Warmups', category: 'warmup', completed: false, notes: '' },
-  { id: 7, time: -40, duration: 10, name: 'Dynamic Stretch', category: 'warmup', completed: false, notes: '' },
-  { id: 8, time: -30, duration: 10, name: 'Position Groups', category: 'warmup', completed: false, notes: '' },
-  { id: 9, time: -20, duration: 5, name: 'Special Teams Warmup', category: 'warmup', completed: false, notes: '' },
-  { id: 10, time: -15, duration: 5, name: 'Return to Locker Room', category: 'logistics', completed: false, notes: '' },
-  { id: 11, time: -10, duration: 5, name: 'Final Meeting / Prayer', category: 'team', completed: false, notes: '' },
-  { id: 12, time: -5, duration: 5, name: 'Captains for Coin Toss', category: 'team', completed: false, notes: '' },
-  { id: 13, time: 0, duration: 0, name: 'KICKOFF', category: 'game', completed: false, notes: '' }
+  { id: 1, time: -120, duration: 0, name: 'Locker Room Opens', location: 'Locker Room', category: 'logistics', completed: false, notes: '' },
+  { id: 2, time: -90, duration: 15, name: 'Team Arrives / Dress', location: 'Locker Room', category: 'logistics', completed: false, notes: '' },
+  { id: 3, time: -75, duration: 15, name: 'Offensive Walk-through', location: 'Locker Room', category: 'warmup', completed: false, notes: '' },
+  { id: 4, time: -60, duration: 10, name: 'Defensive Walk-through', location: 'Locker Room', category: 'warmup', completed: false, notes: '' },
+  { id: 5, time: -50, duration: 5, name: 'Special Teams Review', location: 'Locker Room', category: 'warmup', completed: false, notes: '' },
+  { id: 6, time: -45, duration: 5, name: 'Take Field for Warmups', location: 'Field', category: 'warmup', completed: false, notes: '' },
+  { id: 7, time: -40, duration: 10, name: 'Dynamic Stretch', location: 'Field', category: 'warmup', completed: false, notes: '' },
+  { id: 8, time: -30, duration: 10, name: 'Position Groups', location: 'Field', category: 'warmup', completed: false, notes: '' },
+  { id: 9, time: -20, duration: 5, name: 'Special Teams Warmup', location: 'Field', category: 'warmup', completed: false, notes: '' },
+  { id: 10, time: -15, duration: 5, name: 'Return to Locker Room', location: 'Locker Room', category: 'logistics', completed: false, notes: '' },
+  { id: 11, time: -10, duration: 5, name: 'Final Meeting / Prayer', location: 'Locker Room', category: 'team', completed: false, notes: '' },
+  { id: 12, time: -5, duration: 5, name: 'Captains for Coin Toss', location: 'Field', category: 'team', completed: false, notes: '' },
+  { id: 13, time: 0, duration: 0, name: 'KICKOFF', location: 'Field', category: 'game', completed: false, notes: '' }
 ];
 
 // Categories
@@ -43,6 +43,21 @@ const CATEGORIES = [
   { id: 'team', label: 'Team', color: '#3b82f6' },
   { id: 'game', label: 'Game', color: '#22c55e' }
 ];
+
+// Helper to format time in 12-hour format with AM/PM
+const formatTime12Hour = (hours24, minutes) => {
+  const period = hours24 >= 12 ? 'PM' : 'AM';
+  let hours12 = hours24 % 12;
+  if (hours12 === 0) hours12 = 12;
+  return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+// Helper to convert HH:MM string to 12-hour format
+const formatTimeString12Hour = (timeStr) => {
+  if (!timeStr) return '';
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return formatTime12Hour(hours, minutes);
+};
 
 // Pregame Notes Modal Component with @mention support
 function PregameNotesModal({ item, staff, positionGroups, onUpdateNotes, onClose }) {
@@ -316,6 +331,7 @@ function SavePregameTemplateModal({ schedule, gameTime, existingTemplates, onSav
         time: item.time,
         duration: item.duration || 0,
         name: item.name,
+        location: item.location || '',
         category: item.category,
         notes: item.notes || ''
       }))
@@ -448,7 +464,7 @@ function SavePregameTemplateModal({ schedule, gameTime, existingTemplates, onSav
             <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Template will include:</p>
             <ul className="text-sm text-slate-400 space-y-1">
               <li>- {schedule.length} timeline items</li>
-              <li>- Default kickoff time: {gameTime}</li>
+              <li>- Default kickoff time: {formatTimeString12Hour(gameTime)}</li>
               <li>- Notes from all items preserved</li>
             </ul>
           </div>
@@ -561,7 +577,7 @@ function ImportPregameTemplateModal({ existingTemplates, onImport, onClose }) {
                     >
                       <div className="font-medium">{template.name}</div>
                       <div className="text-xs text-slate-400 mt-1">
-                        {template.schedule?.length || 0} items - Kickoff: {template.gameTime || '19:00'}
+                        {template.schedule?.length || 0} items - Kickoff: {formatTimeString12Hour(template.gameTime || '19:00')}
                         {template.folder && ` - ${template.folder}`}
                       </div>
                     </button>
@@ -575,7 +591,7 @@ function ImportPregameTemplateModal({ existingTemplates, onImport, onClose }) {
                   <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Template Preview</p>
                   <ul className="text-sm text-slate-400 space-y-1">
                     <li>- {selectedTemplate.schedule?.length || 0} timeline items</li>
-                    <li>- Default kickoff: {selectedTemplate.gameTime || '19:00'}</li>
+                    <li>- Default kickoff: {formatTimeString12Hour(selectedTemplate.gameTime || '19:00')}</li>
                     {selectedTemplate.schedule?.some(i => i.notes) && (
                       <li>- Includes notes on some items</li>
                     )}
@@ -652,9 +668,10 @@ export default function Pregame() {
 
     return schedule.map(item => {
       const itemMinutes = gameMinutes + item.time;
-      const itemHours = Math.floor(itemMinutes / 60) % 24;
+      let itemHours = Math.floor(itemMinutes / 60) % 24;
+      if (itemHours < 0) itemHours += 24;
       const itemMins = ((itemMinutes % 60) + 60) % 60;
-      const actualTime = `${itemHours.toString().padStart(2, '0')}:${itemMins.toString().padStart(2, '0')}`;
+      const actualTime = formatTime12Hour(itemHours, itemMins);
 
       return { ...item, actualTime };
     }).sort((a, b) => a.time - b.time);
@@ -685,6 +702,7 @@ export default function Pregame() {
       time: -30,
       duration: 10,
       name: '',
+      location: '',
       category: 'warmup',
       completed: false,
       notes: ''
@@ -861,9 +879,9 @@ export default function Pregame() {
         </div>
       </div>
 
-      {/* Schedule Timeline */}
-      <div className="bg-slate-900 rounded-lg border border-slate-800 p-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* Schedule Table */}
+      <div className="bg-slate-800 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
           <h3 className="font-semibold text-white">Schedule</h3>
           <button
             onClick={resetSchedule}
@@ -873,92 +891,138 @@ export default function Pregame() {
           </button>
         </div>
 
-        <div className="space-y-2">
-          {scheduleWithTimes.map((item, idx) => {
-            const category = getCategoryConfig(item.category);
-            const isKickoff = item.time === 0;
-            const itemHasNotes = hasNotes(item.notes);
+        <table className="w-full">
+          <thead>
+            <tr className="border-b-2 border-slate-600 text-slate-400 text-xs uppercase">
+              <th className="px-3 py-3 text-center w-12"></th>
+              <th className="px-3 py-3 text-center w-24">Time</th>
+              <th className="px-3 py-3 text-center w-16">Dur</th>
+              <th className="px-3 py-3 text-center w-24">Category</th>
+              <th className="px-3 py-3 text-left">Activity</th>
+              <th className="px-3 py-3 text-left w-28">Location</th>
+              <th className="px-3 py-3 text-left w-48">Notes</th>
+              <th className="px-3 py-3 text-center w-24"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {scheduleWithTimes.map((item, idx) => {
+              const category = getCategoryConfig(item.category);
+              const isKickoff = item.time === 0;
+              const itemHasNotes = hasNotes(item.notes);
 
-            return (
-              <div
-                key={item.id}
-                className={`flex items-start gap-4 p-3 rounded-lg ${
-                  item.completed ? 'bg-green-500/10' : 'bg-slate-800'
-                } ${isKickoff ? 'ring-2 ring-green-500' : ''}`}
-              >
-                {/* Completion Toggle */}
-                <button
-                  onClick={() => toggleComplete(item.id)}
-                  className={`flex-shrink-0 mt-0.5 ${item.completed ? 'text-green-400' : 'text-slate-500'}`}
+              return (
+                <tr
+                  key={item.id}
+                  className={`border-b border-slate-700 ${
+                    item.completed ? 'bg-green-500/5' : 'bg-slate-800/50'
+                  } ${isKickoff ? 'bg-green-500/10' : ''} hover:bg-slate-700/30`}
                 >
-                  {item.completed ? <CheckCircle size={24} /> : <Circle size={24} />}
-                </button>
+                  {/* Completion Toggle */}
+                  <td className="px-3 py-3 text-center">
+                    <button
+                      onClick={() => toggleComplete(item.id)}
+                      className={item.completed ? 'text-green-400' : 'text-slate-500 hover:text-slate-300'}
+                    >
+                      {item.completed ? <CheckCircle size={20} /> : <Circle size={20} />}
+                    </button>
+                  </td>
 
-                {/* Time */}
-                <div className="w-20 text-center flex-shrink-0">
-                  <div className="text-lg font-bold text-white">{item.actualTime}</div>
-                  <div className="text-xs text-slate-500">{formatRelativeTime(item.time)}</div>
-                  {item.duration > 0 && (
-                    <div className="text-xs text-slate-600 mt-0.5">{item.duration}m</div>
-                  )}
-                </div>
+                  {/* Time */}
+                  <td className="px-3 py-3 text-center">
+                    <div className="font-bold text-white">{item.actualTime}</div>
+                    <div className="text-xs text-slate-500">{formatRelativeTime(item.time)}</div>
+                  </td>
 
-                {/* Category indicator */}
-                <div
-                  className="w-1 self-stretch rounded-full flex-shrink-0"
-                  style={{ backgroundColor: category.color, minHeight: '40px' }}
-                />
+                  {/* Duration */}
+                  <td className="px-3 py-3 text-center text-sm text-slate-300">
+                    {item.duration > 0 ? `${item.duration}m` : '-'}
+                  </td>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className={`font-medium ${item.completed ? 'text-slate-500 line-through' : 'text-white'}`}>
-                    {item.name}
-                  </div>
-                  <div className="text-xs" style={{ color: category.color }}>
-                    {category.label}
-                  </div>
-                  {/* Notes preview */}
-                  {itemHasNotes && (
-                    <div className="mt-1 text-xs text-slate-400 truncate">
-                      {renderHighlightedText(item.notes.split('\n')[0])}
+                  {/* Category */}
+                  <td className="px-3 py-3 text-center">
+                    <span
+                      className="inline-flex px-2 py-1 rounded text-xs font-medium"
+                      style={{
+                        backgroundColor: `${category.color}20`,
+                        color: category.color,
+                        border: `1px solid ${category.color}40`
+                      }}
+                    >
+                      {category.label}
+                    </span>
+                  </td>
+
+                  {/* Activity Name */}
+                  <td className="px-3 py-3">
+                    <span className={`font-medium ${item.completed ? 'text-slate-500 line-through' : 'text-white'}`}>
+                      {item.name}
+                    </span>
+                  </td>
+
+                  {/* Location */}
+                  <td className="px-3 py-3 text-sm text-slate-400">
+                    {item.location || '-'}
+                  </td>
+
+                  {/* Notes */}
+                  <td className="px-3 py-3">
+                    {itemHasNotes ? (
+                      <button
+                        onClick={() => setNotesModalItemId(item.id)}
+                        className="text-left text-xs text-slate-400 hover:text-amber-300 truncate block max-w-full"
+                        title="Click to edit notes"
+                      >
+                        {renderHighlightedText(item.notes.split('\n')[0])}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setNotesModalItemId(item.id)}
+                        className="text-xs text-slate-600 hover:text-slate-400"
+                      >
+                        + Add note
+                      </button>
+                    )}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-3 py-3 text-center">
+                    <div className="flex justify-center gap-1">
+                      <button
+                        onClick={() => setNotesModalItemId(item.id)}
+                        className={`p-1.5 rounded transition-colors ${
+                          itemHasNotes
+                            ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
+                            : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'
+                        }`}
+                        title={itemHasNotes ? 'Edit notes' : 'Add notes'}
+                      >
+                        <StickyNote size={14} />
+                      </button>
+                      {!isKickoff && (
+                        <>
+                          <button
+                            onClick={() => openEditor(item)}
+                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
+                            title="Edit item"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => deleteItem(item.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded"
+                            title="Delete item"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-1 flex-shrink-0">
-                  <button
-                    onClick={() => setNotesModalItemId(item.id)}
-                    className={`p-2 rounded transition-colors ${
-                      itemHasNotes
-                        ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
-                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'
-                    }`}
-                    title={itemHasNotes ? 'Edit notes' : 'Add notes'}
-                  >
-                    <StickyNote size={14} />
-                  </button>
-                  {!isKickoff && (
-                    <>
-                      <button
-                        onClick={() => openEditor(item)}
-                        className="p-2 text-slate-400 hover:text-white"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => deleteItem(item.id)}
-                        className="p-2 text-slate-400 hover:text-red-400"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Category Legend */}
@@ -991,15 +1055,27 @@ export default function Pregame() {
             </div>
 
             <div className="p-4 space-y-4">
-              <div>
-                <label className="text-sm text-slate-400 block mb-1">Item Name</label>
-                <input
-                  type="text"
-                  value={editingItem.name}
-                  onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                  placeholder="e.g., Team Stretch"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="text-sm text-slate-400 block mb-1">Item Name</label>
+                  <input
+                    type="text"
+                    value={editingItem.name}
+                    onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    placeholder="e.g., Team Stretch"
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="text-sm text-slate-400 block mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={editingItem.location || ''}
+                    onChange={e => setEditingItem({ ...editingItem, location: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    placeholder="e.g., Field, Locker Room"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

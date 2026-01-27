@@ -39,23 +39,25 @@ export default function PlayCard({
     if (onOpenDetails) onOpenDetails(play.id);
   };
 
-  // Get diagram elements from any available source
-  const getDiagramElements = () => {
-    if (play.wizSkillData?.length > 0) return play.wizSkillData;
-    if (play.rooskiSkillData?.length > 0) return play.rooskiSkillData;
-    if (play.wizOlineData?.length > 0) return play.wizOlineData;
+  // Get diagram elements from any available source and track the mode
+  const getDiagramInfo = () => {
+    if (play.wizSkillData?.length > 0) return { elements: play.wizSkillData, mode: 'wiz-skill' };
+    if (play.rooskiSkillData?.length > 0) return { elements: play.rooskiSkillData, mode: 'wiz-skill' };
+    if (play.wizOlineData?.length > 0) return { elements: play.wizOlineData, mode: 'wiz-oline' };
     if (play.diagramData) {
       if (Array.isArray(play.diagramData) && play.diagramData.length > 0) {
-        return play.diagramData;
+        return { elements: play.diagramData, mode: 'standard' };
       }
       if (play.diagramData.elements?.length > 0) {
-        return play.diagramData.elements;
+        return { elements: play.diagramData.elements, mode: 'standard' };
       }
     }
     return null;
   };
 
-  const elements = getDiagramElements();
+  const diagramInfo = getDiagramInfo();
+  const elements = diagramInfo?.elements;
+  const diagramMode = diagramInfo?.mode || 'standard';
 
   // Get display name (formation first, then play name)
   const getDisplayName = () => {
@@ -165,9 +167,9 @@ export default function PlayCard({
             className="w-full h-44 object-cover"
           />
         ) : (
-          <div className={`h-44 flex items-center justify-center ${elements ? 'bg-emerald-50' : 'bg-slate-800'}`}>
+          <div className={`h-44 flex items-center justify-center ${elements ? (diagramMode === 'wiz-skill' ? 'bg-slate-900' : 'bg-emerald-50') : 'bg-slate-800'}`}>
             {elements ? (
-              <PlayDiagramPreview elements={elements} />
+              <PlayDiagramPreview elements={elements} mode={diagramMode} />
             ) : (
               <div className="text-slate-600 text-center">
                 <span className="text-3xl">📷</span>
@@ -233,12 +235,14 @@ export default function PlayCard({
 }
 
 // SVG diagram preview component
-function PlayDiagramPreview({ elements }) {
+function PlayDiagramPreview({ elements, mode = 'standard' }) {
   const colors = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+  const isWizSkill = mode === 'wiz-skill';
+  const viewBox = isWizSkill ? '0 0 754 445' : '0 60 800 460';
 
   return (
     <svg
-      viewBox="0 60 800 460"
+      viewBox={viewBox}
       className="w-full h-full"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -259,14 +263,25 @@ function PlayDiagramPreview({ elements }) {
         ))}
       </defs>
 
-      {/* Field lines */}
-      <g opacity="0.15">
-        <line x1="0" y1="150" x2="800" y2="150" stroke="#000" strokeWidth="2" />
-        <line x1="0" y1="250" x2="800" y2="250" stroke="#000" strokeWidth="2" />
-        <line x1="0" y1="350" x2="800" y2="350" stroke="#000" strokeWidth="2" />
-        <line x1="0" y1="400" x2="800" y2="400" stroke="#000" strokeWidth="3" />
-        <line x1="0" y1="450" x2="800" y2="450" stroke="#000" strokeWidth="2" />
-      </g>
+      {/* Background */}
+      {isWizSkill ? (
+        <image
+          href="/WIZ Background.jpg"
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          preserveAspectRatio="none"
+        />
+      ) : (
+        <g opacity="0.15">
+          <line x1="0" y1="150" x2="800" y2="150" stroke="#000" strokeWidth="2" />
+          <line x1="0" y1="250" x2="800" y2="250" stroke="#000" strokeWidth="2" />
+          <line x1="0" y1="350" x2="800" y2="350" stroke="#000" strokeWidth="2" />
+          <line x1="0" y1="400" x2="800" y2="400" stroke="#000" strokeWidth="3" />
+          <line x1="0" y1="450" x2="800" y2="450" stroke="#000" strokeWidth="2" />
+        </g>
+      )}
 
       {/* Render elements */}
       {elements.map((el, idx) => {
