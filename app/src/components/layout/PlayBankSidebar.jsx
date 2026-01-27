@@ -37,9 +37,9 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
   const [expandedSections, setExpandedSections] = useState({});
   const [quickAddValue, setQuickAddValue] = useState('');
 
-  // Get play categories and buckets from settings
-  const playCategories = settings?.playCategories || [];
-  const playBuckets = settings?.playBuckets || [];
+  // Get play buckets and concept families from settings
+  const playBuckets = settings?.playCategories || [];
+  const conceptFamilies = settings?.playBuckets || [];
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
@@ -58,7 +58,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     e.dataTransfer.effectAllowed = 'copy';
   }, []);
 
-  // Calculate play usage data organized by category and family
+  // Calculate play usage data organized by bucket and concept family
   const usageData = useMemo(() => {
     // Filter by phase first (plays without phase default to OFFENSE)
     const filteredPlays = (playsArray || []).filter(p =>
@@ -77,39 +77,39 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
       }
     });
 
-    // Filter categories by phase (default to OFFENSE if no phase set)
-    const phaseCategories = playCategories.filter(cat =>
-      (cat.phase || 'OFFENSE') === playBankPhase
+    // Filter buckets by phase (default to OFFENSE if no phase set)
+    const phaseBuckets = playBuckets.filter(bucket =>
+      (bucket.phase || 'OFFENSE') === playBankPhase
     );
 
-    const categories = phaseCategories.map(cat => {
-      const families = playBuckets
-        .filter(b => b.categoryId === cat.id)
-        .map(bucket => {
-          // Find plays assigned to this category and family label
-          const bucketPlays = Object.values(filteredMap).filter(p =>
-            p.bucketId === cat.id && p.conceptFamily === bucket.label
+    const buckets = phaseBuckets.map(bucket => {
+      const families = conceptFamilies
+        .filter(cf => cf.categoryId === bucket.id)
+        .map(family => {
+          // Find plays assigned to this bucket and concept family
+          const familyPlays = Object.values(filteredMap).filter(p =>
+            p.bucketId === bucket.id && p.conceptFamily === family.label
           ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-          return { ...bucket, plays: bucketPlays };
+          return { ...family, plays: familyPlays };
         })
         .filter(f => searchTerm ? f.plays.length > 0 : true);
 
       const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
-      return { ...cat, families, totalPlays };
-    }).filter(c => searchTerm ? c.totalPlays > 0 : true);
+      return { ...bucket, families, totalPlays };
+    }).filter(b => searchTerm ? b.totalPlays > 0 : true);
 
-    // Find unassigned plays (those not matching a category/family combination)
+    // Find unassigned plays (those not matching a bucket/family combination)
     const unassignedPlays = Object.values(filteredMap).filter(p => {
       if (!p.bucketId || !p.conceptFamily) return true;
       // Also unassigned if its bucketId or conceptFamily doesn't exist in setup
-      const catExists = playCategories.some(cat => cat.id === p.bucketId);
-      const bucketExists = playBuckets.some(b => b.categoryId === p.bucketId && b.label === p.conceptFamily);
-      return !catExists || !bucketExists;
+      const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
+      const familyExists = conceptFamilies.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
+      return !bucketExists || !familyExists;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (unassignedPlays.length > 0 || !searchTerm) {
-      categories.push({
+      buckets.push({
         id: 'unassigned',
         label: 'Unassigned',
         color: '#64748b',
@@ -118,23 +118,77 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
       });
     }
 
-    return categories;
-  }, [playsArray, playCategories, playBuckets, searchTerm, playBankPhase]);
+    return buckets;
+  }, [playsArray, playBuckets, conceptFamilies, searchTerm, playBankPhase]);
 
-  // Calculate install data (plays in current week's install list)
-  const installData = useMemo(() => {
+  // Calculate install data organized by bucket and concept family (like usageData but filtered to installed plays)
+  const installUsageData = useMemo(() => {
     const installList = currentWeek?.installList || [];
+    if (installList.length === 0) return [];
+
+    // Filter by install list, phase, and search
     const installedPlays = (playsArray || []).filter(p =>
       !p.archived && installList.includes(p.id) && (p.phase || 'OFFENSE') === playBankPhase
     );
     const query = searchTerm.toLowerCase();
 
-    return installedPlays.filter(p =>
-      !searchTerm ||
-      p.name?.toLowerCase().includes(query) ||
-      p.formation?.toLowerCase().includes(query)
-    ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [playsArray, currentWeek, searchTerm, playBankPhase]);
+    // Map of filtered plays for quick lookup
+    const filteredMap = {};
+    installedPlays.forEach(p => {
+      if (!searchTerm ||
+          p.name?.toLowerCase().includes(query) ||
+          p.formation?.toLowerCase().includes(query) ||
+          p.concept?.toLowerCase().includes(query)) {
+        filteredMap[p.id] = p;
+      }
+    });
+
+    // Filter buckets by phase
+    const phaseBuckets = playBuckets.filter(bucket =>
+      (bucket.phase || 'OFFENSE') === playBankPhase
+    );
+
+    const buckets = phaseBuckets.map(bucket => {
+      const families = conceptFamilies
+        .filter(cf => cf.categoryId === bucket.id)
+        .map(family => {
+          const familyPlays = Object.values(filteredMap).filter(p =>
+            p.bucketId === bucket.id && p.conceptFamily === family.label
+          ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+          return { ...family, plays: familyPlays };
+        })
+        .filter(f => f.plays.length > 0);
+
+      const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
+      return { ...bucket, families, totalPlays };
+    }).filter(b => b.totalPlays > 0);
+
+    // Find unassigned installed plays
+    const unassignedPlays = Object.values(filteredMap).filter(p => {
+      if (!p.bucketId || !p.conceptFamily) return true;
+      const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
+      const familyExists = conceptFamilies.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
+      return !bucketExists || !familyExists;
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (unassignedPlays.length > 0) {
+      buckets.push({
+        id: 'install-unassigned',
+        label: 'Unassigned',
+        color: '#64748b',
+        families: [{ id: 'install-unassigned-family', label: 'Other Plays', plays: unassignedPlays }],
+        totalPlays: unassignedPlays.length
+      });
+    }
+
+    return buckets;
+  }, [playsArray, playBuckets, conceptFamilies, currentWeek, searchTerm, playBankPhase]);
+
+  // Total install count for display
+  const installTotalCount = useMemo(() => {
+    return installUsageData.reduce((sum, bucket) => sum + bucket.totalPlays, 0);
+  }, [installUsageData]);
 
   // Week stats
   const weekStats = useMemo(() => {
@@ -283,24 +337,24 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     );
   }, [handleDragStart, openPlayDetails]);
 
-  // Render category with families
-  const renderCategory = useCallback((category) => {
-    const isCatExpanded = expandedSections[`cat-${category.id}`];
+  // Render bucket with concept families
+  const renderBucket = useCallback((bucket) => {
+    const isBucketExpanded = expandedSections[`bucket-${bucket.id}`];
 
     return (
-      <div key={category.id} className="mb-2">
-        {/* Category Header */}
+      <div key={bucket.id} className="mb-2">
+        {/* Bucket Header */}
         <div
-          onClick={() => toggleSection(`cat-${category.id}`)}
+          onClick={() => toggleSection(`bucket-${bucket.id}`)}
           className="flex items-center justify-between px-2.5 py-2 rounded cursor-pointer"
-          style={{ backgroundColor: category.color || '#3b82f6' }}
+          style={{ backgroundColor: bucket.color || '#3b82f6' }}
         >
           <span className="text-xs font-bold text-white uppercase tracking-wide">
-            {category.label}
+            {bucket.label}
           </span>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/80">{category.totalPlays}</span>
-            {isCatExpanded ? (
+            <span className="text-xs text-white/80">{bucket.totalPlays}</span>
+            {isBucketExpanded ? (
               <ChevronDown size={14} className="text-white" />
             ) : (
               <ChevronRight size={14} className="text-white" />
@@ -308,20 +362,20 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
           </div>
         </div>
 
-        {/* Category Content */}
-        {isCatExpanded && (
+        {/* Bucket Content */}
+        {isBucketExpanded && (
           <div
             className="ml-2 pl-1.5 pt-1 border-l-2"
-            style={{ borderColor: category.color || '#3b82f6' }}
+            style={{ borderColor: bucket.color || '#3b82f6' }}
           >
-            {category.families.map(family => {
-              const isFamExpanded = expandedSections[`fam-${family.id}`];
+            {bucket.families.map(family => {
+              const isFamilyExpanded = expandedSections[`family-${family.id}`];
 
               return (
                 <div key={family.id} className="mb-1 border border-slate-200 rounded overflow-hidden">
-                  {/* Family Header */}
+                  {/* Concept Family Header */}
                   <div
-                    onClick={() => toggleSection(`fam-${family.id}`)}
+                    onClick={() => toggleSection(`family-${family.id}`)}
                     className="flex items-center justify-between px-2 py-1.5 bg-slate-50 cursor-pointer hover:bg-slate-100"
                   >
                     <span className="text-xs font-semibold text-slate-700">
@@ -329,7 +383,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
                     </span>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-slate-500">{family.plays.length}</span>
-                      {isFamExpanded ? (
+                      {isFamilyExpanded ? (
                         <ChevronDown size={12} className="text-slate-400" />
                       ) : (
                         <ChevronRight size={12} className="text-slate-400" />
@@ -338,7 +392,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
                   </div>
 
                   {/* Family Plays */}
-                  {isFamExpanded && family.plays.length > 0 && (
+                  {isFamilyExpanded && family.plays.length > 0 && (
                     <div className="bg-white border-t border-slate-200">
                       {family.plays.map(renderPlayRow)}
                     </div>
@@ -520,7 +574,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
           {activeTab === 'usage' && (
             <>
               {usageData.length > 0 ? (
-                usageData.map(renderCategory)
+                usageData.map(renderBucket)
               ) : (
                 <div className="py-8 text-center text-slate-400 text-sm">
                   {searchTerm ? `No plays found matching "${searchTerm}"` : 'No plays in playbook'}
@@ -538,19 +592,18 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
 
           {activeTab === 'install' && (
             <>
-              {installData.length > 0 ? (
-                <div className="border border-slate-200 rounded overflow-hidden">
-                  <div className="px-2 py-1.5 bg-emerald-500 text-white text-xs font-bold uppercase">
-                    Week Install ({installData.length})
+              {installUsageData.length > 0 ? (
+                <>
+                  {/* Install header with total count */}
+                  <div className="mb-2 px-2 py-1.5 bg-emerald-500 text-white text-xs font-bold uppercase rounded">
+                    Week Install ({installTotalCount})
                   </div>
-                  <div className="bg-white">
-                    {installData.map(renderPlayRow)}
-                  </div>
-                </div>
+                  {installUsageData.map(renderBucket)}
+                </>
               ) : (
                 <div className="py-8 text-center text-slate-400 text-sm">
                   {currentWeek
-                    ? 'No plays installed for this week'
+                    ? (searchTerm ? `No installed plays matching "${searchTerm}"` : 'No plays installed for this week')
                     : 'Select a week to view installed plays'
                   }
                 </div>

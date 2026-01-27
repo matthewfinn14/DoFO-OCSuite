@@ -29,11 +29,11 @@ export default function InstallManager() {
 
   // Local state
   const [activePhase, setActivePhase] = useState('OFFENSE');
-  const [expandedCategories, setExpandedCategories] = useState({});
+  const [expandedBuckets, setExpandedBuckets] = useState({});
 
-  // Get play categories and buckets from settings/setupConfig
-  const playCategories = setupConfig?.playCategories || settings?.playCategories || [];
-  const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
+  // Get play buckets and concept families from settings/setupConfig
+  const playBuckets = setupConfig?.playCategories || settings?.playCategories || [];
+  const conceptFamilies = setupConfig?.playBuckets || settings?.playBuckets || [];
 
   // Current install list and new install IDs from week
   const installList = currentWeek?.installList || [];
@@ -51,20 +51,20 @@ export default function InstallManager() {
     return installedPlays.filter(p => (p.phase || 'OFFENSE') === activePhase);
   }, [installedPlays, activePhase]);
 
-  // Group installed plays by category and concept family
+  // Group installed plays by bucket and concept family
   const bucketData = useMemo(() => {
-    // Filter categories by current phase
-    const phaseCategories = playCategories.filter(cat =>
-      (cat.phase || 'OFFENSE') === activePhase
+    // Filter buckets by current phase
+    const phaseBuckets = playBuckets.filter(bucket =>
+      (bucket.phase || 'OFFENSE') === activePhase
     );
 
-    const categories = phaseCategories.map(cat => {
-      // Get buckets (concept families) for this category
-      const categoryBuckets = playBuckets.filter(b => b.categoryId === cat.id);
+    const buckets = phaseBuckets.map(bucket => {
+      // Get concept families for this bucket
+      const bucketFamilies = conceptFamilies.filter(cf => cf.categoryId === bucket.id);
 
-      const families = categoryBuckets.map(bucket => {
+      const families = bucketFamilies.map(family => {
         const familyPlays = phaseInstalledPlays
-          .filter(p => p.bucketId === cat.id && p.conceptFamily === bucket.label)
+          .filter(p => p.bucketId === bucket.id && p.conceptFamily === family.label)
           .sort((a, b) => {
             // Priority first, then alphabetical
             if (a.priority && !b.priority) return -1;
@@ -72,19 +72,19 @@ export default function InstallManager() {
             return (a.name || '').localeCompare(b.name || '');
           });
 
-        return { ...bucket, plays: familyPlays };
+        return { ...family, plays: familyPlays };
       }).filter(f => f.plays.length > 0);
 
       const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
-      return { ...cat, families, totalPlays };
-    }).filter(c => c.totalPlays > 0 || c.families.length > 0);
+      return { ...bucket, families, totalPlays };
+    }).filter(b => b.totalPlays > 0 || b.families.length > 0);
 
-    // Unassigned plays (installed but not categorized)
+    // Unassigned plays (installed but not in a bucket)
     const unassignedPlays = phaseInstalledPlays.filter(p => {
       if (!p.bucketId || !p.conceptFamily) return true;
-      const catExists = playCategories.some(cat => cat.id === p.bucketId);
-      const bucketExists = playBuckets.some(b => b.categoryId === p.bucketId && b.label === p.conceptFamily);
-      return !catExists || !bucketExists;
+      const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
+      const familyExists = conceptFamilies.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
+      return !bucketExists || !familyExists;
     }).sort((a, b) => {
       if (a.priority && !b.priority) return -1;
       if (!a.priority && b.priority) return 1;
@@ -92,7 +92,7 @@ export default function InstallManager() {
     });
 
     if (unassignedPlays.length > 0) {
-      categories.push({
+      buckets.push({
         id: 'unassigned',
         label: 'Unassigned',
         color: '#64748b',
@@ -101,8 +101,8 @@ export default function InstallManager() {
       });
     }
 
-    return categories;
-  }, [phaseInstalledPlays, playCategories, playBuckets, activePhase]);
+    return buckets;
+  }, [phaseInstalledPlays, playBuckets, conceptFamilies, activePhase]);
 
   // Stats
   const stats = useMemo(() => {
@@ -112,9 +112,9 @@ export default function InstallManager() {
     return { total: phaseTotal, priority: priorityCount, new: newCount };
   }, [phaseInstalledPlays, newInstallIds]);
 
-  // Toggle category expansion
-  const toggleCategory = useCallback((catId) => {
-    setExpandedCategories(prev => ({ ...prev, [catId]: !prev[catId] }));
+  // Toggle bucket expansion
+  const toggleBucket = useCallback((bucketId) => {
+    setExpandedBuckets(prev => ({ ...prev, [bucketId]: !prev[bucketId] }));
   }, []);
 
   // Remove play from install
@@ -286,35 +286,35 @@ export default function InstallManager() {
             </div>
           ) : (
             <div className="space-y-4">
-              {bucketData.map(category => {
-                const isExpanded = expandedCategories[category.id] !== false;
+              {bucketData.map(bucket => {
+                const isExpanded = expandedBuckets[bucket.id] !== false;
 
                 return (
                   <div
-                    key={category.id}
+                    key={bucket.id}
                     className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden"
                   >
-                    {/* Category Header */}
+                    {/* Bucket Header */}
                     <button
-                      onClick={() => toggleCategory(category.id)}
+                      onClick={() => toggleBucket(bucket.id)}
                       className="w-full flex items-center gap-3 p-3 hover:bg-slate-800/50 transition-colors"
-                      style={{ borderLeft: `4px solid ${category.color || '#3b82f6'}` }}
+                      style={{ borderLeft: `4px solid ${bucket.color || '#3b82f6'}` }}
                     >
                       {isExpanded ? (
                         <ChevronDown size={16} className="text-slate-500" />
                       ) : (
                         <ChevronRight size={16} className="text-slate-500" />
                       )}
-                      <span className="font-semibold text-white">{category.label}</span>
+                      <span className="font-semibold text-white">{bucket.label}</span>
                       <span className="text-sm text-slate-500">
-                        {category.totalPlays} play{category.totalPlays !== 1 ? 's' : ''}
+                        {bucket.totalPlays} play{bucket.totalPlays !== 1 ? 's' : ''}
                       </span>
                     </button>
 
-                    {/* Families */}
+                    {/* Concept Families */}
                     {isExpanded && (
                       <div className="border-t border-slate-800">
-                        {category.families.map(family => (
+                        {bucket.families.map(family => (
                           <div key={family.id} className="border-b border-slate-800 last:border-b-0">
                             {/* Family Header */}
                             <div className="px-4 py-2 bg-slate-800/30 flex items-center gap-2">

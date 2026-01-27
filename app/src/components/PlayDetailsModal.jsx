@@ -65,17 +65,17 @@ export default function PlayDetailsModal({
   const isWiz = play.isWiz || false;
   const isMiniScript = play.isMiniScript || false;
 
-  // Get the category and family for display
-  const category = playCategories.find(c => c.id === play.bucketId);
-  const family = playBuckets.find(b => b.label === play.conceptFamily && b.categoryId === play.bucketId);
+  // Get the bucket and concept family for display
+  const bucket = playCategories.find(c => c.id === play.bucketId);
+  const conceptFamily = playBuckets.find(b => b.label === play.conceptFamily && b.categoryId === play.bucketId);
 
-  // Filter categories by play's phase
-  const phaseCategories = playCategories.filter(c =>
+  // Filter buckets by play's phase
+  const phaseBuckets = playCategories.filter(c =>
     (c.phase || 'OFFENSE') === (play.phase || 'OFFENSE')
   );
 
-  // Get families for selected bucket
-  const bucketFamilies = play.bucketId
+  // Get concept families for selected bucket
+  const bucketConceptFamilies = play.bucketId
     ? playBuckets.filter(b => b.categoryId === play.bucketId)
     : [];
 
@@ -137,26 +137,26 @@ export default function PlayDetailsModal({
               {play.formation && <span className="text-slate-500">{play.formation} </span>}
               {play.name}
             </h3>
-            {/* Category and Family badges */}
-            {(category || family) && (
+            {/* Bucket and Concept Family badges */}
+            {(bucket || conceptFamily) && (
               <div className="flex gap-1 mt-1.5 flex-wrap">
-                {category && (
+                {bucket && (
                   <span
                     className="text-xs px-1.5 py-0.5 rounded font-semibold"
                     style={{
-                      backgroundColor: category.color || '#64748b',
-                      color: category.textColor || '#fff'
+                      backgroundColor: bucket.color || '#64748b',
+                      color: bucket.textColor || '#fff'
                     }}
                   >
-                    {category.label}
+                    {bucket.label}
                   </span>
                 )}
-                {family && (
+                {conceptFamily && (
                   <span
                     className="text-xs px-1.5 py-0.5 rounded font-semibold"
                     style={{
-                      backgroundColor: family.color || '#94a3b8',
-                      color: family.textColor || '#fff'
+                      backgroundColor: conceptFamily.color || '#94a3b8',
+                      color: conceptFamily.textColor || '#fff'
                     }}
                   >
                     {play.conceptFamily}
@@ -280,33 +280,33 @@ export default function PlayDetailsModal({
         )}
 
         {/* Bucket Selection */}
-        {phaseCategories.length > 0 && (
+        {phaseBuckets.length > 0 && (
           <div className="p-4 border-b border-slate-200">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
               Bucket
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {phaseCategories.map(cat => {
-                const isSelected = play.bucketId === cat.id;
+              {phaseBuckets.map(b => {
+                const isSelected = play.bucketId === b.id;
                 return (
                   <button
-                    key={cat.id}
-                    onClick={() => handleBucketSelect(cat.id)}
+                    key={b.id}
+                    onClick={() => handleBucketSelect(b.id)}
                     className={`px-2.5 py-1.5 rounded-md text-sm font-semibold transition-all ${
                       isSelected
                         ? 'ring-2 ring-offset-1'
                         : 'border border-slate-200 hover:border-slate-300'
                     }`}
                     style={isSelected ? {
-                      backgroundColor: cat.color || '#3b82f6',
-                      color: cat.textColor || '#fff',
-                      ringColor: cat.color || '#3b82f6'
+                      backgroundColor: b.color || '#3b82f6',
+                      color: b.textColor || '#fff',
+                      ringColor: b.color || '#3b82f6'
                     } : {
                       backgroundColor: 'white',
                       color: '#64748b'
                     }}
                   >
-                    {cat.label}
+                    {b.label}
                   </button>
                 );
               })}
@@ -315,33 +315,33 @@ export default function PlayDetailsModal({
         )}
 
         {/* Concept Family Selection */}
-        {bucketFamilies.length > 0 && (
+        {bucketConceptFamilies.length > 0 && (
           <div className="p-4 border-b border-slate-200">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
               Concept Family
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {bucketFamilies.map(fam => {
-                const isSelected = play.conceptFamily === fam.label;
+              {bucketConceptFamilies.map(cf => {
+                const isSelected = play.conceptFamily === cf.label;
                 return (
                   <button
-                    key={fam.id}
-                    onClick={() => handleFamilySelect(fam.label)}
+                    key={cf.id}
+                    onClick={() => handleFamilySelect(cf.label)}
                     className={`px-2.5 py-1.5 rounded-md text-sm font-semibold transition-all ${
                       isSelected
                         ? 'ring-2 ring-offset-1'
                         : 'border border-slate-200 hover:border-slate-300'
                     }`}
                     style={isSelected ? {
-                      backgroundColor: fam.color || '#64748b',
-                      color: fam.textColor || '#fff',
-                      ringColor: fam.color || '#64748b'
+                      backgroundColor: cf.color || '#64748b',
+                      color: cf.textColor || '#fff',
+                      ringColor: cf.color || '#64748b'
                     } : {
                       backgroundColor: 'white',
                       color: '#64748b'
                     }}
                   >
-                    {fam.label}
+                    {cf.label}
                   </button>
                 );
               })}
