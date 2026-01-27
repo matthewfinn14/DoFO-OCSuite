@@ -10,7 +10,7 @@ const PlayDetailsModalContext = createContext({
 export const usePlayDetailsModal = () => useContext(PlayDetailsModalContext);
 
 // Provider component that wraps the app
-export function PlayDetailsModalProvider({ children, plays, updatePlay, playCategories, playBuckets, currentWeek, updateWeek }) {
+export function PlayDetailsModalProvider({ children, plays, updatePlay, playCategories, playBuckets, formations, currentWeek, updateWeek }) {
   const [modalState, setModalState] = useState({ isOpen: false, playId: null });
 
   const openPlayDetails = (playId) => {
@@ -32,6 +32,7 @@ export function PlayDetailsModalProvider({ children, plays, updatePlay, playCate
           onUpdatePlay={updatePlay}
           playCategories={playCategories}
           playBuckets={playBuckets}
+          formations={formations}
           currentWeek={currentWeek}
           onUpdateWeek={updateWeek}
         />
@@ -48,6 +49,7 @@ export default function PlayDetailsModal({
   onUpdatePlay,
   playCategories = [],
   playBuckets = [],
+  formations = [],
   currentWeek,
   onUpdateWeek
 }) {
@@ -245,6 +247,35 @@ export default function PlayDetailsModal({
             >
               {isNew ? '✓ Marked as NEW for this week' : 'Mark as NEW for this week'}
             </button>
+          </div>
+        )}
+
+        {/* Formation Selection */}
+        {formations.length > 0 && (
+          <div className="p-4 border-b border-slate-200">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+              Formation
+            </div>
+            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+              {formations
+                .filter(f => !f.phase || f.phase === (play.phase || 'OFFENSE'))
+                .map(form => {
+                  const isSelected = play.formation === form.name || play.formation === form.label;
+                  return (
+                    <button
+                      key={form.id || form.name}
+                      onClick={() => onUpdatePlay?.(playId, { formation: form.name || form.label })}
+                      className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                        isSelected
+                          ? 'bg-slate-700 text-white ring-2 ring-slate-500 ring-offset-1'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {form.name || form.label}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         )}
 

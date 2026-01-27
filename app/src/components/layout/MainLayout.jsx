@@ -18,9 +18,10 @@ export default function MainLayout() {
   } = useSchool();
   const [playBankOpen, setPlayBankOpen] = useState(false);
 
-  // Get play categories and buckets from setup
+  // Get play categories, buckets, and formations from setup
   const playCategories = setupConfig?.playCategories || settings?.playCategories || [];
   const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
+  const formations = setupConfig?.formations || settings?.formations || [];
 
   return (
     <PlayDetailsModalProvider
@@ -28,6 +29,7 @@ export default function MainLayout() {
       updatePlay={updatePlay}
       playCategories={playCategories}
       playBuckets={playBuckets}
+      formations={formations}
       currentWeek={currentWeek}
       updateWeek={updateWeek}
     >
