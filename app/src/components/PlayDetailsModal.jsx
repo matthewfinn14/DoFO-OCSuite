@@ -207,8 +207,20 @@ export default function PlayDetailsModal({
             Mini Script
           </button>
 
-          {/* Wristband Slot */}
+          {/* Personnel Group */}
           <div className="flex items-center gap-1.5 ml-auto">
+            <label className="text-sm font-semibold text-slate-500">PERS:</label>
+            <input
+              type="text"
+              value={play.personnel || ''}
+              onChange={(e) => onUpdatePlay?.(playId, { personnel: e.target.value })}
+              className="w-12 px-2 py-1.5 text-sm font-semibold text-center border border-slate-300 rounded"
+              placeholder="--"
+            />
+          </div>
+
+          {/* Wristband Slot */}
+          <div className="flex items-center gap-1.5">
             <label className="text-sm font-semibold text-slate-500">WB:</label>
             <input
               type="text"
