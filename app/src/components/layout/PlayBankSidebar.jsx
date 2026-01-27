@@ -31,7 +31,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
   } = useSchool();
 
   // Local state
-  const [activeTab, setActiveTab] = useState('usage'); // usage, gameplan, install
+  const [activeTab, setActiveTab] = useState('install'); // install, gameplan, usage
   const [playBankPhase, setPlayBankPhase] = useState('OFFENSE');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedSections, setExpandedSections] = useState({});
@@ -509,9 +509,9 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
         {/* Tabs */}
         <div className="flex border-b border-slate-200">
           {[
-            { key: 'usage', label: 'Full Playbook' },
+            { key: 'install', label: 'Install' },
             { key: 'gameplan', label: 'Game Plan' },
-            { key: 'install', label: 'Install' }
+            { key: 'usage', label: 'Full Playbook' }
           ].map(tab => (
             <div
               key={tab.key}
