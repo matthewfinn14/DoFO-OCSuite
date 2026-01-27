@@ -45,8 +45,11 @@ export default function PlayEditor({
   const [selectedPlayType, setSelectedPlayType] = useState('quick');
   const [selectedBucketId, setSelectedBucketId] = useState('');
 
-  // Check if in advanced setup mode
-  const isAdvancedMode = setupConfig?.setupMode?.[phase] === 'advanced';
+  // Check setup mode (basic, standard, advanced)
+  const setupMode = setupConfig?.setupMode?.[phase] || 'standard';
+  const isBasicMode = setupMode === 'basic';
+  const isStandardMode = setupMode === 'standard';
+  const isAdvancedMode = setupMode === 'advanced';
 
   // Get play call chain syntax for current phase based on bucket (advanced) or play type (standard)
   const playCallSyntax = useMemo(() => {
@@ -137,7 +140,7 @@ export default function PlayEditor({
     staplesSlot: '',
     playType: 'quick', // Default to quick (simple Formation + Play)
     actionTypes: [],
-    hashPreference: 'Any',
+    hashPreference: 'any',
     baseType: '',
     fieldZones: [],
     downDistance: [],
@@ -147,6 +150,12 @@ export default function PlayEditor({
     concept: '',
     incomplete: false,
     complementaryPlays: [],
+    // New categorization fields
+    playRating: '', // How do we like it? (love, like, situational, developing)
+    playObjectives: [], // What are we trying to accomplish? (efficiency, convert, score, break-keys)
+    setupPlayId: '', // Play that sets this one up
+    premiumLooks: '', // Notes on fronts/coverages/blitzes this is good against
+    targetProgressions: [], // Who are we targeting? Array of {position, isPrimary, order}
   });
 
   const [loading, setSaving] = useState(false);
@@ -154,6 +163,7 @@ export default function PlayEditor({
     basic: true,
     playCall: true,
     situations: false,
+    gameplan: false,
     diagrams: true,
     complementary: false,
     advanced: false
@@ -192,7 +202,7 @@ export default function PlayEditor({
         staplesSlot: play.staplesSlot || '',
         playType: playType,
         actionTypes: play.actionTypes || [],
-        hashPreference: play.hashPreference || 'Any',
+        hashPreference: play.hashPreference || 'any',
         baseType: play.baseType || '',
         fieldZones: play.fieldZones || [],
         downDistance: play.downDistance || [],
@@ -209,6 +219,12 @@ export default function PlayEditor({
         wizOlineRef: play.wizOlineRef || null,
         // Play call chain parts
         playCallParts: play.playCallParts || {},
+        // New categorization fields
+        playRating: play.playRating || '',
+        playObjectives: play.playObjectives || [],
+        setupPlayId: play.setupPlayId || '',
+        premiumLooks: play.premiumLooks || '',
+        targetProgressions: play.targetProgressions || [],
       });
     } else {
       // Reset form for new play
@@ -229,7 +245,7 @@ export default function PlayEditor({
         staplesSlot: '',
         playType: 'quick',
         actionTypes: [],
-        hashPreference: 'Any',
+        hashPreference: 'any',
         baseType: '',
         fieldZones: [],
         downDistance: [],
@@ -245,6 +261,12 @@ export default function PlayEditor({
         wizOlineRef: null,
         // Play call chain parts
         playCallParts: {},
+        // New categorization fields
+        playRating: '',
+        playObjectives: [],
+        setupPlayId: '',
+        premiumLooks: '',
+        targetProgressions: [],
       });
     }
   }, [play, phase]);
@@ -439,101 +461,156 @@ export default function PlayEditor({
             onToggle={() => toggleSection('basic')}
           >
             <div className="space-y-4">
-              {/* Play Type Selector - Only for Offense in Standard mode */}
-              {phase === 'OFFENSE' && !isAdvancedMode && (
+              {/* BASIC MODE: Single text field for entire play call */}
+              {isBasicMode && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
-                    Play Type
+                  <label className="block text-sm font-medium text-slate-400 mb-1">
+                    Play Call *
                   </label>
-                  <div className="flex gap-2">
-                    {PLAY_TYPES.map(type => (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedPlayType(type.id);
-                          setFormData(prev => ({ ...prev, playType: type.id }));
-                        }}
-                        className={`flex-1 px-3 py-2 rounded-lg border-2 transition-all text-center ${
-                          selectedPlayType === type.id
-                            ? 'border-sky-500 bg-sky-500/10 text-sky-400'
-                            : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-slate-500'
-                        }`}
-                      >
-                        <span className="text-lg mr-1">{type.icon}</span>
-                        <span className="font-medium">{type.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Bucket Selector - Prominent in Advanced mode */}
-              {phase === 'OFFENSE' && isAdvancedMode && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
-                    Play Bucket <span className="text-slate-500">(determines syntax)</span>
-                  </label>
-                  <select
-                    value={selectedBucketId}
-                    onChange={e => {
-                      setSelectedBucketId(e.target.value);
-                      setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
-                    }}
-                    className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white text-lg"
-                  >
-                    <option value="">Select Bucket...</option>
-                    {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
-                      <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Full Play Call - Formation + Name combined */}
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Full Play Call *
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.formation}
-                    onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
-                    list="formations-list"
-                    placeholder="Formation"
-                    className="w-1/3 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
-                  />
                   <input
                     type="text"
                     value={formData.name}
                     onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Play Name"
-                    className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                    placeholder="Enter entire play call (e.g., Trips Right Z Motion 94 Mesh)"
+                    className="w-full px-3 py-3 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                    autoFocus
                   />
-                  <datalist id="formations-list">
-                    {availableFormations.map(f => (
-                      <option key={f} value={f} />
-                    ))}
-                  </datalist>
-                </div>
-                {/* Preview of full call */}
-                <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
-                    <span className="text-emerald-400 font-semibold">
-                      {formData.formation || formData.name
-                        ? `${formData.formation}${formData.formation && formData.name ? ' ' : ''}${formData.name}`
-                        : '...'}
+                  <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-slate-500 uppercase tracking-wide">Play: </span>
+                      <span className="text-emerald-400 font-semibold">
+                        {formData.name || '...'}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400/70 bg-slate-600/30 px-2 py-0.5 rounded">
+                      Basic Mode
                     </span>
                   </div>
-                  {!isAdvancedMode && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Type your play call exactly as you say it. No parsing - just simple entry for practice scripts and game plans.
+                  </p>
+                </div>
+              )}
+
+              {/* STANDARD MODE: Formation + Motion/Tag + Play Name */}
+              {isStandardMode && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">
+                    Full Play Call *
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.formation}
+                      onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
+                      list="formations-list"
+                      placeholder="Formation"
+                      className="w-1/4 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                    />
+                    <input
+                      type="text"
+                      value={formData.formationTag || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, formationTag: e.target.value }))}
+                      placeholder="Motion/Tag (optional)"
+                      className="w-1/4 px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-slate-500 text-base"
+                    />
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Play Name"
+                      className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                    />
+                    <datalist id="formations-list">
+                      {availableFormations.map(f => (
+                        <option key={f} value={f} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
+                      <span className="text-emerald-400 font-semibold">
+                        {formData.formation || formData.formationTag || formData.name
+                          ? [formData.formation, formData.formationTag, formData.name].filter(Boolean).join(' ')
+                          : '...'}
+                      </span>
+                    </div>
                     <span className="text-xs text-green-500/70 bg-green-500/10 px-2 py-0.5 rounded">
                       Standard Mode
                     </span>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* ADVANCED MODE: Bucket Selector + Full Call + Breakdown */}
+              {isAdvancedMode && (
+                <>
+                  {/* Bucket Selector */}
+                  {phase === 'OFFENSE' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-2">
+                        Play Bucket <span className="text-slate-500">(determines syntax)</span>
+                      </label>
+                      <select
+                        value={selectedBucketId}
+                        onChange={e => {
+                          setSelectedBucketId(e.target.value);
+                          setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
+                        }}
+                        className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white text-lg"
+                      >
+                        <option value="">Select Bucket...</option>
+                        {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
+                          <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Full Play Call */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">
+                      Full Play Call *
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={formData.formation}
+                        onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
+                        list="formations-list"
+                        placeholder="Formation"
+                        className="w-1/3 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                      />
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Play Name"
+                        className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                      />
+                      <datalist id="formations-list">
+                        {availableFormations.map(f => (
+                          <option key={f} value={f} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md flex items-center justify-between">
+                      <div>
+                        <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
+                        <span className="text-emerald-400 font-semibold">
+                          {formData.formation || formData.name
+                            ? `${formData.formation}${formData.formation && formData.name ? ' ' : ''}${formData.name}`
+                            : '...'}
+                        </span>
+                      </div>
+                      <span className="text-xs text-purple-500/70 bg-purple-500/10 px-2 py-0.5 rounded">
+                        Advanced Mode
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Play Call Chain Parsing - only in Advanced mode or when syntax has more than 2 parts */}
               {isAdvancedMode && playCallSyntax.length > 2 && (
@@ -695,85 +772,89 @@ export default function PlayEditor({
                 </div>
               )}
 
-              {/* Bucket & Concept Group */}
-              <div className="pt-3 border-t border-slate-700">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Category */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">
-                      Bucket
-                    </label>
-                    <select
-                      value={formData.playCategory}
-                      onChange={e => setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }))}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
-                    >
-                      <option value="">Select Bucket</option>
-                      {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
-                        <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
-                      ))}
-                    </select>
-                  </div>
+              {/* Bucket & Concept Group - hidden in Basic mode, and hidden in Advanced when bucket already selected above */}
+              {!isBasicMode && !(isAdvancedMode && phase === 'OFFENSE') && (
+                <div className="pt-3 border-t border-slate-700">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Category */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-1">
+                        Bucket
+                      </label>
+                      <select
+                        value={formData.playCategory}
+                        onChange={e => setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }))}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                      >
+                        <option value="">Select Bucket</option>
+                        {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
+                          <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* Concept Group */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">
-                      Concept Group
-                    </label>
-                    <select
-                      value={formData.bucketId}
-                      onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
-                    >
-                      <option value="">Select Group</option>
-                      {filteredBuckets.map(bucket => (
-                        <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
-                      ))}
-                    </select>
+                    {/* Concept Group */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-1">
+                        Concept Group
+                      </label>
+                      <select
+                        value={formData.bucketId}
+                        onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                      >
+                        <option value="">Select Group</option>
+                        {filteredBuckets.map(bucket => (
+                          <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Read Type & Series */}
-              <div className="pt-3 border-t border-slate-700">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Read Type */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">
-                      <Eye size={14} className="inline mr-1" />
-                      Read Type
-                    </label>
-                    <select
-                      value={formData.readType || ''}
-                      onChange={e => setFormData(prev => ({ ...prev, readType: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
-                    >
-                      <option value="">No Read</option>
-                      {(setupConfig?.readTypes || []).map(rt => (
-                        <option key={rt.id} value={rt.id}>{rt.label || rt.name}</option>
-                      ))}
-                    </select>
-                  </div>
+              {/* Read Type & Series - hidden in Basic mode */}
+              {!isBasicMode && (
+                <div className="pt-3 border-t border-slate-700">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Read Type */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-1">
+                        <Eye size={14} className="inline mr-1" />
+                        Read Type
+                      </label>
+                      <select
+                        value={formData.readType || ''}
+                        onChange={e => setFormData(prev => ({ ...prev, readType: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                      >
+                        <option value="">No Read</option>
+                        {(setupConfig?.readTypes || []).map(rt => (
+                          <option key={rt.id} value={rt.id}>{rt.label || rt.name}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* Look-Alike Series */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">
-                      <Layers size={14} className="inline mr-1" />
-                      Look-Alike Series
-                    </label>
-                    <select
-                      value={formData.seriesId || ''}
-                      onChange={e => setFormData(prev => ({ ...prev, seriesId: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
-                    >
-                      <option value="">None</option>
-                      {(setupConfig?.lookAlikeSeries || []).map(series => (
-                        <option key={series.id} value={series.id}>{series.name}</option>
-                      ))}
-                    </select>
+                    {/* Look-Alike Series */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-1">
+                        <Layers size={14} className="inline mr-1" />
+                        Look-Alike Series
+                      </label>
+                      <select
+                        value={formData.seriesId || ''}
+                        onChange={e => setFormData(prev => ({ ...prev, seriesId: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                      >
+                        <option value="">None</option>
+                        {(setupConfig?.lookAlikeSeries || []).map(series => (
+                          <option key={series.id} value={series.id}>{series.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </Section>
 
@@ -917,6 +998,245 @@ export default function PlayEditor({
               </div>
             </Section>
           )}
+
+          {/* Game Plan Intel Section */}
+          <Section
+            title={
+              <span className="flex items-center gap-2">
+                <span className="text-sky-400">Game Plan Intel</span>
+                {(formData.playRating || formData.playObjectives?.length > 0 || formData.setupPlayId || formData.premiumLooks || formData.targetProgressions?.length > 0) && (
+                  <span className="px-1.5 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded">
+                    Tagged
+                  </span>
+                )}
+              </span>
+            }
+            isOpen={expandedSections.gameplan}
+            onToggle={() => toggleSection('gameplan')}
+          >
+            <div className="space-y-5">
+              {/* How Do We Like It? */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  How Do We Like It?
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'love', label: 'Love It', color: '#22c55e', emoji: '🔥' },
+                    { id: 'like', label: 'Like It', color: '#3b82f6', emoji: '👍' },
+                    { id: 'situational', label: 'Situational', color: '#f59e0b', emoji: '🎯' },
+                    { id: 'developing', label: 'Developing', color: '#8b5cf6', emoji: '🔧' },
+                  ].map(rating => {
+                    const isSelected = formData.playRating === rating.id;
+                    return (
+                      <button
+                        key={rating.id}
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          playRating: isSelected ? '' : rating.id
+                        }))}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'ring-2 ring-offset-1 ring-offset-slate-900'
+                            : 'opacity-60 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: isSelected ? rating.color : 'rgba(100,116,139,0.3)',
+                          color: isSelected ? '#fff' : '#94a3b8',
+                          ringColor: rating.color
+                        }}
+                      >
+                        <span>{rating.emoji}</span>
+                        {rating.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Play Objectives */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  What Are We Trying To Accomplish?
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'efficiency', label: 'Base Down Efficiency', color: '#22c55e' },
+                    { id: 'convert', label: 'Convert First Down', color: '#3b82f6' },
+                    { id: 'score', label: 'Score', color: '#ef4444' },
+                    { id: 'break-keys', label: 'Break Defensive Keys', color: '#f59e0b' },
+                    { id: 'chunk', label: 'Chunk Play', color: '#8b5cf6' },
+                    { id: 'safe', label: 'Safe/Protect Lead', color: '#64748b' },
+                  ].map(obj => {
+                    const isSelected = (formData.playObjectives || []).includes(obj.id);
+                    return (
+                      <button
+                        key={obj.id}
+                        type="button"
+                        onClick={() => {
+                          const current = formData.playObjectives || [];
+                          const updated = isSelected
+                            ? current.filter(o => o !== obj.id)
+                            : [...current, obj.id];
+                          setFormData(prev => ({ ...prev, playObjectives: updated }));
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-offset-1 ring-offset-slate-900'
+                            : 'opacity-60 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: isSelected ? obj.color : 'rgba(100,116,139,0.3)',
+                          color: isSelected ? '#fff' : '#94a3b8',
+                          ringColor: obj.color
+                        }}
+                      >
+                        {obj.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Hash Preference */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  Where Do We Like It? (Hash)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'left', label: 'Left Hash', icon: '◀' },
+                    { id: 'middle', label: 'Middle', icon: '⬛' },
+                    { id: 'right', label: 'Right Hash', icon: '▶' },
+                    { id: 'any', label: 'Anywhere', icon: '↔' },
+                  ].map(hash => {
+                    const isSelected = formData.hashPreference === hash.id;
+                    return (
+                      <button
+                        key={hash.id}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, hashPreference: hash.id }))}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-sky-600 text-white ring-2 ring-sky-400 ring-offset-1 ring-offset-slate-900'
+                            : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                        }`}
+                      >
+                        <span>{hash.icon}</span>
+                        {hash.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Setup Play */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  Setup By Another Play?
+                </label>
+                <select
+                  value={formData.setupPlayId || ''}
+                  onChange={e => setFormData(prev => ({ ...prev, setupPlayId: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                >
+                  <option value="">No setup play needed</option>
+                  {availablePlays
+                    .filter(p => p.id !== play?.id && (p.phase || 'OFFENSE') === phase)
+                    .map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.formation ? `${p.formation} ` : ''}{p.name}
+                      </option>
+                    ))}
+                </select>
+                {formData.setupPlayId && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    This play works best after running the selected setup play.
+                  </p>
+                )}
+              </div>
+
+              {/* Target Progressions */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  Who Are We Targeting? (Progressions)
+                </label>
+                <div className="space-y-2">
+                  {(formData.targetProgressions || []).map((target, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg">
+                      <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
+                        idx === 0 ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-300'
+                      }`}>
+                        {idx + 1}
+                      </span>
+                      <input
+                        type="text"
+                        value={target.position || ''}
+                        onChange={e => {
+                          const updated = [...(formData.targetProgressions || [])];
+                          updated[idx] = { ...updated[idx], position: e.target.value };
+                          setFormData(prev => ({ ...prev, targetProgressions: updated }));
+                        }}
+                        placeholder="Position/Player (e.g., X, Z, RB)"
+                        className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                      />
+                      <input
+                        type="text"
+                        value={target.note || ''}
+                        onChange={e => {
+                          const updated = [...(formData.targetProgressions || [])];
+                          updated[idx] = { ...updated[idx], note: e.target.value };
+                          setFormData(prev => ({ ...prev, targetProgressions: updated }));
+                        }}
+                        placeholder="Note (e.g., vs Cover 2)"
+                        className="w-32 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = (formData.targetProgressions || []).filter((_, i) => i !== idx);
+                          setFormData(prev => ({ ...prev, targetProgressions: updated }));
+                        }}
+                        className="p-1 text-red-400 hover:text-red-300"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(formData.targetProgressions || []), { position: '', note: '' }];
+                      setFormData(prev => ({ ...prev, targetProgressions: updated }));
+                    }}
+                    className="w-full px-3 py-2 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 text-sm hover:border-slate-500 hover:text-slate-300"
+                  >
+                    + Add Target/Progression
+                  </button>
+                </div>
+                {(formData.targetProgressions || []).length > 0 && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    First target is primary. Order indicates read progression.
+                  </p>
+                )}
+              </div>
+
+              {/* Premium Looks */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  Premium Looks (Fronts/Coverages/Blitzes)
+                </label>
+                <textarea
+                  value={formData.premiumLooks || ''}
+                  onChange={e => setFormData(prev => ({ ...prev, premiumLooks: e.target.value }))}
+                  placeholder="What defensive looks make this a great call? (e.g., Cover 3, single-high, man-free...)"
+                  rows={2}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm placeholder-slate-500 resize-none"
+                />
+              </div>
+            </div>
+          </Section>
 
           {/* Diagrams Section - Only for Offense */}
           {phase === 'OFFENSE' && (

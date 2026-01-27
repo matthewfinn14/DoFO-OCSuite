@@ -6587,6 +6587,7 @@
         // Context for opening PlayDetailsModal from any PlayChip
         const PlayDetailsModalContext = React.createContext({
             openPlayDetails: () => { },
+            editPlay: () => { }, // Navigate to PlayEditor for a play
         });
 
         const usePlayDetailsModal = () => React.useContext(PlayDetailsModalContext);
@@ -7483,6 +7484,7 @@
             onUpdatePlay, // Required: function(id, updates)
             onAssignSituation, // Optional: function(playId, box) -> adds to script/situation
             onSuggest, // Optional: function(playId, setId) -> adds play suggestion for situation
+            onEdit, // Optional: function(play) -> opens play in full editor
             suggestions = {}, // Current suggestions { setId: [playId, ...] }
             position = { x: 0, y: 0 },
             playBuckets = [], // Concept families (nested under categories)
@@ -7491,6 +7493,9 @@
         }) => {
             const play = plays.find(p => p.id === playId);
             if (!play) return null;
+
+            // Get editPlay from context for global edit capability
+            const { editPlay } = usePlayDetailsModal();
 
             // Local state for immediate visual feedback on situation assignments
             const [localAssignedIds, setLocalAssignedIds] = useState(() => new Set(assignedIds));
@@ -7650,6 +7655,20 @@
                             >
                                 Mini Script
                             </button>
+                            {/* Edit Details Button - Always available via context */}
+                            <button
+                                onClick={() => { editPlay(play); onClose(); }}
+                                style={{
+                                    padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+                                    border: '1px solid #0ea5e9',
+                                    background: '#0ea5e9',
+                                    color: '#fff',
+                                    display: 'flex', alignItems: 'center', gap: '4px'
+                                }}
+                            >
+                                <Icon name="Edit3" size={14} />
+                                Edit
+                            </button>
                             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>WB:</label>
                                 <div style={{ position: 'relative', width: '60px' }}>
@@ -7784,6 +7803,161 @@
                                 </div>
                             </div>
                         )}
+
+                        {/* GAME PLAN INTEL SECTION */}
+                        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>
+                            <div style={{
+                                fontSize: '0.7rem', fontWeight: '700', color: '#0ea5e9',
+                                marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                                display: 'flex', alignItems: 'center', gap: '6px'
+                            }}>
+                                <Icon name="Target" size={12} />
+                                Game Plan Intel
+                            </div>
+
+                            {/* How Do We Like It? */}
+                            <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                    How Do We Like It?
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {[
+                                        { id: 'love', label: '🔥 Love It', color: '#22c55e' },
+                                        { id: 'like', label: '👍 Like It', color: '#3b82f6' },
+                                        { id: 'situational', label: '🎯 Situational', color: '#f59e0b' },
+                                        { id: 'developing', label: '🔧 Developing', color: '#8b5cf6' },
+                                    ].map(rating => {
+                                        const isSelected = play.playRating === rating.id;
+                                        return (
+                                            <button
+                                                key={rating.id}
+                                                onClick={() => onUpdatePlay && onUpdatePlay(playId, {
+                                                    playRating: isSelected ? '' : rating.id
+                                                })}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    border: isSelected ? `2px solid ${rating.color}` : '1px solid #e2e8f0',
+                                                    background: isSelected ? rating.color : '#f8fafc',
+                                                    color: isSelected ? '#fff' : '#64748b',
+                                                    opacity: isSelected ? 1 : 0.7,
+                                                    transition: 'all 0.15s ease',
+                                                }}
+                                            >
+                                                {rating.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Play Objectives */}
+                            <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                    What Are We Trying To Accomplish?
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {[
+                                        { id: 'efficiency', label: 'Efficiency', color: '#22c55e' },
+                                        { id: 'convert', label: 'Convert', color: '#3b82f6' },
+                                        { id: 'score', label: 'Score', color: '#ef4444' },
+                                        { id: 'break-keys', label: 'Break Keys', color: '#f59e0b' },
+                                        { id: 'chunk', label: 'Chunk', color: '#8b5cf6' },
+                                        { id: 'safe', label: 'Safe', color: '#64748b' },
+                                    ].map(obj => {
+                                        const isSelected = (play.playObjectives || []).includes(obj.id);
+                                        return (
+                                            <button
+                                                key={obj.id}
+                                                onClick={() => {
+                                                    if (!onUpdatePlay) return;
+                                                    const current = play.playObjectives || [];
+                                                    const updated = isSelected
+                                                        ? current.filter(o => o !== obj.id)
+                                                        : [...current, obj.id];
+                                                    onUpdatePlay(playId, { playObjectives: updated });
+                                                }}
+                                                style={{
+                                                    padding: '3px 6px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    border: isSelected ? `2px solid ${obj.color}` : '1px solid #e2e8f0',
+                                                    background: isSelected ? obj.color : '#f8fafc',
+                                                    color: isSelected ? '#fff' : '#64748b',
+                                                    opacity: isSelected ? 1 : 0.6,
+                                                    transition: 'all 0.15s ease',
+                                                }}
+                                            >
+                                                {obj.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Hash Preference */}
+                            <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                    Where Do We Like It?
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {[
+                                        { id: 'left', label: '◀ Left' },
+                                        { id: 'middle', label: '⬛ Mid' },
+                                        { id: 'right', label: 'Right ▶' },
+                                        { id: 'any', label: '↔ Any' },
+                                    ].map(hash => {
+                                        const isSelected = play.hashPreference === hash.id;
+                                        return (
+                                            <button
+                                                key={hash.id}
+                                                onClick={() => onUpdatePlay && onUpdatePlay(playId, { hashPreference: hash.id })}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    border: isSelected ? '2px solid #0ea5e9' : '1px solid #e2e8f0',
+                                                    background: isSelected ? '#0ea5e9' : '#f8fafc',
+                                                    color: isSelected ? '#fff' : '#64748b',
+                                                    transition: 'all 0.15s ease',
+                                                }}
+                                            >
+                                                {hash.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Premium Looks */}
+                            <div>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                    Premium Looks
+                                </div>
+                                <input
+                                    type="text"
+                                    value={play.premiumLooks || ''}
+                                    onChange={(e) => onUpdatePlay && onUpdatePlay(playId, { premiumLooks: e.target.value })}
+                                    placeholder="Fronts/coverages this is good against..."
+                                    style={{
+                                        width: '100%',
+                                        padding: '6px 8px',
+                                        fontSize: '0.75rem',
+                                        borderRadius: '4px',
+                                        border: '1px solid #e2e8f0',
+                                        color: '#0f172a',
+                                        background: '#f8fafc'
+                                    }}
+                                />
+                            </div>
+                        </div>
 
                         {/* BODY - SCROLLABLE CHIPS */}
                         <div style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
@@ -34013,6 +34187,18 @@
             const openPlayDetails = (playId) => setPlayDetailsModalState({ isOpen: true, playId });
             const closePlayDetails = () => setPlayDetailsModalState({ isOpen: false, playId: null });
 
+            // Global function to edit a play from anywhere
+            const editPlay = (playOrId) => {
+                const play = typeof playOrId === 'string'
+                    ? plays.find(p => p.id === playOrId)
+                    : playOrId;
+                if (play) {
+                    setEditingPlay(play);
+                    setView('new-play');
+                    closePlayDetails(); // Close the details modal if open
+                }
+            };
+
             // -- SCHOOL INITIALIZATION CHECK (SIMPLIFIED) --
             const [schoolSetupData, setSchoolSetupData] = useState({ showWizard: false, schoolId: null });
             const [inviteData, setInviteData] = useState(null); // Invite State for team joins
@@ -39657,7 +39843,7 @@
             }
 
             return (
-                <PlayDetailsModalContext.Provider value={{ openPlayDetails }}>
+                <PlayDetailsModalContext.Provider value={{ openPlayDetails, editPlay }}>
                     <div className="app-container">
                         {schoolSetupData.showWizard && !isSiteAdmin && (
                             <div className="onboarding-wizard-wrapper">
@@ -41361,7 +41547,7 @@
                                             const play = filteredPlaybook.find(p => p.id === playId);
                                             return (
                                                 <PlayDetailsModal
-                                                    play={play}
+                                                    playId={playId}
                                                     plays={plays}
                                                     gamePlanLayouts={gamePlanLayouts}
                                                     gamePlan={currentWeek?.offensiveGamePlan}
@@ -41369,6 +41555,7 @@
                                                     onUpdatePlay={handleUpdatePlay}
                                                     onUpdateWeek={handleUpdateWeek}
                                                     onClose={() => setQuickEditModalState(null)}
+                                                    onEdit={(p) => { setEditingPlay(p); setView('new-play'); }}
                                                     position={{ x, y }}
                                                     playCategories={playCategories}
                                                 />
@@ -42897,6 +43084,7 @@
                                 playCategories={playCategories}
                                 currentWeek={currentWeek}
                                 onClose={closePlayDetails}
+                                onEdit={(p) => { setEditingPlay(p); setView('new-play'); closePlayDetails(); }}
                             />
                         )}
 

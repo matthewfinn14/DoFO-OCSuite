@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { PlayCard, PlayEditor } from '../components/playbook';
 import { usePlayDetailsModal } from '../components/PlayDetailsModal';
@@ -34,6 +35,8 @@ const DEFAULT_TAG_CATEGORIES = {
 export default function Playbook() {
   const { playsArray, plays, updatePlays, addPlay, updatePlay, setupConfig } = useSchool();
   const { openPlayDetails } = usePlayDetailsModal();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // UI State
   const [activePhase, setActivePhase] = useState('OFFENSE');
@@ -55,6 +58,22 @@ export default function Playbook() {
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingPlay, setEditingPlay] = useState(null);
+
+  // Handle incoming edit request from navigation state (e.g., from PlayDetailsModal)
+  useEffect(() => {
+    if (location.state?.editPlayId) {
+      const playToEdit = playsArray.find(p => p.id === location.state.editPlayId);
+      if (playToEdit) {
+        // Switch to the play's phase
+        setActivePhase(playToEdit.phase || 'OFFENSE');
+        // Open the editor with this play
+        setEditingPlay(playToEdit);
+        setEditorOpen(true);
+        // Clear the state to prevent re-opening on subsequent renders
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state?.editPlayId, playsArray, navigate, location.pathname]);
 
   // Get play buckets, concept groups, read types, look-alike series from setupConfig
   const playBuckets = setupConfig?.playBuckets || [];

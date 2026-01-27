@@ -1,16 +1,17 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { X, Star, Zap, FileText, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers } from 'lucide-react';
+import { X, Star, Zap, FileText, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers, Target, Crosshair, Edit3 } from 'lucide-react';
 
 // Context for opening PlayDetailsModal from anywhere
 const PlayDetailsModalContext = createContext({
   openPlayDetails: () => {},
-  closePlayDetails: () => {}
+  closePlayDetails: () => {},
+  editPlay: () => {}
 });
 
 export const usePlayDetailsModal = () => useContext(PlayDetailsModalContext);
 
 // Provider component that wraps the app
-export function PlayDetailsModalProvider({ children, plays, updatePlay, playBuckets, conceptGroups, formations, currentWeek, updateWeek, setupConfig, updateSetupConfig }) {
+export function PlayDetailsModalProvider({ children, plays, updatePlay, playBuckets, conceptGroups, formations, currentWeek, updateWeek, setupConfig, updateSetupConfig, onEditPlay }) {
   const [modalState, setModalState] = useState({ isOpen: false, playId: null });
 
   const openPlayDetails = (playId) => {
@@ -21,8 +22,14 @@ export function PlayDetailsModalProvider({ children, plays, updatePlay, playBuck
     setModalState({ isOpen: false, playId: null });
   };
 
+  // Edit play - navigates to PlayEditor for this play
+  const editPlay = (playId) => {
+    closePlayDetails();
+    onEditPlay?.(playId);
+  };
+
   return (
-    <PlayDetailsModalContext.Provider value={{ openPlayDetails, closePlayDetails }}>
+    <PlayDetailsModalContext.Provider value={{ openPlayDetails, closePlayDetails, editPlay }}>
       {children}
       {modalState.isOpen && modalState.playId && (
         <PlayDetailsModal
@@ -37,6 +44,7 @@ export function PlayDetailsModalProvider({ children, plays, updatePlay, playBuck
           onUpdateWeek={updateWeek}
           setupConfig={setupConfig}
           updateSetupConfig={updateSetupConfig}
+          onEdit={() => editPlay(modalState.playId)}
         />
       )}
     </PlayDetailsModalContext.Provider>
@@ -55,7 +63,8 @@ export default function PlayDetailsModal({
   currentWeek,
   onUpdateWeek,
   setupConfig,
-  updateSetupConfig
+  updateSetupConfig,
+  onEdit
 }) {
   // Series creation prompt state
   const [showSeriesPrompt, setShowSeriesPrompt] = useState(false);
@@ -300,6 +309,15 @@ export default function PlayDetailsModal({
             <FileText size={14} className="inline mr-1" />
             Mini Script
           </button>
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="px-3 py-1.5 rounded-md text-sm font-semibold border transition-colors border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100"
+            >
+              <Edit3 size={14} className="inline mr-1" />
+              Edit
+            </button>
+          )}
 
           {/* Personnel Group */}
           <div className="flex items-center gap-1.5 ml-auto">
@@ -613,6 +631,163 @@ export default function PlayDetailsModal({
             )}
           </div>
         )}
+
+        {/* Game Plan Intel Section */}
+        <div className="p-4 border-b border-slate-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Target size={14} className="text-sky-500" />
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Game Plan Intel</span>
+            {(play.playRating || play.playObjectives?.length > 0) && (
+              <span className="px-1.5 py-0.5 bg-sky-100 text-sky-700 text-xs rounded font-semibold">
+                Tagged
+              </span>
+            )}
+          </div>
+
+          {/* How Do We Like It? */}
+          <div className="mb-3">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+              How Do We Like It?
+            </label>
+            <div className="flex flex-wrap gap-1">
+              {[
+                { id: 'love', label: 'Love It', color: '#22c55e', emoji: '🔥' },
+                { id: 'like', label: 'Like It', color: '#3b82f6', emoji: '👍' },
+                { id: 'situational', label: 'Situational', color: '#f59e0b', emoji: '🎯' },
+                { id: 'developing', label: 'Developing', color: '#8b5cf6', emoji: '🔧' },
+              ].map(rating => {
+                const isSelected = play.playRating === rating.id;
+                return (
+                  <button
+                    key={rating.id}
+                    onClick={() => onUpdatePlay?.(playId, {
+                      playRating: isSelected ? '' : rating.id
+                    })}
+                    className={`px-2 py-1 rounded text-[10px] font-semibold transition-all flex items-center gap-1 ${
+                      isSelected
+                        ? 'ring-1 ring-offset-1'
+                        : 'opacity-50 hover:opacity-100'
+                    }`}
+                    style={{
+                      backgroundColor: isSelected ? rating.color : '#f1f5f9',
+                      color: isSelected ? '#fff' : '#64748b',
+                      ringColor: rating.color
+                    }}
+                  >
+                    <span>{rating.emoji}</span>
+                    {rating.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Play Objectives */}
+          <div className="mb-3">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+              What Are We Trying To Accomplish?
+            </label>
+            <div className="flex flex-wrap gap-1">
+              {[
+                { id: 'efficiency', label: 'Base Efficiency', color: '#22c55e' },
+                { id: 'convert', label: 'Convert', color: '#3b82f6' },
+                { id: 'score', label: 'Score', color: '#ef4444' },
+                { id: 'break-keys', label: 'Break Keys', color: '#f59e0b' },
+                { id: 'chunk', label: 'Chunk', color: '#8b5cf6' },
+                { id: 'safe', label: 'Safe', color: '#64748b' },
+              ].map(obj => {
+                const isSelected = (play.playObjectives || []).includes(obj.id);
+                return (
+                  <button
+                    key={obj.id}
+                    onClick={() => {
+                      const current = play.playObjectives || [];
+                      const updated = isSelected
+                        ? current.filter(o => o !== obj.id)
+                        : [...current, obj.id];
+                      onUpdatePlay?.(playId, { playObjectives: updated });
+                    }}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                      isSelected
+                        ? 'ring-1 ring-offset-1'
+                        : 'opacity-50 hover:opacity-100'
+                    }`}
+                    style={{
+                      backgroundColor: isSelected ? obj.color : '#f1f5f9',
+                      color: isSelected ? '#fff' : '#64748b',
+                      ringColor: obj.color
+                    }}
+                  >
+                    {obj.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Hash Preference */}
+          <div className="mb-3">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+              Where Do We Like It?
+            </label>
+            <div className="flex flex-wrap gap-1">
+              {[
+                { id: 'left', label: '◀ Left' },
+                { id: 'middle', label: '⬛ Middle' },
+                { id: 'right', label: 'Right ▶' },
+                { id: 'any', label: '↔ Any' },
+              ].map(hash => {
+                const isSelected = play.hashPreference === hash.id;
+                return (
+                  <button
+                    key={hash.id}
+                    onClick={() => onUpdatePlay?.(playId, { hashPreference: hash.id })}
+                    className={`px-2 py-1 rounded text-[10px] font-semibold transition-all ${
+                      isSelected
+                        ? 'bg-sky-500 text-white ring-1 ring-sky-400 ring-offset-1'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    }`}
+                  >
+                    {hash.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Setup Play */}
+          <div className="mb-3">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+              Setup By Another Play?
+            </label>
+            <select
+              value={play.setupPlayId || ''}
+              onChange={(e) => onUpdatePlay?.(playId, { setupPlayId: e.target.value })}
+              className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
+            >
+              <option value="">No setup play</option>
+              {samePhasePlays.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.formation ? `${p.formation} ` : ''}{p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Premium Looks */}
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+              Premium Looks (Fronts/Coverages)
+            </label>
+            <input
+              type="text"
+              value={play.premiumLooks || ''}
+              onChange={(e) => onUpdatePlay?.(playId, { premiumLooks: e.target.value })}
+              placeholder="e.g., Cover 3, single-high, man-free..."
+              className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700 placeholder-slate-400"
+            />
+          </div>
+        </div>
 
         {/* Complementary Plays Section */}
         <div className="p-4 border-b border-slate-200">

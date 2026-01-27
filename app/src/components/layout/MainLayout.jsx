@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PlayBankSidebar from './PlayBankSidebar';
 import { useSchool } from '../../context/SchoolContext';
@@ -18,6 +18,12 @@ export default function MainLayout() {
     updateWeek
   } = useSchool();
   const [playBankOpen, setPlayBankOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Navigate to Playbook to edit a play
+  const handleEditPlay = (playId) => {
+    navigate('/playbook', { state: { editPlayId: playId } });
+  };
 
   // Get play buckets, concept families, and formations from setup
   const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
@@ -35,6 +41,7 @@ export default function MainLayout() {
       updateWeek={updateWeek}
       setupConfig={setupConfig}
       updateSetupConfig={updateSetupConfig}
+      onEditPlay={handleEditPlay}
     >
       <div className="flex h-screen bg-slate-950 text-white">
         {/* Sidebar */}

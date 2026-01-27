@@ -687,6 +687,9 @@ export default function Setup() {
         { id: 'segment-focus', label: 'Segment Focus', icon: Target }
       ];
     }
+    // Check if in basic mode
+    const isBasicMode = (localConfig.setupMode?.[phase] || 'standard') === 'basic';
+
     // Top persistent section
     const tabs = [
       { id: 'positions', label: 'Name Positions', icon: Users },
@@ -698,7 +701,10 @@ export default function Setup() {
         { id: 'play-buckets', label: 'Define Play Buckets', icon: Tag }
       );
     }
-    tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
+    // Hide Play Call Chain in Basic mode
+    if (!isBasicMode) {
+      tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
+    }
 
     // Add divider after stationary items
     tabs.push({ divider: true });
@@ -727,26 +733,28 @@ export default function Setup() {
       runBlocking: { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
     };
 
-    // Add tabs in the order they appear in the play call syntax
-    savedSyntax.forEach(syntaxPart => {
-      if (syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom') {
-        const tabConfig = categoryToTab[syntaxPart.sourceCategory];
-        if (tabConfig && !addedTabs.has(tabConfig.id)) {
-          tabs.push({ ...tabConfig });
-          addedTabs.add(tabConfig.id);
+    // Add tabs in the order they appear in the play call syntax (skip in Basic mode)
+    if (!isBasicMode) {
+      savedSyntax.forEach(syntaxPart => {
+        if (syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom') {
+          const tabConfig = categoryToTab[syntaxPart.sourceCategory];
+          if (tabConfig && !addedTabs.has(tabConfig.id)) {
+            tabs.push({ ...tabConfig });
+            addedTabs.add(tabConfig.id);
+          }
+        } else if ((!syntaxPart.sourceCategory || syntaxPart.sourceCategory === 'custom') &&
+                   syntaxPart.label && syntaxPart.label !== 'New') {
+          // Custom syntax tab - hidden in Basic mode
+          tabs.push({
+            id: `custom-syntax-${syntaxPart.id}`,
+            label: syntaxPart.label,
+            icon: FileText,
+            isCustomSyntax: true,
+            syntaxPartId: syntaxPart.id
+          });
         }
-      } else if ((!syntaxPart.sourceCategory || syntaxPart.sourceCategory === 'custom') &&
-                 syntaxPart.label && syntaxPart.label !== 'New') {
-        // Custom syntax tab
-        tabs.push({
-          id: `custom-syntax-${syntaxPart.id}`,
-          label: syntaxPart.label,
-          icon: FileText,
-          isCustomSyntax: true,
-          syntaxPartId: syntaxPart.id
-        });
-      }
-    });
+      });
+    }
 
     // Add remaining tabs that weren't in the syntax (for offense)
     if (isOffense) {
@@ -775,9 +783,11 @@ export default function Setup() {
       }
     }
 
-    // Bottom - Glossary (with divider)
-    tabs.push({ divider: true });
-    tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
+    // Bottom - Glossary (with divider) - hidden in Basic mode
+    if (!isBasicMode) {
+      tabs.push({ divider: true });
+      tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
+    }
 
     return tabs;
   };
@@ -942,15 +952,28 @@ export default function Setup() {
                 <h3 className="text-white font-medium flex items-center gap-2">
                   Setup Mode
                   <span className={`text-xs px-2 py-0.5 rounded ${
-                    (localConfig.setupMode?.[phase] || 'standard') === 'standard'
+                    (localConfig.setupMode?.[phase] || 'standard') === 'basic'
+                      ? 'bg-slate-600/30 text-slate-300'
+                      : (localConfig.setupMode?.[phase] || 'standard') === 'standard'
                       ? 'bg-green-600/30 text-green-400'
                       : 'bg-purple-600/30 text-purple-400'
                   }`}>
-                    {(localConfig.setupMode?.[phase] || 'standard') === 'standard' ? 'Standard' : 'Advanced'}
+                    {(localConfig.setupMode?.[phase] || 'standard') === 'basic' ? 'Basic' :
+                     (localConfig.setupMode?.[phase] || 'standard') === 'standard' ? 'Standard' : 'Advanced'}
                   </span>
                 </h3>
               </div>
               <div className="flex gap-2">
+                <button
+                  onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'basic' })}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    (localConfig.setupMode?.[phase] || 'standard') === 'basic'
+                      ? 'bg-slate-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Basic
+                </button>
                 <button
                   onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'standard' })}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -975,7 +998,22 @@ export default function Setup() {
             </div>
 
             {/* Mode description cards */}
-            <div className="grid md:grid-cols-2 gap-3">
+            <div className="grid md:grid-cols-3 gap-3">
+              {/* Basic Mode Card */}
+              <div className={`p-3 rounded-lg border transition-all ${
+                (localConfig.setupMode?.[phase] || 'standard') === 'basic'
+                  ? 'bg-slate-700/40 border-slate-500/50'
+                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
+              }`}>
+                <h4 className="text-slate-300 font-medium text-sm mb-2">Basic Mode</h4>
+                <ul className="text-xs text-slate-400 space-y-1">
+                  <li>• Type entire play call in one field</li>
+                  <li>• No syntax parsing or breakdown</li>
+                  <li>• Practice scripts and game plans work</li>
+                  <li>• Situation tagging still available</li>
+                </ul>
+              </div>
+
               {/* Standard Mode Card */}
               <div className={`p-3 rounded-lg border transition-all ${
                 (localConfig.setupMode?.[phase] || 'standard') === 'standard'
@@ -984,10 +1022,10 @@ export default function Setup() {
               }`}>
                 <h4 className="text-green-400 font-medium text-sm mb-2">Standard Mode</h4>
                 <ul className="text-xs text-slate-400 space-y-1">
-                  <li>• Simple Formation + Play syntax</li>
-                  <li>• Quick play entry without complex parsing</li>
-                  <li>• Basic filtering by formation and play name</li>
-                  <li>• Great for JV programs or getting started</li>
+                  <li>• Formation + Motion + Play structure</li>
+                  <li>• Filter by formation, motion, bucket</li>
+                  <li>• Great for JV or getting started</li>
+                  <li>• Upgrade anytime as system grows</li>
                 </ul>
               </div>
 
@@ -999,18 +1037,17 @@ export default function Setup() {
               }`}>
                 <h4 className="text-purple-400 font-medium text-sm mb-2">Advanced Mode</h4>
                 <ul className="text-xs text-slate-400 space-y-1">
-                  <li>• Custom syntax per play bucket (runs vs passes)</li>
-                  <li>• Term signals auto-fill multiple fields</li>
-                  <li>• Deep filtering for self-scout analysis</li>
-                  <li>• Full play call chain customization</li>
+                  <li>• Custom syntax per play bucket</li>
+                  <li>• Term signals auto-fill fields</li>
+                  <li>• Deep filtering for self-scout</li>
+                  <li>• Full play call chain parsing</li>
                 </ul>
               </div>
             </div>
 
             {/* Info note */}
             <p className="text-xs text-slate-500 italic">
-              You can switch modes anytime. Start with Standard and upgrade to Advanced as your system grows,
-              or use different modes for different program levels (Varsity vs JV). Your data is preserved when switching.
+              You can switch modes anytime. Your data is preserved when switching - just different entry/filtering options.
             </p>
           </div>
         </div>
@@ -1235,6 +1272,7 @@ export default function Setup() {
               syntaxTemplates={localConfig.syntaxTemplates || {}}
               termLibrary={localConfig.termLibrary || {}}
               setupConfig={localConfig}
+              setupMode={localConfig.setupMode?.[phase] || 'standard'}
               onUpdate={updateLocal}
             />
           )}
@@ -2192,6 +2230,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
 function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setupConfig }) {
   const phaseLabel = phase === 'DEFENSE' ? 'Defensive Categories' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Categories' : 'Play Buckets';
   const itemLabel = phase === 'OFFENSE' ? 'Bucket' : 'Category';
+  const isBasicMode = setupMode === 'basic';
   const isAdvanced = setupMode === 'advanced';
 
   // State for editing bucket syntax
@@ -3559,8 +3598,12 @@ function TeachPlayCallModal({ isOpen, onClose, phase, currentSyntax, termLibrary
   );
 }
 
-// Play Call Chain Tab Component - now with template support
-function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupConfig, onUpdate }) {
+// Play Call Chain Tab Component - now with template support and mode awareness
+function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupConfig, setupMode, onUpdate }) {
+  const isBasicMode = setupMode === 'basic';
+  const isStandardMode = setupMode === 'standard';
+  const isAdvancedMode = setupMode === 'advanced';
+
   // State for selected template type
   const [selectedTemplate, setSelectedTemplate] = useState(() => {
     // Default to 'custom' if templates exist there, otherwise 'pass' for offense
@@ -3733,6 +3776,80 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
     selectedTemplate !== 'custom' &&
     (!syntaxTemplates?.[phase]?.[selectedTemplate]?.length);
 
+  // Basic mode - show simple message
+  if (isBasicMode) {
+    return (
+      <div className="text-center py-16 text-slate-400">
+        <BookOpen size={64} className="mx-auto mb-6 opacity-30" />
+        <h3 className="text-xl font-semibold text-white mb-3">Play Call Chain Not Used in Basic Mode</h3>
+        <p className="text-slate-400 max-w-md mx-auto mb-6">
+          In Basic mode, play calls are entered as a single text field with no parsing or breakdown.
+          This keeps things simple for practice scripts and game plans.
+        </p>
+        <p className="text-sm text-slate-500">
+          Switch to <span className="text-green-400">Standard</span> or <span className="text-purple-400">Advanced</span> mode
+          to enable play call syntax and filtering.
+        </p>
+      </div>
+    );
+  }
+
+  // Standard mode - show simplified info
+  if (isStandardMode) {
+    return (
+      <div>
+        <div className="mb-6 p-4 bg-green-900/20 border border-green-600/30 rounded-lg">
+          <h3 className="text-lg font-semibold text-green-400 mb-2">Standard Mode: Formation + Motion + Play</h3>
+          <p className="text-slate-400 text-sm">
+            In Standard mode, plays are entered as <strong>Formation</strong> + <strong>Motion/Tag</strong> (optional) + <strong>Play Name</strong>.
+            This enables filtering by formation and basic organization by buckets.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+            <h4 className="text-white font-medium mb-3">Example Play Calls</h4>
+            <ul className="space-y-3 text-sm">
+              <li className="flex flex-wrap items-center gap-1">
+                <span className="text-slate-500">Formation:</span>
+                <span className="text-emerald-400">Trips Right</span>
+                <span className="text-slate-500">Motion:</span>
+                <span className="text-amber-400">Z Jet</span>
+                <span className="text-slate-500">Play:</span>
+                <span className="text-emerald-400">94 Mesh</span>
+              </li>
+              <li className="flex flex-wrap items-center gap-1">
+                <span className="text-slate-500">Formation:</span>
+                <span className="text-emerald-400">Ace</span>
+                <span className="text-slate-500">Motion:</span>
+                <span className="text-slate-400 italic">-</span>
+                <span className="text-slate-500">Play:</span>
+                <span className="text-emerald-400">Inside Zone</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+            <h4 className="text-white font-medium mb-3">What You Can Do</h4>
+            <ul className="space-y-1 text-sm text-slate-400">
+              <li>• Filter plays by formation</li>
+              <li>• Filter plays by motion/tag</li>
+              <li>• Organize plays by bucket</li>
+              <li>• Tag plays with situations</li>
+              <li>• Build practice scripts and game plans</li>
+            </ul>
+          </div>
+        </div>
+
+        <p className="mt-6 text-sm text-slate-500 text-center">
+          Switch to <span className="text-purple-400">Advanced</span> mode to customize play call syntax
+          per bucket and enable term signals.
+        </p>
+      </div>
+    );
+  }
+
+  // Advanced mode - show full syntax editor
   return (
     <div>
       {/* Template Type Selector - Only show for Offense */}
