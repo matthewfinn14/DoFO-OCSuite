@@ -287,115 +287,61 @@ export default function PlayEditor({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Basic Info Section */}
+          {/* Play Call Section */}
           <Section
-            title="Basic Info"
+            title="Play Call"
             isOpen={expandedSections.basic}
             onToggle={() => toggleSection('basic')}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Play Name */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Play Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., TRIPS RT Z SLANT"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500"
-                />
-              </div>
-
-              {/* Formation */}
+            <div className="space-y-4">
+              {/* Full Play Call - Formation + Name combined */}
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Formation
+                  Full Play Call *
                 </label>
-                <input
-                  type="text"
-                  value={formData.formation}
-                  onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
-                  list="formations-list"
-                  placeholder="e.g., TRIPS RT"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500"
-                />
-                <datalist id="formations-list">
-                  {availableFormations.map(f => (
-                    <option key={f} value={f} />
-                  ))}
-                </datalist>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.formation}
+                    onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
+                    list="formations-list"
+                    placeholder="Formation"
+                    className="w-1/3 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                  />
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Play Name"
+                    className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                  />
+                  <datalist id="formations-list">
+                    {availableFormations.map(f => (
+                      <option key={f} value={f} />
+                    ))}
+                  </datalist>
+                </div>
+                {/* Preview of full call */}
+                <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
+                  <span className="text-emerald-400 font-semibold">
+                    {formData.formation || formData.name
+                      ? `${formData.formation}${formData.formation && formData.name ? ' ' : ''}${formData.name}`
+                      : '...'}
+                  </span>
+                </div>
               </div>
 
-              {/* Formation Tag */}
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Formation Tag
-                </label>
-                <input
-                  type="text"
-                  value={formData.formationTag}
-                  onChange={e => setFormData(prev => ({ ...prev, formationTag: e.target.value }))}
-                  placeholder="e.g., TIGHT"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500"
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Play Category
-                </label>
-                <select
-                  value={formData.playCategory}
-                  onChange={e => setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
-                >
-                  <option value="">Select Bucket</option>
-                  {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
-                    <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Play Family/Bucket */}
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Play Family
-                </label>
-                <select
-                  value={formData.bucketId}
-                  onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
-                >
-                  <option value="">Select Family</option>
-                  {filteredBuckets.map(bucket => (
-                    <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
-                  ))}
-                </select>
-              </div>
-
-            </div>
-          </Section>
-
-          {/* Play Call Builder Section - Only if syntax is defined */}
-          {playCallSyntax.length > 0 && (
-            <Section
-              title="Play Call Builder"
-              isOpen={expandedSections.playCall !== false}
-              onToggle={() => toggleSection('playCall')}
-            >
-              <div className="space-y-4">
-                {/* Word tokens from play name */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase mb-2">
-                    Drag words from play name into slots below
+              {/* Play Call Chain Parsing - if syntax is defined */}
+              {playCallSyntax.length > 0 && (
+                <div className="pt-3 border-t border-slate-700">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">
+                    Play Call Breakdown
                   </label>
-                  <div className="flex flex-wrap gap-2 p-3 bg-slate-800/50 rounded-lg min-h-[44px]">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {/* Show tokens from play name */}
                     {formData.name ? (
                       formData.name.split(/\s+/).filter(w => w.trim()).map((word, idx) => {
-                        // Check if this word is already used in a slot
                         const isUsed = Object.values(formData.playCallParts || {}).includes(word);
                         return (
                           <div
@@ -406,120 +352,135 @@ export default function PlayEditor({
                               e.dataTransfer.setData('text/plain', word);
                             }}
                             onDragEnd={() => setDraggedWord(null)}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium cursor-grab active:cursor-grabbing flex items-center gap-1 ${
+                            className={`px-2.5 py-1 rounded text-sm font-medium cursor-grab active:cursor-grabbing flex items-center gap-1 ${
                               isUsed
                                 ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
                                 : 'bg-sky-500/20 text-sky-400 border border-sky-500/30 hover:bg-sky-500/30'
                             }`}
                           >
-                            {!isUsed && <GripVertical size={12} />}
+                            {!isUsed && <GripVertical size={10} />}
                             {word}
                           </div>
                         );
                       })
                     ) : (
-                      <span className="text-slate-500 text-sm italic">Type a play name above to see word tokens</span>
+                      <span className="text-slate-500 text-sm italic">Enter play name above to see tokens</span>
                     )}
                   </div>
-                </div>
 
-                {/* Syntax slots */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase mb-2">
-                    Play Call Structure
-                  </label>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                    {playCallSyntax.map((slot, idx) => {
+                  {/* Syntax slots */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {playCallSyntax.map((slot) => {
                       const slotValue = formData.playCallParts?.[slot.id] || '';
                       const slotTerms = termLibrary[slot.id] || [];
 
                       return (
-                        <div key={slot.id} className="flex items-center gap-2">
-                          <div
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.classList.add('border-sky-500', 'bg-sky-500/10');
-                            }}
-                            onDragLeave={(e) => {
-                              e.currentTarget.classList.remove('border-sky-500', 'bg-sky-500/10');
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.classList.remove('border-sky-500', 'bg-sky-500/10');
-                              const word = e.dataTransfer.getData('text/plain');
-                              if (word) {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  playCallParts: { ...prev.playCallParts, [slot.id]: word }
-                                }));
-                              }
-                            }}
-                            className="flex-shrink-0 min-w-[120px] p-2 bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg transition-colors"
-                          >
-                            <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
-                              {slot.label}
-                            </div>
-                            {slotValue ? (
-                              <div className="flex items-center justify-between">
-                                <span className="text-white font-medium">{slot.prefix || ''}{slotValue}{slot.suffix || ''}</span>
-                                <button
-                                  onClick={() => setFormData(prev => ({
-                                    ...prev,
-                                    playCallParts: { ...prev.playCallParts, [slot.id]: '' }
-                                  }))}
-                                  className="p-1 text-slate-400 hover:text-red-400"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="text-slate-500 text-sm">Drop here</div>
-                            )}
-                            {/* Show term suggestions */}
-                            {!slotValue && slotTerms.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-slate-700">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        playCallParts: { ...prev.playCallParts, [slot.id]: e.target.value }
-                                      }));
-                                    }
-                                  }}
-                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white"
-                                  value=""
-                                >
-                                  <option value="">Or select...</option>
-                                  {slotTerms.map(term => (
-                                    <option key={term.id} value={term.label}>{term.label}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            )}
+                        <div
+                          key={slot.id}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.add('border-sky-500', 'bg-sky-500/10');
+                          }}
+                          onDragLeave={(e) => {
+                            e.currentTarget.classList.remove('border-sky-500', 'bg-sky-500/10');
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('border-sky-500', 'bg-sky-500/10');
+                            const word = e.dataTransfer.getData('text/plain');
+                            if (word) {
+                              setFormData(prev => ({
+                                ...prev,
+                                playCallParts: { ...prev.playCallParts, [slot.id]: word }
+                              }));
+                            }
+                          }}
+                          className="p-2 bg-slate-800 border border-dashed border-slate-600 rounded-lg transition-colors"
+                        >
+                          <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
+                            {slot.label}
                           </div>
-                          {idx < playCallSyntax.length - 1 && (
-                            <ArrowRight size={16} className="text-slate-600 flex-shrink-0" />
+                          {slotValue ? (
+                            <div className="flex items-center justify-between">
+                              <span className="text-white font-medium text-sm">{slotValue}</span>
+                              <button
+                                onClick={() => setFormData(prev => ({
+                                  ...prev,
+                                  playCallParts: { ...prev.playCallParts, [slot.id]: '' }
+                                }))}
+                                className="p-0.5 text-slate-400 hover:text-red-400"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ) : slotTerms.length > 0 ? (
+                            <select
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    playCallParts: { ...prev.playCallParts, [slot.id]: e.target.value }
+                                  }));
+                                }
+                              }}
+                              className="w-full px-1 py-0.5 bg-slate-700 border border-slate-600 rounded text-xs text-slate-400"
+                              value=""
+                            >
+                              <option value="">Select or drop...</option>
+                              {slotTerms.map(term => (
+                                <option key={term.id} value={term.label}>{term.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="text-slate-500 text-xs">Drop here</div>
                           )}
                         </div>
                       );
                     })}
                   </div>
                 </div>
+              )}
 
-                {/* Preview */}
-                <div className="p-3 bg-slate-700/50 rounded-lg">
-                  <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call Preview:</span>
-                  <p className="text-lg font-mono text-emerald-400 mt-1">
-                    {playCallSyntax.map(slot => {
-                      const val = formData.playCallParts?.[slot.id] || '';
-                      return val ? `${slot.prefix || ''}${val}${slot.suffix || ''}` : '';
-                    }).filter(Boolean).join(' ') || '...'}
-                  </p>
+              {/* Bucket & Concept Group */}
+              <div className="pt-3 border-t border-slate-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Category */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">
+                      Bucket
+                    </label>
+                    <select
+                      value={formData.playCategory}
+                      onChange={e => setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }))}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                    >
+                      <option value="">Select Bucket</option>
+                      {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
+                        <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Concept Group */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">
+                      Concept Group
+                    </label>
+                    <select
+                      value={formData.bucketId}
+                      onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                    >
+                      <option value="">Select Group</option>
+                      {filteredBuckets.map(bucket => (
+                        <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
-            </Section>
-          )}
+            </div>
+          </Section>
 
           {/* Diagrams Section - Only for Offense */}
           {phase === 'OFFENSE' && (
@@ -530,7 +491,7 @@ export default function PlayEditor({
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* WIZ Skill Diagram */}
-                <div>
+                <div className="flex flex-col">
                   <label className="block text-sm font-medium text-slate-400 mb-2">
                     WIZ Skill Diagram
                   </label>
@@ -581,16 +542,16 @@ export default function PlayEditor({
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2 flex-1 flex flex-col">
                       <button
                         type="button"
                         onClick={() => setShowSkillEditor(true)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-sky-500 hover:text-sky-400 transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-sky-500 hover:text-sky-400 transition-colors"
                       >
                         <Edit3 size={18} />
                         Draw Diagram
                       </button>
-                      <label className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
+                      <label className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
                         <Upload size={14} />
                         Upload Image
                         <input
@@ -614,7 +575,7 @@ export default function PlayEditor({
                 </div>
 
                 {/* WIZ OL Diagram */}
-                <div>
+                <div className="flex flex-col">
                   <label className="block text-sm font-medium text-slate-400 mb-2">
                     WIZ OL Diagram
                   </label>
@@ -683,7 +644,7 @@ export default function PlayEditor({
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2 flex-1 flex flex-col">
                       <button
                         type="button"
                         onClick={() => setShowOLEditor(true)}
@@ -692,17 +653,7 @@ export default function PlayEditor({
                         <Edit3 size={18} />
                         Draw Diagram
                       </button>
-                      {(olSchemes.protections.length > 0 || olSchemes.runBlocking.length > 0) && (
-                        <button
-                          type="button"
-                          onClick={() => setShowOLLibrary(true)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 hover:bg-amber-500/20 transition-colors"
-                        >
-                          <Library size={18} />
-                          Select from WIZ Library
-                        </button>
-                      )}
-                      <label className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
+                      <label className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
                         <Upload size={14} />
                         Upload Image
                         <input
@@ -721,6 +672,16 @@ export default function PlayEditor({
                           className="hidden"
                         />
                       </label>
+                      {(olSchemes.protections.length > 0 || olSchemes.runBlocking.length > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => setShowOLLibrary(true)}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                        >
+                          <Library size={12} />
+                          or select from WIZ Library
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
